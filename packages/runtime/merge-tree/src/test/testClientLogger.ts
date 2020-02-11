@@ -18,10 +18,10 @@ export class TestClientLogger {
         private readonly clients: readonly TestClient[],
         private readonly title?: string) {
 
-        this.roundLogLines.push([
-            ...this.clients.map((c) => `client ${c.longClientId}`),
-        ]);
-
+        this.roundLogLines.push([]);
+        for (const client of clients) {
+            this.roundLogLines[0].push("refSeq", `client ${client.longClientId}`,"|");
+        }
         this.roundLogLines[0].forEach((v) => this.paddings.push(v.length));
     }
 
@@ -33,13 +33,15 @@ export class TestClientLogger {
         this.clients.forEach((c, i) => {
             const refseq = c.getCurrentSeq().toString();
             const segStrings = this.getSegString(c);
-            ackedLine.push(`${refseq}|${segStrings.acked}`);
-            localLine.push(`${" ".repeat(refseq.length)}|${segStrings.local}`);
+            ackedLine.push(refseq, segStrings.acked, "|");
+            localLine.push(" ", segStrings.local, "|");
             if (!localChanges && segStrings.local.trim().length > 0) {
                 localChanges = true;
             }
-            this.paddings[i] = Math.max(ackedLine[i].length, localLine[i].length, this.paddings[i]);
         });
+        for (let i = 0; i < this.paddings.length; i++) {
+            this.paddings[i] = Math.max(ackedLine[i].length, localLine[i].length, this.paddings[i]);
+        }
         if (localChanges) {
             this.roundLogLines.push(localLine);
         }
@@ -76,7 +78,8 @@ export class TestClientLogger {
     *: un-acked insert and remove\n";
 
         str += this.roundLogLines
-            .map((line) => line.map((v, i) => v.padEnd(this.paddings[i])).join("  "))
+            .map((line) => line.map(
+                (v, i) => i % 3 === 0 ? v.padStart(this.paddings[i]) : v.padEnd(this.paddings[i])).join(" "))
             .join("\n");
         return str;
     }

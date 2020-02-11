@@ -113,19 +113,22 @@ export function runMergeTreeOperationRunner(
                     message.minimumSequenceNumber = minimumSequenceNumber;
                     messagesPerClient.forEach((ca) => ca.push(message));
 
-                    // apply some random ops
-                    //
+                    // keep the readonly client 0 fully caught up
+                    while (messagesPerClient[0].length > 0) {
+                        clients[0].applyMsg(messagesPerClient[0].shift());
+                    }
                     logger.log();
+
+                    // apply some random ops, so clients are in different states
                     let opToRun = random.integer(0, 5)(mt);
                     while(--opToRun > 0 && messagesPerClient.some((ca) => ca.length > 0)){
-                        const clientIndex = random.integer(0, clients.length - 1)(mt);
+                        const clientIndex = random.integer(1, clients.length - 1)(mt);
                         if (messagesPerClient[clientIndex].length > 0) {
                             const msg = messagesPerClient[clientIndex].shift();
                             clients[clientIndex].applyMsg(msg);
                         }
                     }
                 }
-
             }
             // finish applying all the ops
             for (let clientIndex = 0; clientIndex < clients.length; clientIndex++){
