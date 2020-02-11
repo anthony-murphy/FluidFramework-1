@@ -71,12 +71,12 @@ export function runMergeTreeOperationRunner(
         }
         for (let round = 0; round < config.rounds; round++) {
             const minimumSequenceNumber = seq;
-            let tempSeq = seq * -1;
             const logger = new TestClientLogger(
                 clients,
                 `Clients: ${clients.length} Ops: ${opsPerRound} Round: ${round}`);
             logger.log();
-            const messages: ISequencedDocumentMessage[] = [];
+            const messagesPerClient: ISequencedDocumentMessage[][] = [];
+            clients.forEach((c) => messagesPerClient.push([]));
             for (let i = 0; i < opsPerRound; i++) {
                 // pick a client greater than 0, client 0 only applies remote ops
                 // and is our baseline
@@ -109,20 +109,32 @@ export function runMergeTreeOperationRunner(
                             client.mergeTree.pendingSegments.last(),
                             `op created but segment group not enqueued.${logger}`);
                     }
-                    const message = client.makeOpMessage(op, --tempSeq);
+                    const message = client.makeOpMessage(op, ++seq);
                     message.minimumSequenceNumber = minimumSequenceNumber;
-                    logger.log(message);
-                    messages.push(message);
+                    messagesPerClient.forEach((ca) => ca.push(message));
+
+                    // apply some random ops
+                    //
+                    logger.log();
+                    let opToRun = random.integer(0, 5)(mt);
+                    while(--opToRun > 0 && messagesPerClient.some((ca) => ca.length > 0)){
+                        const clientIndex = random.integer(0, clients.length - 1)(mt);
+                        if (messagesPerClient[clientIndex].length > 0) {
+                            const msg = messagesPerClient[clientIndex].shift();
+                            clients[clientIndex].applyMsg(msg);
+                        }
+                    }
+                }
+
+            }
+            // finish applying all the ops
+            for (let clientIndex = 0; clientIndex < clients.length; clientIndex++){
+                while (messagesPerClient[clientIndex].length > 0) {
+                    const message = messagesPerClient[clientIndex].shift();
+                    clients[clientIndex].applyMsg(message);
                 }
             }
-            // log and apply all the ops created in the round
-            while (messages.length > 0) {
-                const message = messages.shift();
-                message.sequenceNumber = ++seq;
-                logger.log(message, (c) => {
-                    c.applyMsg(message);
-                });
-            }
+            logger.log();
 
             // validate that all the clients match at the end of the round
             logger.validate();

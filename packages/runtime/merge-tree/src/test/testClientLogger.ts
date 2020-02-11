@@ -4,9 +4,7 @@
  */
 
 import * as assert from "assert";
-import { ISequencedDocumentMessage } from "@microsoft/fluid-protocol-definitions";
 import { UnassignedSequenceNumber } from "../constants";
-import { IMergeTreeOp } from "../ops";
 import { TextSegment } from "../textSegment";
 import { TestClient } from "./testClient";
 
@@ -21,53 +19,32 @@ export class TestClientLogger {
         private readonly title?: string) {
 
         this.roundLogLines.push([
-            "seq",
-            "op",
             ...this.clients.map((c) => `client ${c.longClientId}`),
         ]);
 
         this.roundLogLines[0].forEach((v) => this.paddings.push(v.length));
     }
 
-    public log(msg?: ISequencedDocumentMessage, preAction?: (c: TestClient) => void) {
-        const seq = msg ? msg.sequenceNumber.toString() : "";
-        const client = msg ? msg.clientId : "";
-        const op = msg ? msg.contents as IMergeTreeOp : undefined;
-        const opType = op ? op.type.toString() : "";
-        // eslint-disable-next-line dot-notation, max-len
-        const opPos = op && op["pos1"] !== undefined ? `@${op["pos1"]}${op["pos2"] !== undefined ? `,${op["pos2"]}` : ""}` : "";
-        const clientOp = ` ${client}${opType}${opPos}`;
-        const ackedLine: string[] = [
-            seq,
-            clientOp,
-        ];
+    public log() {
+        const ackedLine: string[] = [];
         this.roundLogLines.push(ackedLine);
-        const localLine: string[] = ["", ""];
+        const localLine: string[] = [];
         let localChanges = false;
-        this.paddings[0] = Math.max(ackedLine[0].length, this.paddings[0]);
-        this.paddings[1] = Math.max(ackedLine[1].length, this.paddings[1]);
         this.clients.forEach((c, i) => {
-            if (preAction) {
-                try {
-                    preAction(c);
-                } catch (e) {
-                    e.message += this.toString();
-                    throw e;
-                }
-            }
+            const refseq = c.getCurrentSeq().toString();
             const segStrings = this.getSegString(c);
-            ackedLine.push(segStrings.acked);
-            localLine.push(segStrings.local);
+            ackedLine.push(`${refseq}|${segStrings.acked}`);
+            localLine.push(`${" ".repeat(refseq.length)}|${segStrings.local}`);
             if (!localChanges && segStrings.local.trim().length > 0) {
                 localChanges = true;
             }
-            this.paddings[i + 2] = Math.max(ackedLine[i + 2].length, this.paddings[i + 2]);
+            this.paddings[i] = Math.max(ackedLine[i].length, localLine[i].length, this.paddings[i]);
         });
         if (localChanges) {
             this.roundLogLines.push(localLine);
         }
         if (this.incrementalLog) {
-            console.log(ackedLine.map((v, i) => v.padEnd(this.paddings[i])).join(" | "));
+            console.log(ackedLine.map((v, i) => v.padEnd(this.paddings[i])).join("  "));
         }
     }
 
@@ -88,12 +65,18 @@ export class TestClientLogger {
     }
 
     public toString() {
-        let str = "";
+        let str = "\n";
         if (this.title) {
             str += `${this.title}\n`;
         }
+
+        str +="\
+    -: removed value.\n\
+    _: un-acked value below.\n\
+    *: un-acked insert and remove\n";
+
         str += this.roundLogLines
-            .map((line) => line.map((v, i) => v.padEnd(this.paddings[i])).join(" | "))
+            .map((line) => line.map((v, i) => v.padEnd(this.paddings[i])).join("  "))
             .join("\n");
         return str;
     }
@@ -112,8 +95,9 @@ export class TestClientLogger {
                                 acked += "_".repeat(node.text.length);
                                 if (node.seq === UnassignedSequenceNumber) {
                                     local += "*".repeat(node.text.length);
+                                } else {
+                                    local += "-".repeat(node.text.length);
                                 }
-                                local += "-".repeat(node.text.length);
                             } else {
                                 acked += "-".repeat(node.text.length);
                                 local += " ".repeat(node.text.length);

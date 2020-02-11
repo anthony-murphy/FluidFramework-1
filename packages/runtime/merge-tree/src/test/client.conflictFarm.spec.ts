@@ -5,11 +5,11 @@
 
 import * as random from "random-js";
 import {
-    annotateRange,
+    // annotateRange,
     doOverRange,
     IConfigRange,
     IMergeTreeOperationRunnerConfig,
-    insertAtRefPos,
+    // insertAtRefPos,
     removeRange,
     runMergeTreeOperationRunner,
     TestOperation,
@@ -23,18 +23,18 @@ interface IConflictFarmConfig extends IMergeTreeOperationRunnerConfig {
 
 const allOpertaions: TestOperation[] = [
     removeRange,
-    annotateRange,
-    insertAtRefPos,
+    // annotateRange,
+    // insertAtRefPos,
 ];
 
 export const debugOptions: IConflictFarmConfig = {
-    minLength: {min: 2, max: 2},
-    clients: {min: 3, max: 3},
-    opsPerRoundRange: { min: 1, max: 100 },
-    rounds: 1000,
+    minLength: {min: 1, max: 1},
+    clients: {min: 3, max: 8},
+    opsPerRoundRange: {min: 1, max: 128},
+    rounds: 8,
     operations: allOpertaions,
-    incrementalLog: true,
     growthFunc: (input: number) => input + 1,
+    incrementalLog: true,
 };
 
 export const defaultOptions: IConflictFarmConfig = {
@@ -59,8 +59,8 @@ describe("MergeTree.Client", () => {
 
     // tslint:disable: mocha-no-side-effect-code
     const opts =
-        defaultOptions;
-        // debugOptions;
+        // defaultOptions;
+        debugOptions;
         // longOptions;
 
     // Generate a list of single character client names, support up to 69 clients
