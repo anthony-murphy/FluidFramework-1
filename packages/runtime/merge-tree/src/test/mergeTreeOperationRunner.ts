@@ -113,31 +113,30 @@ export function runMergeTreeOperationRunner(
                     message.minimumSequenceNumber = minimumSequenceNumber;
                     messagesPerClient.forEach((ca) => ca.push(message));
 
-                    // keep the readonly client 0 fully caught up
-                    while (messagesPerClient[0].length > 0) {
-                        clients[0].applyMsg(messagesPerClient[0].shift());
-                    }
-                    logger.log();
-
                     // apply some random ops, so clients are in different states
                     let opToRun = random.integer(0, 5)(mt);
                     while(--opToRun > 0 && messagesPerClient.some((ca) => ca.length > 0)){
                         const clientIndex = random.integer(1, clients.length - 1)(mt);
                         if (messagesPerClient[clientIndex].length > 0) {
-                            const msg = messagesPerClient[clientIndex].shift();
-                            clients[clientIndex].applyMsg(msg);
+                            clients[clientIndex].applyMsg(messagesPerClient[clientIndex].shift());
                         }
                     }
+                    logger.log();
                 }
             }
             // finish applying all the ops
-            for (let clientIndex = 0; clientIndex < clients.length; clientIndex++){
-                while (messagesPerClient[clientIndex].length > 0) {
-                    const message = messagesPerClient[clientIndex].shift();
-                    clients[clientIndex].applyMsg(message);
+
+            while (messagesPerClient[0].length > 0) {
+                const currentMsg = messagesPerClient[0][0];
+                for (let clientIndex = 0; clientIndex < clients.length; clientIndex++) {
+                    if (messagesPerClient[clientIndex].length > 0
+                        && messagesPerClient[clientIndex][0].sequenceNumber <= currentMsg.sequenceNumber) {
+                        clients[clientIndex].applyMsg(messagesPerClient[clientIndex].shift());
+                    }
                 }
+                logger.log();
             }
-            logger.log();
+
 
             // validate that all the clients match at the end of the round
             logger.validate();
