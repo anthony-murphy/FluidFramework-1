@@ -2310,20 +2310,24 @@ export class MergeTree {
                 const branchId = this.getBranchId(clientId);
                 const segmentBranchId = this.getBranchId(segment.clientId);
                 const removalInfo = this.getRemovalInfo(branchId, segmentBranchId, segment);
-                if (removalInfo.removedSeq
-                    && removalInfo.removedSeq <= refSeq
-                    && removalInfo.removedSeq !== UnassignedSequenceNumber) {
-                    return false;
-                }
+                if (removalInfo.removedSeq === undefined) {
 
-                // Local change see everything
-                if (clientId === this.collabWindow.clientId) {
-                    return true;
-                }
+                    // Local change see everything
+                    if (clientId === this.collabWindow.clientId) {
+                        return true;
+                    }
 
-                if (node.seq !== UnassignedSequenceNumber) {
-                    // Ensure we merge right. newer segments should come before older segments
-                    return true;
+                    if (node.seq !== UnassignedSequenceNumber) {
+                        // Ensure we merge right. newer segments should come before older segments
+                        return true;
+                    }
+                }
+                else {
+                    if (clientId !== this.collabWindow.clientId) {
+                        if (removalInfo.removedSeq === UnassignedSequenceNumber) {
+                            return true;
+                        }
+                    }
                 }
             }
             return false;

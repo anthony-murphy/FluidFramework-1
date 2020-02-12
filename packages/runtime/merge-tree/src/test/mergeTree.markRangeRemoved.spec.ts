@@ -4,9 +4,11 @@
  */
 
 import * as assert from "assert";
-import { TextSegment } from "../";
+import { ISequencedDocumentMessage } from "@microsoft/fluid-protocol-definitions";
+import { TextSegment, IMergeTreeOp } from "../";
 import { createInsertSegmentOp, createRemoveRangeOp } from "../opBuilder";
 import { TestClient } from "./testClient";
+import { TestClientLogger } from "./testClientLogger";
 
 describe("MergeTree.markRangeRemoved", () => {
     let client: TestClient;
@@ -161,5 +163,50 @@ describe("MergeTree.markRangeRemoved", () => {
         }
 
         assert.equal(actual.getText(), expected.getText());
+    });
+
+
+    it("Overlapping insert and delete", () => {
+        const clients = [new TestClient(), new TestClient()];
+        const opsPerClient: ISequencedDocumentMessage[][] = [];
+        clients.forEach((c, i) => {
+            c.startCollaboration(i.toString());
+            opsPerClient.push([]);
+        });
+
+        let seq = 0;
+        const logger = new TestClientLogger(clients);
+        const doOp = (index: number, doIt: (c: TestClient) => IMergeTreeOp) => {
+            const msg = clients[index].makeOpMessage(doIt(clients[index]), ++seq);
+
+            opsPerClient.forEach((ops) => ops.push(msg));
+        };
+
+        doOp(1, (c) => c.insertTextLocal(0, "B"));
+        doOp(0, (c) => c.insertTextLocal(0, "A"));
+        logger.log();
+
+        clients[0].applyMsg(opsPerClient[0].shift());
+        clients[1].applyMsg(opsPerClient[1].shift());
+        logger.log();
+
+        doOp(1, (c) => c.removeRangeLocal(0, 1));
+        doOp(0, (c) => c.removeRangeLocal(1, 2));
+        logger.log();
+
+        clients[0].applyMsg(opsPerClient[0].shift());
+        clients[1].applyMsg(opsPerClient[1].shift());
+        logger.log();
+
+        clients[0].applyMsg(opsPerClient[0].shift());
+        clients[1].applyMsg(opsPerClient[1].shift());
+        logger.log();
+
+        clients[0].applyMsg(opsPerClient[0].shift());
+        clients[1].applyMsg(opsPerClient[1].shift());
+        logger.log();
+
+        assert.equal(clients[0].getText(), clients[1].getText(), logger.toString());
+
     });
 });

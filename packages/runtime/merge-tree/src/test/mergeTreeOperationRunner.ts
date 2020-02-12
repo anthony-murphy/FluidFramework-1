@@ -115,7 +115,7 @@ export function runMergeTreeOperationRunner(
 
                     // apply some random ops, so clients are in different states
                     let opToRun = random.integer(0, 5)(mt);
-                    while(--opToRun > 0 && messagesPerClient.some((ca) => ca.length > 0)){
+                    while(--opToRun > 0){
                         const clientIndex = random.integer(1, clients.length - 1)(mt);
                         if (messagesPerClient[clientIndex].length > 0) {
                             clients[clientIndex].applyMsg(messagesPerClient[clientIndex].shift());
@@ -125,11 +125,10 @@ export function runMergeTreeOperationRunner(
                 }
             }
             // finish applying all the ops
-
             while (messagesPerClient[0].length > 0) {
                 const currentMsg = messagesPerClient[0][0];
                 for (let clientIndex = 0; clientIndex < clients.length; clientIndex++) {
-                    if (messagesPerClient[clientIndex].length > 0
+                    while (messagesPerClient[clientIndex].length > 0
                         && messagesPerClient[clientIndex][0].sequenceNumber <= currentMsg.sequenceNumber) {
                         clients[clientIndex].applyMsg(messagesPerClient[clientIndex].shift());
                     }
