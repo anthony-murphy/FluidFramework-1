@@ -63,6 +63,7 @@ export function runMergeTreeOperationRunner(
 
     let seq = startingSeq;
 
+
     // eslint-disable-next-line @typescript-eslint/unbound-method
     doOverRange(config.opsPerRoundRange, config.growthFunc, (opsPerRound) => {
         if (config.incrementalLog) {
@@ -112,24 +113,29 @@ export function runMergeTreeOperationRunner(
                     const message = client.makeOpMessage(op, ++seq);
                     message.minimumSequenceNumber = minimumSequenceNumber;
                     messagesPerClient.forEach((ca) => ca.push(message));
-
+                    while (messagesPerClient[0].length > 0) {
+                        clients[0].applyMsg(messagesPerClient[0].shift());
+                    }
                     // apply some random ops, so clients are in different states
                     let opToRun = random.integer(0, 5)(mt);
+                    let logged = false;
                     while(--opToRun > 0){
                         const clientIndex = random.integer(1, clients.length - 1)(mt);
                         if (messagesPerClient[clientIndex].length > 0) {
                             clients[clientIndex].applyMsg(messagesPerClient[clientIndex].shift());
+                            logger.log();
+                            logged = true;
                         }
                     }
-                    logger.log();
+                    if (!logged) {
+                        logger.log();
+                    }
                 }
             }
             // finish applying all the ops
-            while (messagesPerClient[0].length > 0) {
-                const currentMsg = messagesPerClient[0][0];
+            while (messagesPerClient.some((ops) => ops.length > 0)) {
                 for (let clientIndex = 0; clientIndex < clients.length; clientIndex++) {
-                    while (messagesPerClient[clientIndex].length > 0
-                        && messagesPerClient[clientIndex][0].sequenceNumber <= currentMsg.sequenceNumber) {
+                    if (messagesPerClient[clientIndex].length > 0) {
                         clients[clientIndex].applyMsg(messagesPerClient[clientIndex].shift());
                     }
                 }
