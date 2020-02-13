@@ -239,13 +239,13 @@ describe("client.applyMsg", () => {
         const remoteClient = new TestClient();
         remoteClient.insertTextLocal(0, client.getText());
         remoteClient.startCollaboration("remoteUser");
-        const logger = new TestClientLogger([client, remoteClient]);
-        logger.log();
+        const clients = [client, remoteClient];
+        const logger = new TestClientLogger(clients);
         let seq = 0;
         const initialMsg = client.makeOpMessage(client.insertTextLocal(0, "-"), ++seq);
-
-        logger.log(initialMsg, (c) => c.applyMsg(initialMsg));
+        clients.forEach((c) => c.applyMsg(initialMsg));
         logger.validate();
+        logger.log();
 
         const messages = [
             client.makeOpMessage(client.insertTextLocal(0, "L"), ++seq),
@@ -257,7 +257,8 @@ describe("client.applyMsg", () => {
         logger.log();
         while (messages.length > 0) {
             const msg = messages.shift();
-            logger.log(msg, (c) => c.applyMsg(msg));
+            clients.forEach((c) => c.applyMsg(msg));
+            logger.log();
         }
 
         logger.validate();
@@ -286,9 +287,8 @@ describe("client.applyMsg", () => {
         logger.log();
         while (messages.length > 0) {
             const msg = messages.shift();
-            logger.log(msg, (c) => {
-                c.applyMsg(msg);
-            });
+            clients.forEach((c) => c.applyMsg(msg));
+            logger.log();
         }
 
         logger.validate();
@@ -318,9 +318,8 @@ describe("client.applyMsg", () => {
         logger.log();
         while (messages.length > 0) {
             const msg = messages.shift();
-            logger.log(msg, (c) => {
-                c.applyMsg(msg);
-            });
+            clients.forEach((c) => c.applyMsg(msg));
+            logger.log();
         }
 
         logger.validate();
@@ -348,9 +347,8 @@ describe("client.applyMsg", () => {
         logger.log();
         while (messages.length > 0) {
             const msg = messages.shift();
-            logger.log(msg, (c) => {
-                c.applyMsg(msg);
-            });
+            clients.forEach((c) => c.applyMsg(msg));
+            logger.log();
         }
 
         logger.validate();
@@ -376,9 +374,8 @@ describe("client.applyMsg", () => {
         logger.log();
         while (messages.length > 0) {
             const msg = messages.shift();
-            logger.log(msg, (c) => {
-                c.applyMsg(msg);
-            });
+            clients.forEach((c) => c.applyMsg(msg));
+            logger.log();
         }
 
         logger.validate();
