@@ -136,12 +136,19 @@ export function runMergeTreeOperationRunner(
             while (messagesPerClient.some((ops) => ops.length > 0)) {
                 for (let clientIndex = 0; clientIndex < clients.length; clientIndex++) {
                     if (messagesPerClient[clientIndex].length > 0) {
-                        clients[clientIndex].applyMsg(messagesPerClient[clientIndex].shift());
+                        const message = messagesPerClient[clientIndex].shift();
+                        const client = clients[clientIndex];
+                        try {
+                            client.applyMsg(message);
+                        } catch (error) {
+                            const msgStr = JSON.stringify(message, undefined, 1);
+                            throw new Error(
+                                `${logger.toString()}\nClient ${client.longClientId}: ${error}\n${msgStr}\n`);
+                        }
                     }
                 }
-                logger.log();
             }
-
+            logger.log();
 
             // validate that all the clients match at the end of the round
             logger.validate();
