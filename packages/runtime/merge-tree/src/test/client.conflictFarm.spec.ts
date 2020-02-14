@@ -28,10 +28,10 @@ const allOpertaions: TestOperation[] = [
 ];
 
 export const debugOptions: IConflictFarmConfig = {
-    minLength: {min: 1, max: 1},
+    minLength: {min: 2, max: 2},
     clients: {min: 3, max: 8},
     opsPerRoundRange: {min: 1, max: 128},
-    rounds: 8,
+    rounds: 10000,
     operations: allOpertaions,
     growthFunc: (input: number) => input + 1,
     incrementalLog: true,

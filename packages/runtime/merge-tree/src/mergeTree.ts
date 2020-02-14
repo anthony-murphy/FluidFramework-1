@@ -2271,6 +2271,7 @@ export class MergeTree {
                 const splitNode = this.insertingWalk(this.root, insertPos, refSeq, clientId, seq,
                     { leaf: onLeaf, candidateSegment: newSegment, continuePredicate: continueFrom });
 
+                assert(newSegment.parent, "failed to insert segment");
                 this.updateRoot(splitNode);
                 saveIfLocal(newSegment);
 
@@ -2310,25 +2311,34 @@ export class MergeTree {
                 const branchId = this.getBranchId(clientId);
                 const segmentBranchId = this.getBranchId(segment.clientId);
                 const removalInfo = this.getRemovalInfo(branchId, segmentBranchId, segment);
-                if (removalInfo.removedSeq === undefined) {
 
-                    // Local change see everything
-                    if (clientId === this.collabWindow.clientId) {
-                        return true;
-                    }
-
-                    if (node.seq !== UnassignedSequenceNumber) {
-                        // Ensure we merge right. newer segments should come before older segments
-                        return true;
-                    }
-                }
-                else {
-                    if (clientId !== this.collabWindow.clientId) {
+                // Local change see everything
+                if (clientId === this.collabWindow.clientId) {
+                    if (removalInfo.removedSeq) {
                         if (removalInfo.removedSeq === UnassignedSequenceNumber) {
                             return true;
                         }
+                    } else {
+                        return true;
                     }
                 }
+
+                if (node.seq !== UnassignedSequenceNumber) {
+                    // Ensure we merge right. newer segments should come before older segments
+                    return true;
+                }
+
+                if (removalInfo.removedSeq) {
+                    let removedNode: IMergeNode = node;
+                    while (removedNode.parent !== undefined && removedNode !== undefined) {
+                        if (removedNode.index !== removedNode.parent.childCount - 1) {
+                            return false;
+                        }
+                        removedNode = removedNode.parent;
+                    }
+                    return false;
+                }
+
             }
             return false;
         } else {
