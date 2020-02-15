@@ -2307,43 +2307,73 @@ export class MergeTree {
         clientId: number, candidateSegment?: ISegment) {
         if (node.isLeaf()) {
             if (pos === 0) {
-                const segment = node;
-                const branchId = this.getBranchId(clientId);
-                const segmentBranchId = this.getBranchId(segment.clientId);
-                const removalInfo = this.getRemovalInfo(branchId, segmentBranchId, segment);
-
-                // Local change see everything
-                if (clientId === this.collabWindow.clientId) {
-                    if (removalInfo.removedSeq) {
-                        if (removalInfo.removedSeq === UnassignedSequenceNumber) {
-                            return true;
-                        }
-                    } else {
-                        return true;
-                    }
+                const oldBreakTie = this.oldBreakTie(node, clientId, refSeq);
+                const newBreakTie = this.newBreakTie(node, clientId, refSeq);
+                if (newBreakTie !== oldBreakTie) {
+                    return newBreakTie;
                 }
-
-                if (node.seq !== UnassignedSequenceNumber) {
-                    // Ensure we merge right. newer segments should come before older segments
-                    return true;
-                }
-
-                if (removalInfo.removedSeq) {
-                    let removedNode: IMergeNode = node;
-                    while (removedNode.parent !== undefined && removedNode !== undefined) {
-                        if (removedNode.index !== removedNode.parent.childCount - 1) {
-                            return false;
-                        }
-                        removedNode = removedNode.parent;
-                    }
-                    return false;
-                }
-
+                return oldBreakTie;
             }
             return false;
         } else {
             return true;
         }
+    }
+
+    private newBreakTie(segment: ISegment, clientId: number, refSeq: number) {
+        const branchId = this.getBranchId(clientId);
+        const segmentBranchId = this.getBranchId(segment.clientId);
+        const removalInfo = this.getRemovalInfo(branchId, segmentBranchId, segment);
+
+        // local change see everything
+        if (clientId === this.collabWindow.clientId) {
+            // segment will be sequenced earlier so move it right
+            if (segment.seq === UnassignedSequenceNumber) {
+                return true;
+            }
+            // segment removed move past it
+            if (removalInfo.removedSeq !== undefined) {
+                return false;
+            }
+            // segment sequenced earlier so move it right
+            return true;
+        }
+
+        if (segment.seq === UnassignedSequenceNumber) {
+            // segment will be sequeced in the future so will have a high sequence than this insert, so move past
+            return false;
+        }
+
+        if (removalInfo.removedSeq !== undefined) {
+            if (removalInfo.removedSeq === UnassignedSequenceNumber) {
+                return true;
+            }
+            return false;
+        }
+
+        return true;
+    }
+
+    private oldBreakTie(segment: ISegment, clientId: number, refSeq: number) {
+        const branchId = this.getBranchId(clientId);
+        const segmentBranchId = this.getBranchId(segment.clientId);
+        const removalInfo = this.getRemovalInfo(branchId, segmentBranchId, segment);
+        if (removalInfo.removedSeq
+            && removalInfo.removedSeq <= refSeq
+            && removalInfo.removedSeq !== UnassignedSequenceNumber) {
+            return false;
+        }
+
+        // local change see everything
+        if (clientId === this.collabWindow.clientId) {
+            return true;
+        }
+
+        if (segment.seq !== UnassignedSequenceNumber) {
+            // ensure we merge right. newer segments should come before older segments
+            return true;
+        }
+        return false;
     }
 
     // Visit segments starting from node's left siblings, then up to node's parent
@@ -2694,6 +2724,7 @@ export class MergeTree {
                     if (removalInfo.removedSeq === UnassignedSequenceNumber) {
                         // Will only happen on local branch (brid === this.localBranchId)
                         // replace because comes later
+                        this.addOverlappingClient(removalInfo, removalInfo.removedClientId);
                         removalInfo.removedClientId = clientId;
                         removalInfo.removedSeq = seq;
                     } else {
