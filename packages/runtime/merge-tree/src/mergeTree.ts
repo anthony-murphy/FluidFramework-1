@@ -2332,7 +2332,7 @@ export class MergeTree {
                 return true;
             }
             // segment removed move past it
-            if (removalInfo.removedSeq !== undefined) {
+            if (removalInfo.removedSeq !== undefined && removalInfo.removedSeq !== UnassignedSequenceNumber) {
                 return false;
             }
             // segment sequenced earlier so move it right
