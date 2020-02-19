@@ -2308,9 +2308,9 @@ export class MergeTree {
         if (node.isLeaf()) {
             if (pos === 0) {
                 const oldBreakTie = this.oldBreakTie(node, clientId, refSeq);
-                const newBreakTie = this.newBreakTie(node, clientId, refSeq);
+                const newBreakTie = this.newBreakTie2(node, clientId, refSeq);
                 if (newBreakTie !== oldBreakTie) {
-                    return newBreakTie;
+                    return this.newBreakTie2(node, clientId, refSeq);
                 }
                 return oldBreakTie;
             }
@@ -2319,8 +2319,95 @@ export class MergeTree {
             return true;
         }
     }
+    private newBreakTie2(segment: ISegment, clientId: number, refSeq: number) {
+        const branchId = this.getBranchId(clientId);
+        const segmentBranchId = this.getBranchId(segment.clientId);
+        const removalInfo = this.getRemovalInfo(branchId, segmentBranchId, segment);
 
-    private newBreakTie(segment: ISegment, clientId: number, refSeq: number) {
+        const incomingIsLocal = clientId === this.collabWindow.clientId;
+        // go through all the states the current segment could be in order
+        if (segment.seq === UnassignedSequenceNumber) {
+            if (incomingIsLocal) {
+                if (removalInfo.removedSeq === UnassignedSequenceNumber || removalInfo.removedClientOverlap?.includes(clientId)) {
+                    // the incoming will be sequenced after the removed, so move past it
+                    return false;
+                } else if (removalInfo.removedSeq !== undefined) {
+                    assert.fail("An unassigned segment can only have an unassigned remove");
+                }
+                // local inserts should come before other local inserts to merge right
+                return true;
+            } else {
+                // non local changes should always move passed unacked segments
+                return false;
+            }
+        } else if (segment.seq > refSeq) {
+            if(incomingIsLocal){
+                assert.fail("A local segment cannot have a seq beyond the refseq of local insert");
+            } else {
+                if (segment.clientId === clientId) {
+                    // it is there segment, so they saw it before it was sequenced
+                    if (removalInfo.removedSeq !== undefined) {
+                        if (removalInfo.removedSeq === UnassignedSequenceNumber) {
+                            return true;
+                        }
+                        else if (removalInfo.removedClientId === clientId || removalInfo.removedClientOverlap?.includes(clientId)) {
+                            // they also removed it, so they saw that too
+                            return false;
+                        }
+                        assert.fail("unhandled remove case");
+                    }
+                    return true;
+                }
+                // something fishy here. the segment is insert after this insert, so we should come after it
+                return true;
+            }
+        }else if(segment.seq === refSeq){
+            if (incomingIsLocal) {
+                if (removalInfo.removedSeq === UnassignedSequenceNumber || removalInfo.removedClientOverlap?.includes(clientId)) {
+                    // the incoming will be sequenced after the removed, so move past it
+                    return false;
+                }
+                else if (removalInfo.removedSeq !== undefined) {
+                    assert.fail("local segment with seq matching ref seq cannot have a removed seq other than unassigned");
+                }
+                // the segment is sequenced, so local changes should come before it
+                return true;
+            } else {
+                assert.fail("a remote inserts ref seq must be greater than any local segments seq");
+            }
+        }else if(segment.seq < refSeq){
+            if(incomingIsLocal){
+                if (removalInfo.removedSeq !== undefined) {
+                    // the segment is acked and removed, so a local insert will always move past it
+                    return false;
+                }
+                // the segment is sequenced, so local changes should come before it
+                return true;
+            } else {
+                if (removalInfo.removedSeq !== undefined) {
+                    if (removalInfo.removedSeq === UnassignedSequenceNumber) {
+                        // remove not acked, so stop here
+                        return true;
+                    } else if (removalInfo.removedClientId === clientId || removalInfo.removedClientOverlap?.includes(clientId)) {
+                        // it was my remove so move past
+                        return false;
+                    } else if (removalInfo.removedSeq > refSeq) {
+                        // remove happend after what i saw, so stop
+                        return true;
+                    } else if (removalInfo.removedSeq <= refSeq) {
+                        // remove should have been seen so move past
+                        return false;
+                    }
+                    assert.fail("what case is this?");
+                }
+                return true;
+            }
+        }
+        assert.fail("should have handled every case");
+    }
+
+
+    public newBreakTie(segment: ISegment, clientId: number, refSeq: number) {
         const branchId = this.getBranchId(clientId);
         const segmentBranchId = this.getBranchId(segment.clientId);
         const removalInfo = this.getRemovalInfo(branchId, segmentBranchId, segment);
@@ -2329,10 +2416,13 @@ export class MergeTree {
         if (clientId === this.collabWindow.clientId) {
             // segment will be sequenced earlier so move it right
             if (segment.seq === UnassignedSequenceNumber) {
+                if (removalInfo.removedSeq === UnassignedSequenceNumber) {
+                    return false;
+                }
                 return true;
             }
             // segment removed move past it
-            if (removalInfo.removedSeq !== undefined && removalInfo.removedSeq !== UnassignedSequenceNumber) {
+            if (removalInfo.removedSeq !== undefined) {
                 return false;
             }
             // segment sequenced earlier so move it right
@@ -2348,13 +2438,18 @@ export class MergeTree {
             if (removalInfo.removedSeq === UnassignedSequenceNumber) {
                 return true;
             }
+            if (removalInfo.removedSeq > refSeq) {
+                if (removalInfo.removedClientId !== clientId && !removalInfo.removedClientOverlap?.includes(clientId)) {
+                    return true;
+                }
+            }
             return false;
         }
 
         return true;
     }
 
-    private oldBreakTie(segment: ISegment, clientId: number, refSeq: number) {
+    public oldBreakTie(segment: ISegment, clientId: number, refSeq: number) {
         const branchId = this.getBranchId(clientId);
         const segmentBranchId = this.getBranchId(segment.clientId);
         const removalInfo = this.getRemovalInfo(branchId, segmentBranchId, segment);

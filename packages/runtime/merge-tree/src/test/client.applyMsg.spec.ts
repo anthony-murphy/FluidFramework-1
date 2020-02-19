@@ -242,7 +242,8 @@ describe("client.applyMsg", () => {
         const clients = [client, remoteClient];
         const logger = new TestClientLogger(clients);
         let seq = 0;
-        const initialMsg = client.makeOpMessage(client.insertTextLocal(0, "-"), ++seq);
+        logger.log();
+        const initialMsg = client.makeOpMessage(client.insertTextLocal(0, "$"), ++seq);
         clients.forEach((c) => c.applyMsg(initialMsg));
         logger.validate();
         logger.log();
@@ -273,9 +274,10 @@ describe("client.applyMsg", () => {
         clientC.startCollaboration("C");
 
         const clients = [clientA, clientB, clientC];
+        const logger = new TestClientLogger(clients);
+        logger.log();
 
         let seq = 0;
-
         const messages = [
             clientC.makeOpMessage(clientC.insertTextLocal(0, "c"), ++seq),
             clientC.makeOpMessage(clientC.removeRangeLocal(0, 1), ++seq),
@@ -283,11 +285,11 @@ describe("client.applyMsg", () => {
             clientC.makeOpMessage(clientC.insertTextLocal(0, "c"), ++seq),
         ];
 
-        const logger = new TestClientLogger(clients);
-        logger.log();
         while (messages.length > 0) {
             const msg = messages.shift();
-            clients.forEach((c) => c.applyMsg(msg));
+            clients.forEach((c) => {
+                c.applyMsg(msg);
+            });
             logger.log();
         }
 
@@ -342,7 +344,6 @@ describe("client.applyMsg", () => {
             clientC.makeOpMessage(clientC.removeRangeLocal(0, 1), ++seq),
             clientC.makeOpMessage(clientC.insertTextLocal(0, "c"), ++seq),
         ];
-
         const logger = new TestClientLogger(clients);
         logger.log();
         while (messages.length > 0) {

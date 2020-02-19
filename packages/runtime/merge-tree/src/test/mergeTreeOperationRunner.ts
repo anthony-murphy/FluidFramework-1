@@ -147,8 +147,8 @@ export function runMergeTreeOperationRunner(
                         }
                     }
                 }
+                logger.log();
             }
-            logger.log();
 
             // validate that all the clients match at the end of the round
             logger.validate();
