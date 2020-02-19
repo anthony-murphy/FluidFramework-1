@@ -2307,10 +2307,10 @@ export class MergeTree {
         clientId: number, candidateSegment?: ISegment) {
         if (node.isLeaf()) {
             if (pos === 0) {
-                const oldBreakTie = this.oldBreakTie(node, clientId, refSeq);
+                const oldBreakTie = this.newBreakTie(node, clientId, refSeq);
                 const newBreakTie = this.newBreakTie2(node, clientId, refSeq);
                 if (newBreakTie !== oldBreakTie) {
-                    return this.newBreakTie2(node, clientId, refSeq);
+                    return this.newBreakTie(node, clientId, refSeq);
                 }
                 return oldBreakTie;
             }
@@ -2407,7 +2407,7 @@ export class MergeTree {
     }
 
 
-    public newBreakTie(segment: ISegment, clientId: number, refSeq: number) {
+    private newBreakTie(segment: ISegment, clientId: number, refSeq: number) {
         const branchId = this.getBranchId(clientId);
         const segmentBranchId = this.getBranchId(segment.clientId);
         const removalInfo = this.getRemovalInfo(branchId, segmentBranchId, segment);
@@ -2416,13 +2416,10 @@ export class MergeTree {
         if (clientId === this.collabWindow.clientId) {
             // segment will be sequenced earlier so move it right
             if (segment.seq === UnassignedSequenceNumber) {
-                if (removalInfo.removedSeq === UnassignedSequenceNumber) {
-                    return false;
-                }
                 return true;
             }
             // segment removed move past it
-            if (removalInfo.removedSeq !== undefined) {
+            if (removalInfo.removedSeq !== undefined && removalInfo.removedSeq !== UnassignedSequenceNumber) {
                 return false;
             }
             // segment sequenced earlier so move it right
@@ -2437,11 +2434,6 @@ export class MergeTree {
         if (removalInfo.removedSeq !== undefined) {
             if (removalInfo.removedSeq === UnassignedSequenceNumber) {
                 return true;
-            }
-            if (removalInfo.removedSeq > refSeq) {
-                if (removalInfo.removedClientId !== clientId && !removalInfo.removedClientOverlap?.includes(clientId)) {
-                    return true;
-                }
             }
             return false;
         }
