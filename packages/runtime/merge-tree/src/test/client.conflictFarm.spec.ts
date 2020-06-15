@@ -59,8 +59,8 @@ export const longOptions: IConflictFarmConfig = {
 describe("MergeTree.Client", () => {
     // tslint:disable: mocha-no-side-effect-code
     const opts =
-        defaultOptions;
-    // debugOptions;
+    //    defaultOptions;
+     debugOptions;
     // longOptions;
 
     // Generate a list of single character client names, support up to 69 clients
