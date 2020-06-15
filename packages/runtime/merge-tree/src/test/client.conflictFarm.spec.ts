@@ -29,7 +29,7 @@ const allOpertaions: TestOperation[] = [
 ];
 
 export const debugOptions: IConflictFarmConfig = {
-    minLength: { min: 2, max: 2 },
+    minLength: { min: 0, max: 0 },
     clients: { min: 3, max: 3 },
     opsPerRoundRange: { min: 1, max: 100 },
     rounds: 1000,

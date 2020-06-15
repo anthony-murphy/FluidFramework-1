@@ -27,6 +27,7 @@ function applyMessagesWithReconnect(
 ) {
     const replayWaterline = clients.reduce<number>((pv,cv)=>Math.max(pv, cv.getCurrentSeq()), 0);
 
+    // catch up all clients to the waterline
     while(messagesPerClient.some((msgs) =>msgs[0].sequenceNumber <= replayWaterline)) {
         for (let clientIndex = 0; clientIndex < clients.length; clientIndex++) {
             if (messagesPerClient[clientIndex][0].sequenceNumber <= replayWaterline) {
@@ -44,6 +45,8 @@ function applyMessagesWithReconnect(
         logger.log();
     }
 
+    // replay all ops above water line from all clients expect 1
+    // store the ops for client 1, to replay via reconnect
     let seq = replayWaterline;
     const reconnectClientMsgs: IMergeTreeOp[] = [];
     const messages = messagesPerClient[0];
@@ -62,6 +65,7 @@ function applyMessagesWithReconnect(
         }
     }
 
+    // rebuild ops for client 1 to simulate reconnect
     const reconnectMsgs: ISequencedDocumentMessage[][] = [];
     clients.forEach(() => reconnectMsgs.push([]));
     reconnectClientMsgs.forEach((op) => {
@@ -79,6 +83,7 @@ function applyMessagesWithReconnect(
         reconnectMsgs.forEach((m)=>m.push(newMsg));
     });
 
+    // apply the reconnect ops to all clients
     return applyMessages(seq, reconnectMsgs, clients, logger);
 }
 
