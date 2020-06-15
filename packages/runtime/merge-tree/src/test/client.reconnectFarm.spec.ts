@@ -58,9 +58,8 @@ function applyMessagesWithReconnect(
             reconnectClientMsgs.push(message.contents as IMergeTreeOp);
         } else {
             message.sequenceNumber = ++seq;
-            logger.log(message, (c) => {
-                c.applyMsg(message);
-            });
+            logger.log();
+            clients.forEach((c) => c.applyMsg(message));
             minSeq = message.minimumSequenceNumber;
         }
     }

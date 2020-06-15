@@ -5,7 +5,7 @@
 
 import assert from "assert";
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
-import { SegmentGroup } from "../";
+import { SegmentGroup } from "../mergeTree";
 import { UnassignedSequenceNumber } from "../constants";
 import { TestClient } from "./testClient";
 import { TestClientLogger } from "./testClientLogger";
@@ -234,13 +234,14 @@ describe("client.applyMsg", () => {
         const remoteClient = new TestClient();
         remoteClient.insertTextLocal(0, client.getText());
         remoteClient.startOrUpdateCollaboration("remoteUser");
-        const logger = new TestClientLogger([client, remoteClient]);
-        logger.log();
+        const clients = [client, remoteClient];
+        const logger = new TestClientLogger(clients);
         let seq = 0;
-        const initialMsg = client.makeOpMessage(client.insertTextLocal(0, "-"), ++seq);
-
-        logger.log(initialMsg, (c) => c.applyMsg(initialMsg));
+        logger.log();
+        const initialMsg = client.makeOpMessage(client.insertTextLocal(0, "$"), ++seq);
+        clients.forEach((c) => c.applyMsg(initialMsg));
         logger.validate();
+        logger.log();
 
         const messages = [
             client.makeOpMessage(client.insertTextLocal(0, "L"), ++seq),
@@ -252,7 +253,8 @@ describe("client.applyMsg", () => {
         logger.log();
         while (messages.length > 0) {
             const msg = messages.shift();
-            logger.log(msg, (c) => c.applyMsg(msg));
+            clients.forEach((c) => c.applyMsg(msg));
+            logger.log();
         }
 
         logger.validate();
@@ -267,9 +269,10 @@ describe("client.applyMsg", () => {
         clientC.startOrUpdateCollaboration("C");
 
         const clients = [clientA, clientB, clientC];
+        const logger = new TestClientLogger(clients);
+        logger.log();
 
         let seq = 0;
-
         const messages = [
             clientC.makeOpMessage(clientC.insertTextLocal(0, "c"), ++seq),
             clientC.makeOpMessage(clientC.removeRangeLocal(0, 1), ++seq),
@@ -277,13 +280,12 @@ describe("client.applyMsg", () => {
             clientC.makeOpMessage(clientC.insertTextLocal(0, "c"), ++seq),
         ];
 
-        const logger = new TestClientLogger(clients);
-        logger.log();
         while (messages.length > 0) {
             const msg = messages.shift();
-            logger.log(msg, (c) => {
+            clients.forEach((c) => {
                 c.applyMsg(msg);
             });
+            logger.log();
         }
 
         logger.validate();
@@ -313,9 +315,8 @@ describe("client.applyMsg", () => {
         logger.log();
         while (messages.length > 0) {
             const msg = messages.shift();
-            logger.log(msg, (c) => {
-                c.applyMsg(msg);
-            });
+            clients.forEach((c) => c.applyMsg(msg));
+            logger.log();
         }
 
         logger.validate();
@@ -338,14 +339,12 @@ describe("client.applyMsg", () => {
             clientC.makeOpMessage(clientC.removeRangeLocal(0, 1), ++seq),
             clientC.makeOpMessage(clientC.insertTextLocal(0, "c"), ++seq),
         ];
-
         const logger = new TestClientLogger(clients);
         logger.log();
         while (messages.length > 0) {
             const msg = messages.shift();
-            logger.log(msg, (c) => {
-                c.applyMsg(msg);
-            });
+            clients.forEach((c) => c.applyMsg(msg));
+            logger.log();
         }
 
         logger.validate();
@@ -371,9 +370,8 @@ describe("client.applyMsg", () => {
         logger.log();
         while (messages.length > 0) {
             const msg = messages.shift();
-            logger.log(msg, (c) => {
-                c.applyMsg(msg);
-            });
+            clients.forEach((c) => c.applyMsg(msg));
+            logger.log();
         }
 
         logger.validate();
