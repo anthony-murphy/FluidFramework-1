@@ -2285,10 +2285,10 @@ export class MergeTree {
         clientId: number, candidateSegment?: ISegment) {
         if (node.isLeaf()) {
             if (pos === 0) {
-                const newBreakTie = this.newBreakTie(node, clientId, refSeq);
+                const newBreakTie = this.newBreakTie3(node, clientId, refSeq);
                 const oldBreakTie = this.oldBreakTie(node, clientId, refSeq);
                 if (newBreakTie !== oldBreakTie) {
-                    return this.newBreakTie(node, clientId, refSeq);
+                    return this.oldBreakTie(node, clientId, refSeq);
                 }
                 return newBreakTie;
             }
@@ -2383,7 +2383,70 @@ export class MergeTree {
         assert.fail("should have handled every case");
     }
 
-    private newBreakTie(segment: ISegment, clientId: number, refSeq: number) {
+    public newBreakTie3(segment: ISegment, clientId: number, refSeq: number) {
+        const branchId = this.getBranchId(clientId);
+        const segmentBranchId = this.getBranchId(segment.clientId);
+        const removalInfo = this.getRemovalInfo(branchId, segmentBranchId, segment);
+
+        if (clientId === this.collabWindow.clientId) {
+            // for inserts we should only ever need to break tie on
+            // removed segments, and we should always move past them
+            assert.notEqual(removalInfo.removedSeq, undefined);
+            return false;
+        }
+
+        // go through all the states the current segment could be in order
+        if (segment.seq === UnassignedSequenceNumber) {
+            // non local changes should always move passed unacked segments
+            return false;
+        } else if (segment.seq > refSeq) {
+            if (segment.clientId === clientId) {
+                // it is there segment, so they saw it before it was sequenced
+                if (removalInfo.removedSeq !== undefined) {
+                    if (removalInfo.removedSeq === UnassignedSequenceNumber) {
+                        assert.fail(this.nodeLength(segment, refSeq, clientId).toString());
+                    }
+                    else if (removalInfo.removedClientId === clientId || removalInfo.removedClientOverlap?.includes(clientId)) {
+                        // they also removed it, so they saw that too
+                        return false;
+                    }
+                    assert.fail("unhandled remove case");
+                }
+                return true;
+            }
+            if (removalInfo.removedSeq !== undefined) {
+                if (removalInfo.removedSeq === UnassignedSequenceNumber) {
+                    // this insert will be seen before the delete, so come before it
+                    return true;
+                }
+                // the insert and delete happend before it could be see by this, so just move past
+                return false;
+            }
+            // something fishy here. the segment is insert after this insert, so we should come after it
+            return true;
+        }else if(segment.seq <= refSeq) {
+            if (removalInfo.removedSeq !== undefined) {
+                if (removalInfo.removedSeq === UnassignedSequenceNumber) {
+                    // remove not acked, so stop here
+                    return true;
+                } else if (removalInfo.removedClientId === clientId || removalInfo.removedClientOverlap?.includes(clientId)) {
+                    // it was my remove so move past
+                    return false;
+                } else if (removalInfo.removedSeq > refSeq) {
+                    // remove happend after what i saw, so stop
+                    return assert.fail(this.nodeLength(segment, refSeq, clientId).toString());
+                } else if (removalInfo.removedSeq <= refSeq) {
+                    // remove should have been seen so move past
+                    return false;
+                }
+                assert.fail("what case is this?");
+            }
+            return true;
+        }
+        assert.fail("should have handled every case");
+    }
+
+    public newBreakTie(segment: ISegment, clientId: number, refSeq: number) {
         const branchId = this.getBranchId(clientId);
         const segmentBranchId = this.getBranchId(segment.clientId);
         const removalInfo = this.getRemovalInfo(branchId, segmentBranchId, segment);
@@ -2428,14 +2491,23 @@ export class MergeTree {
         const branchId = this.getBranchId(clientId);
         const segmentBranchId = this.getBranchId(segment.clientId);
         const removalInfo = this.getRemovalInfo(branchId, segmentBranchId, segment);
-        if (removalInfo.removedSeq
-            && removalInfo.removedSeq <= refSeq
-            && removalInfo.removedSeq !== UnassignedSequenceNumber) {
+
+        if (clientId === this.collabWindow.clientId) {
+            // for inserts we should only ever need to break tie on
+            // removed segments, and we should always move past them
+            assert.notEqual(removalInfo.removedSeq, undefined);
             return false;
         }
 
-        // local change see everything
-        if (clientId === this.collabWindow.clientId) {
+        if (removalInfo.removedSeq && removalInfo.removedSeq !== UnassignedSequenceNumber) {
+            return false;
+        }
+
+        if (segment.seq === UnassignedSequenceNumber) {
+            return false;
+        }
+
+        if (segment.seq <= refSeq) {
             return true;
         }
 
