@@ -9,6 +9,7 @@ import random from "random-js";
 import { LocalReference } from "../localReference";
 import { IMergeTreeOp } from "../ops";
 import { TextSegment } from "../textSegment";
+import { MergeTree } from "../mergeTree";
 import { TestClient } from "./testClient";
 import { TestClientLogger } from "./testClientLogger";
 
@@ -63,8 +64,14 @@ export function runMergeTreeOperationRunner(
     apply = applyMessages) {
     let seq = startingSeq;
 
+    MergeTree.options.runZamboni = false;
+    MergeTree.zamboniSegmentsMaxCount = 999999;
+
     // eslint-disable-next-line @typescript-eslint/unbound-method
     doOverRange(config.opsPerRoundRange, config.growthFunc, (opsPerRound) => {
+        MergeTree.options.runZamboni = true;
+        clients.forEach((c) => c.updateMinSeq(seq));
+        MergeTree.options.runZamboni = false;
         if (config.incrementalLog) {
             // tslint:disable-next-line: max-line-length
             console.log(`MinLength: ${minLength} Clients: ${clients.length} Ops: ${opsPerRound} Seq: ${seq}`);
@@ -101,9 +108,10 @@ export function generateOperationMessagesForClients(
     minLength: number,
     operations: readonly TestOperation[]) {
     const minimumSequenceNumber = startingSeq;
+
     let seq = startingSeq;
     const messagesPerClient: ISequencedDocumentMessage[][] = [];
-            clients.forEach((c) => messagesPerClient.push([]));
+    clients.forEach((c) => messagesPerClient.push([]));
     for (let i = 0; i < opsPerRound; i++) {
         // pick a client greater than 0, client 0 only applies remote ops
         // and is our baseline

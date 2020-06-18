@@ -79,8 +79,6 @@ describe("MergeTree.Client", () => {
 
             let seq = 0;
             while (clients.length < opts.clients.max) {
-                clients.forEach((c) => c.updateMinSeq(seq));
-
                 // Add double the number of clients each iteration
                 const targetClients = Math.max(opts.clients.min, opts.growthFunc(clients.length));
                 for (let cc = clients.length; cc < targetClients; cc++) {

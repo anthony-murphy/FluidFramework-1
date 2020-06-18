@@ -63,7 +63,6 @@ export type IMergeNode = IMergeBlock | ISegment;
 
 // Node with segments as children
 export interface IMergeBlock extends IMergeNodeCommon {
-    needsScour?: boolean;
     childCount: number;
     children: IMergeNode[];
     partialLengths?: PartialSequenceLengths;
@@ -1109,12 +1108,13 @@ export class MergeTree {
     static TextSegmentGranularity = 256;
 
     static zamboniSegmentsMaxCount = 2;
-    static options = {
+    public static options = {
         incrementalUpdate: true,
         insertAfterRemovedSegs: true,
         measureOrdinalTime: true,
         measureWindowTime: true,
-        zamboniSegments: true,
+        collectZamboniSegments: true,
+        runZamboni: true,
     };
     static traceAppend = false;
     static traceZRemove = false;
@@ -1325,8 +1325,7 @@ export class MergeTree {
 
         // TODO: 'seq' may be less than the current sequence number when inserting pre-ACKed
         //       segments from a snapshot.  We currently skip these for now.
-        if (segment.parent.needsScour !== true && seq > this.collabWindow.currentSeq) {
-            segment.parent.needsScour = true;
+        if (seq > this.collabWindow.currentSeq) {
             this.segmentsToScour.add({ segment, maxSeq: seq });
         }
     }
@@ -1463,6 +1462,9 @@ export class MergeTree {
         if (!this.collabWindow.collaborating) {
             return;
         }
+        if (MergeTree.options.runZamboni !== true) {
+            return;
+        }
         let clockStart;
         if (MergeTree.options.measureWindowTime) {
             clockStart = clock();
@@ -1475,14 +1477,13 @@ export class MergeTree {
             }
             segmentToScour = this.segmentsToScour.get();
             // Only skip scouring if needs scour is explicitly false, not true or undefined
-            if (segmentToScour.segment.parent && segmentToScour.segment.parent.needsScour !== false) {
+            if (segmentToScour.segment.parent) {
                 const block = segmentToScour.segment.parent;
                 const childrenCopy: IMergeNode[] = [];
                 // console.log(`scouring from ${segmentToScour.segment.seq}`);
                 this.scourNode(block, childrenCopy);
                 // This will avoid the cost of re-scouring nodes
                 // that have recently been scoured
-                block.needsScour = false;
 
                 const newChildCount = childrenCopy.length;
 
@@ -1763,7 +1764,7 @@ export class MergeTree {
 
         if (minSeq > this.collabWindow.minSeq) {
             this.collabWindow.minSeq = minSeq;
-            if (MergeTree.options.zamboniSegments) {
+            if (MergeTree.options.collectZamboniSegments) {
                 this.zamboniSegments();
             }
             if (this.minSeqListeners && this.minSeqListeners.count()) {
@@ -1941,7 +1942,7 @@ export class MergeTree {
             }
             pendingSegmentGroup.segments.map((pendingSegment) => {
                 overwrite = !pendingSegment.ack(pendingSegmentGroup, opArgs, this) || overwrite;
-                if (MergeTree.options.zamboniSegments) {
+                if (MergeTree.options.collectZamboniSegments) {
                     this.addToLRUSet(pendingSegment, seq);
                 }
                 if (!nodesToUpdate.includes(pendingSegment.parent)) {
@@ -1954,7 +1955,7 @@ export class MergeTree {
                 // NodeUpdatePathLengths(node, seq, clientId, true);
             }
         }
-        if (MergeTree.options.zamboniSegments) {
+        if (MergeTree.options.collectZamboniSegments) {
             this.zamboniSegments();
         }
     }
@@ -2031,7 +2032,7 @@ export class MergeTree {
         if (MergeTree.traceOrdinals) {
             this.ordinalIntegrity();
         }
-        if (this.collabWindow.collaborating && MergeTree.options.zamboniSegments &&
+        if (this.collabWindow.collaborating && MergeTree.options.collectZamboniSegments &&
             (seq !== UnassignedSequenceNumber)) {
             this.zamboniSegments();
         }
@@ -2214,7 +2215,7 @@ export class MergeTree {
                 // locSegment.seq > this.collabWindow.currentSeq
                 // tslint:disable-next-line: one-line
                 else if ((locSegment.seq > this.collabWindow.minSeq) &&
-                    MergeTree.options.zamboniSegments) {
+                    MergeTree.options.collectZamboniSegments) {
                     this.addToLRUSet(locSegment, locSegment.seq);
                 }
             }
@@ -2293,205 +2294,16 @@ export class MergeTree {
         clientId: number, seq: number) {
         if (node.isLeaf()) {
             if (pos === 0) {
-                const newBreakTie = this.newBreakTie3(node, clientId, refSeq);
                 const oldBreakTie = this.oldBreakTie(node, clientId, refSeq, seq);
-                if (newBreakTie !== oldBreakTie) {
+                if(node.removedSeq !== undefined && oldBreakTie) {
                     return this.oldBreakTie(node, clientId, refSeq, seq);
+                } else {
+                    return oldBreakTie;
                 }
-                return newBreakTie;
             }
             return false;
         } else {
             return true;
-        }
-    }
-    public newBreakTie2(segment: ISegment, clientId: number, refSeq: number) {
-        const branchId = this.getBranchId(clientId);
-        const segmentBranchId = this.getBranchId(segment.clientId);
-        const removalInfo = this.getRemovalInfo(branchId, segmentBranchId, segment);
-
-        const incomingIsLocal = clientId === this.collabWindow.clientId;
-        // go through all the states the current segment could be in order
-        if (segment.seq === UnassignedSequenceNumber) {
-            if (incomingIsLocal) {
-                if (removalInfo.removedSeq === UnassignedSequenceNumber || removalInfo.removedClientOverlap?.includes(clientId)) {
-                    // the incoming will be sequenced after the removed, so move past it
-                    return false;
-                } else if (removalInfo.removedSeq !== undefined) {
-                    assert.fail("An unassigned segment can only have an unassigned remove");
-                }
-                assert.fail(this.nodeLength(segment, refSeq, clientId).toString());
-            } else {
-                // non local changes should always move passed unacked segments
-                return false;
-            }
-        } else if (segment.seq > refSeq) {
-            if(incomingIsLocal) {
-                assert.fail("A local segment cannot have a seq beyond the refseq of local insert");
-            } else {
-                if (segment.clientId === clientId) {
-                    // it is there segment, so they saw it before it was sequenced
-                    if (removalInfo.removedSeq !== undefined) {
-                        if (removalInfo.removedSeq === UnassignedSequenceNumber) {
-                            return assert.fail(this.nodeLength(segment, refSeq, clientId).toString());
-                        }
-                        else if (removalInfo.removedClientId === clientId || removalInfo.removedClientOverlap?.includes(clientId)) {
-                            // they also removed it, so they saw that too
-                            return false;
-                        }
-                        assert.fail("unhandled remove case");
-                    }
-                    return true;
-                }
-                // something fishy here. the segment is insert after this insert, so we should come after it
-                return true;
-            }
-        }else if(segment.seq === refSeq) {
-            if (incomingIsLocal) {
-                if (removalInfo.removedSeq === UnassignedSequenceNumber || removalInfo.removedClientOverlap?.includes(clientId)) {
-                    // the incoming will be sequenced after the removed, so move past it
-                    return false;
-                }
-                else if (removalInfo.removedSeq !== undefined) {
-                    assert.fail("local segment with seq matching ref seq cannot have a removed seq other than unassigned");
-                }
-                // the segment is sequenced, so local changes should come before it
-                return assert.fail(this.nodeLength(segment, refSeq, clientId).toString());
-            } else {
-                return true;
-            }
-        }else if(segment.seq < refSeq) {
-            if(incomingIsLocal) {
-                if (removalInfo.removedSeq !== undefined) {
-                    // the segment is acked and removed, so a local insert will always move past it
-                    return false;
-                }
-                // the segment is sequenced, so local changes should come before it
-                return assert.fail(this.nodeLength(segment, refSeq, clientId).toString());
-            } else {
-                if (removalInfo.removedSeq !== undefined) {
-                    if (removalInfo.removedSeq === UnassignedSequenceNumber) {
-                        // remove not acked, so stop here
-                        return true;
-                    } else if (removalInfo.removedClientId === clientId || removalInfo.removedClientOverlap?.includes(clientId)) {
-                        // it was my remove so move past
-                        return false;
-                    } else if (removalInfo.removedSeq > refSeq) {
-                        // remove happend after what i saw, so stop
-                        return assert.fail(this.nodeLength(segment, refSeq, clientId).toString());
-                    } else if (removalInfo.removedSeq <= refSeq) {
-                        // remove should have been seen so move past
-                        return false;
-                    }
-                    assert.fail("what case is this?");
-                }
-                return true;
-            }
-        }
-        assert.fail("should have handled every case");
-    }
-
-    public newBreakTie3(segment: ISegment, clientId: number, refSeq: number) {
-        const branchId = this.getBranchId(clientId);
-        const segmentBranchId = this.getBranchId(segment.clientId);
-        const removalInfo = this.getRemovalInfo(branchId, segmentBranchId, segment);
-
-        if (clientId === this.collabWindow.clientId) {
-            // for inserts we should only ever need to break tie on
-            // removed segments, and we should always move past them
-            assert.notEqual(removalInfo.removedSeq, undefined);
-            return false;
-        }
-
-        // go through all the states the current segment could be in order
-        if (segment.seq === UnassignedSequenceNumber) {
-            // non local changes should always move passed unacked segments
-            return false;
-        } else if (segment.seq > refSeq) {
-            if (segment.clientId === clientId) {
-                // it is there segment, so they saw it before it was sequenced
-                if (removalInfo.removedSeq !== undefined) {
-                    if (removalInfo.removedSeq === UnassignedSequenceNumber) {
-                        assert.fail(this.nodeLength(segment, refSeq, clientId).toString());
-                    }
-                    else if (removalInfo.removedClientId === clientId || removalInfo.removedClientOverlap?.includes(clientId)) {
-                        // they also removed it, so they saw that too
-                        return false;
-                    }
-                    assert.fail("unhandled remove case");
-                }
-                return true;
-            }
-            if (removalInfo.removedSeq !== undefined) {
-                if (removalInfo.removedSeq === UnassignedSequenceNumber) {
-                    // this insert will be seen before the delete, so come before it
-                    return true;
-                }
-                // the insert and delete happend before it could be see by this, so just move past
-                return false;
-            }
-            // something fishy here. the segment is insert after this insert, so we should come after it
-            return true;
-        }else if(segment.seq <= refSeq) {
-            if (removalInfo.removedSeq !== undefined) {
-                if (removalInfo.removedSeq === UnassignedSequenceNumber) {
-                    // remove not acked, so stop here
-                    return true;
-                } else if (removalInfo.removedClientId === clientId || removalInfo.removedClientOverlap?.includes(clientId)) {
-                    // it was my remove so move past
-                    return false;
-                } else if (removalInfo.removedSeq > refSeq) {
-                    // remove happend after what i saw, so stop
-                    return assert.fail(this.nodeLength(segment, refSeq, clientId).toString());
-                } else if (removalInfo.removedSeq <= refSeq) {
-                    // remove should have been seen so move past
-                    return false;
-                }
-                assert.fail("what case is this?");
-            }
-            return true;
-        }
-        assert.fail("should have handled every case");
-    }
-
-    public newBreakTie(segment: ISegment, clientId: number, refSeq: number) {
-        const branchId = this.getBranchId(clientId);
-        const segmentBranchId = this.getBranchId(segment.clientId);
-        const removalInfo = this.getRemovalInfo(branchId, segmentBranchId, segment);
-
-        if (clientId === this.collabWindow.clientId) {
-            // for inserts we should only ever need to break tie on
-            // removed segments, and we should always move past them
-            assert.notEqual(removalInfo.removedSeq, undefined);
-            return false;
-        } else {
-            if (segment.seq === UnassignedSequenceNumber) {
-                // we are sequenced, and the segment is not, so we will come after
-                return false;
-            }
-            if (removalInfo.removedClientId === clientId || removalInfo.removedClientOverlap?.includes(clientId)) {
-                // i removed it, so i should see the remove, so move past
-                return false;
-            }
-            if (removalInfo.removedSeq === undefined) {
-                if (segment.seq > refSeq) {
-                    // the segment was sequenced before i was, but i can't see it, so push it right
-                    return true;
-                }
-                assert.fail(this.nodeLength(segment, refSeq, clientId).toString());
-            }
-
-            if (removalInfo.removedSeq !== undefined) {
-                if (removalInfo.removedSeq !== UnassignedSequenceNumber) {
-                    return false;
-                } else if (segment.seq > refSeq) {
-                    return true;
-                }
-                assert.fail(this.nodeLength(segment, refSeq, clientId).toString());
-            } else if (segment.seq > refSeq) {
-                return true;
-            }
-            assert.fail(this.nodeLength(segment, refSeq, clientId).toString());
         }
     }
 
@@ -2843,7 +2655,7 @@ export class MergeTree {
                 if (seq === UnassignedSequenceNumber) {
                     segmentGroup = this.addToPendingList(segment, segmentGroup, localSeq);
                 } else {
-                    if (MergeTree.options.zamboniSegments) {
+                    if (MergeTree.options.collectZamboniSegments) {
                         this.addToLRUSet(segment, seq);
                     }
                 }
@@ -2863,7 +2675,7 @@ export class MergeTree {
                 });
         }
         if (this.collabWindow.collaborating && (seq !== UnassignedSequenceNumber)) {
-            if (MergeTree.options.zamboniSegments) {
+            if (MergeTree.options.collectZamboniSegments) {
                 this.zamboniSegments();
             }
         }
@@ -2916,7 +2728,7 @@ export class MergeTree {
                 if ((removalInfo.removedSeq === UnassignedSequenceNumber) && (clientId === this.collabWindow.clientId)) {
                     segmentGroup = this.addToPendingList(segment, segmentGroup, localSeq);
                 } else {
-                    if (MergeTree.options.zamboniSegments) {
+                    if (MergeTree.options.collectZamboniSegments) {
                         this.addToLRUSet(segment, seq);
                     }
                 }
@@ -2977,7 +2789,7 @@ export class MergeTree {
                 });
         }
         if (this.collabWindow.collaborating && (seq !== UnassignedSequenceNumber)) {
-            if (MergeTree.options.zamboniSegments) {
+            if (MergeTree.options.collectZamboniSegments) {
                 this.zamboniSegments();
             }
         }
