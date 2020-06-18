@@ -2312,42 +2312,34 @@ export class MergeTree {
         const segmentBranchId = this.getBranchId(segment.clientId);
         const removalInfo = this.getRemovalInfo(branchId, segmentBranchId, segment);
 
-        if (clientId === this.collabWindow.clientId) {
-            // for inserts we should only ever need to break tie on
-            // removed segments, and we should always move past them
-            assert.notEqual(removalInfo.removedSeq, undefined);
+        // if removedSeq is UnassignedSequenceNumber it impossible anyone saw the delete before this op
+        // otherwise everyone will see the delete before this op
+        if (removalInfo.removedSeq && removalInfo.removedSeq !== UnassignedSequenceNumber) {
             return false;
-        }
-        // if the client removed it, move past it
-        if (removalInfo.removedSeq && (segment.removedClientId === clientId || segment.removedClientOverlap?.includes(clientId))) {
-            return false;
-        }
-
-        // if removedSeq is UnassignedSequenceNumber it impossible they saw the delete
-        if (removalInfo.removedSeq && removalInfo.removedSeq !== UnassignedSequenceNumber && removalInfo.removedSeq <= refSeq) {
-            return false;
-        }
-
-        // if the client inserted it, come before it
-        if (clientId === segment.clientId) {
-            return true;
         }
 
         // this seg hasn't arrived when this op was made
-        if (segment.seq === UnassignedSequenceNumber || segment.seq > refSeq) {
-            if (segment.refSeq === refSeq) {
-                if (this.getLongClientId(clientId) > this.getLongClientId(segment.clientId)) {
-                    return false;
-                } else {
-                    return true;
-                }
-            }
-            if (segment.refSeq > refSeq) {
+        if (segment.refSeq === refSeq) {
+            // the internal client id numbers are not comparable
+            // as they are different on each client, so each client
+            // would get a different result. However, if they are equal
+            // then we know they both map to the same client, and we can
+            // avoid the string compare.
+            // this also preserves the behavior of clients and their own changes
+            // as the refseqs, and client id's will be equal, so the later op
+            // will push the earlier op
+            if (clientId === segment.clientId
+                || this.getLongClientId(clientId) <= this.getLongClientId(segment.clientId)) {
+                return true;
+            } else {
                 return false;
             }
-            if(segment.refSeq < refSeq) {
-                return true;
-            }
+        }
+        if (segment.refSeq > refSeq) {
+            return false;
+        }
+        if(segment.refSeq < refSeq) {
+            return true;
         }
 
         assert.fail();
