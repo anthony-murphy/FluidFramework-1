@@ -48,6 +48,7 @@ export class TestClient extends Client {
     public static useCheckQ = false;
 
     public static async createFromClientSnapshot(client1: TestClient, newLongClientId: string): Promise<TestClient> {
+        client1.mergeTree.zamboniSegments(Number.MAX_SAFE_INTEGER);
         const snapshot = new SnapshotLegacy(client1.mergeTree, DebugLogger.create("fluid:snapshot"));
         snapshot.extractSync();
         const snapshotTree = snapshot.emit([]);

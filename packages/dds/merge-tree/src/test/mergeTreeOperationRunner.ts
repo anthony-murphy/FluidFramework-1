@@ -76,6 +76,7 @@ export function runMergeTreeOperationRunner(
             const logger = new TestClientLogger(
                 clients,
                 `Clients: ${clients.length} Ops: ${opsPerRound} Round: ${round}`);
+            logger.log();
             clients.forEach((c) => c.mergeTree.zamboniSegments(Number.MAX_SAFE_INTEGER));
             logger.log();
             logger.validate("Validate after Zamboni");

@@ -90,7 +90,7 @@ export interface ISegment extends IMergeNodeCommon, IRemovalInfo {
     readonly segmentGroups: SegmentGroupCollection;
     readonly trackingCollection: TrackingGroupCollection;
     propertyManager: SegmentPropertiesManager;
-    localSeq?: number
+    localSeq?: number;
     localRemovedSeq?: number;
     seq?: number;  // If not present assumed to be previous to window min
     clientId?: number;
@@ -2295,7 +2295,7 @@ export class MergeTree {
             return false;
         }
 
-        const curSegSeq = segment.seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER - 1 : segment.seq;
+        const curSegSeq = segment.seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER - 1 : segment.seq ?? 0;
         const newSegSeq = seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER  : seq;
 
         return newSegSeq > curSegSeq;
@@ -2651,7 +2651,6 @@ export class MergeTree {
                     if (removalInfo.removedSeq === UnassignedSequenceNumber) {
                         // Will only happen on local branch (brid === this.localBranchId)
                         // replace because comes later
-                        this.addOverlappingClient(removalInfo, removalInfo.removedClientId);
                         removalInfo.removedClientId = clientId;
                         removalInfo.removedSeq = seq;
                         segment.localRemovedSeq = undefined;
