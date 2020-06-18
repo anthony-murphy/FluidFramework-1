@@ -93,7 +93,6 @@ export interface ISegment extends IMergeNodeCommon, IRemovalInfo {
     localSeq?: number
     localRemovedSeq?: number;
     seq?: number;  // If not present assumed to be previous to window min
-    refSeq?: number;
     clientId?: number;
     localRefs?: LocalReferenceCollection;
     removalsByBranch?: IRemovalInfo[];
@@ -447,7 +446,6 @@ export abstract class BaseSegment extends MergeNode implements ISegment {
     abstract readonly type: string;
     localSeq?: number;
     localRemovedSeq?: number;
-    refSeq?: number;
 
     addProperties(newProps: Properties.PropertySet, op?: ops.ICombiningOp, seq?: number, collabWindow?: CollaborationWindow) {
         if (!this.propertyManager) {
@@ -472,7 +470,6 @@ export abstract class BaseSegment extends MergeNode implements ISegment {
         // TODO: copy removed client overlap and branch removal info
         b.removedSeq = this.removedSeq;
         b.seq = this.seq;
-        b.refSeq = this.seq;
     }
 
     canAppend(segment: ISegment) {
@@ -557,7 +554,6 @@ export abstract class BaseSegment extends MergeNode implements ISegment {
                 leafSegment.seq = this.seq;
                 leafSegment.localSeq = this.localSeq;
                 leafSegment.clientId = this.clientId;
-                leafSegment.refSeq = this.refSeq;
                 if (this.removedClientOverlap) {
                     leafSegment.removedClientOverlap = [...this.removedClientOverlap];
                 }
@@ -1458,11 +1454,8 @@ export class MergeTree {
         }
     }
 
-    private zamboniSegments(zamboniSegmentsMaxCount = MergeTree.zamboniSegmentsMaxCount) {
+    public zamboniSegments(zamboniSegmentsMaxCount = MergeTree.zamboniSegmentsMaxCount) {
         if (!this.collabWindow.collaborating) {
-            return;
-        }
-        if (MergeTree.options.runZamboni !== true) {
             return;
         }
         let clockStart;
@@ -1764,7 +1757,7 @@ export class MergeTree {
 
         if (minSeq > this.collabWindow.minSeq) {
             this.collabWindow.minSeq = minSeq;
-            if (MergeTree.options.collectZamboniSegments) {
+            if (MergeTree.options.runZamboni) {
                 this.zamboniSegments();
             }
             if (this.minSeqListeners && this.minSeqListeners.count()) {
@@ -1955,7 +1948,7 @@ export class MergeTree {
                 // NodeUpdatePathLengths(node, seq, clientId, true);
             }
         }
-        if (MergeTree.options.collectZamboniSegments) {
+        if (MergeTree.options.runZamboni) {
             this.zamboniSegments();
         }
     }
@@ -2032,7 +2025,7 @@ export class MergeTree {
         if (MergeTree.traceOrdinals) {
             this.ordinalIntegrity();
         }
-        if (this.collabWindow.collaborating && MergeTree.options.collectZamboniSegments &&
+        if (this.collabWindow.collaborating && MergeTree.options.runZamboni &&
             (seq !== UnassignedSequenceNumber)) {
             this.zamboniSegments();
         }
@@ -2100,7 +2093,7 @@ export class MergeTree {
             // Find the nearest 0 length seg we can insert over, as all other inserts
             // go near to far
             if (backLen === 0) {
-                if (this.breakTie(0, 0, backSeg, this.collabWindow.currentSeq, clientId, UnassignedSequenceNumber)) {
+                if (this.breakTie(backSeg, UnassignedSequenceNumber, this.collabWindow.currentSeq, clientId)) {
                     startSeg = backSeg;
                 }
                 return true;
@@ -2110,7 +2103,6 @@ export class MergeTree {
         const localSeq = ++this.collabWindow.localSeq;
         insertSegment.seq = UnassignedSequenceNumber;
         insertSegment.localSeq = localSeq;
-        insertSegment.refSeq = this.collabWindow.currentSeq;
         insertSegment.clientId = clientId;
 
         if (Marker.is(insertSegment)) {
@@ -2239,7 +2231,6 @@ export class MergeTree {
             if (newSegment.cachedLength > 0) {
                 newSegment.seq = seq;
                 newSegment.localSeq = localSeq;
-                newSegment.refSeq = refSeq;
                 newSegment.clientId = clientId;
                 if (Marker.is(newSegment)) {
                     const markerId = newSegment.getId();
@@ -2288,26 +2279,12 @@ export class MergeTree {
         this.updateRoot(splitNode);
     }
 
-    // Assume called only when pos == len
-    private breakTie(
-        pos: number, len: number, node: IMergeNode, refSeq: number,
-        clientId: number, seq: number) {
-        if (node.isLeaf()) {
-            if (pos === 0) {
-                const oldBreakTie = this.oldBreakTie(node, clientId, refSeq, seq);
-                if(node.removedSeq !== undefined && oldBreakTie) {
-                    return this.oldBreakTie(node, clientId, refSeq, seq);
-                } else {
-                    return oldBreakTie;
-                }
-            }
-            return false;
-        } else {
+    private breakTie(node: IMergeNode, seq: number, refSeq: number, clientId: number) {
+        if(!node.isLeaf()) {
             return true;
         }
-    }
 
-    public oldBreakTie(segment: ISegment, clientId: number, refSeq: number, seq: number) {
+        const segment = node;
         const branchId = this.getBranchId(clientId);
         const segmentBranchId = this.getBranchId(segment.clientId);
         const removalInfo = this.getRemovalInfo(branchId, segmentBranchId, segment);
@@ -2318,29 +2295,10 @@ export class MergeTree {
             return false;
         }
 
-        // this seg hasn't arrived when this op was made
-        if (segment.refSeq === refSeq) {
-            // the internal client id numbers are not comparable
-            // as they are different on each client, so each client
-            // would get a different result. However, if they are equal
-            // then we know they both map to the same client, and we can
-            // avoid the string compare.
-            // this also preserves the behavior of clients and their own changes
-            // as the refseqs, and client id's will be equal, so the later op
-            // will push the earlier op
-            if (clientId === segment.clientId
-                || this.getLongClientId(clientId) <= this.getLongClientId(segment.clientId)) {
-                return true;
-            } else {
-                return false;
-            }
-        }
-        if (segment.refSeq > refSeq) {
-            return false;
-        }
-        if(segment.refSeq < refSeq) {
-            return true;
-        }
+        const curSegSeq = segment.seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER - 1 : segment.seq;
+        const newSegSeq = seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER  : seq;
+
+        return newSegSeq > curSegSeq;
 
         assert.fail();
     }
@@ -2437,7 +2395,7 @@ export class MergeTree {
                 console.log(`@tcli: ${glc(this, this.collabWindow.clientId)} len: ${len} pos: ${pos} ${segInfo}`);
             }
 
-            if ((pos < len) || ((pos === len) && this.breakTie(pos, len, child, refSeq, clientId, seq))) {
+            if ((pos < len) || ((pos === len) && pos === 0 && this.breakTie(child, seq, refSeq, clientId))) {
                 // Found entry containing pos
                 found = true;
                 if (!child.isLeaf()) {
@@ -2667,7 +2625,7 @@ export class MergeTree {
                 });
         }
         if (this.collabWindow.collaborating && (seq !== UnassignedSequenceNumber)) {
-            if (MergeTree.options.collectZamboniSegments) {
+            if (MergeTree.options.runZamboni) {
                 this.zamboniSegments();
             }
         }
@@ -2781,7 +2739,7 @@ export class MergeTree {
                 });
         }
         if (this.collabWindow.collaborating && (seq !== UnassignedSequenceNumber)) {
-            if (MergeTree.options.collectZamboniSegments) {
+            if (MergeTree.options.runZamboni) {
                 this.zamboniSegments();
             }
         }

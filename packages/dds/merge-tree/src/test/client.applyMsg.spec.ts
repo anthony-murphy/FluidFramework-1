@@ -5,7 +5,7 @@
 
 import assert from "assert";
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
-import { SegmentGroup, MergeTree } from "../mergeTree";
+import { SegmentGroup } from "../mergeTree";
 import { UnassignedSequenceNumber } from "../constants";
 import { TestClient } from "./testClient";
 import { TestClientLogger } from "./testClientLogger";
@@ -14,7 +14,6 @@ describe("client.applyMsg", () => {
     let client: TestClient;
 
     beforeEach(() => {
-        MergeTree.options.collectZamboniSegments = false;
         client = new TestClient();
         client.insertTextLocal(0, "hello world");
         client.startOrUpdateCollaboration(localUserLongId);

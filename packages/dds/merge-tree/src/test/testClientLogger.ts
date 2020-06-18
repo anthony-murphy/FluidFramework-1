@@ -49,7 +49,7 @@ export class TestClientLogger {
         }
     }
 
-    public validate() {
+    public validate(message?: string) {
         const baseText = this.clients[0].getText();
         this.clients.forEach(
             (c) => {
@@ -60,15 +60,18 @@ export class TestClientLogger {
                         c.getText(),
                         baseText,
                         // eslint-disable-next-line max-len
-                        `${this.toString()}\nClient ${c.longClientId} does not match client ${this.clients[0].longClientId}`);
+                        `${this.toString(message)}\nClient ${c.longClientId} does not match client ${this.clients[0].longClientId}`);
                 }
             });
     }
 
-    public toString() {
+    public toString(message?: string) {
         let str = "\n";
         if (this.title) {
             str += `${this.title}\n`;
+        }
+        if(message) {
+            str += `${message}\n`;
         }
 
         str += "\

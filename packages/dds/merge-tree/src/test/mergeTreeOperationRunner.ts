@@ -65,13 +65,9 @@ export function runMergeTreeOperationRunner(
     let seq = startingSeq;
 
     MergeTree.options.runZamboni = false;
-    MergeTree.zamboniSegmentsMaxCount = 999999;
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     doOverRange(config.opsPerRoundRange, config.growthFunc, (opsPerRound) => {
-        MergeTree.options.runZamboni = true;
-        clients.forEach((c) => c.updateMinSeq(seq));
-        MergeTree.options.runZamboni = false;
         if (config.incrementalLog) {
             // tslint:disable-next-line: max-line-length
             console.log(`MinLength: ${minLength} Clients: ${clients.length} Ops: ${opsPerRound} Seq: ${seq}`);
@@ -80,7 +76,10 @@ export function runMergeTreeOperationRunner(
             const logger = new TestClientLogger(
                 clients,
                 `Clients: ${clients.length} Ops: ${opsPerRound} Round: ${round}`);
+            clients.forEach((c) => c.mergeTree.zamboniSegments(Number.MAX_SAFE_INTEGER));
             logger.log();
+            logger.validate("Validate after Zamboni");
+
             const messageData = generateOperationMessagesForClients(
                 mt,
                 seq,

@@ -29,17 +29,17 @@ const allOpertaions: TestOperation[] = [
 ];
 
 export const debugOptions: IConflictFarmConfig = {
-    minLength: { min: 0, max: 0 },
-    clients: { min: 3, max: 3 },
-    opsPerRoundRange: { min: 1, max: 100 },
-    rounds: 1000,
+    minLength: { min: 1, max: 1 },
+    clients: { min: 2, max: 3 },
+    opsPerRoundRange: { min: 1, max: 128 },
+    rounds: 8,
     operations: allOpertaions,
     growthFunc: (input: number) => input + 1,
     incrementalLog: true,
 };
 
 export const defaultOptions: IConflictFarmConfig = {
-    minLength: { min: 1, max: 512 },
+    minLength: { min: 1, max: 2 },
     clients: { min: 1, max: 8 },
     opsPerRoundRange: { min: 1, max: 128 },
     rounds: 8,
@@ -59,8 +59,8 @@ export const longOptions: IConflictFarmConfig = {
 describe("MergeTree.Client", () => {
     // tslint:disable: mocha-no-side-effect-code
     const opts =
-    //    defaultOptions;
-     debugOptions;
+    defaultOptions;
+    // debugOptions;
     // longOptions;
 
     // Generate a list of single character client names, support up to 69 clients
@@ -73,12 +73,13 @@ describe("MergeTree.Client", () => {
             const mt = random.engines.mt19937();
             mt.seedWithArray([0xDEADBEEF, 0xFEEDBED, minLength]);
 
-            const clients: TestClient[] = [new TestClient({ blockUpdateMarkers: true })];
+            const clients: TestClient[] = [new TestClient()];
             clients.forEach(
                 (c, i) => c.startOrUpdateCollaboration(clientNames[i]));
 
             let seq = 0;
             while (clients.length < opts.clients.max) {
+                clients.forEach((c) => c.updateMinSeq(seq));
                 // Add double the number of clients each iteration
                 const targetClients = Math.max(opts.clients.min, opts.growthFunc(clients.length));
                 for (let cc = clients.length; cc < targetClients; cc++) {
@@ -94,7 +95,7 @@ describe("MergeTree.Client", () => {
                     opts);
             }
         })
-            // tslint:disable-next-line: mocha-no-side-effect-code
-            .timeout(30 * 1000);
+        // tslint:disable-next-line: mocha-no-side-effect-code
+        .timeout(30 * 1000);
     });
 });
