@@ -30,12 +30,12 @@ const allOpertaions: TestOperation[] = [
 
 export const debugOptions: IConflictFarmConfig = {
     minLength: { min: 2, max: 2 },
-    clients: { min: 3, max: 3 },
-    opsPerRoundRange: { min: 1, max: 100 },
+    clients: { min: 3, max: 4 },
+    opsPerRoundRange: { min: 1, max: 128 },
     rounds: 1000,
     operations: allOpertaions,
-    incrementalLog: true,
     growthFunc: (input: number) => input + 1,
+    incrementalLog: true,
 };
 
 export const defaultOptions: IConflictFarmConfig = {
@@ -59,7 +59,7 @@ export const longOptions: IConflictFarmConfig = {
 describe("MergeTree.Client", () => {
     // tslint:disable: mocha-no-side-effect-code
     const opts =
-        defaultOptions;
+    defaultOptions;
     // debugOptions;
     // longOptions;
 
@@ -70,9 +70,6 @@ describe("MergeTree.Client", () => {
     doOverRange(opts.minLength, opts.growthFunc, (minLength) => {
         // tslint:enable: mocha-no-side-effect-code
         it(`ConflictFarm_${minLength}`, async () => {
-            const mt = random.engines.mt19937();
-            mt.seedWithArray([0xDEADBEEF, 0xFEEDBED, minLength]);
-
             const clients: TestClient[] = [new TestClient({ blockUpdateMarkers: true })];
             clients.forEach(
                 (c, i) => c.startOrUpdateCollaboration(clientNames[i]));
@@ -87,6 +84,9 @@ describe("MergeTree.Client", () => {
                     const newClient = await TestClient.createFromClientSnapshot(clients[0], clientNames[cc]);
                     clients.push(newClient);
                 }
+
+                const mt = random.engines.mt19937();
+                mt.seedWithArray([0xDEADBEEF, 0xFEEDBED, minLength, clients.length]);
 
                 seq = runMergeTreeOperationRunner(
                     mt,

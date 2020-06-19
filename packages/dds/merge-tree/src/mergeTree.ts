@@ -2297,12 +2297,20 @@ export class MergeTree {
         // a segment must be inserted before it is removed, so INT_MAX-2 for the segments sequence
         // and INT_MAX-1 for the removed sequence. The new seg is always the last item sequenced, so give it INT_MAX
         // This preserves local ordering, but makes local segments comparilbe to remote segments
-        const curSegSeq = segment.seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER - 1 : segment.seq ?? 0;
+        const curSegSeq = segment.seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER - 2 : segment.seq ?? 0;
         const newSegSeq = seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER  : seq;
 
-        // if the newSeg is sequenced after the remove, skip it and keep looking
-        if (segment.removedSeq && segment.removedSeq !== UnassignedSequenceNumber) {
-            return false;
+        if (segment.removedSeq) {
+            const curSegRemoveSeq = segment.removedSeq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER - 1 : segment.removedSeq;
+            // was the segment removed before the new seg?
+            if (newSegSeq > curSegRemoveSeq) {
+                // removed seq exist before the new seq
+                if (newSegSeq > curSegRemoveSeq) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
         }
 
         return newSegSeq > curSegSeq;
