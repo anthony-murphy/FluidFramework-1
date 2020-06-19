@@ -1110,7 +1110,8 @@ export class MergeTree {
         insertAfterRemovedSegs: true,
         measureOrdinalTime: true,
         measureWindowTime: true,
-        zamboniSegments: true,
+        zamboniCollectSegments: true,
+        zamboniRunOnModification: true,
     };
     static traceAppend = false;
     static traceZRemove = false;
@@ -1457,7 +1458,7 @@ export class MergeTree {
         }
     }
 
-    private zamboniSegments(zamboniSegmentsMaxCount = MergeTree.zamboniSegmentsMaxCount) {
+    public zamboniSegments(zamboniSegmentsMaxCount = MergeTree.zamboniSegmentsMaxCount) {
         if (!this.collabWindow.collaborating) {
             return;
         }
@@ -1761,7 +1762,7 @@ export class MergeTree {
 
         if (minSeq > this.collabWindow.minSeq) {
             this.collabWindow.minSeq = minSeq;
-            if (MergeTree.options.zamboniSegments) {
+            if (MergeTree.options.zamboniRunOnModification) {
                 this.zamboniSegments();
             }
             if (this.minSeqListeners && this.minSeqListeners.count()) {
@@ -1939,7 +1940,7 @@ export class MergeTree {
             }
             pendingSegmentGroup.segments.map((pendingSegment) => {
                 overwrite = !pendingSegment.ack(pendingSegmentGroup, opArgs, this) || overwrite;
-                if (MergeTree.options.zamboniSegments) {
+                if (MergeTree.options.zamboniCollectSegments) {
                     this.addToLRUSet(pendingSegment, seq);
                 }
                 if (!nodesToUpdate.includes(pendingSegment.parent)) {
@@ -1952,7 +1953,7 @@ export class MergeTree {
                 // NodeUpdatePathLengths(node, seq, clientId, true);
             }
         }
-        if (MergeTree.options.zamboniSegments) {
+        if (MergeTree.options.zamboniRunOnModification) {
             this.zamboniSegments();
         }
     }
@@ -2029,7 +2030,7 @@ export class MergeTree {
         if (MergeTree.traceOrdinals) {
             this.ordinalIntegrity();
         }
-        if (this.collabWindow.collaborating && MergeTree.options.zamboniSegments &&
+        if (this.collabWindow.collaborating && MergeTree.options.zamboniRunOnModification &&
             (seq !== UnassignedSequenceNumber)) {
             this.zamboniSegments();
         }
@@ -2211,7 +2212,7 @@ export class MergeTree {
                 // locSegment.seq > this.collabWindow.currentSeq
                 // tslint:disable-next-line: one-line
                 else if ((locSegment.seq > this.collabWindow.minSeq) &&
-                    MergeTree.options.zamboniSegments) {
+                    MergeTree.options.zamboniCollectSegments) {
                     this.addToLRUSet(locSegment, locSegment.seq);
                 }
             }
@@ -2609,7 +2610,7 @@ export class MergeTree {
                 if (seq === UnassignedSequenceNumber) {
                     segmentGroup = this.addToPendingList(segment, segmentGroup, localSeq);
                 } else {
-                    if (MergeTree.options.zamboniSegments) {
+                    if (MergeTree.options.zamboniCollectSegments) {
                         this.addToLRUSet(segment, seq);
                     }
                 }
@@ -2629,7 +2630,7 @@ export class MergeTree {
                 });
         }
         if (this.collabWindow.collaborating && (seq !== UnassignedSequenceNumber)) {
-            if (MergeTree.options.zamboniSegments) {
+            if (MergeTree.options.zamboniRunOnModification) {
                 this.zamboniSegments();
             }
         }
@@ -2681,7 +2682,7 @@ export class MergeTree {
                 if ((removalInfo.removedSeq === UnassignedSequenceNumber) && (clientId === this.collabWindow.clientId)) {
                     segmentGroup = this.addToPendingList(segment, segmentGroup, localSeq);
                 } else {
-                    if (MergeTree.options.zamboniSegments) {
+                    if (MergeTree.options.zamboniCollectSegments) {
                         this.addToLRUSet(segment, seq);
                     }
                 }
@@ -2742,7 +2743,7 @@ export class MergeTree {
                 });
         }
         if (this.collabWindow.collaborating && (seq !== UnassignedSequenceNumber)) {
-            if (MergeTree.options.zamboniSegments) {
+            if (MergeTree.options.zamboniRunOnModification) {
                 this.zamboniSegments();
             }
         }

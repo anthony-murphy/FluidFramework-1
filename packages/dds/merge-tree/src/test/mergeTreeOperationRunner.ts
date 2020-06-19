@@ -9,7 +9,7 @@ import random from "random-js";
 import { LocalReference } from "../localReference";
 import { IMergeTreeOp, MergeTreeDeltaType } from "../ops";
 import { TextSegment } from "../textSegment";
-import { SegmentGroup } from "../mergeTree";
+import { SegmentGroup, MergeTree } from "../mergeTree";
 import { TestClient } from "./testClient";
 import { TestClientLogger } from "./testClientLogger";
 
@@ -63,7 +63,7 @@ export function runMergeTreeOperationRunner(
     config: IMergeTreeOperationRunnerConfig,
     apply = applyMessages) {
     let seq = startingSeq;
-
+    MergeTree.options.zamboniRunOnModification = false;
     // eslint-disable-next-line @typescript-eslint/unbound-method
     doOverRange(config.opsPerRoundRange, config.growthFunc, (opsPerRound) => {
         if (config.incrementalLog) {
@@ -75,6 +75,8 @@ export function runMergeTreeOperationRunner(
                 clients,
                 `Clients: ${clients.length} Ops: ${opsPerRound} Round: ${round}`);
             logger.log();
+            clients.forEach((c)=>c.mergeTree.zamboniSegments(Number.MAX_SAFE_INTEGER));
+            logger.validate();
             const messageData = generateOperationMessagesForClients(
                 mt,
                 seq,
