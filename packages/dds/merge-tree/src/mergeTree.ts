@@ -1338,6 +1338,8 @@ export class MergeTree {
             if (childNode.isLeaf()) {
                 const segment = childNode;
                 if (segment.segmentGroups.empty) {
+                    assert.notEqual(segment.seq, UnassignedSequenceNumber);
+                    assert.notEqual(segment.removedSeq, UnassignedSequenceNumber);
                     if (segment.removedSeq !== undefined) {
                         const createBrid = this.getBranchId(segment.clientId);
                         const removeBrid = this.getBranchId(segment.removedClientId);
@@ -2095,7 +2097,7 @@ export class MergeTree {
             // Find the nearest 0 length seg we can insert over, as all other inserts
             // go near to far
             if (backLen === 0) {
-                if (this.breakTie(0, 0, backSeg, this.collabWindow.currentSeq, clientId)) {
+                if (this.breakTie(0, backSeg, UnassignedSequenceNumber)) {
                     startSeg = backSeg;
                 }
                 return true;
@@ -2281,36 +2283,28 @@ export class MergeTree {
         this.updateRoot(splitNode);
     }
 
-    // Assume called only when pos == len
-    private breakTie(
-        pos: number, len: number, node: IMergeNode, refSeq: number,
-        clientId: number, candidateSegment?: ISegment) {
-        if (node.isLeaf()) {
-            if (pos === 0) {
-                const segment = node;
-                const branchId = this.getBranchId(clientId);
-                const segmentBranchId = this.getBranchId(segment.clientId);
-                const removalInfo = this.getRemovalInfo(branchId, segmentBranchId, segment);
-                if (removalInfo.removedSeq
-                    && removalInfo.removedSeq <= refSeq
-                    && removalInfo.removedSeq !== UnassignedSequenceNumber) {
-                    return false;
-                }
-
-                // Local change see everything
-                if (clientId === this.collabWindow.clientId) {
-                    return true;
-                }
-
-                if (node.seq !== UnassignedSequenceNumber) {
-                    // Ensure we merge right. newer segments should come before older segments
-                    return true;
-                }
-            }
-            return false;
-        } else {
+    private breakTie(pos: number, node: IMergeNode, seq: number) {
+        if(!node.isLeaf()) {
             return true;
         }
+        if (pos !== 0) {
+            return false;
+        }
+
+        const segment = node;
+        // translate UnassignedSequenceNumber (-1) into a relative sequence number
+        // a segment must be inserted before it is removed, so INT_MAX-2 for the segments sequence
+        // and INT_MAX-1 for the removed sequence. The new seg is always the last item sequenced, so give it INT_MAX
+        // This preserves local ordering, but makes local segments comparilbe to remote segments
+        const curSegSeq = segment.seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER - 1 : segment.seq ?? 0;
+        const newSegSeq = seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER  : seq;
+
+        // if the newSeg is sequenced after the remove, skip it and keep looking
+        if (segment.removedSeq && segment.removedSeq !== UnassignedSequenceNumber) {
+            return false;
+        }
+
+        return newSegSeq > curSegSeq;
     }
 
     // Visit segments starting from node's left siblings, then up to node's parent
@@ -2405,7 +2399,7 @@ export class MergeTree {
                 console.log(`@tcli: ${glc(this, this.collabWindow.clientId)} len: ${len} pos: ${pos} ${segInfo}`);
             }
 
-            if ((pos < len) || ((pos === len) && this.breakTie(pos, len, child, refSeq, clientId, context.candidateSegment))) {
+            if ((pos < len) || ((pos === len) && this.breakTie(pos, child, seq))) {
                 // Found entry containing pos
                 found = true;
                 if (!child.isLeaf()) {
