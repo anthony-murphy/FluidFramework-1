@@ -1339,8 +1339,6 @@ export class MergeTree {
             if (childNode.isLeaf()) {
                 const segment = childNode;
                 if (segment.segmentGroups.empty) {
-                    assert.notEqual(segment.seq, UnassignedSequenceNumber);
-                    assert.notEqual(segment.removedSeq, UnassignedSequenceNumber);
                     if (segment.removedSeq !== undefined) {
                         const createBrid = this.getBranchId(segment.clientId);
                         const removeBrid = this.getBranchId(segment.removedClientId);
