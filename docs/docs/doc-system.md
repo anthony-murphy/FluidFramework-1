@@ -100,14 +100,14 @@ a single level of the folder hierarchy, or simply avoid relative links in reusab
 
 You can include files located anywhere in the repo using the same `!!!include()` syntax. The path to the file in the
 repo must be specified relative to `docs/.vuepress/includes`. For example, if you want to include the readme file at
-`packages/dds/sequence/readme.md`, for example, you would specify the include path like so:
+`packages/dds/sequence/README.md`, for example, you would specify the include path like so:
 
 ```markdown
-!!!innclude(../../../dds/sequence/readme.md)!!!
+!!!innclude(../../../packages/dds/sequence/README.md)!!!
 ```
 
 You can create a simple wrapper page within the docs folder, then include a file from the repo within it. See
-[docs/contributing/breaking-changes.md](https://github.com/microsoft/FluidFramework/blob/master/docs/contributing/breaking-changes.md)
+[docs/contributing/breaking-changes.md](https://github.com/microsoft/FluidFramework/blob/main/docs/contributing/breaking-changes.md)
 for an example.
 
 Links are resolved as described above for reusable snippets, so you must be careful when using links in files you also
@@ -369,7 +369,7 @@ Markdown files to enable this, exposed on the `$themeConfig` object:
 | ----------------------: | ------------------------------------------------------------------------- |
 |         `DOCS_AUDIENCE` | Can be used to conditionally build docs for different audiences.          |
 |          `THIS_VERSION` | The version of the documentation **currently being built.** E.g. `0.14`   |
-| `MASTER_BRANCH_VERSION` | The version of the documentation **on the master branch.** E.g. `0.16`    |
+|   `MAIN_BRANCH_VERSION` | The version of the documentation **on the main branch.** E.g. `0.16`      |
 |       `RELEASE_VERSION` | The current release version of **the Fluid client packages.** E.g. `0.15` |
 |            `N1_VERSION` | The version immediately prior to the release version. E.g. `0.14`         |
 

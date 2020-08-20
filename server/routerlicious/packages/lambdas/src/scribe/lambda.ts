@@ -69,8 +69,8 @@ export class ScribeLambda extends SequencedLambda {
     // Ref of the last client generated summary
     private lastClientSummaryHead: string;
 
-    // Last incoming op type.
-    private lastOpType: string;
+    // Indicates whether cache needs to be cleaned
+    private clearCache: boolean = false;
 
     constructor(
         protected readonly context: IContext,
@@ -86,6 +86,7 @@ export class ScribeLambda extends SequencedLambda {
         private protocolHead: number,
         messages: ISequencedDocumentMessage[],
         private readonly generateServiceSummary: boolean,
+        private readonly clearCacheAfterServiceSummary: boolean,
         private readonly nackOnSummarizeException?: boolean,
     ) {
         super(context);
@@ -115,7 +116,10 @@ export class ScribeLambda extends SequencedLambda {
                     if (value.operation.term < this.term) {
                         continue;
                     } else if (value.operation.term > this.term) {
-                        const lastSummary = await fetchLatestSummaryState(this.storage, this.documentId);
+                        const lastSummary = await fetchLatestSummaryState(
+                            this.storage,
+                            this.documentId,
+                            this.context.log);
                         if (!lastSummary.fromSummary) {
                             throw Error(`Required summary can't be fetched`);
                         }
@@ -140,6 +144,11 @@ export class ScribeLambda extends SequencedLambda {
                     continue;
                 }
 
+                if (this.pendingMessages.length > 0 &&
+                    value.operation.sequenceNumber <= this.pendingMessages.peekBack().sequenceNumber) {
+                    continue;
+                }
+
                 // Add the message to the list of pending for this document and those that we need
                 // to include in the checkpoint
                 this.pendingMessages.push(value.operation);
@@ -155,6 +164,11 @@ export class ScribeLambda extends SequencedLambda {
                     this.processFromPending(this.minSequenceNumber);
                 }
 
+                const messageMetaData = {
+                    documentId: this.documentId,
+                    tenantId: this.tenantId,
+                };
+                this.clearCache = false;
                 if (value.operation.type === MessageType.Summarize) {
                     const summarySequenceNumber = value.operation.sequenceNumber;
                     const summaryRefSeqNumber = value.operation.referenceSequenceNumber;
@@ -182,8 +196,7 @@ export class ScribeLambda extends SequencedLambda {
                             this.revertProtocolState(prevState.protocolState, prevState.pendingOps);
                         } else {
                             this.protocolHead = this.protocolHandler.sequenceNumber;
-                            this.context.log.info(
-                                `Client summary @seq${summarySequenceNumber} for ${this.tenantId}/${this.documentId}`);
+                            this.context.log.info(`Client summary @seq${summarySequenceNumber}`, { messageMetaData });
                         }
                     } catch (ex) {
                         this.revertProtocolState(prevState.protocolState, prevState.pendingOps);
@@ -210,15 +223,22 @@ export class ScribeLambda extends SequencedLambda {
                         const summarySequenceNumber = value.operation.sequenceNumber;
                         const deliContent = (value.operation as ISequencedDocumentAugmentedMessage).additionalContent;
                         const scribeCheckpoint = this.generateCheckpoint(this.lastOffset);
-                        await this.createServiceSummary(summarySequenceNumber, deliContent, scribeCheckpoint);
-                        this.context.log.info(
-                            `Service summary @seq${summarySequenceNumber} for ${this.tenantId}/${this.documentId}`);
+                        const success = await this.createServiceSummary(
+                            summarySequenceNumber,
+                            deliContent,
+                            scribeCheckpoint);
+
+                        if (success) {
+                            if (this.clearCacheAfterServiceSummary) {
+                                this.clearCache = true;
+                            }
+                            this.context.log.info(`Service summary @seq${summarySequenceNumber}`, { messageMetaData });
+                        }
                     }
                 } else if (value.operation.type === MessageType.SummaryAck) {
                     const content = value.operation.contents as ISummaryAck;
                     this.lastClientSummaryHead = content.handle;
                 }
-                this.lastOpType = value.operation.type;
             }
         }
 
@@ -226,7 +246,7 @@ export class ScribeLambda extends SequencedLambda {
         this.checkpointCore(
             checkpoint,
             message,
-            this.generateServiceSummary && this.lastOpType === MessageType.NoClient);
+            this.clearCache);
         this.lastOffset = message.offset;
     }
 
@@ -237,12 +257,22 @@ export class ScribeLambda extends SequencedLambda {
     private processFromPending(target: number) {
         while (this.pendingMessages.length > 0 && this.pendingMessages.peekFront().sequenceNumber <= target) {
             const message = this.pendingMessages.shift();
-            if (message.contents && typeof message.contents === "string" && message.type !== MessageType.ClientLeave) {
-                const clonedMessage = _.cloneDeep(message);
-                clonedMessage.contents = JSON.parse(clonedMessage.contents);
-                this.protocolHandler.processMessage(clonedMessage, false);
-            } else {
-                this.protocolHandler.processMessage(message, false);
+            try {
+                if (message.contents &&
+                    typeof message.contents === "string" &&
+                    message.type !== MessageType.ClientLeave) {
+                    const clonedMessage = _.cloneDeep(message);
+                    clonedMessage.contents = JSON.parse(clonedMessage.contents);
+                    this.protocolHandler.processMessage(clonedMessage, false);
+                } else {
+                    this.protocolHandler.processMessage(message, false);
+                }
+            } catch (error) {
+                this.context.log.error(`Protocol error ${error}`,
+                {
+                    documentId: this.documentId,
+                    tenantId: this.tenantId,
+                });
             }
         }
     }
@@ -315,7 +345,11 @@ export class ScribeLambda extends SequencedLambda {
                 "operation.sequenceNumber": lte ? { $lte: sequenceNumber } : { $gte: sequenceNumber },
                 "tenantId": this.tenantId,
             });
-        this.context.log.info(`Scribe cache is cleared for ${this.tenantId}/${this.documentId}`);
+            const messageMetaData = {
+                documentId: this.documentId,
+                tenantId: this.tenantId,
+            };
+            this.context.log.info(`Scribe cache is cleared`, { messageMetaData });
     }
 
     /**
@@ -514,14 +548,14 @@ export class ScribeLambda extends SequencedLambda {
     private async createServiceSummary(
         sequenceNumber: number,
         serviceContent: string,
-        checkpoint: IScribe): Promise<void> {
+        checkpoint: IScribe): Promise<boolean> {
         const existingRef = await this.storage.getRef(encodeURIComponent(this.documentId));
 
         // Client assumes at least one app generated summary. To keep compatibility for now, service summary requires
         // at least one prior client generated summary.
         // TODO: Once clients are updated, we can remove this check.
         if (!existingRef) {
-            return;
+            return false;
         }
 
         // Generate a tree of logTail starting from the last protocol state.
@@ -579,7 +613,8 @@ export class ScribeLambda extends SequencedLambda {
         const commit = await this.storage.createCommit(commitParams);
         await this.storage.upsertRef(this.documentId, commit.sha);
 
-        await this.sendSummaryConfirmationMessage(sequenceNumber, true);
+        await this.sendSummaryConfirmationMessage(sequenceNumber, this.clearCacheAfterServiceSummary);
+        return true;
     }
 
     private async getLogTail(gt: number, lt: number): Promise<ISequencedDocumentMessage[]> {
@@ -616,7 +651,7 @@ export class ScribeLambda extends SequencedLambda {
             {
                 mode: FileMode.File,
                 path: "logTail",
-                type: TreeEntry[TreeEntry.Blob],
+                type: TreeEntry.Blob,
                 value: {
                     contents: JSON.stringify(logTail),
                     encoding: "utf-8",
