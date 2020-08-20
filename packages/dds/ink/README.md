@@ -62,11 +62,10 @@ ink.on("clear", this.renderClear.bind(this));
 
 # Next steps for Ink/Canvases
 
-Ink is an in-progress data structure with the purpose of facilitating collaborative inking.  There is a set of anticipated work to be done still, including breaking changes across Ink, client-ui-lib/OverlayCanvas, and the Canvas component.  Please do try it out and let us know what you think, but also be prepared for the following incoming changes:
+Ink is an in-progress data structure with the purpose of facilitating collaborative inking.  There is a set of anticipated work to be done still, including breaking changes across Ink, client-ui-lib/OverlayCanvas, and the Canvas example.  Please do try it out and let us know what you think, but also be prepared for the following incoming changes:
 
 ## Coordinate bundling
 - Enable bundled coordinate updates rather than one per op
-- Use PointerEvent.getCoalescedEvents(), along with the bundled coordinate updates to improve rendering fidelity and hang resistance
 
 ## Canvas consolidation
 - Replace client-ui-lib's OverlayCanvas with ink's InkCanvas, or remove it.
