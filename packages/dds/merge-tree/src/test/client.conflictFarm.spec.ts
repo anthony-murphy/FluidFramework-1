@@ -4,6 +4,7 @@
  */
 
 import random from "random-js";
+import { MergeTree } from "../mergeTree";
 import {
     annotateRange,
     doOverRange,
@@ -67,33 +68,45 @@ describe("MergeTree.Client", () => {
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     doOverRange(opts.minLength, opts.growthFunc, (minLength) => {
-        it(`ConflictFarm_${minLength}`, async () => {
-            const clients: TestClient[] = [new TestClient({ blockUpdateMarkers: true })];
-            clients.forEach(
-                (c, i) => c.startOrUpdateCollaboration(clientNames[i]));
+        // test with and without incremental zamboni
+        // not doing incremental zamboni leaves more tombstones in the tree
+        // which shouldn't result in different behavior, but has due
+        // to bugs
+        for(const incrementalZamboni of [true, false]) {
+            it(`ConflictFarm_${minLength}_zamboni_${incrementalZamboni}`, async () => {
+                MergeTree.options.zamboniRunOnModification = incrementalZamboni;
+                try {
+                    const clients: TestClient[] = [new TestClient({ blockUpdateMarkers: true })];
+                    clients.forEach(
+                        (c, i) => c.startOrUpdateCollaboration(clientNames[i]));
 
-            let seq = 0;
-            while (clients.length < opts.clients.max) {
-                clients.forEach((c) => c.updateMinSeq(seq));
+                    let seq = 0;
+                    while (clients.length < opts.clients.max) {
+                        clients.forEach((c) => c.updateMinSeq(seq));
 
-                // Add double the number of clients each iteration
-                const targetClients = Math.max(opts.clients.min, opts.growthFunc(clients.length));
-                for (let cc = clients.length; cc < targetClients; cc++) {
-                    const newClient = await TestClient.createFromClientSnapshot(clients[0], clientNames[cc]);
-                    clients.push(newClient);
+                        // Add double the number of clients each iteration
+                        const targetClients = Math.max(opts.clients.min, opts.growthFunc(clients.length));
+                        for (let cc = clients.length; cc < targetClients; cc++) {
+                            const newClient = await TestClient.createFromClientSnapshot(clients[0], clientNames[cc]);
+                            clients.push(newClient);
+                        }
+
+                        const mt = random.engines.mt19937();
+                        mt.seedWithArray([0xDEADBEEF, 0xFEEDBED, minLength, clients.length]);
+
+                        seq = runMergeTreeOperationRunner(
+                            mt,
+                            seq,
+                            clients,
+                            minLength,
+                            opts);
+                    }
+                }finally{
+                    // reset to default
+                    MergeTree.options.zamboniRunOnModification = true;
                 }
-
-                const mt = random.engines.mt19937();
-                mt.seedWithArray([0xDEADBEEF, 0xFEEDBED, minLength, clients.length]);
-
-                seq = runMergeTreeOperationRunner(
-                    mt,
-                    seq,
-                    clients,
-                    minLength,
-                    opts);
-            }
-        })
-        .timeout(30 * 1000);
+            })
+            .timeout(30 * 1000);
+        }
     });
 });
