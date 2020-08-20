@@ -2298,12 +2298,7 @@ export class MergeTree {
             const curSegRemoveSeq = segment.removedSeq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER - 1 : segment.removedSeq;
             // was the segment removed before the new seg?
             if (newSegSeq > curSegRemoveSeq) {
-                // removed seq exist before the new seq
-                if (newSegSeq > curSegRemoveSeq) {
-                    return true;
-                } else {
-                    return false;
-                }
+                return true;
             }
         }
 

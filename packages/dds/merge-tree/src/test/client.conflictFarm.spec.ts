@@ -94,7 +94,6 @@ describe("MergeTree.Client", () => {
                     opts);
             }
         })
-
-            .timeout(30 * 1000);
+        .timeout(30 * 1000);
     });
 });
