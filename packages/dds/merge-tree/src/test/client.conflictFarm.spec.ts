@@ -21,6 +21,7 @@ import { TestClient } from "./testClient";
 interface IConflictFarmConfig extends IMergeTreeOperationRunnerConfig {
     minLength: IConfigRange;
     clients: IConfigRange;
+    incrementalZamboni: boolean[];
 }
 
 const allOpertaions: TestOperation[] = [
@@ -35,6 +36,7 @@ export const debugOptions: IConflictFarmConfig = {
     opsPerRoundRange: { min: 1, max: 128 },
     rounds: 1000,
     operations: allOpertaions,
+    incrementalZamboni: [true],
     growthFunc: (input: number) => input + 1,
     incrementalLog: true,
 };
@@ -45,6 +47,7 @@ export const defaultOptions: IConflictFarmConfig = {
     opsPerRoundRange: { min: 1, max: 128 },
     rounds: 8,
     operations: allOpertaions,
+    incrementalZamboni: [true, false],
     growthFunc: (input: number) => input * 2,
 };
 
@@ -54,12 +57,13 @@ export const longOptions: IConflictFarmConfig = {
     opsPerRoundRange: { min: 1, max: 512 },
     rounds: 32,
     operations: allOpertaions,
+    incrementalZamboni: [true, false],
     growthFunc: (input: number) => input * 2,
 };
 
 describe("MergeTree.Client", () => {
     const opts =
-    defaultOptions;
+    debugOptions;
     // debugOptions;
     // longOptions;
 
@@ -72,7 +76,7 @@ describe("MergeTree.Client", () => {
         // not doing incremental zamboni leaves more tombstones in the tree
         // which shouldn't result in different behavior, but has due
         // to bugs
-        for(const incrementalZamboni of [true, false]) {
+        for(const incrementalZamboni of opts.incrementalZamboni) {
             it(`ConflictFarm_${minLength}_zamboni_${incrementalZamboni}`, async () => {
                 MergeTree.options.zamboniRunOnModification = incrementalZamboni;
                 try {

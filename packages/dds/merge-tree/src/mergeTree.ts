@@ -2290,19 +2290,22 @@ export class MergeTree {
         // translate UnassignedSequenceNumber (-1) into a relative sequence number
         // a segment must be inserted before it is removed, so INT_MAX-2 for the segments sequence
         // and INT_MAX-1 for the removed sequence. The new seg is always the last item sequenced, so give it INT_MAX
-        // This preserves local ordering, but makes local segments comparilbe to remote segments
+        // This preserves local ordering, but makes local segments comparable to remote segments
         const curSegSeq = segment.seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER - 2 : segment.seq ?? 0;
         const newSegSeq = seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER  : seq;
 
-        if (segment.removedSeq) {
-            const curSegRemoveSeq = segment.removedSeq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER - 1 : segment.removedSeq;
-            // was the segment removed before the new seg?
-            if (newSegSeq > curSegRemoveSeq) {
-                return true;
+        if (newSegSeq > curSegSeq) {
+            if (segment.removedSeq) {
+                const curSegRemoveSeq = segment.removedSeq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER - 1 : segment.removedSeq;
+                // was the segment removed before the new seg?
+                if (newSegSeq > curSegRemoveSeq) {
+                    return false;
+                }
             }
+            return true;
         }
 
-        return newSegSeq > curSegSeq;
+        return false;
     }
 
     // Visit segments starting from node's left siblings, then up to node's parent
