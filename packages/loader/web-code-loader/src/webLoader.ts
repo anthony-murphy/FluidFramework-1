@@ -6,6 +6,7 @@
 import {
     ICodeLoader,
     ICodeAllowList,
+    IPackageFluidEntry,
     IFluidModule,
     IFluidCodeResolver,
     IFluidPackage,
@@ -13,7 +14,7 @@ import {
 } from "@fluidframework/container-definitions";
 import { ScriptManager } from "./scriptManager";
 
-export class WebCodeLoader<TResolvedCodeDetails extends Pick<IFluidPackage, "fluid"> = IFluidPackage>
+export class WebCodeLoader<TResolvedCodeDetails extends IPackageFluidEntry = IFluidPackage>
 implements ICodeLoader {
     private readonly loadedModules = new Map<string, Promise<IFluidModule> | IFluidModule>();
     private readonly scriptManager = new ScriptManager();

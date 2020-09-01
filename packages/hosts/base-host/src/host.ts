@@ -14,6 +14,8 @@ import { WebCodeLoader } from "@fluidframework/web-code-loader";
 import { IBaseHostConfig } from "./hostConfig";
 import { initializeContainerCode } from "./initializeContainerCode";
 
+export type MaybeFluidModule = Promise<IFluidModule> | IFluidModule | undefined;
+
 /**
  * Create a loader and return it.
  * @param hostConfig - Config specifying the resolver/factory to be used.
@@ -22,7 +24,7 @@ import { initializeContainerCode } from "./initializeContainerCode";
  */
 async function createWebLoader(
     hostConfig: IBaseHostConfig,
-    seedPackages?: Iterable<[IFluidPackageCodeDetails, Promise<IFluidModule> | IFluidModule | undefined]>): Promise<Loader> {
+    seedPackages?: Iterable<[IFluidPackageCodeDetails, MaybeFluidModule]>): Promise<Loader> {
     // Create the web loader and prefetch the chaincode we will need
     const codeLoader = new WebCodeLoader(hostConfig.codeResolver, hostConfig.allowList);
 
@@ -55,7 +57,7 @@ export class BaseHost {
     private readonly loaderP: Promise<Loader>;
     public constructor(
         hostConfig: IBaseHostConfig,
-        seedPackages?: Iterable<[IFluidPackageCodeDetails, Promise<IFluidModule> | IFluidModule | undefined]>,
+        seedPackages?: Iterable<[IFluidPackageCodeDetails, MaybeFluidModule]>,
     ) {
         this.loaderP = createWebLoader(
             hostConfig,

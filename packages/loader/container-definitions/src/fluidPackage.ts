@@ -47,7 +47,7 @@ export interface IPackage {
     private?: boolean;
 }
 
-export interface IFluidPackage extends IPackage {
+export interface IPackageFluidEntry {
     // https://stackoverflow.com/questions/10065564/add-custom-metadata-or-config-to-package-json-is-it-valid
     fluid: {
         browser: {
@@ -62,6 +62,9 @@ export interface IFluidPackage extends IPackage {
             };
         };
     };
+}
+export interface IFluidPackage extends IPackageFluidEntry, IPackage {
+
 }
 
 /**
