@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { IFluidCodeDetails } from "@fluidframework/container-definitions";
+import { IFluidPackageCodeDetails } from "@fluidframework/container-definitions";
 import { ICommit, ICommitDetails } from "@fluidframework/gitresources";
 import { TenantManager } from "@fluidframework/server-services";
 import { GitManager, Historian, IGitCache } from "@fluidframework/server-services-client";
@@ -40,7 +40,7 @@ export class Alfred implements IAlfred {
     public async getFullTree(
         tenantId: string,
         documentId: string,
-    ): Promise<{ cache: IGitCache; code: IFluidCodeDetails | null }> {
+    ): Promise<{ cache: IGitCache; code: IFluidPackageCodeDetails | null }> {
         const gitManager = this.getGitManager(tenantId);
         const versions = await gitManager.getCommits(documentId, 1);
         if (versions.length === 0) {
@@ -52,7 +52,7 @@ export class Alfred implements IAlfred {
 
         // TODO this needs to be summary aware
         // eslint-disable-next-line no-null/no-null
-        let code: IFluidCodeDetails | null = null;
+        let code: IFluidPackageCodeDetails | null = null;
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (fullTree.quorumValues) {
             let quorumValues;

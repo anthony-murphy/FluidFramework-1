@@ -9,7 +9,7 @@ import {
     DataObjectFactory,
 } from "@fluidframework/aqueduct";
 import { TaskManager } from "@fluidframework/agent-scheduler";
-import { IContainer, IFluidCodeDetails, ILoader } from "@fluidframework/container-definitions";
+import { IContainer, IFluidPackageCodeDetails, ILoader } from "@fluidframework/container-definitions";
 import { taskSchedulerId } from "@fluidframework/container-runtime";
 import { IUrlResolver } from "@fluidframework/driver-definitions";
 import { LocalResolver } from "@fluidframework/local-driver";
@@ -40,7 +40,7 @@ describe("AgentScheduler", () => {
     const leader = "leader";
     const documentId = "agentSchedulerTest";
     const documentLoadUrl = `fluid-test://localhost/${documentId}`;
-    const codeDetails: IFluidCodeDetails = {
+    const codeDetails: IFluidPackageCodeDetails = {
         package: "agentSchedulerTestPackage",
         config: {},
     };

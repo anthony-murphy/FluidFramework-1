@@ -4,7 +4,7 @@
  */
 
 import {
-    IFluidCodeDetails,
+    IFluidPackageCodeDetails,
 } from "@fluidframework/container-definitions";
 import { Container } from "@fluidframework/container-loader";
 
@@ -40,7 +40,7 @@ function isOldestClient(container: Container) {
  */
 export async function initializeContainerCode(
     container: Container,
-    pkgForCodeProposal: IFluidCodeDetails,
+    pkgForCodeProposal: IFluidPackageCodeDetails,
 ): Promise<void> {
     const quorum = container.getQuorum();
 

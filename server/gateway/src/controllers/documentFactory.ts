@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { IFluidCodeDetails, ILoader } from "@fluidframework/container-definitions";
+import { IFluidPackageCodeDetails, ILoader } from "@fluidframework/container-definitions";
 import { Deferred } from "@fluidframework/common-utils";
 import { IDocumentFactory } from "@fluid-example/host-service-interfaces";
 import Axios from "axios";
@@ -26,7 +26,7 @@ export class DocumentFactory implements IDocumentFactory {
         this.loaderDeferred.resolve(loader);
     }
 
-    public async create(chaincode: IFluidCodeDetails): Promise<string> {
+    public async create(chaincode: IFluidPackageCodeDetails): Promise<string> {
         // eslint-disable-next-line @typescript-eslint/no-misused-promises, no-async-promise-executor
         const monikerP = new Promise(async (resolve) => {
             // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions

@@ -8,7 +8,7 @@ import {
     IBaseHostConfig,
 } from "@fluidframework/base-host";
 import { IFluidObject } from "@fluidframework/core-interfaces";
-import { IProxyLoaderFactory, IResolvedFluidCodeDetails } from "@fluidframework/container-definitions";
+import { IProxyLoaderFactory, IResolvedFluidPackageCodeDetails } from "@fluidframework/container-definitions";
 import { IFluidResolvedUrl } from "@fluidframework/driver-definitions";
 import { WebWorkerLoaderFactory } from "@fluidframework/execution-context-loader";
 import {
@@ -35,7 +35,7 @@ async function getFluidObjectAndRender(baseHost: BaseHost, url: string, div: HTM
 export async function initialize(
     url: string,
     resolved: IFluidResolvedUrl,
-    pkg: IResolvedFluidCodeDetails | undefined,
+    pkg: IResolvedFluidPackageCodeDetails | undefined,
     scriptIds: string[],
     config: any,
     clientId: string,

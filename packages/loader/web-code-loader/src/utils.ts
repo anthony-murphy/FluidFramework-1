@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { IFluidPackage } from "@fluidframework/container-definitions";
+import { IPackage } from "@fluidframework/container-definitions";
 
 export interface IPackageIdentifierDetails {
     readonly fullId: string;
@@ -13,7 +13,7 @@ export interface IPackageIdentifierDetails {
     readonly scope: string;
 }
 
-export function extractPackageIdentifierDetails(codeDetailsPackage: string | IFluidPackage): IPackageIdentifierDetails {
+export function extractPackageIdentifierDetails(codeDetailsPackage: string | IPackage): IPackageIdentifierDetails {
     const packageString = typeof codeDetailsPackage === "string"
         ? codeDetailsPackage // Just return it if it's a string e.g. "@fluid-example/clicker@0.1.1"
         : codeDetailsPackage.version === undefined // If it doesn't exist, let's make it from the package details

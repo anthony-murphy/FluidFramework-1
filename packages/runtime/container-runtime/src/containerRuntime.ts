@@ -18,7 +18,6 @@ import {
 import {
     IAudience,
     IBlobManager,
-    IFluidTokenProvider,
     IContainerContext,
     IDeltaManager,
     IDeltaSender,
@@ -28,6 +27,7 @@ import {
     ContainerWarning,
     ICriticalContainerError,
     AttachState,
+    IFluidTokenProvider,
 } from "@fluidframework/container-definitions";
 import { IContainerRuntime, IContainerRuntimeDirtyable } from "@fluidframework/container-runtime-definitions";
 import {
@@ -1765,7 +1765,7 @@ export class ContainerRuntime extends EventEmitter
                 }
             }
 
-            // Note: Chunking will increase content beyond maxOpSize because we JSON'ing JSON payload -
+            // Note: Chunking will increase content beyond maxOpSize because we are re-serializing a JSON payload -
             // there will be a lot of escape characters that can make it up to 2x bigger!
             // This is Ok, because DeltaManager.shouldSplit() will have 2 * maxMessageSize limit
             if (serializedContent.length <= maxOpSize) {

@@ -8,7 +8,7 @@ import * as cell from "@fluidframework/cell";
 import { FluidDataStoreRuntime } from "@fluidframework/datastore";
 import {
     IDeltaManager,
-    IFluidCodeDetails,
+    IFluidPackageCodeDetails,
     IGenericBlob,
     IProxyLoaderFactory,
 } from "@fluidframework/container-definitions";
@@ -206,7 +206,7 @@ export class Document extends EventEmitter {
     }
 }
 
-async function initializeChaincode(container: Container, pkg: IFluidCodeDetails): Promise<void> {
+async function initializeChaincode(container: Container, pkg: IFluidPackageCodeDetails): Promise<void> {
     const quorum = container.getQuorum();
 
     // Wait for connection so that proposals can be sent
@@ -286,7 +286,7 @@ export async function load(
     const container = await loader.resolve({ url });
 
     // The client-api CodeLoader doesn't actually read the proposed code details, so this doesn't really matter.
-    const codeDetails: IFluidCodeDetails = {
+    const codeDetails: IFluidPackageCodeDetails = {
         package: `@fluid-internal/client-api@${apiVersion}`,
         config: {},
     };

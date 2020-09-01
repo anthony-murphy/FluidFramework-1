@@ -5,7 +5,7 @@
 
 import assert from "assert";
 import { IFluidHandle } from "@fluidframework/core-interfaces";
-import { IContainer, ILoader, IFluidCodeDetails } from "@fluidframework/container-definitions";
+import { IContainer, ILoader, IFluidPackageCodeDetails } from "@fluidframework/container-definitions";
 import { IFluidDataStoreRuntime } from "@fluidframework/datastore-definitions";
 import { IUrlResolver } from "@fluidframework/driver-definitions";
 import { LocalResolver } from "@fluidframework/local-driver";
@@ -33,7 +33,7 @@ function generate(name: string, ctor: ISharedObjectConstructor<IConsensusRegiste
         const documentId = "consensusRegisterCollectionTest";
         const documentLoadUrl = `fluid-test://localhost/${documentId}`;
         const mapId = "mapKey";
-        const codeDetails: IFluidCodeDetails = {
+        const codeDetails: IFluidPackageCodeDetails = {
             package: "consensusRegisterCollectionTestPackage",
             config: {},
         };

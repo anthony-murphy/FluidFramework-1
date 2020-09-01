@@ -4,7 +4,7 @@
  */
 
 import * as url from "url";
-import { IFluidCodeDetails, IProxyLoaderFactory } from "@fluidframework/container-definitions";
+import { IFluidPackageCodeDetails, IProxyLoaderFactory } from "@fluidframework/container-definitions";
 import { Loader } from "@fluidframework/container-loader";
 import { IFluidResolvedUrl } from "@fluidframework/driver-definitions";
 import { IUser } from "@fluidframework/protocol-definitions";
@@ -102,7 +102,7 @@ export async function start(): Promise<void> {
 
     // Proposes the code package for a new document.
     if (!fluidDocument.existing) {
-        const details: IFluidCodeDetails = {
+        const details: IFluidPackageCodeDetails = {
             config: {},
             package: defaultPackage,
         };

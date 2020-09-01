@@ -5,7 +5,7 @@
 
 import * as assert from "assert";
 import { ContainerRuntimeFactoryWithDefaultDataStore } from "@fluidframework/aqueduct";
-import { IContainer, IFluidCodeDetails, ILoader, IProxyLoaderFactory } from "@fluidframework/container-definitions";
+import { IContainer, IFluidPackageCodeDetails, ILoader, IProxyLoaderFactory } from "@fluidframework/container-definitions";
 import { Container, Loader } from "@fluidframework/container-loader";
 import {
     ContainerMessageType,
@@ -38,7 +38,7 @@ describe("Ops on Reconnect", () => {
     const map2Id = "map2Key";
     const directoryId = "directoryKey";
     const stringId = "sharedStringKey";
-    const codeDetails: IFluidCodeDetails = {
+    const codeDetails: IFluidPackageCodeDetails = {
         package: "opsOnReconnectTestPackage",
         config: {},
     };

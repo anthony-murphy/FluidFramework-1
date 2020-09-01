@@ -5,7 +5,7 @@
 
 import * as assert from "assert";
 import { ContainerRuntimeFactoryWithDefaultDataStore } from "@fluidframework/aqueduct";
-import { IContainer, IFluidCodeDetails, IProxyLoaderFactory } from "@fluidframework/container-definitions";
+import { IContainer, IFluidPackageCodeDetails, IProxyLoaderFactory } from "@fluidframework/container-definitions";
 import { Container, Loader } from "@fluidframework/container-loader";
 import { IContainerRuntime } from "@fluidframework/container-runtime-definitions";
 import { LocalDocumentServiceFactory, LocalResolver } from "@fluidframework/local-driver";
@@ -23,7 +23,7 @@ import {
 describe("Document Dirty", () => {
     const documentId = "documentDirtyTest";
     const mapId = "mapKey";
-    const codeDetails: IFluidCodeDetails = {
+    const codeDetails: IFluidPackageCodeDetails = {
         package: "documentDirtyTestPackage",
         config: {},
     };

@@ -4,14 +4,14 @@
  */
 
 import {
-    IResolvedFluidCodeDetails,
+    IResolvedFluidPackageCodeDetails,
     IFluidModule,
 } from "@fluidframework/container-definitions";
 
 export function seedFromScriptIds(
-    pkg: IResolvedFluidCodeDetails | undefined,
+    pkg: IResolvedFluidPackageCodeDetails | undefined,
     scriptIds: string[]):
-    [[IResolvedFluidCodeDetails, Promise<IFluidModule>]] | undefined {
+    [[IResolvedFluidPackageCodeDetails, Promise<IFluidModule>]] | undefined {
     if (pkg !== undefined) {
         return [
             [

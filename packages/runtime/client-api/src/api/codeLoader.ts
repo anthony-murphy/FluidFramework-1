@@ -8,7 +8,7 @@ import { FluidDataStoreRuntime } from "@fluidframework/datastore";
 import {
     ICodeLoader,
     IContainerContext,
-    IFluidCodeDetails,
+    IFluidPackageCodeDetails,
     IRuntime,
     IRuntimeFactory,
     IFluidModule,
@@ -146,7 +146,7 @@ export class CodeLoader implements ICodeLoader {
         };
     }
 
-    public async load(source: IFluidCodeDetails): Promise<IFluidModule> {
+    public async load(source: IFluidPackageCodeDetails): Promise<IFluidModule> {
         return Promise.resolve(this.fluidModule);
     }
 }

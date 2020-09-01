@@ -10,7 +10,7 @@ import {
     IRequest,
     IResponse,
 } from "@fluidframework/core-interfaces";
-import { IContainer, ILoader, IFluidCodeDetails } from "@fluidframework/container-definitions";
+import { IContainer, ILoader, IFluidPackageCodeDetails } from "@fluidframework/container-definitions";
 import { Container, Loader } from "@fluidframework/container-loader";
 import {
     IDocumentServiceFactory,
@@ -117,7 +117,7 @@ class WorkerLoader implements ILoader, IFluidRunnable {
         }
     }
 
-    public async createDetachedContainer(source: IFluidCodeDetails): Promise<IContainer> {
+    public async createDetachedContainer(source: IFluidPackageCodeDetails): Promise<IContainer> {
         throw new Error("Method not implemented.");
     }
 }

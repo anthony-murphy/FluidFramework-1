@@ -6,41 +6,42 @@
 import {
     ICodeLoader,
     ICodeAllowList,
-    IFluidCodeDetails,
     IFluidModule,
     IFluidCodeResolver,
-    IResolvedFluidCodeDetails,
+    IFluidPackage,
+    IResolvedCodeDetails,
 } from "@fluidframework/container-definitions";
 import { ScriptManager } from "./scriptManager";
 
-export class WebCodeLoader implements ICodeLoader {
+export class WebCodeLoader<TResolvedCodeDetails extends Pick<IFluidPackage, "fluid"> = IFluidPackage>
+implements ICodeLoader {
     private readonly loadedModules = new Map<string, Promise<IFluidModule> | IFluidModule>();
     private readonly scriptManager = new ScriptManager();
 
     constructor(
-        private readonly codeResolver: IFluidCodeResolver,
-        private readonly allowList?: ICodeAllowList) { }
+        private readonly codeResolver: IFluidCodeResolver<TResolvedCodeDetails>,
+        private readonly allowList?: ICodeAllowList<TResolvedCodeDetails>) { }
 
     public async seedModule(
-        source: IFluidCodeDetails,
+        source: unknown,
         maybeFluidModule?: Promise<IFluidModule> | IFluidModule,
     ): Promise<void> {
         const resolved = await this.codeResolver.resolveCodeDetails(source);
-        if (resolved.resolvedPackageCacheId !== undefined
-            && this.loadedModules.has(resolved.resolvedPackageCacheId)) {
+        if (resolved.codeDetailsCacheId !== undefined
+            && this.loadedModules.has(resolved.codeDetailsCacheId)) {
             return;
         }
         const fluidModule = maybeFluidModule ?? this.load(source);
-        if (resolved.resolvedPackageCacheId !== undefined) {
-            this.loadedModules.set(resolved.resolvedPackageCacheId, fluidModule);
+        if (resolved.codeDetailsCacheId !== undefined) {
+            this.loadedModules.set(resolved.codeDetailsCacheId, fluidModule);
         }
     }
 
-    public async preCache(source: IFluidCodeDetails, tryPreload: boolean) {
+    public async preCache(source: unknown, tryPreload: boolean) {
         const resolved = await this.codeResolver.resolveCodeDetails(source);
-        if (resolved?.resolvedPackage?.fluid?.browser?.umd?.files !== undefined) {
+        if (resolved?.resolvedCodeDetails?.fluid?.browser?.umd?.files !== undefined) {
             return this.scriptManager.preCacheFiles(
-                resolved.resolvedPackage.fluid.browser.umd.files, tryPreload);
+                resolved.resolvedCodeDetails.fluid.browser.umd.files, tryPreload);
         }
     }
 
@@ -48,30 +49,30 @@ export class WebCodeLoader implements ICodeLoader {
      * @param source - Details of where to find chaincode
      */
     public async load(
-        source: IFluidCodeDetails,
+        source: unknown,
     ): Promise<IFluidModule> {
         const resolved = await this.codeResolver.resolveCodeDetails(source);
-        if (resolved.resolvedPackageCacheId !== undefined) {
-            const maybePkg = this.loadedModules.get(resolved.resolvedPackageCacheId);
+        if (resolved.codeDetailsCacheId !== undefined) {
+            const maybePkg = this.loadedModules.get(resolved.codeDetailsCacheId);
             if (maybePkg !== undefined) {
                 return maybePkg;
             }
         }
 
         const fluidModuleP = this.loadModuleFromResolvedCodeDetails(resolved);
-        if (resolved.resolvedPackageCacheId !== undefined) {
-            this.loadedModules.set(resolved.resolvedPackageCacheId, fluidModuleP);
+        if (resolved.codeDetailsCacheId !== undefined) {
+            this.loadedModules.set(resolved.codeDetailsCacheId, fluidModuleP);
         }
         return fluidModuleP;
     }
 
-    private async loadModuleFromResolvedCodeDetails(resolved: IResolvedFluidCodeDetails) {
+    private async loadModuleFromResolvedCodeDetails(resolved: IResolvedCodeDetails<TResolvedCodeDetails>) {
         if (this.allowList !== undefined && !(await this.allowList.testSource(resolved))) {
             throw new Error("Attempted to load invalid code package url");
         }
 
         const loadedScripts = await this.scriptManager.loadLibrary(
-            resolved.resolvedPackage.fluid.browser.umd,
+            resolved.resolvedCodeDetails.fluid.browser.umd,
         );
         let fluidModule: IFluidModule | undefined;
         for (const script of loadedScripts) {

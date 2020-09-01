@@ -5,7 +5,7 @@
 
 import assert from "assert";
 import { IFluidHandle } from "@fluidframework/core-interfaces";
-import { IFluidCodeDetails, ILoader } from "@fluidframework/container-definitions";
+import { IFluidPackageCodeDetails, ILoader } from "@fluidframework/container-definitions";
 import { Container } from "@fluidframework/container-loader";
 import { IUrlResolver } from "@fluidframework/driver-definitions";
 import { LocalResolver } from "@fluidframework/local-driver";
@@ -27,7 +27,7 @@ const documentId = "mapTest";
 const documentLoadUrl = `fluid-test://localhost/${documentId}`;
 const mapId = "mapKey";
 const registry: ChannelFactoryRegistry = [[mapId, SharedMap.getFactory()]];
-const codeDetails: IFluidCodeDetails = {
+const codeDetails: IFluidPackageCodeDetails = {
     package: "sharedMapTestPackage",
     config: {},
 };

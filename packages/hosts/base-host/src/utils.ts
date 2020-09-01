@@ -7,7 +7,7 @@ import { EventEmitter } from "events";
 import { ITelemetryBaseLogger, ITelemetryLogger } from "@fluidframework/common-definitions";
 import { Deferred, PromiseTimer, Timer } from "@fluidframework/common-utils";
 import { DebugLogger } from "@fluidframework/telemetry-utils";
-import { IFluidCodeDetails } from "@fluidframework/container-definitions";
+import { IFluidPackageCodeDetails } from "@fluidframework/container-definitions";
 import { IPendingProposal, IQuorum, ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
 
 // subset of IContainerRuntime used by UpgradeManager
@@ -81,7 +81,7 @@ export class UpgradeManager extends EventEmitter {
     private readonly logger: ITelemetryLogger;
     private proposedSeqNum: number | undefined;
     // details of a delayed low priority upgrade
-    private delayed: { code: IFluidCodeDetails, result: Deferred<boolean> } | undefined;
+    private delayed: { code: IFluidPackageCodeDetails, result: Deferred<boolean> } | undefined;
 
     constructor(private readonly runtime: IUpgradeRuntime, logger?: ITelemetryBaseLogger) {
         super();
@@ -142,7 +142,7 @@ export class UpgradeManager extends EventEmitter {
      * @returns A promise that will resolve once the proposal has been accepted or rejected.
      */
     public async upgrade(
-        code: IFluidCodeDetails,
+        code: IFluidPackageCodeDetails,
         highPriority = false,
         upgradeFn?: (runtime: IUpgradeRuntime) => Promise<string>,
         upgradeFnConfig?: IUpgradeFnConfig,
@@ -185,7 +185,7 @@ export class UpgradeManager extends EventEmitter {
         return this.delayed.result.promise;
     }
 
-    private async propose(code: IFluidCodeDetails, reason: string): Promise<boolean> {
+    private async propose(code: IFluidPackageCodeDetails, reason: string): Promise<boolean> {
         this.logger.sendTelemetryEvent({
             eventName: "UpgradeStarted",
             trackedSequenceNumber: this.proposedSeqNum,

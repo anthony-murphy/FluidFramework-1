@@ -5,7 +5,7 @@
 
 import assert from "assert";
 import { fromBase64ToUtf8 } from "@fluidframework/common-utils";
-import { IFluidCodeDetails, IProxyLoaderFactory } from "@fluidframework/container-definitions";
+import { IFluidPackageCodeDetails, IProxyLoaderFactory } from "@fluidframework/container-definitions";
 import { Loader } from "@fluidframework/container-loader";
 import { IUrlResolver } from "@fluidframework/driver-definitions";
 import { LocalDocumentServiceFactory, LocalResolver } from "@fluidframework/local-driver";
@@ -22,7 +22,7 @@ import { IContainerRuntimeBase } from "@fluidframework/runtime-definitions";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 
 describe(`Dehydrate Rehydrate Container Test`, () => {
-    const codeDetails: IFluidCodeDetails = {
+    const codeDetails: IFluidPackageCodeDetails = {
         package: "detachedContainerTestPackage1",
         config: {},
     };

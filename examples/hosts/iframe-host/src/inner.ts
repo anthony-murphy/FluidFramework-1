@@ -4,7 +4,7 @@
  */
 import { InnerDocumentServiceFactory } from "@fluidframework/iframe-driver";
 import { BaseHost } from "@fluidframework/base-host";
-import { IFluidCodeDetails } from "@fluidframework/container-definitions";
+import { IFluidPackageCodeDetails } from "@fluidframework/container-definitions";
 import { SemVerCdnCodeResolver } from "@fluidframework/web-code-loader";
 import { HTMLViewAdapter } from "@fluidframework/view-adapters";
 
@@ -21,7 +21,7 @@ async function getComponentAndRender(baseHost: BaseHost, url: string, div: HTMLD
 export async function runInner(divId: string) {
     const div = document.getElementById(divId) as HTMLDivElement;
 
-    const pkg: IFluidCodeDetails = {
+    const pkg: IFluidPackageCodeDetails = {
         package: "@fluid-example/todo@^0.15.0",
         config: {
             "@fluid-example:cdn": "https://pragueauspkn.azureedge.net",

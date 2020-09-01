@@ -4,7 +4,7 @@
  */
 
 import assert from "assert";
-import { IContainer, IFluidCodeDetails, ILoader } from "@fluidframework/container-definitions";
+import { IContainer, IFluidPackageCodeDetails, ILoader } from "@fluidframework/container-definitions";
 import { IUrlResolver } from "@fluidframework/driver-definitions";
 import { LocalResolver } from "@fluidframework/local-driver";
 import { MessageType } from "@fluidframework/protocol-definitions";
@@ -23,7 +23,7 @@ describe("LocalTestServer", () => {
     const documentId = "localServerTest";
     const documentLoadUrl = `fluid-test://localhost/${documentId}`;
     const stringId = "stringKey";
-    const codeDetails: IFluidCodeDetails = {
+    const codeDetails: IFluidPackageCodeDetails = {
         package: "localServerTestPackage",
         config: {},
     };

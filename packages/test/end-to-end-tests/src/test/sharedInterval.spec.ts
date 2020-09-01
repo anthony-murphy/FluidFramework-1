@@ -4,7 +4,7 @@
  */
 
 import assert from "assert";
-import { IContainer, IFluidCodeDetails, ILoader } from "@fluidframework/container-definitions";
+import { IContainer, IFluidPackageCodeDetails, ILoader } from "@fluidframework/container-definitions";
 import { IFluidHandle } from "@fluidframework/core-interfaces";
 import { IChannelFactory } from "@fluidframework/datastore-definitions";
 import { IUrlResolver } from "@fluidframework/driver-definitions";
@@ -58,7 +58,7 @@ const assertIntervalsHelper = (
 describe("SharedInterval", () => {
     const documentId = "sharedIntervalTest";
     const documentLoadUrl = `fluid-test://localhost/${documentId}`;
-    const codeDetails: IFluidCodeDetails = {
+    const codeDetails: IFluidPackageCodeDetails = {
         package: "sharedIntervalTestPackage",
         config: {},
     };

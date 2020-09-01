@@ -5,7 +5,7 @@
 import {
     RouterliciousDocumentServiceFactory,
 } from "@fluidframework/routerlicious-driver";
-import { IFluidCodeDetails } from "@fluidframework/container-definitions";
+import { IFluidPackageCodeDetails } from "@fluidframework/container-definitions";
 import { BaseHost } from "@fluidframework/base-host";
 import { IRequest } from "@fluidframework/core-interfaces";
 import { InsecureUrlResolver } from "@fluidframework/test-runtime-utils";
@@ -74,7 +74,7 @@ export async function loadDiv(divId: string) {
 
     const documentServiceFactory = new RouterliciousDocumentServiceFactory();
 
-    const pkg: IFluidCodeDetails = {
+    const pkg: IFluidPackageCodeDetails = {
         package: "@fluid-example/todo@^0.15.0",
         config: {
             "@fluid-example:cdn": "https://pragueauspkn.azureedge.net",

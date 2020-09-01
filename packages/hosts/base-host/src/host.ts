@@ -5,7 +5,7 @@
 
 import { IFluidObject } from "@fluidframework/core-interfaces";
 import {
-    IFluidCodeDetails,
+    IFluidPackageCodeDetails,
     IProxyLoaderFactory,
     IFluidModule,
 } from "@fluidframework/container-definitions";
@@ -22,7 +22,7 @@ import { initializeContainerCode } from "./initializeContainerCode";
  */
 async function createWebLoader(
     hostConfig: IBaseHostConfig,
-    seedPackages?: Iterable<[IFluidCodeDetails, Promise<IFluidModule> | IFluidModule | undefined]>): Promise<Loader> {
+    seedPackages?: Iterable<[IFluidPackageCodeDetails, Promise<IFluidModule> | IFluidModule | undefined]>): Promise<Loader> {
     // Create the web loader and prefetch the chaincode we will need
     const codeLoader = new WebCodeLoader(hostConfig.codeResolver, hostConfig.allowList);
 
@@ -55,7 +55,7 @@ export class BaseHost {
     private readonly loaderP: Promise<Loader>;
     public constructor(
         hostConfig: IBaseHostConfig,
-        seedPackages?: Iterable<[IFluidCodeDetails, Promise<IFluidModule> | IFluidModule | undefined]>,
+        seedPackages?: Iterable<[IFluidPackageCodeDetails, Promise<IFluidModule> | IFluidModule | undefined]>,
     ) {
         this.loaderP = createWebLoader(
             hostConfig,
@@ -67,7 +67,7 @@ export class BaseHost {
         return this.loaderP;
     }
 
-    public async initializeContainer(url: string, codeDetails?: IFluidCodeDetails): Promise<Container> {
+    public async initializeContainer(url: string, codeDetails?: IFluidPackageCodeDetails): Promise<Container> {
         const loader = await this.getLoader();
         const container = await loader.resolve({ url });
 

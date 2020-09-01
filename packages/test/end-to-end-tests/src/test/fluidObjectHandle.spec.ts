@@ -10,7 +10,7 @@ import {
     DataObjectFactory,
 } from "@fluidframework/aqueduct";
 import { IFluidHandle } from "@fluidframework/core-interfaces";
-import { IContainer, IFluidCodeDetails, ILoader } from "@fluidframework/container-definitions";
+import { IContainer, IFluidPackageCodeDetails, ILoader } from "@fluidframework/container-definitions";
 import { IUrlResolver } from "@fluidframework/driver-definitions";
 import { LocalResolver } from "@fluidframework/local-driver";
 import { SharedMap } from "@fluidframework/map";
@@ -49,7 +49,7 @@ const testSharedDataObjectFactory = new DataObjectFactory(
 describe("FluidObjectHandle", () => {
     const documentId = "componentHandleTest";
     const documentLoadUrl = `fluid-test://localhost/${documentId}`;
-    const codeDetails: IFluidCodeDetails = {
+    const codeDetails: IFluidPackageCodeDetails = {
         package: "fluidObjectHandleTestPackage",
         config: {},
     };

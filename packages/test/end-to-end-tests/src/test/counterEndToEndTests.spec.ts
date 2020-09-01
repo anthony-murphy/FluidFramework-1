@@ -4,7 +4,7 @@
  */
 
 import assert from "assert";
-import { IContainer, ILoader, IFluidCodeDetails } from "@fluidframework/container-definitions";
+import { IContainer, ILoader, IFluidPackageCodeDetails } from "@fluidframework/container-definitions";
 import { ISharedCounter, SharedCounter } from "@fluidframework/counter";
 import { IUrlResolver } from "@fluidframework/driver-definitions";
 import { LocalResolver } from "@fluidframework/local-driver";
@@ -22,7 +22,7 @@ describe("SharedCounter", () => {
     const documentId = "counterTest";
     const documentLoadUrl = `fluid-test://localhost/${documentId}`;
     const counterId = "counterKey";
-    const codeDetails: IFluidCodeDetails = {
+    const codeDetails: IFluidPackageCodeDetails = {
         package: "sharedCounterTestPackage",
         config: {},
     };

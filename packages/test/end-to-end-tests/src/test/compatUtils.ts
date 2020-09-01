@@ -8,7 +8,7 @@
 import { DataObject, DataObjectFactory } from "@fluidframework/aqueduct";
 import {
     IContainer,
-    IFluidCodeDetails,
+    IFluidPackageCodeDetails,
     IFluidModule,
     ILoader,
     IRuntimeFactory,
@@ -34,7 +34,7 @@ import * as old from "./oldVersion";
 
 const documentId = "compatibilityTest";
 const documentLoadUrl = `fluid-test://localhost/${documentId}`;
-const codeDetails: IFluidCodeDetails = {
+const codeDetails: IFluidPackageCodeDetails = {
     package: "compatibilityTestPackage",
     config: {},
 };

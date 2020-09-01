@@ -5,7 +5,7 @@
 
 import assert from "assert";
 import { DataObject, DataObjectFactory } from "@fluidframework/aqueduct";
-import { IContainer, IFluidCodeDetails, ILoader } from "@fluidframework/container-definitions";
+import { IContainer, IFluidPackageCodeDetails, ILoader } from "@fluidframework/container-definitions";
 import { Container } from "@fluidframework/container-loader";
 import { IFluidHandle } from "@fluidframework/core-interfaces";
 import { IUrlResolver } from "@fluidframework/driver-definitions";
@@ -59,7 +59,7 @@ describe("DataObject", () => {
     describe("Blob support", () => {
         const documentId = "primedComponentTest";
         const documentLoadUrl = `fluid-test://localhost/${documentId}`;
-        const codeDetails: IFluidCodeDetails = {
+        const codeDetails: IFluidPackageCodeDetails = {
             package: "primedTestDataObjectTestPackage",
             config: {},
         };

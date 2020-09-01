@@ -4,7 +4,7 @@
  */
 
 import { IFluidObject } from "@fluidframework/core-interfaces";
-import { IFluidCodeDetails } from "@fluidframework/container-definitions";
+import { IFluidPackageCodeDetails } from "@fluidframework/container-definitions";
 import { Container, Loader } from "@fluidframework/container-loader";
 import { launchCLI } from "./cli";
 
@@ -12,7 +12,7 @@ import { launchCLI } from "./cli";
  * The initializeChaincode method takes in a document and a desired npm package and establishes a code quorum
  * on this package.
  */
-export async function initializeChaincode(document: Container, pkg?: IFluidCodeDetails): Promise<void> {
+export async function initializeChaincode(document: Container, pkg?: IFluidPackageCodeDetails): Promise<void> {
     if (pkg === undefined) {
         return;
     }

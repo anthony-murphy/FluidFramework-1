@@ -5,7 +5,7 @@
 
 import assert from "assert";
 import { IRequest } from "@fluidframework/core-interfaces";
-import { IFluidCodeDetails, IProxyLoaderFactory, AttachState } from "@fluidframework/container-definitions";
+import { IFluidPackageCodeDetails, IProxyLoaderFactory, AttachState } from "@fluidframework/container-definitions";
 import { ConnectionState, Loader } from "@fluidframework/container-loader";
 import { IUrlResolver, IDocumentServiceFactory } from "@fluidframework/driver-definitions";
 import { LocalDocumentServiceFactory, LocalResolver } from "@fluidframework/local-driver";
@@ -32,7 +32,7 @@ import { requestFluidObject } from "@fluidframework/runtime-utils";
 
 describe("Detached Container", () => {
     const documentId = "detachedContainerTest";
-    const pkg: IFluidCodeDetails = {
+    const pkg: IFluidPackageCodeDetails = {
         package: "detachedContainerTestPackage",
         config: {},
     };

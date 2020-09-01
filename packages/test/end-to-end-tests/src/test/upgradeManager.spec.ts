@@ -9,7 +9,7 @@ import { UpgradeManager } from "@fluidframework/base-host";
 import {
     ICodeLoader,
     IContainer,
-    IFluidCodeDetails,
+    IFluidPackageCodeDetails,
     IProxyLoaderFactory,
 } from "@fluidframework/container-definitions";
 import { Container, Loader } from "@fluidframework/container-loader";
@@ -43,7 +43,7 @@ class TestDataObject extends DataObject {
 describe("UpgradeManager", () => {
     const documentId = "upgradeManagerTest";
     const documentLoadUrl = `fluid-test://localhost/${documentId}`;
-    const codeDetails: IFluidCodeDetails = {
+    const codeDetails: IFluidPackageCodeDetails = {
         package: "localLoaderTestPackage",
         config: {},
     };

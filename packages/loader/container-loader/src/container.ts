@@ -19,7 +19,7 @@ import {
     IContainer,
     IContainerEvents,
     IDeltaManager,
-    IFluidCodeDetails,
+    IFluidPackageCodeDetails,
     IGenericBlob,
     ILoader,
     IRuntimeFactory,
@@ -29,6 +29,7 @@ import {
     ContainerWarning,
     IThrottlingWarning,
     AttachState,
+    isFluidPackageCodeDetails,
 } from "@fluidframework/container-definitions";
 import { performanceNow } from "@fluidframework/common-utils";
 import {
@@ -193,7 +194,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         options: any,
         scope: IFluidObject,
         loader: Loader,
-        source: IFluidCodeDetails,
+        codeDetails: unknown,
         serviceFactory: IDocumentServiceFactory,
         urlResolver: IUrlResolver,
         logger?: ITelemetryBaseLogger,
@@ -207,7 +208,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
             urlResolver,
             {},
             logger);
-        await container.createDetached(source);
+        await container.createDetached(codeDetails);
 
         return container;
     }
@@ -248,7 +249,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         }
         return this._context;
     }
-    private pkg: IFluidCodeDetails | undefined;
+    private _codeDetails: unknown | undefined;
     private _protocolHandler: ProtocolOpHandler | undefined;
     private get protocolHandler() {
         if (this._protocolHandler === undefined) {
@@ -351,8 +352,12 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         return this._deltaManager.clientDetails;
     }
 
-    public get chaincodePackage(): IFluidCodeDetails | undefined {
-        return this.pkg;
+    public get chaincodePackage(): IFluidPackageCodeDetails | undefined {
+        return  isFluidPackageCodeDetails(this._codeDetails) ? this._codeDetails : undefined;
+    }
+
+    public get codeDetails(): unknown | undefined {
+        return this._codeDetails;
     }
 
     /**
@@ -429,7 +434,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
                 if (document.hidden) {
                     this.lastVisible = performanceNow();
                 } else {
-                    // settimeout so this will hopefully fire after disconnect event if being hidden caused it
+                    // setTimeout so this will hopefully fire after disconnect event if being hidden caused it
                     setTimeout(() => this.lastVisible = undefined, 0);
                 }
             });
@@ -763,8 +768,8 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
              * There are currently two scenarios where this is called:
              * 1. When a new code proposal is accepted - This should be set to true before `this.loadContext` is
              * called which creates and loads the ContainerRuntime. This is because for "read" mode clients this
-             * flag is false which causes ContainerRuntime to create the internal compoents again.
-             * 2. When the first client connects in "write" mode - This happens when a clent does not create the
+             * flag is false which causes ContainerRuntime to create the internal components again.
+             * 2. When the first client connects in "write" mode - This happens when a client does not create the
              * Container in detached mode. In this case, when the code proposal is accepted, we come here and we
              * need to create the internal data stores in ContainerRuntime.
              * Once we move to using detached container everywhere, this can move outside this block.
@@ -1003,7 +1008,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         };
     }
 
-    private async createDetached(source: IFluidCodeDetails) {
+    private async createDetached(codeDetails: unknown) {
         const attributes: IDocumentAttributes = {
             branch: "",
             sequenceNumber: 0,
@@ -1014,7 +1019,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         // Seed the base quorum to be an empty list with a code quorum set
         const committedCodeProposal: ICommittedProposal = {
             key: "code",
-            value: source,
+            value: codeDetails,
             approvalSequenceNumber: 0,
             commitSequenceNumber: 0,
             sequenceNumber: 0,
@@ -1150,7 +1155,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
                 if (key === "code" || key === "code2") {
                     debug(`loadRuntimeFactory ${JSON.stringify(value)}`);
 
-                    if (value === this.pkg) {
+                    if (value === this._codeDetails) {
                         return;
                     }
 
@@ -1177,7 +1182,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         return blobManager;
     }
 
-    private getCodeDetailsFromQuorum(): IFluidCodeDetails | undefined {
+    private getCodeDetailsFromQuorum(): unknown | undefined {
         const quorum = this.protocolHandler.quorum;
 
         let pkg = quorum.get("code");
@@ -1193,9 +1198,9 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
     /**
      * Loads the runtime factory for the provided package
      */
-    private async loadRuntimeFactory(pkg: IFluidCodeDetails): Promise<IRuntimeFactory> {
+    private async loadRuntimeFactory(codeDetails: unknown): Promise<IRuntimeFactory> {
         const fluidModule = await PerformanceEvent.timedExecAsync(this.logger, { eventName: "CodeLoad" },
-            async () => this.codeLoader.load(pkg),
+            async () => this.codeLoader.load(codeDetails),
         );
 
         const factory = fluidModule.fluidExport.IRuntimeFactory;
@@ -1504,8 +1509,9 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         snapshot?: ISnapshotTree,
         previousRuntimeState: IRuntimeState = {},
     ) {
-        this.pkg = this.getCodeDetailsFromQuorum();
-        const chaincode = this.pkg !== undefined ? await this.loadRuntimeFactory(this.pkg) : new NullChaincode();
+        this._codeDetails = this.getCodeDetailsFromQuorum();
+        const chaincode =
+            this._codeDetails !== undefined ? await this.loadRuntimeFactory(this._codeDetails) : new NullChaincode();
 
         // The relative loader will proxy requests to '/' to the loader itself assuming no non-cache flags
         // are set. Global requests will still go to this loader
@@ -1532,18 +1538,18 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         );
 
         loader.resolveContainer(this);
-        this.emit("contextChanged", this.pkg);
+        this.emit("contextChanged", this._codeDetails);
     }
 
     /**
      * Creates a new, unattached container context
      */
     private async createDetachedContext(attributes: IDocumentAttributes) {
-        this.pkg = this.getCodeDetailsFromQuorum();
-        if (this.pkg === undefined) {
+        this._codeDetails = this.getCodeDetailsFromQuorum();
+        if (this._codeDetails === undefined) {
             throw new Error("pkg should be provided in create flow!!");
         }
-        const runtimeFactory = await this.loadRuntimeFactory(this.pkg);
+        const runtimeFactory = await this.loadRuntimeFactory(this._codeDetails);
 
         // The relative loader will proxy requests to '/' to the loader itself assuming no non-cache flags
         // are set. Global requests will still go to this loader
@@ -1570,7 +1576,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         );
 
         loader.resolveContainer(this);
-        this.emit("contextChanged", this.pkg);
+        this.emit("contextChanged", this._codeDetails);
     }
 
     // Please avoid calling it directly.

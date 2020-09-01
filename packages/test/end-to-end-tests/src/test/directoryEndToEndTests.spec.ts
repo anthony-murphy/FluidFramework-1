@@ -5,7 +5,7 @@
 
 import assert from "assert";
 import { IFluidHandle } from "@fluidframework/core-interfaces";
-import { IContainer, ILoader, IFluidCodeDetails } from "@fluidframework/container-definitions";
+import { IContainer, ILoader, IFluidPackageCodeDetails } from "@fluidframework/container-definitions";
 import { IUrlResolver } from "@fluidframework/driver-definitions";
 import { LocalResolver } from "@fluidframework/local-driver";
 import { ISharedDirectory, ISharedMap, SharedDirectory, SharedMap } from "@fluidframework/map";
@@ -24,7 +24,7 @@ describe("Directory", () => {
     const documentId = "directoryTest";
     const documentLoadUrl = `fluid-test://localhost/${documentId}`;
     const directoryId = "directoryKey";
-    const codeDetails: IFluidCodeDetails = {
+    const codeDetails: IFluidPackageCodeDetails = {
         package: "sharedDirectoryTestPackage",
         config: {},
     };

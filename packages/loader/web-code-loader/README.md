@@ -28,7 +28,7 @@ const testConfig: IPackageConfig = {
 };
 
 export const testResolvedPackage: IResolvedPackage = {
-    details: { // IFluidCodeDetails
+    details: { // IFluidPackageCodeDetails
         package: testPackage,
         config:  testConfig,
     },

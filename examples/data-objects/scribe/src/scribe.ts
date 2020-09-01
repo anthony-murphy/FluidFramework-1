@@ -15,7 +15,7 @@ import {
 import { FluidDataStoreRuntime, FluidObjectHandle } from "@fluidframework/datastore";
 import {
     IContainerContext,
-    IFluidCodeDetails,
+    IFluidPackageCodeDetails,
     IRuntime,
     IRuntimeFactory,
 } from "@fluidframework/container-definitions";
@@ -226,7 +226,7 @@ function initialize(
         intervalTime = Number.parseInt(intervalElement.value, 10);
         authorCount = Number.parseInt(authorElement.value, 10);
 
-        const details: IFluidCodeDetails = {
+        const details: IFluidPackageCodeDetails = {
             config: {
                 "@fluid-example:cdn": "https://pragueauspkn.azureedge.net",
             },

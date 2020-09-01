@@ -4,7 +4,7 @@
  */
 
 import assert from "assert";
-import { IFluidCodeDetails, ILoader } from "@fluidframework/container-definitions";
+import { IFluidPackageCodeDetails, ILoader } from "@fluidframework/container-definitions";
 import { Container } from "@fluidframework/container-loader";
 import { IUrlResolver } from "@fluidframework/driver-definitions";
 import { LocalResolver } from "@fluidframework/local-driver";
@@ -22,7 +22,7 @@ import { compatTest, ICompatTestArgs } from "./compatUtils";
 
 const documentId = "localSignalsTest";
 const documentLoadUrl = `fluid-test://localhost/${documentId}`;
-const codeDetails: IFluidCodeDetails = {
+const codeDetails: IFluidPackageCodeDetails = {
     package: "localSignalsTestPackage",
     config: {},
 };

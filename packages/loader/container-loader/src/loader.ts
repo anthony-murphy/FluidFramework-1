@@ -17,7 +17,6 @@ import {
     ILoader,
     IProxyLoaderFactory,
     LoaderHeader,
-    IFluidCodeDetails,
 } from "@fluidframework/container-definitions";
 import { Deferred, performanceNow } from "@fluidframework/common-utils";
 import { ChildLogger, DebugLogger, PerformanceEvent } from "@fluidframework/telemetry-utils";
@@ -99,7 +98,7 @@ export class RelativeLoader extends EventEmitter implements ILoader {
         return this.loader.request(request);
     }
 
-    public async createDetachedContainer(source: IFluidCodeDetails): Promise<Container> {
+    public async createDetachedContainer(source: unknown): Promise<Container> {
         throw new Error("Relative loader should not create a detached container");
     }
 
@@ -156,7 +155,7 @@ export class Loader extends EventEmitter implements ILoader {
         this.documentServiceFactory = MultiDocumentServiceFactory.create(documentServiceFactory);
     }
 
-    public async createDetachedContainer(source: IFluidCodeDetails): Promise<Container> {
+    public async createDetachedContainer(source: unknown): Promise<Container> {
         debug(`Container creating in detached state: ${performanceNow()} `);
 
         return Container.create(

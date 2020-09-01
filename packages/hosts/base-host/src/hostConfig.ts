@@ -4,7 +4,12 @@
  */
 
 import { IFluidObject } from "@fluidframework/core-interfaces";
-import { ICodeAllowList, IProxyLoaderFactory, IFluidCodeResolver } from "@fluidframework/container-definitions";
+import {
+    ICodeAllowList,
+    IProxyLoaderFactory,
+    IFluidCodeResolver,
+    IFluidPackage,
+} from "@fluidframework/container-definitions";
 import { IDocumentServiceFactory, IUrlResolver } from "@fluidframework/driver-definitions";
 
 /**
@@ -12,7 +17,7 @@ import { IDocumentServiceFactory, IUrlResolver } from "@fluidframework/driver-de
  * list of document service factories from which one can be selected based on protocol
  * of resolved url.
  */
-export interface IBaseHostConfig {
+export interface IBaseHostConfig<TResolvedCodeDetails= IFluidPackage> {
     documentServiceFactory: IDocumentServiceFactory | IDocumentServiceFactory[];
     urlResolver: IUrlResolver | IUrlResolver[];
 
@@ -26,8 +31,8 @@ export interface IBaseHostConfig {
     proxyLoaderFactories?: Map<string, IProxyLoaderFactory>;
 
     // Allow List for the code loader
-    allowList?: ICodeAllowList;
+    allowList?: ICodeAllowList<TResolvedCodeDetails>;
 
     // The code resolver
-    codeResolver: IFluidCodeResolver;
+    codeResolver: IFluidCodeResolver<TResolvedCodeDetails>;
 }

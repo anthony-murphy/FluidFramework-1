@@ -6,12 +6,12 @@
 
 import assert from "assert";
 import { Container } from "@fluidframework/container-loader";
-import { IFluidCodeDetails } from "@fluidframework/container-definitions";
+import { IFluidPackageCodeDetails } from "@fluidframework/container-definitions";
 import { MockQuorum } from "@fluidframework/test-runtime-utils";
 import { IQuorum } from "@fluidframework/protocol-definitions";
 import { initializeContainerCode } from "../initializeContainerCode";
 
-const codePkg = {} as IFluidCodeDetails;
+const codePkg = {} as IFluidPackageCodeDetails;
 
 describe("base-host", () => {
     describe("initializeContainerCode", () => {

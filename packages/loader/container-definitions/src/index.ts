@@ -17,7 +17,7 @@ declare module "@fluidframework/core-interfaces" {
 
 export * from "./audience";
 export * from "./blobs";
-export * from "./legacy/chaincode";
+export * from "./codeLoader";
 export * from "./deltas";
 export * from "./error";
 export * from "./loader";
@@ -26,3 +26,4 @@ export * from "./fluidModule";
 export * from "./proxyLoader";
 export * from "./messageScheduler";
 export * from "./runtime";
+export * from "./tokenProvider";

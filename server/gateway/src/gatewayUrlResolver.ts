@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { IFluidCodeDetails } from "@fluidframework/container-definitions";
+import { IFluidPackageCodeDetails } from "@fluidframework/container-definitions";
 import { IFluidResolvedUrl } from "@fluidframework/driver-definitions";
 import { configurableUrlResolver } from "@fluidframework/driver-utils";
 import { IClientConfig } from "@fluidframework/odsp-utils";
@@ -19,7 +19,7 @@ import { isSpoTenant, spoGetResolvedUrl } from "./odspUtils";
 
 interface FullTree {
     cache: IGitCache,
-    code: IFluidCodeDetails | null,
+    code: IFluidPackageCodeDetails | null,
 }
 
 export function resolveUrl(

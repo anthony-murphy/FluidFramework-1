@@ -4,17 +4,25 @@
  */
 
 import {
-    IFluidCodeDetails, IFluidCodeResolver, IPackage, IResolvedFluidCodeDetails, isFluidPackage,
+    IFluidPackageCodeDetails,
+    IFluidCodeResolver,
+    IPackage,
+    isFluidPackage,
+    IFluidPackage,
+    IResolvedCodeDetails,
+    ensureFluidPackageCodeDetails,
 } from "@fluidframework/container-definitions";
 import fetch from "isomorphic-fetch";
 import { extractPackageIdentifierDetails } from "./utils";
 
+type ResolvedFluidPackage = IResolvedCodeDetails<IFluidPackage> & IFluidPackageCodeDetails;
+
 class FluidPackage {
-    private resolveP: Promise<IResolvedFluidCodeDetails> | undefined;
+    private resolveP: Promise<ResolvedFluidPackage> | undefined;
 
-    constructor(private readonly codeDetails: IFluidCodeDetails, private readonly packageUrl: string) { }
+    constructor(private readonly codeDetails: IFluidPackageCodeDetails, private readonly packageUrl: string) { }
 
-    public async resolve(): Promise<IResolvedFluidCodeDetails> {
+    public async resolve(): Promise<ResolvedFluidPackage> {
         if (this.resolveP === undefined) {
             this.resolveP = this.resolveCore();
         }
@@ -22,8 +30,8 @@ class FluidPackage {
         return this.resolveP;
     }
 
-    private async resolveCore(): Promise<IResolvedFluidCodeDetails> {
-        let packageJson: IPackage;
+    private async resolveCore(): Promise<ResolvedFluidPackage> {
+        let packageJson: any;
         if (typeof this.codeDetails.package === "string") {
             const response = await fetch(`${this.packageUrl}/package.json`);
             packageJson = await response.json() as IPackage;
@@ -32,7 +40,7 @@ class FluidPackage {
         }
 
         if (!isFluidPackage(packageJson)) {
-            throw new Error(`Package ${packageJson.name} not a Fluid module.`);
+            throw new Error(`Package ${packageJson?.name} not a Fluid module.`);
         }
         const files = packageJson.fluid.browser.umd.files;
         for (let i = 0; i < packageJson.fluid.browser.umd.files.length; i++) {
@@ -44,14 +52,14 @@ class FluidPackage {
         return {
             config: this.codeDetails.config,
             package: this.codeDetails.package,
-            resolvedPackage: packageJson,
-            resolvedPackageCacheId: this.packageUrl,
+            resolvedCodeDetails: packageJson,
+            codeDetailsCacheId: this.packageUrl,
         };
     }
 }
 
 /**
- * This code resolver works against cdns that support semantic verioning in the url path of the format:
+ * This code resolver works against cdns that support semantic versioning in the url path of the format:
  * `cdn_base/@package_scope?/package_name@package_version`
  *
  * The `@package_scope?` is optional, and only needed it the package has a scope.
@@ -61,11 +69,13 @@ class FluidPackage {
  * a per scope cdn, `config["@package_scope:cdn"]`. A scope specific cdn base will take precedence over
  * the global cdn.
  */
-export class SemVerCdnCodeResolver implements IFluidCodeResolver {
+export class SemVerCdnCodeResolver implements IFluidCodeResolver<IFluidPackage> {
     // Cache goes CDN -> package -> entrypoint
     private readonly fluidPackageCache = new Map<string, FluidPackage>();
 
-    public async resolveCodeDetails(details: IFluidCodeDetails): Promise<IResolvedFluidCodeDetails> {
+    public async resolveCodeDetails(details: unknown): Promise<ResolvedFluidPackage> {
+        ensureFluidPackageCodeDetails(details);
+
         const parsed = extractPackageIdentifierDetails(details.package);
 
         const cdn = details.config[`@${parsed.scope}:cdn`] ?? details.config.cdn;

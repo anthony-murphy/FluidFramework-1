@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { IFluidCodeDetails } from "@fluidframework/container-definitions";
+import { IFluidPackageCodeDetails } from "@fluidframework/container-definitions";
 
 export const IDocumentFactory: keyof IProvideDocumentFactory = "IDocumentFactory";
 
@@ -12,7 +12,7 @@ export interface IProvideDocumentFactory {
 }
 
 export interface IDocumentFactory extends IProvideDocumentFactory {
-    create(fluidCodeDetails: IFluidCodeDetails): Promise<string>;
+    create(fluidCodeDetails: IFluidPackageCodeDetails): Promise<string>;
 }
 
 declare module "@fluidframework/core-interfaces" {

@@ -4,7 +4,7 @@
  */
 
 import assert from "assert";
-import { IContainer, IFluidCodeDetails, ILoader } from "@fluidframework/container-definitions";
+import { IContainer, IFluidPackageCodeDetails, ILoader } from "@fluidframework/container-definitions";
 import { IUrlResolver } from "@fluidframework/driver-definitions";
 import { LocalResolver } from "@fluidframework/local-driver";
 import { ContainerMessageType, taskSchedulerId } from "@fluidframework/container-runtime";
@@ -27,7 +27,7 @@ describe("Batching", () => {
     const documentLoadUrl = `fluid-test://localhost/${documentId}`;
     const map1Id = "map1Key";
     const map2Id = "map2Key";
-    const codeDetails: IFluidCodeDetails = {
+    const codeDetails: IFluidPackageCodeDetails = {
         package: "batchingTestPackage",
         config: {},
     };

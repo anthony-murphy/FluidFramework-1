@@ -11,7 +11,7 @@ import {
     ICodeLoader,
     IProvideRuntimeFactory,
     IFluidModule,
-    IFluidCodeDetails,
+    IFluidPackageCodeDetails,
 } from "@fluidframework/container-definitions";
 import { Loader, Container } from "@fluidframework/container-loader";
 import { IProvideFluidDataStoreFactory } from "@fluidframework/runtime-definitions";
@@ -57,7 +57,7 @@ export async function createLocalContainerFactory(
     return async () => {
         const container = await loader.resolve({ url });
 
-        await initializeContainerCode(container, {} as any as IFluidCodeDetails);
+        await initializeContainerCode(container, {} as any as IFluidPackageCodeDetails);
 
         // If we're loading from ops, the context might be in the middle of reloading.  Check for that case and wait
         // for the contextChanged event to avoid returning before that reload completes.

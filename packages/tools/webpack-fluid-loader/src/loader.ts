@@ -10,11 +10,12 @@ import {
     AttachState,
     IFluidModule,
     IFluidPackage,
-    IFluidCodeDetails,
+    IFluidPackageCodeDetails,
     IFluidCodeResolver,
     IProxyLoaderFactory,
-    IResolvedFluidCodeDetails,
     isFluidPackage,
+    ensureFluidPackageCodeDetails,
+    IResolvedCodeDetails,
 } from "@fluidframework/container-definitions";
 import { Container, Loader } from "@fluidframework/container-loader";
 import { IUrlResolver } from "@fluidframework/driver-definitions";
@@ -77,14 +78,14 @@ export type RouteOptions =
     | ITinyliciousRouteOptions
     | IOdspRouteOptions;
 
-function wrapWithRuntimeFactoryIfNeeded(packageJson: IFluidPackage, fluidModule: IFluidModule): IFluidModule {
+function wrapWithRuntimeFactoryIfNeeded(fluidModule: IFluidModule): IFluidModule {
     if (fluidModule.fluidExport.IRuntimeFactory === undefined) {
         const dataStoreFactory = fluidModule.fluidExport.IFluidDataStoreFactory;
 
         const runtimeFactory = new ContainerRuntimeFactoryWithDefaultDataStore(
-            packageJson.name,
+            "default",
             new Map([
-                [packageJson.name, Promise.resolve(dataStoreFactory)],
+                ["default", Promise.resolve(dataStoreFactory)],
             ]),
         );
         return {
@@ -109,9 +110,10 @@ function makeSideBySideDiv(divId: string) {
     return div;
 }
 
-class WebpackCodeResolver implements IFluidCodeResolver {
+class WebpackCodeResolver implements IFluidCodeResolver<IFluidPackage> {
     constructor(private readonly options: IBaseRouteOptions) { }
-    async resolveCodeDetails(details: IFluidCodeDetails): Promise<IResolvedFluidCodeDetails> {
+    async resolveCodeDetails(details: unknown): Promise<IResolvedCodeDetails<IFluidPackage>> {
+        ensureFluidPackageCodeDetails(details);
         const baseUrl = details.config.cdn ?? `http://localhost:${this.options.port}`;
         let pkg = details.package;
         if (typeof pkg === "string") {
@@ -129,10 +131,8 @@ class WebpackCodeResolver implements IFluidCodeResolver {
         }
         const parse = extractPackageIdentifierDetails(details.package);
         return {
-            config: details.config,
-            package: details.package,
-            resolvedPackage: pkg,
-            resolvedPackageCacheId: parse.fullId,
+            resolvedCodeDetails: pkg,
+            codeDetailsCacheId: parse.fullId,
         };
     }
 }
@@ -145,14 +145,15 @@ async function createWebLoader(
     fluidModule: IFluidModule,
     options: RouteOptions,
     urlResolver: IUrlResolver,
-    codeDetails: IFluidCodeDetails,
+    codeDetails: IFluidPackageCodeDetails,
 ): Promise<Loader> {
     const documentServiceFactory = getDocumentServiceFactory(documentId, options);
     const codeLoader = new WebCodeLoader(new WebpackCodeResolver(options));
 
     await codeLoader.seedModule(
         codeDetails,
-        wrapWithRuntimeFactoryIfNeeded(codeDetails.package as IFluidPackage, fluidModule),
+        wrapWithRuntimeFactoryIfNeeded(
+            fluidModule),
     );
 
     return new Loader(
@@ -186,7 +187,7 @@ export async function start(
         url = url.replace(id, `doc/${documentId}`);
     }
 
-    const codeDetails: IFluidCodeDetails = {
+    const codeDetails: IFluidPackageCodeDetails = {
         package: packageJson,
         config: {},
     };
@@ -305,7 +306,7 @@ async function getFluidObjectAndRender(container: Container, url: string, div: H
 /**
  * Attached a detached container.
  * In case of manual attach (when manualAttach is true), it creates a button and attaches the container when the button
- * is clicked. Otherwise, it attaches the conatiner right away.
+ * is clicked. Otherwise, it attaches the container right away.
  */
 async function attachContainer(
     container: Container,

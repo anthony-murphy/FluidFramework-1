@@ -4,7 +4,7 @@
  */
 
 import { parse } from "url";
-import { IFluidCodeDetails } from "@fluidframework/container-definitions";
+import { IFluidPackageCodeDetails } from "@fluidframework/container-definitions";
 import { ScopeType } from "@fluidframework/protocol-definitions";
 import { IAlfredTenant } from "@fluidframework/server-services-client";
 import { extractPackageIdentifierDetails, SemVerCdnCodeResolver } from "@fluidframework/web-code-loader";
@@ -96,7 +96,7 @@ export function create(
                     const cdn = request.query.cdn ? request.query.cdn : config.get("worker:npm");
                     const entryPoint = queryParamAsString(request.query.entrypoint);
 
-                    let codeDetails: IFluidCodeDetails;
+                    let codeDetails: IFluidPackageCodeDetails;
                     if (chaincode.startsWith("http")) {
                         codeDetails = {
                             config: {

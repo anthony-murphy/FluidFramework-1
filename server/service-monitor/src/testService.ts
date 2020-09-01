@@ -5,7 +5,7 @@
 
 /* eslint-disable prefer-template */
 import * as url from "url";
-import { IFluidCodeDetails, IProxyLoaderFactory } from "@fluidframework/container-definitions";
+import { IFluidPackageCodeDetails, IProxyLoaderFactory } from "@fluidframework/container-definitions";
 import { Container, Loader } from "@fluidframework/container-loader";
 import { IFluidResolvedUrl } from "@fluidframework/driver-definitions";
 import { ContainerUrlResolver } from "@fluidframework/routerlicious-host";
@@ -47,7 +47,7 @@ async function waitForFullConnection(container: Container): Promise<void> {
 }
 
 // Initializes the data store.
-async function initializeChaincode(container: Container, pkg?: IFluidCodeDetails): Promise<void> {
+async function initializeChaincode(container: Container, pkg?: IFluidPackageCodeDetails): Promise<void> {
     if (pkg === undefined) {
         return;
     }
@@ -68,7 +68,7 @@ async function runInternal(loader: Loader, docUrl: string, params: ILoadParams):
     await waitForFullConnection(container);
     winston.info(`Fully connected to ${docUrl}`);
     if (params.dataStore.load) {
-        const codePackage: IFluidCodeDetails = {
+        const codePackage: IFluidPackageCodeDetails = {
             config: undefined,
             package: params.dataStore.packageName,
         };

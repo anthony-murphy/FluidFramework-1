@@ -9,7 +9,7 @@ import {
     ICodeLoader,
     IProvideRuntimeFactory,
     IFluidModule,
-    IFluidCodeDetails,
+    IFluidPackageCodeDetails,
 } from "@fluidframework/container-definitions";
 import { IProvideFluidDataStoreFactory, IProvideFluidDataStoreRegistry } from "@fluidframework/runtime-definitions";
 
@@ -27,7 +27,7 @@ export type fluidEntryPoint = Partial<
 export class LocalCodeLoader implements ICodeLoader {
     private readonly fluidPackageCache = new Map<string, fluidEntryPoint>();
 
-    constructor(packageEntries: Iterable<[IFluidCodeDetails, fluidEntryPoint]>) {
+    constructor(packageEntries: Iterable<[IFluidPackageCodeDetails, fluidEntryPoint]>) {
         for (const entry of packageEntries) {
             // Store the entry point against a unique id in the fluidPackageCache.
             // For code details containing a package name, use the package name as the id.
@@ -51,7 +51,7 @@ export class LocalCodeLoader implements ICodeLoader {
      * @param source - Details of where to find chaincode
      */
     public async load(
-        source: IFluidCodeDetails,
+        source: IFluidPackageCodeDetails,
     ): Promise<IFluidModule> {
         // Get the entry point for from the fluidPackageCache for the given code details.
         // For code details containing a package name, use the package name as the id.

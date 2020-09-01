@@ -5,7 +5,7 @@
 
 import { strict as assert } from "assert";
 import { DataObject, DataObjectFactory, IDataObjectProps } from "@fluidframework/aqueduct";
-import { IContainer, IFluidCodeDetails, ILoader } from "@fluidframework/container-definitions";
+import { IContainer, IFluidPackageCodeDetails, ILoader } from "@fluidframework/container-definitions";
 import { IFluidHandle } from "@fluidframework/core-interfaces";
 import { SharedCounter } from "@fluidframework/counter";
 import { IFluidDataStoreRuntime } from "@fluidframework/datastore-definitions";
@@ -89,7 +89,7 @@ const testDataObjectFactory = new DataObjectFactory(
 describe("LocalLoader", () => {
     const documentId = "localLoaderTest";
     const documentLoadUrl = `fluid-test://localhost/${documentId}`;
-    const codeDetails: IFluidCodeDetails = {
+    const codeDetails: IFluidPackageCodeDetails = {
         package: "localLoaderTestPackage",
         config: {},
     };

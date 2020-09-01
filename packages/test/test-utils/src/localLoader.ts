@@ -7,7 +7,7 @@ import {
     ICodeLoader,
     IContainer,
     ILoader,
-    IFluidCodeDetails,
+    IFluidPackageCodeDetails,
     IFluidModule,
     IProxyLoaderFactory,
     IProvideRuntimeFactory,
@@ -26,7 +26,7 @@ import { LocalCodeLoader } from "./localCodeLoader";
  */
 export function createLocalLoader(
     packageEntries: Iterable<[
-        IFluidCodeDetails,
+        IFluidPackageCodeDetails,
         Partial<IProvideRuntimeFactory & IProvideFluidDataStoreFactory & IFluidModule>
     ]>,
     deltaConnectionServer: ILocalDeltaConnectionServer,
@@ -54,7 +54,7 @@ export function createLocalLoader(
 
 export async function createAndAttachContainer(
     documentId: string,
-    source: IFluidCodeDetails,
+    source: IFluidPackageCodeDetails,
     loader: ILoader,
     urlResolver: IUrlResolver,
 ): Promise<IContainer> {

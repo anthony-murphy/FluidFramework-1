@@ -68,8 +68,8 @@ export interface IFluidPackage extends IPackage {
  * Check if the package.json defines a Fluid module, which requires a `fluid` entry
  * @param pkg - the package json data to check if it is a Fluid package.
  */
-export const isFluidPackage = (pkg: IPackage): pkg is IFluidPackage =>
-    pkg.fluid?.browser?.umd !== undefined;
+export const isFluidPackage = (pkg: any): pkg is IFluidPackage =>
+    pkg?.fluid?.browser?.umd !== undefined;
 
 /**
  * Package manager configuration. Provides a key value mapping of config values
@@ -81,15 +81,29 @@ export interface IPackageConfig {
 /**
  * Data structure used to describe the code to load on the Fluid document
  */
-export interface IFluidCodeDetails {
+export interface IFluidPackageCodeDetails {
     /**
      * The code package to be used on the Fluid document. This is either the package name which will be loaded
      * from a package manager. Or the expanded Fluid package.
      */
-    package: string | IFluidPackage;
+    package: string | IFluidPackage
 
     /**
      * Configuration details. This includes links to the package manager and base CDNs.
      */
     config: IPackageConfig;
 }
+
+export const isFluidPackageCodeDetails = (codeDetails: any): codeDetails is IFluidPackageCodeDetails =>
+    typeof codeDetails === "object"
+    && typeof codeDetails?.config === "object"
+    && (typeof codeDetails?.package === "string"
+        || typeof codeDetails?.package === "object"
+        && isFluidPackage(codeDetails?.package));
+
+export const ensureFluidPackageCodeDetails = (codeDetails: unknown): asserts codeDetails is IFluidPackageCodeDetails=> {
+    if (isFluidPackageCodeDetails(codeDetails)) {
+        return;
+    }
+    throw new Error("codeDetails not a IFluidPackageCodeDetails");
+};

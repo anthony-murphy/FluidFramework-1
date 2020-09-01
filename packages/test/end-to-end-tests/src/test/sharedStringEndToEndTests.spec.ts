@@ -4,7 +4,7 @@
  */
 
 import assert from "assert";
-import { IContainer, IFluidCodeDetails, ILoader } from "@fluidframework/container-definitions";
+import { IContainer, IFluidPackageCodeDetails, ILoader } from "@fluidframework/container-definitions";
 import { Container } from "@fluidframework/container-loader";
 import { IUrlResolver } from "@fluidframework/driver-definitions";
 import { LocalResolver } from "@fluidframework/local-driver";
@@ -25,7 +25,7 @@ const documentId = "sharedStringTest";
 const documentLoadUrl = `fluid-test://localhost/${documentId}`;
 const stringId = "sharedStringKey";
 const registry: ChannelFactoryRegistry = [[stringId, SharedString.getFactory()]];
-const codeDetails: IFluidCodeDetails = {
+const codeDetails: IFluidPackageCodeDetails = {
     package: "sharedStringTestPackage",
     config: {},
 };

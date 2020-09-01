@@ -6,7 +6,7 @@
 import assert from "assert";
 import { ISharedCell, SharedCell } from "@fluidframework/cell";
 import { IFluidHandle } from "@fluidframework/core-interfaces";
-import { IContainer, IFluidCodeDetails, ILoader } from "@fluidframework/container-definitions";
+import { IContainer, IFluidPackageCodeDetails, ILoader } from "@fluidframework/container-definitions";
 import { IUrlResolver } from "@fluidframework/driver-definitions";
 import { LocalResolver } from "@fluidframework/local-driver";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
@@ -25,7 +25,7 @@ describe("Cell", () => {
     const cellId = "cellKey";
     const initialCellValue = "Initial cell value";
     const newCellValue = "A new cell value";
-    const codeDetails: IFluidCodeDetails = {
+    const codeDetails: IFluidPackageCodeDetails = {
         package: "sharedCellTestPackage",
         config: {},
     };

@@ -11,7 +11,7 @@ import {
 } from "@fluidframework/aqueduct";
 import {
     IContainer,
-    IFluidCodeDetails,
+    IFluidPackageCodeDetails,
     IFluidPackage,
     ILoader,
     IRuntimeFactory,
@@ -79,7 +79,7 @@ class OldTestDataStoreV2 extends OldTestDataStore {
 describe("context reload", function() {
     const documentId = "contextReloadTest";
     const documentLoadUrl = `fluid-test://localhost/${documentId}`;
-    const codeDetails = (version: string): IFluidCodeDetails => {
+    const codeDetails = (version: string): IFluidPackageCodeDetails => {
         return {
             // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
             package: { name: TestDataStore.type, version } as IFluidPackage,
@@ -94,7 +94,7 @@ describe("context reload", function() {
         // wait for "contextChanged" events on all containers
         return Promise.all(containers.map(
             async (container) => new Promise((resolve, reject) =>
-                container.on("contextChanged", (code: IFluidCodeDetails) =>
+                container.on("contextChanged", (code: IFluidPackageCodeDetails) =>
                     typeof code.package === "object" && code.package.version === version ? resolve() : reject()))));
     };
 

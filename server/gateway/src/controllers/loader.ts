@@ -4,7 +4,7 @@
  */
 
 import { BaseHost, IBaseHostConfig } from "@fluidframework/base-host";
-import { IProxyLoaderFactory, IResolvedFluidCodeDetails } from "@fluidframework/container-definitions";
+import { IProxyLoaderFactory, IResolvedFluidPackageCodeDetails } from "@fluidframework/container-definitions";
 import {
     IDocumentServiceFactory,
     IFluidResolvedUrl,
@@ -36,7 +36,7 @@ export async function initialize(
     url: string,
     resolved: IFluidResolvedUrl,
     cache: IGitCache,
-    pkg: IResolvedFluidCodeDetails | undefined,
+    pkg: IResolvedFluidPackageCodeDetails | undefined,
     scriptIds: string[],
     jwt: string,
     config: any,

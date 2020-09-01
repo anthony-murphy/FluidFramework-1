@@ -4,7 +4,7 @@ This package contains utilities for writing end-to-end tests in Fluid Framework.
 
 ## Local Code Loader
 
-`LocalCodeLoader` in `localCodeLoader.ts` is a simple code loader that can load a Fluid package with a given entry point. It can be used to load multiple different Fluid packages with different sources (`IFluidCodeDetails`).
+`LocalCodeLoader` in `localCodeLoader.ts` is a simple code loader that can load a Fluid package with a given entry point. It can be used to load multiple different Fluid packages with different sources (`IFluidPackageCodeDetails`).
 
 It should be created by passing in a list of source to entry point mapping. Then entry point can be an `IFluidDataStoreFactory`, `IRuntimeFactory` or a `fluidExport`:
 ```typeScript
@@ -12,9 +12,9 @@ It should be created by passing in a list of source to entry point mapping. Then
 export type fluidEntryPoint = Partial<IProvideRuntimeFactory & IProvideFluidDataStoreFactory & IFluidModule>;
 
 // Constructor for LocalCodeLoader.
-constructor(packageEntries: Iterable<[IFluidCodeDetails, fluidEntryPoint]>);
+constructor(packageEntries: Iterable<[IFluidPackageCodeDetails, fluidEntryPoint]>);
 ```
-On load, it retrieves the `fluidEntryPoint` matching the package in the `IFluidCodeDetails` and loads it.
+On load, it retrieves the `fluidEntryPoint` matching the package in the `IFluidPackageCodeDetails` and loads it.
 
 ## Local Loader
 `localLoader.ts` contains couple of methods:
@@ -27,7 +27,7 @@ It should be created with a list of source to entry point mappings (of type `flu
 ```typeScript
 export function createLocalLoader(
     packageEntries: Iterable<[
-        IFluidCodeDetails,
+        IFluidPackageCodeDetails,
         Partial<IProvideRuntimeFactory & IProvideFluidDataStoreFactory & IFluidModule>
     ]>,
     deltaConnectionServer: ILocalDeltaConnectionServer,
@@ -44,7 +44,7 @@ This method creates and attaches a `Container` with the given `documentId`, `sou
 ```typescript
 export async function createAndAttachContainer(
     documentId: string,
-    source: IFluidCodeDetails,
+    source: IFluidPackageCodeDetails,
     loader: ILoader,
     urlResolver: IUrlResolver,
 ): Promise<IContainer>
@@ -99,9 +99,9 @@ The typical usage for testing a Fluid object is as follows:
     const urlResolver: IUrlResolver = new LocalResolver();
     ```
 
-3. Create an `IFluidCodeDetails` and a `TestFluidObjectFactory` which will serve as the Fluid entry point (code details to factory mapping):
+3. Create an `IFluidPackageCodeDetails` and a `TestFluidObjectFactory` which will serve as the Fluid entry point (code details to factory mapping):
     ```typescript
-    const codeDetails: IFluidCodeDetails = {
+    const codeDetails: IFluidPackageCodeDetails = {
         package: "sharedStringTestPackage",
         config: {},
     };
@@ -119,7 +119,7 @@ The typical usage for testing a Fluid object is as follows:
     const documentId = "testDocument";
     const container = await createAndAttachContainer(documentId, codeDetails, loader, urlResolver);
     ```
-    > We used the same `IFluidCodeDetails` that was used to create the `Loader` in step 3.
+    > We used the same `IFluidPackageCodeDetails` that was used to create the `Loader` in step 3.
 
 6. Get the `Fluid object (TestFluidObject)` by using `requestFluidObject` API in `@fluidframework/runtime-utils`. Then get the `DDS` to test:
     ```typescript

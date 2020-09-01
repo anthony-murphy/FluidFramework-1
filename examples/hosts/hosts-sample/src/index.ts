@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { IFluidCodeDetails, IProxyLoaderFactory } from "@fluidframework/container-definitions";
+import { IFluidPackageCodeDetails, IProxyLoaderFactory } from "@fluidframework/container-definitions";
 import { Loader } from "@fluidframework/container-loader";
 import { IUser } from "@fluidframework/protocol-definitions";
 import { RouterliciousDocumentServiceFactory } from "@fluidframework/routerlicious-driver";
@@ -92,7 +92,7 @@ export async function start(url: string, code: string): Promise<void> {
     // package name on the code quorum. We only perform this check for new documents.
     if (!fluidDocument.existing) {
         const parsedPackage = extractPackageIdentifierDetails(code);
-        const details: IFluidCodeDetails = {
+        const details: IFluidPackageCodeDetails = {
             config: {
                 [`@${parsedPackage.scope}:cdn`]: npm,
             },

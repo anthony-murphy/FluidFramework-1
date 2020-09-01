@@ -26,8 +26,9 @@ import {
 import { IAudience } from "./audience";
 import { IBlobManager } from "./blobs";
 import { ICriticalContainerError, ContainerWarning } from "./error";
-import { ICodeLoader, ILoader } from "./loader";
+import { ILoader } from "./loader";
 import { IMessageScheduler } from "./messageScheduler";
+import { ICodeLoader } from "./codeLoader";
 
 // Represents the attachment state of the entity.
 export enum AttachState {
@@ -165,7 +166,7 @@ export interface IProvideRuntimeFactory {
  */
 export interface IRuntimeFactory extends IProvideRuntimeFactory {
     /**
-     * Instantiates a new chaincode container
+     * Instantiates a new runtime container
      */
     instantiateRuntime(context: IContainerContext): Promise<IRuntime>;
 }
