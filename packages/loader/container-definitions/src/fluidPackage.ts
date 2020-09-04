@@ -88,8 +88,9 @@ export interface IFluidPackageCodeDetails {
     /**
      * The code package to be used on the Fluid document. This is either the package name which will be loaded
      * from a package manager. Or the expanded Fluid package.
+     * format scope/name@version
      */
-    package: string | IFluidPackage
+    package: string;
 
     /**
      * Configuration details. This includes links to the package manager and base CDNs.

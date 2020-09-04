@@ -30,6 +30,8 @@ import {
     IThrottlingWarning,
     AttachState,
     isFluidPackageCodeDetails,
+    ICodeProposal,
+    UpgradeDetails,
 } from "@fluidframework/container-definitions";
 import { performanceNow } from "@fluidframework/common-utils";
 import {
@@ -85,6 +87,7 @@ import {
     MessageType,
     TreeEntry,
     ISummaryTree,
+    IPendingProposal,
 } from "@fluidframework/protocol-definitions";
 import { Audience } from "./audience";
 import { BlobManager } from "./blobManager";
@@ -249,7 +252,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         }
         return this._context;
     }
-    private _codeDetails: unknown | undefined;
+    private _codeProposal: ICodeProposal | any | undefined;
     private _protocolHandler: ProtocolOpHandler | undefined;
     private get protocolHandler() {
         if (this._protocolHandler === undefined) {
@@ -352,12 +355,15 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         return this._deltaManager.clientDetails;
     }
 
+    /**
+     * deprecated. use codeDetails instead
+     */
     public get chaincodePackage(): IFluidPackageCodeDetails | undefined {
-        return  isFluidPackageCodeDetails(this._codeDetails) ? this._codeDetails : undefined;
+        return  isFluidPackageCodeDetails(this.codeDetails) ? this.codeDetails : undefined;
     }
 
     public get codeDetails(): unknown | undefined {
-        return this._codeDetails;
+        return  this._codeProposal?.codeDetails ?? this._codeProposal;
     }
 
     /**
@@ -750,12 +756,21 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         throw new Error("Url Resolver does not support creating urls");
     }
 
+    public async proposeCode(codeDetails: unknown, forceUpdate?: boolean) {
+        const codeProposal: ICodeProposal = {
+            codeDetails,
+            forceUpdate,
+        };
+        return this.getQuorum().propose("code", codeProposal);
+    }
+
     private async reloadContextCore(): Promise<void> {
         await Promise.all([
             this.deltaManager.inbound.systemPause(),
             this.deltaManager.inboundSignal.systemPause()]);
 
         const previousContextState = await this.context.snapshotRuntimeState();
+
         this.context.dispose();
 
         let snapshot: ISnapshotTree | undefined;
@@ -1015,11 +1030,13 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
             term: 1,
             minimumSequenceNumber: 0,
         };
-
+        const codeProposal: ICodeProposal = {
+            codeDetails,
+        };
         // Seed the base quorum to be an empty list with a code quorum set
         const committedCodeProposal: ICommittedProposal = {
             key: "code",
-            value: codeDetails,
+            value: codeProposal,
             approvalSequenceNumber: 0,
             commitSequenceNumber: 0,
             sequenceNumber: 0,
@@ -1148,19 +1165,58 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
             }
         });
 
+        const contextNeedsReload = (maybeCP: Partial<ICodeProposal>, maybeUpgradeDetails: UpgradeDetails | undefined)=>
+            maybeCP.codeDetails === undefined
+            || maybeCP.forceUpdate === true
+            || maybeUpgradeDetails?.isValid === false
+            || (maybeUpgradeDetails?.isValid === true && maybeUpgradeDetails.requiresReload === true);
+
+        protocol.quorum.on(
+            "addProposal",
+            (proposal: IPendingProposal) => {
+                if (proposal.key === "code") {
+                        if (this._context !== undefined && this.hasNullRuntime() === false) {
+                            // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                            this.deltaManager.outbound.systemPause()
+                                .then(()=> {
+                                    const maybeCP = proposal.value as Partial<ICodeProposal>;
+                                    const maybeUpgradeDetails =
+                                        this._context?.runtimeFactory?.IRuntimeUpgradeDetails?.getRuntimeUpgradeDetails(
+                                            this.codeDetails, maybeCP.codeDetails ?? proposal.value);
+                                    if (contextNeedsReload(maybeCP, maybeUpgradeDetails)) {
+                                        this.emit(
+                                            "contextChangeProposed",
+                                            maybeCP.codeDetails ?? proposal.value,
+                                            maybeUpgradeDetails,
+                                            maybeCP.forceUpdate !== true ? () => proposal.reject() : undefined);
+                                    }
+                                })
+                                .finally(() => {
+                                    this.deltaManager.outbound.systemResume();
+                                });
+                        }
+                    }
+                });
+
         protocol.quorum.on(
             "approveProposal",
             (sequenceNumber, key, value) => {
                 debug(`approved ${key}`);
-                if (key === "code" || key === "code2") {
+                if (key === "code") {
                     debug(`loadRuntimeFactory ${JSON.stringify(value)}`);
 
-                    if (value === this._codeDetails) {
+                    if (value === this._codeProposal) {
                         return;
                     }
+                    const maybeCP = value as Partial<ICodeProposal>;
+                    const maybeUpgradeDetails =
+                        this._context?.runtimeFactory?.IRuntimeUpgradeDetails?.getRuntimeUpgradeDetails(
+                            this.codeDetails, maybeCP.codeDetails ?? value);
 
-                    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-                    this.reloadContext();
+                    if (contextNeedsReload(maybeCP, maybeUpgradeDetails)) {
+                        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                        this.reloadContext();
+                    }
                 }
             });
 
@@ -1182,7 +1238,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         return blobManager;
     }
 
-    private getCodeDetailsFromQuorum(): unknown | undefined {
+    private loadCodeDetailsFromQuorum() {
         const quorum = this.protocolHandler.quorum;
 
         let pkg = quorum.get("code");
@@ -1192,10 +1248,9 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
             pkg = quorum.get("code2");
         }
 
-        return pkg;
+        this._codeProposal = pkg;
     }
-
-    /**
+        /**
      * Loads the runtime factory for the provided package
      */
     private async loadRuntimeFactory(codeDetails: unknown): Promise<IRuntimeFactory> {
@@ -1509,9 +1564,9 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         snapshot?: ISnapshotTree,
         previousRuntimeState: IRuntimeState = {},
     ) {
-        this._codeDetails = this.getCodeDetailsFromQuorum();
+        this.loadCodeDetailsFromQuorum();
         const chaincode =
-            this._codeDetails !== undefined ? await this.loadRuntimeFactory(this._codeDetails) : new NullChaincode();
+            this.codeDetails !== undefined ? await this.loadRuntimeFactory(this.codeDetails) : new NullChaincode();
 
         // The relative loader will proxy requests to '/' to the loader itself assuming no non-cache flags
         // are set. Global requests will still go to this loader
@@ -1538,18 +1593,18 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         );
 
         loader.resolveContainer(this);
-        this.emit("contextChanged", this._codeDetails);
+        this.emit("contextChanged", this.codeDetails);
     }
 
     /**
      * Creates a new, unattached container context
      */
     private async createDetachedContext(attributes: IDocumentAttributes) {
-        this._codeDetails = this.getCodeDetailsFromQuorum();
-        if (this._codeDetails === undefined) {
+        this.loadCodeDetailsFromQuorum();
+        if (this.codeDetails === undefined) {
             throw new Error("pkg should be provided in create flow!!");
         }
-        const runtimeFactory = await this.loadRuntimeFactory(this._codeDetails);
+        const runtimeFactory = await this.loadRuntimeFactory(this.codeDetails);
 
         // The relative loader will proxy requests to '/' to the loader itself assuming no non-cache flags
         // are set. Global requests will still go to this loader
@@ -1576,7 +1631,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         );
 
         loader.resolveContainer(this);
-        this.emit("contextChanged", this._codeDetails);
+        this.emit("contextChanged", this.codeDetails);
     }
 
     // Please avoid calling it directly.

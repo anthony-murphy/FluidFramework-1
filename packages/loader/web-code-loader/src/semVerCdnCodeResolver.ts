@@ -19,8 +19,9 @@ type ResolvedFluidPackage = IResolvedCodeDetails<IFluidPackage> & IFluidPackageC
 
 class FluidPackage {
     private resolveP: Promise<ResolvedFluidPackage> | undefined;
+    private _package: IFluidPackage | undefined;
 
-    constructor(private readonly codeDetails: IFluidPackageCodeDetails, private readonly packageUrl: string) { }
+    constructor(public readonly codeDetails: IFluidPackageCodeDetails, private readonly packageUrl: string) { }
 
     public async resolve(): Promise<ResolvedFluidPackage> {
         if (this.resolveP === undefined) {
@@ -28,6 +29,10 @@ class FluidPackage {
         }
 
         return this.resolveP;
+    }
+
+    public get resolvedPackage(): IFluidPackage | undefined {
+        return this._package;
     }
 
     private async resolveCore(): Promise<ResolvedFluidPackage> {
@@ -42,6 +47,7 @@ class FluidPackage {
         if (!isFluidPackage(packageJson)) {
             throw new Error(`Package ${packageJson?.name} not a Fluid module.`);
         }
+        this._package = packageJson;
         const files = packageJson.fluid.browser.umd.files;
         for (let i = 0; i < packageJson.fluid.browser.umd.files.length; i++) {
             if (!files[i].startsWith("http")) {
@@ -77,6 +83,19 @@ export class SemVerCdnCodeResolver implements IFluidCodeResolver<IFluidPackage> 
         ensureFluidPackageCodeDetails(details);
 
         const parsed = extractPackageIdentifierDetails(details.package);
+
+        for (const resolved of this.fluidPackageCache.values()) {
+            if (resolved.resolvedPackage !== undefined) {
+                if (resolved.resolvedPackage.name === parsed.name) {
+                    // how do we know if these versions are compatible.
+                    // equals is safe, but some sort of server ver would be better
+                    //
+                    if (resolved.resolvedPackage.version === parsed.version) {
+                        return resolved.resolve();
+                    }
+                }
+            }
+        }
 
         const cdn = details.config[`@${parsed.scope}:cdn`] ?? details.config.cdn;
         const scopePath = parsed.scope !== undefined && parsed.scope.length > 0 ? `@${encodeURI(parsed.scope)}/` : "";

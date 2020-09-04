@@ -33,8 +33,7 @@ export class RuntimeFactory implements IRuntimeFactory {
                 ? storeFactories
                 : storeFactories.concat(defaultStoreFactory)
             ).map(
-                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                (factory) => [factory.type, factory]) as NamedFluidDataStoreRegistryEntries;
+                (factory) => [factory.type, Promise.resolve(factory)]);
     }
 
     public get IRuntimeFactory() { return this; }
@@ -57,5 +56,9 @@ export class RuntimeFactory implements IRuntimeFactory {
         }
 
         return runtime;
+    }
+
+    async areRuntimesCompatible?(currentCodeDetails: unknown, newCodeDetails: unknown) {
+        return false;
     }
 }

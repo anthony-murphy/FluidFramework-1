@@ -115,11 +115,10 @@ class WebpackCodeResolver implements IFluidCodeResolver<IFluidPackage> {
     async resolveCodeDetails(details: unknown): Promise<IResolvedCodeDetails<IFluidPackage>> {
         ensureFluidPackageCodeDetails(details);
         const baseUrl = details.config.cdn ?? `http://localhost:${this.options.port}`;
-        let pkg = details.package;
-        if (typeof pkg === "string") {
-            const resp = await fetch(`${baseUrl}/package.json`);
-            pkg = await resp.json() as IFluidPackage;
-        }
+
+        const resp = await fetch(`${baseUrl}/package.json`);
+        const pkg = await resp.json() as IFluidPackage;
+
         if (!isFluidPackage(pkg)) {
             throw new Error("Not a Fluid package");
         }
@@ -188,7 +187,7 @@ export async function start(
     }
 
     const codeDetails: IFluidPackageCodeDetails = {
-        package: packageJson,
+        package: `${packageJson.name}@^${packageJson.version}`,
         config: {},
     };
 

@@ -23,6 +23,7 @@ import {
     ICriticalContainerError,
     ContainerWarning,
     AttachState,
+    IProvideRuntimeUpgradeDetails,
 } from "@fluidframework/container-definitions";
 import { IDocumentStorageService } from "@fluidframework/driver-definitions";
 import {
@@ -179,7 +180,7 @@ export class ContainerContext implements IContainerContext {
         private readonly container: Container,
         public readonly scope: IFluidObject,
         public readonly codeLoader: ICodeLoader,
-        public readonly runtimeFactory: IRuntimeFactory,
+        public readonly runtimeFactory: IRuntimeFactory & Partial<IProvideRuntimeUpgradeDetails>,
         private readonly _baseSnapshot: ISnapshotTree | null,
         private readonly attributes: IDocumentAttributes,
         public readonly blobManager: BlobManager | undefined,

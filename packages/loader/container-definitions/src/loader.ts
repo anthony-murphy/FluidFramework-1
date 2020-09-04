@@ -14,7 +14,7 @@ import { IResolvedUrl } from "@fluidframework/driver-definitions";
 import { IEvent, IEventProvider } from "@fluidframework/common-definitions";
 import { IDeltaManager } from "./deltas";
 import { ICriticalContainerError, ContainerWarning } from "./error";
-import { AttachState } from "./runtime";
+import { AttachState, UpgradeDetails } from "./runtime";
 
 export interface IContainerEvents extends IEvent {
     (event: "readonly", listener: (readonly: boolean) => void): void;
@@ -23,6 +23,9 @@ export interface IContainerEvents extends IEvent {
      * @param opsBehind - number of ops this client is behind (if present).
      */
     (event: "connect", listener: (opsBehind?: number) => void);
+    (event:
+        "contextChangeProposed",
+        listener: (codeDetails: unknown, maybeUpgradeDetails?: UpgradeDetails , maybeReject?: (() => void)) => void)
     (event: "contextChanged", listener: (codeDetails: unknown) => void);
     (event: "disconnected" | "attaching" | "attached", listener: () => void);
     (event: "closed", listener: (error?: ICriticalContainerError) => void);

@@ -57,3 +57,8 @@ export interface IFluidCodeResolver<TResolvedCodeDetails> {
 export interface ICodeAllowList<TResolvedCodeDetails> {
     testSource(source: IResolvedCodeDetails<TResolvedCodeDetails>): Promise<boolean>;
 }
+
+export interface ICodeProposal {
+    readonly codeDetails: unknown;
+    readonly forceUpdate?: boolean
+}

@@ -4,6 +4,7 @@
  */
 
 import assert from "assert";
+import { Lazy } from "./lazy";
 
 /**
  * A deferred creates a promise and the ability to resolve or reject it
@@ -82,34 +83,29 @@ export function assertNotRejected<T>(promise: Promise<T>): Promise<T> {
  */
 export class LazyPromise<T> implements Promise<T> {
     public get [Symbol.toStringTag](): string {
-        return this.getPromise()[Symbol.toStringTag];
+        return this.promise.value[Symbol.toStringTag];
     }
 
-    private result: Promise<T> | undefined;
+    private readonly promise: Lazy<Promise<T>>;
 
-    constructor(private readonly execute: () => Promise<T>) { }
+    constructor(execute: () => Promise<T>) {
+        this.promise = new Lazy(async ()=> execute());
+     }
 
     public async then<TResult1 = T, TResult2 = never>(
         onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null | undefined,
         onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null | undefined):
         Promise<TResult1 | TResult2> {
-        return this.getPromise().then<TResult1, TResult2>(...arguments);
+        return this.promise.value.then<TResult1, TResult2>(...arguments);
     }
 
     public async catch<TResult = never>(
         onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | null | undefined):
         Promise<T | TResult> {
-        return this.getPromise().catch<TResult>(...arguments);
+        return this.promise.value.catch<TResult>(...arguments);
     }
 
     public async finally(onfinally?: (() => void) | null | undefined): Promise<T> {
-        return this.getPromise().finally(...arguments);
-    }
-
-    private async getPromise(): Promise<T> {
-        if (this.result === undefined) {
-            this.result = this.execute();
-        }
-        return this.result;
+        return this.promise.value.finally(...arguments);
     }
 }

@@ -161,6 +161,7 @@ export const IRuntimeFactory: keyof IProvideRuntimeFactory = "IRuntimeFactory";
 export interface IProvideRuntimeFactory {
     readonly IRuntimeFactory: IRuntimeFactory;
 }
+
 /**
  * Exported module definition
  */
@@ -169,4 +170,34 @@ export interface IRuntimeFactory extends IProvideRuntimeFactory {
      * Instantiates a new runtime container
      */
     instantiateRuntime(context: IContainerContext): Promise<IRuntime>;
+}
+
+export const IRuntimeUpgradeDetails = "IRuntimeUpgradeDetails";
+
+export interface IProvideRuntimeUpgradeDetails {
+    IRuntimeUpgradeDetails: IRuntimeUpgradeDetails;
+}
+
+export interface InvalidUpgrade {
+    isValid: false;
+    previousCodeDetails: unknown;
+    newCodeDetails: unknown;
+    reason: string | undefined;
+    data: {[key: string]: any}
+}
+
+export interface ValidUpgrade {
+    isValid: true,
+    previousCodeDetails: unknown;
+    newCodeDetails: unknown;
+    reason: string | undefined;
+    data: {[key: string]: any};
+
+    requiresReload: boolean;
+    required: boolean;
+}
+export type UpgradeDetails = InvalidUpgrade | ValidUpgrade;
+
+export interface IRuntimeUpgradeDetails extends IProvideRuntimeUpgradeDetails {
+    getRuntimeUpgradeDetails(previousCodeDetails: unknown, newCodeDetails: unknown): UpgradeDetails
 }
