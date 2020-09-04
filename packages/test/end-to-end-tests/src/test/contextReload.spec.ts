@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import assert from "assert";
+import { strict as assert } from "assert";
 import {
     ContainerRuntimeFactoryWithDefaultDataStore,
     DataObject,
@@ -12,7 +12,6 @@ import {
 import {
     IContainer,
     IFluidPackageCodeDetails,
-    IFluidPackage,
     ILoader,
     IRuntimeFactory,
 } from "@fluidframework/container-definitions";
@@ -81,8 +80,7 @@ describe("context reload", function() {
     const documentLoadUrl = `fluid-test://localhost/${documentId}`;
     const codeDetails = (version: string): IFluidPackageCodeDetails => {
         return {
-            // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-            package: { name: TestDataStore.type, version } as IFluidPackage,
+            package: `${TestDataStore.type}@${version }`,
             config: {},
         };
     };
@@ -95,7 +93,8 @@ describe("context reload", function() {
         return Promise.all(containers.map(
             async (container) => new Promise((resolve, reject) =>
                 container.on("contextChanged", (code: IFluidPackageCodeDetails) =>
-                    typeof code.package === "object" && code.package.version === version ? resolve() : reject()))));
+                    typeof code.package === "object" && code.package === `${TestDataStore.type}@${version }` ?
+                        resolve() : reject()))));
     };
 
     async function createContainer(packageEntries, server, urlResolver): Promise<IContainer> {
@@ -108,9 +107,9 @@ describe("context reload", function() {
         return loader.resolve({ url: documentLoadUrl });
     }
 
-    async function createContainerWithOldLoader(packageEntries, server): Promise<old.IContainer> {
-        const loader = old.createLocalLoader(packageEntries, server);
-        return old.initializeLocalContainer(documentLoadUrl, loader, defaultCodeDetails);
+    async function createContainerWithOldLoader(packageEntries, server, urlResolver): Promise<old.IContainer> {
+        const loader = old.createLocalLoader(packageEntries, server, urlResolver);
+        return old.createAndAttachContainer(documentId, defaultCodeDetails, loader, urlResolver);
     }
 
     const createRuntimeFactory = (dataStore): IRuntimeFactory => {
@@ -281,10 +280,11 @@ describe("context reload", function() {
         describe("old loader, new runtime", () => {
             beforeEach(async function() {
                 this.deltaConnectionServer = LocalDeltaConnectionServer.create();
+                this.urlResolver = new LocalResolver();
                 this.container = await createContainerWithOldLoader([
                     [codeDetails(V1), createOldRuntimeFactory(OldTestDataStoreV1)],
                     [codeDetails(V2), createRuntimeFactory(TestDataStoreV2)],
-                ], this.deltaConnectionServer);
+                ], this.deltaConnectionServer, this.urlResolver);
                 this.dataStoreV1 = await requestFluidObject<OldTestDataStore>(this.container, "default");
                 assert.strictEqual(this.dataStoreV1.version, TestDataStoreV1.version);
 
