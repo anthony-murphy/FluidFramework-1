@@ -3,9 +3,6 @@
 
 FROM node:12.16.3-slim AS base
 
-# To auth against private VSTS
-ARG NPM_TOKEN
-
 # node-gyp dependencies
 RUN apt-get update && apt-get install -y \
         python \
@@ -26,7 +23,6 @@ WORKDIR /usr/src/server
 COPY package*.json ./
 COPY lerna.json .
 COPY lerna-package-lock.json .
-COPY .npmrc .
 
 COPY packages/gitresources/package*.json packages/gitresources/
 COPY packages/protocol-definitions/package*.json packages/protocol-definitions/
@@ -36,6 +32,7 @@ COPY packages/lambdas/package*.json packages/lambdas/
 COPY packages/local-server/package*.json packages/local-server/
 COPY packages/memory-orderer/package*.json packages/memory-orderer/
 COPY packages/routerlicious/package*.json packages/routerlicious/
+COPY packages/routerlicious-base/package*.json packages/routerlicious-base/
 COPY packages/services/package*.json packages/services/
 COPY packages/services-client/package*.json packages/services-client/
 COPY packages/services-core/package*.json packages/services-core/

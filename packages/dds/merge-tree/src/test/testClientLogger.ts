@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import * as assert from "assert";
+import { strict as assert } from "assert";
 import { UnassignedSequenceNumber } from "../constants";
 import { TextSegment } from "../textSegment";
 import { TestClient } from "./testClient";

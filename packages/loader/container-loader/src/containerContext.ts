@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import assert from "assert";
+import { strict as assert } from "assert";
 import { ITelemetryLogger } from "@fluidframework/common-definitions";
 import {
     IFluidObject,
@@ -50,7 +50,7 @@ export class ContainerContext implements IContainerContext {
         scope: IFluidObject,
         codeLoader: ICodeLoader,
         runtimeFactory: IRuntimeFactory,
-        baseSnapshot: ISnapshotTree | null,
+        baseSnapshot: ISnapshotTree | undefined,
         attributes: IDocumentAttributes,
         blobManager: BlobManager | undefined,
         deltaManager: IDeltaManager<ISequencedDocumentMessage, IDocumentMessage>,
@@ -117,6 +117,10 @@ export class ContainerContext implements IContainerContext {
         return this.connected ? ConnectionState.Connected : ConnectionState.Disconnected;
     }
 
+    public get runtimeVersion(): string | undefined {
+        return this.runtime?.runtimeVersion;
+    }
+
     public get connected(): boolean {
         return this.container.connected;
     }
@@ -143,10 +147,6 @@ export class ContainerContext implements IContainerContext {
             scopes: this.container.scopes,
         };
         return config as IFluidConfiguration;
-    }
-
-    public get IMessageScheduler() {
-        return this;
     }
 
     public get baseSnapshot() {
@@ -176,7 +176,7 @@ export class ContainerContext implements IContainerContext {
         public readonly scope: IFluidObject,
         public readonly codeLoader: ICodeLoader,
         public readonly runtimeFactory: IRuntimeFactory,
-        private readonly _baseSnapshot: ISnapshotTree | null,
+        private readonly _baseSnapshot: ISnapshotTree | undefined,
         private readonly attributes: IDocumentAttributes,
         public readonly blobManager: BlobManager | undefined,
         public readonly deltaManager: IDeltaManager<ISequencedDocumentMessage, IDocumentMessage>,
