@@ -24,7 +24,7 @@ interface IConflictFarmConfig extends IMergeTreeOperationRunnerConfig {
     incrementalZamboni: boolean[];
 }
 
-const allOpertaions: TestOperation[] = [
+const allOperations: TestOperation[] = [
     removeRange,
     annotateRange,
     insertAtRefPos,
@@ -35,7 +35,7 @@ export const debugOptions: IConflictFarmConfig = {
     clients: { min: 3, max: 4 },
     opsPerRoundRange: { min: 1, max: 128 },
     rounds: 1000,
-    operations: allOpertaions,
+    operations: allOperations,
     incrementalZamboni: [true],
     growthFunc: (input: number) => input + 1,
     incrementalLog: true,
@@ -46,7 +46,7 @@ export const defaultOptions: IConflictFarmConfig = {
     clients: { min: 1, max: 8 },
     opsPerRoundRange: { min: 1, max: 128 },
     rounds: 8,
-    operations: allOpertaions,
+    operations: allOperations,
     incrementalZamboni: [true, false],
     growthFunc: (input: number) => input * 2,
 };
@@ -56,7 +56,7 @@ export const longOptions: IConflictFarmConfig = {
     clients: { min: 1, max: 32 },
     opsPerRoundRange: { min: 1, max: 512 },
     rounds: 32,
-    operations: allOpertaions,
+    operations: allOperations,
     incrementalZamboni: [true, false],
     growthFunc: (input: number) => input * 2,
 };

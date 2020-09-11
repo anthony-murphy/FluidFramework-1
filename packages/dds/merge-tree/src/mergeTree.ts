@@ -1560,11 +1560,11 @@ export class MergeTree {
         return rootStats;
     }
 
-    findHistorialPosition(pos: number, fromSeq: number, toSeq: number, clientId: number) {
-        return this.findHistorialPositionFromClient(pos, fromSeq, toSeq, clientId);
+    findHistoricalPosition(pos: number, fromSeq: number, toSeq: number, clientId: number) {
+        return this.findHistoricalPositionFromClient(pos, fromSeq, toSeq, clientId);
     }
 
-    findHistorialPositionFromClient(pos: number, fromSeq: number, toSeq: number, clientId: number) {
+    findHistoricalPositionFromClient(pos: number, fromSeq: number, toSeq: number, clientId: number) {
         assert(fromSeq < toSeq);
         if (pos < this.getLength(fromSeq, clientId)) {
             assert(toSeq <= this.collabWindow.currentSeq);
@@ -1579,7 +1579,7 @@ export class MergeTree {
         }
     }
 
-    findHistorialRangeFromClient(rangeStart: number, rangeEnd: number, fromSeq: number, toSeq: number, clientId: number) {
+    findHistoricalRangeFromClient(rangeStart: number, rangeEnd: number, fromSeq: number, toSeq: number, clientId: number) {
         const ranges: Base.IIntegerRange[] = [];
         const recordRange = (
             segment: ISegment,
@@ -1604,8 +1604,8 @@ export class MergeTree {
         return ranges;
     }
 
-    findHistorialRange(rangeStart: number, rangeEnd: number, fromSeq: number, toSeq: number, clientId: number) {
-        return this.findHistorialRangeFromClient(rangeStart, rangeEnd, fromSeq, toSeq, clientId);
+    findHistoricalRange(rangeStart: number, rangeEnd: number, fromSeq: number, toSeq: number, clientId: number) {
+        return this.findHistoricalRangeFromClient(rangeStart, rangeEnd, fromSeq, toSeq, clientId);
     }
 
     getLength(refSeq: number, clientId: number) {
@@ -2585,7 +2585,7 @@ export class MergeTree {
 
     /**
      * Annotate a range with properties
-     * @param start - The inclusive start postition of the range to annotate
+     * @param start - The inclusive start position of the range to annotate
      * @param end - The exclusive end position of the range to annotate
      * @param props - The properties to annotate the range with
      * @param combiningOp - Optional. Specifies how to combine values for the property, such as "incr" for increment.
