@@ -58,6 +58,7 @@ import {
     isOnline,
     ensureFluidResolvedUrl,
     combineAppAndProtocolSummary,
+    readAndParseFromBlobs,
 } from "@fluidframework/driver-utils";
 import { CreateContainerError } from "@fluidframework/container-utils";
 import {
@@ -126,6 +127,14 @@ export enum ConnectionState {
      */
     Connected,
 }
+
+export type DetachedContainerSource = {
+    codeDetails: IFluidCodeDetails,
+    create: true,
+} | {
+    snapshot: ISnapshotTree,
+    create: false,
+};
 
 export class Container extends EventEmitterWithErrorHandling<IContainerEvents> implements IContainer {
     public static version = "^0.1.0";
@@ -197,7 +206,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         options: any,
         scope: IFluidObject,
         loader: Loader,
-        codeDetails: unknown,
+        source: DetachedContainerSource,
         serviceFactory: IDocumentServiceFactory,
         urlResolver: IUrlResolver,
         logger?: ITelemetryBaseLogger,
@@ -211,7 +220,12 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
             urlResolver,
             {},
             logger);
-        await container.createDetached(codeDetails);
+
+        if (source.create) {
+            await container.createDetached(source.codeDetails);
+        } else {
+            await container.rehydrateDetachedFromSnapshot(source.snapshot);
+        }
 
         return container;
     }
@@ -587,8 +601,6 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
             this._attachState = AttachState.Attached;
             this.emit("attached");
             this.cachedAttachSummary = undefined;
-            // We know this is create new flow.
-            this._existing = false;
             this._parentBranch = this._id;
 
             // Propagate current connection state through the system.
@@ -1048,6 +1060,9 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
 
         this.attachDeltaManagerOpHandler(attributes);
 
+        // We know this is create detached flow without snapshot.
+        this._existing = false;
+
         // Need to just seed the source data in the code quorum. Quorum itself is empty
         this._protocolHandler = this.initializeProtocolState(
             attributes,
@@ -1063,6 +1078,26 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         this.loaded = true;
     }
 
+    private async rehydrateDetachedFromSnapshot(snapshotTree: ISnapshotTree) {
+        const attributes = await this.getDocumentAttributes(undefined, snapshotTree);
+        assert.strictEqual(attributes.sequenceNumber, 0, "Seq number in detached container should be 0!!");
+        this.attachDeltaManagerOpHandler(attributes);
+
+        // We know this is create detached flow with snapshot.
+        this._existing = true;
+
+        // ...load in the existing quorum
+        // Initialize the protocol handler
+        this._protocolHandler =
+            await this.loadAndInitializeProtocolState(attributes, undefined, snapshotTree);
+
+        await this.createDetachedContext(attributes, snapshotTree);
+
+        this.loaded = true;
+
+        this.propagateConnectionState();
+    }
+
     private async getDocumentStorageService(): Promise<IDocumentStorageService> {
         if (this.service === undefined) {
             throw new Error("Not attached");
@@ -1072,7 +1107,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
     }
 
     private async getDocumentAttributes(
-        storage: IDocumentStorageService,
+        storage: IDocumentStorageService | undefined,
         tree: ISnapshotTree | undefined,
     ): Promise<IDocumentAttributes> {
         if (tree === undefined) {
@@ -1089,7 +1124,8 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
             ? tree.trees[".protocol"].blobs.attributes
             : tree.blobs[".attributes"];
 
-        const attributes = await readAndParse<IDocumentAttributes>(storage, attributesHash);
+        const attributes = storage !== undefined ? await readAndParse<IDocumentAttributes>(storage, attributesHash)
+            : readAndParseFromBlobs<IDocumentAttributes>(tree.trees[".protocol"].blobs, attributesHash);
 
         // Back-compat for older summaries with no term
         if (attributes.term === undefined) {
@@ -1101,7 +1137,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
 
     private async loadAndInitializeProtocolState(
         attributes: IDocumentAttributes,
-        storage: IDocumentStorageService,
+        storage: IDocumentStorageService | undefined,
         snapshot: ISnapshotTree | undefined,
     ): Promise<ProtocolOpHandler> {
         let members: [string, ISequencedClient][] = [];
@@ -1110,11 +1146,20 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
 
         if (snapshot !== undefined) {
             const baseTree = ".protocol" in snapshot.trees ? snapshot.trees[".protocol"] : snapshot;
-            [members, proposals, values] = await Promise.all([
-                readAndParse<[string, ISequencedClient][]>(storage, baseTree.blobs.quorumMembers),
-                readAndParse<[number, ISequencedProposal, string[]][]>(storage, baseTree.blobs.quorumProposals),
-                readAndParse<[string, ICommittedProposal][]>(storage, baseTree.blobs.quorumValues),
-            ]);
+            if (storage !== undefined) {
+                [members, proposals, values] = await Promise.all([
+                    readAndParse<[string, ISequencedClient][]>(storage, baseTree.blobs.quorumMembers),
+                    readAndParse<[number, ISequencedProposal, string[]][]>(storage, baseTree.blobs.quorumProposals),
+                    readAndParse<[string, ICommittedProposal][]>(storage, baseTree.blobs.quorumValues),
+                ]);
+            } else {
+                members = readAndParseFromBlobs<[string, ISequencedClient][]>(snapshot.trees[".protocol"].blobs,
+                    baseTree.blobs.quorumMembers);
+                proposals = readAndParseFromBlobs<[number, ISequencedProposal, string[]][]>(
+                    snapshot.trees[".protocol"].blobs, baseTree.blobs.quorumProposals);
+                values = readAndParseFromBlobs<[string, ICommittedProposal][]>(snapshot.trees[".protocol"].blobs,
+                    baseTree.blobs.quorumValues);
+            }
         }
 
         const protocolHandler = this.initializeProtocolState(
@@ -1577,7 +1622,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
             this.scope,
             this.codeLoader,
             chaincode,
-            snapshot ?? null,
+            snapshot,
             attributes,
             this.blobManager,
             new DeltaManagerProxy(this._deltaManager),
@@ -1599,9 +1644,9 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
     /**
      * Creates a new, unattached container context
      */
-    private async createDetachedContext(attributes: IDocumentAttributes) {
-        this.loadCodeDetailsFromQuorum();
-        if (this.codeDetails === undefined) {
+    private async createDetachedContext(attributes: IDocumentAttributes, snapshot?: ISnapshotTree) {
+        this.pkg = this.getCodeDetailsFromQuorum();
+        if (this.pkg === undefined) {
             throw new Error("pkg should be provided in create flow!!");
         }
         const runtimeFactory = await this.loadRuntimeFactory(this.codeDetails);
@@ -1615,7 +1660,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
             this.scope,
             this.codeLoader,
             runtimeFactory,
-            { id: null, blobs: {}, commits: {}, trees: {} },    // TODO this will be from the offline store
+            snapshot,
             attributes,
             this.blobManager,
             new DeltaManagerProxy(this._deltaManager),
