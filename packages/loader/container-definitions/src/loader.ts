@@ -109,7 +109,7 @@ export interface ILoader extends IFluidRouter {
      * Creates a new container using the specified code details but in an unattached state. While unattached all
      * updates will only be local until the user explicitly attaches the container to a service provider.
      */
-    createDetachedContainer(codeDetails: IFluidCodeDetails): Promise<IContainer>;
+    createDetachedContainer(codeDetails: unknown): Promise<IContainer>;
 
     /**
      * Creates a new container using the specified snapshot but in an unattached state. While unattached all

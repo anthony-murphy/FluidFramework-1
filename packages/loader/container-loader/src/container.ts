@@ -129,7 +129,7 @@ export enum ConnectionState {
 }
 
 export type DetachedContainerSource = {
-    codeDetails: IFluidCodeDetails,
+    codeDetails: unknown,
     create: true,
 } | {
     snapshot: ISnapshotTree,
