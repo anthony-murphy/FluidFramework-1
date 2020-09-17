@@ -18,8 +18,8 @@ import { IDocumentServiceFactory, IUrlResolver } from "@fluidframework/driver-de
  * of resolved url.
  */
 export interface IBaseHostConfig<TResolvedCodeDetails= IFluidPackage> {
-    documentServiceFactory: IDocumentServiceFactory | IDocumentServiceFactory[];
-    urlResolver: IUrlResolver | IUrlResolver[];
+    documentServiceFactory: IDocumentServiceFactory;
+    urlResolver: IUrlResolver;
 
     // Any config to be provided to loader.
     config?: any;
@@ -36,3 +36,22 @@ export interface IBaseHostConfig<TResolvedCodeDetails= IFluidPackage> {
     // The code resolver
     codeResolver: IFluidCodeResolver<TResolvedCodeDetails>;
 }
+
+export interface IProvideUrlResolver{
+    IUrlResolver: IUrlResolver;
+}
+
+export interface IProvideFluidCodeResolver{
+    IFluidCodeResolver: IFluidCodeResolver<IFluidPackage>;
+}
+
+export interface config extends IProvideUrlResolver, IProvideFluidCodeResolver{
+
+}
+
+const urlResolver = {} as any as IProvideUrlResolver;
+const codeResolver = {} as any as IProvideFluidCodeResolver;
+
+const c: config = { ...urlResolver, ...codeResolver };
+
+c.

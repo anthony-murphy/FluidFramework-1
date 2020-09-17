@@ -27,7 +27,7 @@ import {
     ContainerWarning,
     ICriticalContainerError,
     AttachState,
-    IFluidTokenProvider,
+    IFluidTokenProvider,, ICodeProposal
 } from "@fluidframework/container-definitions";
 import { IContainerRuntime, IContainerRuntimeDirtyable } from "@fluidframework/container-runtime-definitions";
 import {
@@ -66,7 +66,7 @@ import {
     ISummaryTree,
     ITree,
     MessageType,
-    IVersion,
+    IVersion,, IPendingProposal
 } from "@fluidframework/protocol-definitions";
 import {
     FlushMode,
@@ -650,7 +650,7 @@ export class ContainerRuntime extends EventEmitter
             ? { ...DefaultSummaryConfiguration, ...this.context.serviceConfiguration.summary }
             : DefaultSummaryConfiguration;
     }
-
+    private _closingState: undefined | "closing" | "resubmitting" ;
     private _disposed = false;
     public get disposed() { return this._disposed; }
 
@@ -879,6 +879,35 @@ export class ContainerRuntime extends EventEmitter
                 this.pendingStateManager.replayPendingStates();
             }
         });
+
+        const quorum = this.getQuorum();
+        quorum.on(
+            "addProposal",
+            (proposal: IPendingProposal) => {
+                if (proposal.key === "code") {
+                    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                    this.deltaManager.outbound.systemPause()
+                        .then(()=> {
+                            if (this.isDocumentDirty()) {
+                                proposal.reject();
+                                quorum.propose("code", proposal.value);
+                                this._closingState = "closing";
+                            }
+                        })
+                        .finally(() => {
+                            this.deltaManager.outbound.systemResume();
+                        });
+                }
+            });
+
+        quorum.on(
+            "approveProposal",
+            (sequenceNumber, key, value) => {
+                debug(`approved ${key}`);
+                if (key === "code") {
+                    this.context.reloadContext();
+                }
+            });
 
         ReportOpPerfTelemetry(this.context.clientId, this.deltaManager, this.logger);
     }
@@ -1792,6 +1821,8 @@ export class ContainerRuntime extends EventEmitter
         localOpMetadata: unknown = undefined): void {
         this.verifyNotClosed();
 
+        assert(this._closingState === undefined || this._closingState === "resubmitting")
+
         let clientSequenceNumber: number = -1;
 
         if (this.canSendOps()) {
@@ -1906,6 +1937,9 @@ export class ContainerRuntime extends EventEmitter
      * @param localOpMetadata - The local metadata associated with the original message.
      */
     private reSubmit(type: ContainerMessageType, content: any, localOpMetadata: unknown) {
+        if(this._closingState !== undefined){
+            this._closingState = "resubmitting";
+        }
         switch (type) {
             case ContainerMessageType.FluidDataStoreOp:
                 // For Operations, call resubmitDataStoreOp which will find the right store

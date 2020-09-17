@@ -1210,61 +1210,6 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
             }
         });
 
-        const contextNeedsReload = (maybeCP: Partial<ICodeProposal>, maybeUpgradeDetails: UpgradeDetails | undefined)=>
-            maybeCP.codeDetails === undefined
-            || maybeCP.forceUpdate === true
-            || maybeUpgradeDetails?.isValid === false
-            || (maybeUpgradeDetails?.isValid === true && maybeUpgradeDetails.requiresReload === true);
-
-        protocol.quorum.on(
-            "addProposal",
-            (proposal: IPendingProposal) => {
-                if (proposal.key === "code") {
-                        if (this._context !== undefined && this.hasNullRuntime() === false) {
-                            // eslint-disable-next-line @typescript-eslint/no-floating-promises
-                            this.deltaManager.outbound.systemPause()
-                                .then(()=> {
-                                    const maybeCP = proposal.value as Partial<ICodeProposal>;
-                                    const maybeUpgradeDetails =
-                                        this._context?.runtimeFactory?.IRuntimeUpgradeDetails?.getRuntimeUpgradeDetails(
-                                            this.codeDetails, maybeCP.codeDetails ?? proposal.value);
-                                    if (contextNeedsReload(maybeCP, maybeUpgradeDetails)) {
-                                        this.emit(
-                                            "contextChangeProposed",
-                                            maybeCP.codeDetails ?? proposal.value,
-                                            maybeUpgradeDetails,
-                                            maybeCP.forceUpdate !== true ? () => proposal.reject() : undefined);
-                                    }
-                                })
-                                .finally(() => {
-                                    this.deltaManager.outbound.systemResume();
-                                });
-                        }
-                    }
-                });
-
-        protocol.quorum.on(
-            "approveProposal",
-            (sequenceNumber, key, value) => {
-                debug(`approved ${key}`);
-                if (key === "code") {
-                    debug(`loadRuntimeFactory ${JSON.stringify(value)}`);
-
-                    if (value === this._codeProposal) {
-                        return;
-                    }
-                    const maybeCP = value as Partial<ICodeProposal>;
-                    const maybeUpgradeDetails =
-                        this._context?.runtimeFactory?.IRuntimeUpgradeDetails?.getRuntimeUpgradeDetails(
-                            this.codeDetails, maybeCP.codeDetails ?? value);
-
-                    if (contextNeedsReload(maybeCP, maybeUpgradeDetails)) {
-                        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-                        this.reloadContext();
-                    }
-                }
-            });
-
         return protocol;
     }
 
