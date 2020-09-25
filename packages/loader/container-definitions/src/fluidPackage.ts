@@ -13,44 +13,11 @@ export interface IPerson {
 }
 
 /**
- * Typescript interface definition for fields within a npm module's package.json.
- */
-export interface IPackage {
-    // General access for extended fields
-    [key: string]: any;
-    name: string;
-    version: string;
-    description?: string;
-    keywords?: string[];
-    homepage?: string;
-    bugs?: { url: string; email: string };
-    license?: string;
-    author?: IPerson;
-    contributors?: IPerson[];
-    files?: string[];
-    main?: string;
-    // Same as main but for browser based clients (check if webpack supports this)
-    browser?: string;
-    bin?: { [key: string]: string };
-    man?: string | string[];
-    repository?: string | { type: string; url: string };
-    scripts?: { [key: string]: string };
-    config?: { [key: string]: string };
-    dependencies?: { [key: string]: string };
-    devDependencies?: { [key: string]: string };
-    peerDependencies?: { [key: string]: string };
-    bundledDependencies?: { [key: string]: string };
-    optionalDependencies?: { [key: string]: string };
-    engines?: { node: string; npm: string };
-    os?: string[];
-    cpu?: string[];
-    private?: boolean;
-}
-
-/**
  * Fluid-specific properties expected on a package to be loaded by the Fluid code loader
  */
-export interface IFluidPackage extends IPackage {
+export interface IFluidPackage {
+    name: string;
+    version: string;
     // https://stackoverflow.com/questions/10065564/add-custom-metadata-or-config-to-package-json-is-it-valid
     fluid: {
         browser: {
@@ -71,8 +38,12 @@ export interface IFluidPackage extends IPackage {
  * Check if the package.json defines a Fluid module, which requires a `fluid` entry
  * @param pkg - the package json data to check if it is a Fluid package.
  */
-export const isFluidPackage = (pkg: IPackage): pkg is IFluidPackage =>
-    pkg.fluid?.browser?.umd !== undefined;
+export const isFluidPackage = (pkg: any): pkg is IFluidPackage => {
+    const maybePkg = pkg as Partial<IFluidPackage>;
+    return typeof maybePkg?.name === "string"
+        && typeof maybePkg?.version === "string"
+        && maybePkg.fluid?.browser?.umd?.library !== undefined;
+};
 
 /**
  * Package manager configuration. Provides a key value mapping of config values
