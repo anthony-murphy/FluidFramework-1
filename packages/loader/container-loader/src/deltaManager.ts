@@ -1248,7 +1248,10 @@ export class DeltaManager
             throw new Error("Attempted to process an inbound message without a handler attached");
         }
         const result = this.handler.process(message);
-        this.scheduleSequenceNumberUpdate(message, result.immediateNoOp === true);
+        this.scheduleSequenceNumberUpdate(
+            message,
+            result.immediateNoOp === true ? 0 : 2000,
+            result.immediateNoOp === true ? ImmediateNoOpResponse : null);
 
         const endTime = Date.now();
         this.emit("processTime", endTime - startTime);
@@ -1319,22 +1322,16 @@ export class DeltaManager
     /**
      * Schedules as ack to the server to update the reference sequence number
      */
-    private scheduleSequenceNumberUpdate(message: ISequencedDocumentMessage, immediateNoOp: boolean): void {
+    private scheduleSequenceNumberUpdate(
+        message: ISequencedDocumentMessage,
+        nextSequenceNumberUpdateMs: 2000 | 0,
+        nextSequenceNumberUpdateResponse: string | null): void {
         // Exit early for inactive (not in quorum or not writers) clients.
         // They don't take part in the minimum sequence number calculation.
         if (!this.active) {
             this.stopSequenceNumberUpdate();
             return;
         }
-
-        // While processing a message, an immediate no-op can be requested.
-        // i.e. to expedite approve or commit phase of quorum.
-        if (immediateNoOp) {
-            this.stopSequenceNumberUpdate();
-            this.submit(MessageType.NoOp, ImmediateNoOpResponse);
-            return;
-        }
-
         // We don't acknowledge no-ops to avoid acknowledgement cycles (i.e. ack the MSN
         // update, which updates the MSN, then ack the update, etc...).
         if (message.type === MessageType.NoOp) {
@@ -1345,13 +1342,23 @@ export class DeltaManager
         // operation. This allows the server to know our true reference sequence number and be able to
         // correctly update the minimum sequence number (MSN).
         if (this.updateSequenceNumberTimer === undefined) {
-            // Clear an update in 2 s
+            this.stopSequenceNumberUpdate();
             this.updateSequenceNumberTimer = setTimeout(() => {
                 this.updateSequenceNumberTimer = undefined;
                 if (this.active) {
-                    this.submit(MessageType.NoOp, null);
+                    // if outbound is paused try re-schedule
+                    // and increase the delay exponentially
+                    // up to 2 seconds
+                    if (this.outbound.paused === true) {
+                        this.scheduleSequenceNumberUpdate(
+                            message,
+                            Math.min(2000, Math.pow(nextSequenceNumberUpdateMs, 2)) as any,
+                            nextSequenceNumberUpdateResponse);
+                    } else {
+                        this.submit(MessageType.NoOp, nextSequenceNumberUpdateResponse);
+                    }
                 }
-            }, 2000);
+            }, nextSequenceNumberUpdateMs);
         }
     }
 
