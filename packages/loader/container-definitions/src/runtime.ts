@@ -26,6 +26,7 @@ import {
 import { IAudience } from "./audience";
 import { IDeltaManager } from "./deltas";
 import { ICriticalContainerError, ContainerWarning } from "./error";
+import { IFluidCodeDetails } from "./fluidPackage";
 import { ICodeLoader, ILoader } from "./loader";
 
 // Represents the attachment state of the entity.
@@ -117,6 +118,7 @@ export interface IContainerContext extends IDisposable {
     readonly configuration: IFluidConfiguration;
     readonly clientId: string | undefined;
     readonly clientDetails: IClientDetails;
+    readonly codeDetails: IFluidCodeDetails;
     readonly parentBranch: string | null;
     readonly storage: IDocumentStorageService | undefined | null;
     readonly connected: boolean;

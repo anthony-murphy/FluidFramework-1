@@ -23,6 +23,8 @@ import {
     ICriticalContainerError,
     ContainerWarning,
     AttachState,
+    IFluidCodeDetails,
+    IFluidModule,
 } from "@fluidframework/container-definitions";
 import { IDocumentStorageService } from "@fluidframework/driver-definitions";
 import {
@@ -40,14 +42,14 @@ import {
     IVersion,
 } from "@fluidframework/protocol-definitions";
 import { Container } from "./container";
-import { NullRuntime } from "./nullRuntime";
+import { NullChaincode, NullRuntime, NullRuntimeCodeDetails } from "./nullRuntime";
 
 export class ContainerContext implements IContainerContext {
     public static async createOrLoad(
         container: Container,
         scope: IFluidObject,
         codeLoader: ICodeLoader,
-        runtimeFactory: IRuntimeFactory,
+        codeDetails: IFluidCodeDetails,
         baseSnapshot: ISnapshotTree | undefined,
         attributes: IDocumentAttributes,
         deltaManager: IDeltaManager<ISequencedDocumentMessage, IDocumentMessage>,
@@ -65,7 +67,7 @@ export class ContainerContext implements IContainerContext {
             container,
             scope,
             codeLoader,
-            runtimeFactory,
+            codeDetails,
             baseSnapshot,
             attributes,
             deltaManager,
@@ -167,7 +169,7 @@ export class ContainerContext implements IContainerContext {
         private readonly container: Container,
         public readonly scope: IFluidObject,
         public readonly codeLoader: ICodeLoader,
-        public readonly runtimeFactory: IRuntimeFactory,
+        public readonly codeDetails: IFluidCodeDetails,
         private readonly _baseSnapshot: ISnapshotTree | undefined,
         private readonly attributes: IDocumentAttributes,
         public readonly deltaManager: IDeltaManager<ISequencedDocumentMessage, IDocumentMessage>,
@@ -269,6 +271,13 @@ export class ContainerContext implements IContainerContext {
     }
 
     private async load() {
-        this._runtime = await this.runtimeFactory.instantiateRuntime(this);
+        let entrypoint: IFluidModule | undefined;
+        if (this.codeDetails !== NullRuntimeCodeDetails) {
+            entrypoint = await this.codeLoader.load(this.codeDetails);
+        }
+        const runtimeFactory: IRuntimeFactory =
+            entrypoint?.fluidExport?.IRuntimeFactory ?? new NullChaincode();
+
+        this._runtime = await runtimeFactory.instantiateRuntime(this);
     }
 }

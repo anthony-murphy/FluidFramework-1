@@ -12,7 +12,7 @@ import {
     ISnapshotTree,
 } from "@fluidframework/protocol-definitions";
 import { IResolvedUrl } from "@fluidframework/driver-definitions";
-import { IEvent, IEventProvider } from "@fluidframework/common-definitions";
+import { IEvent, IEventProvider, IEventThisPlaceHolder } from "@fluidframework/common-definitions";
 import { IDeltaManager } from "./deltas";
 import { ICriticalContainerError, ContainerWarning } from "./error";
 import { IFluidModule } from "./fluidModule";
@@ -80,7 +80,17 @@ export interface IContainerEvents extends IEvent {
      * @param opsBehind - number of ops this client is behind (if present).
      */
     (event: "connect", listener: (opsBehind?: number) => void);
-    (event: "contextChanged", listener: (codeDetails: IFluidCodeDetails) => void);
+    (event: "contextProposed",
+        listener: (
+            proposedCodeDetails: IFluidCodeDetails,
+            currentCodeDetails: IFluidCodeDetails | undefined,
+            overrideProposedCode: (codeDetails: IFluidCodeDetails) => void) => void,
+            target: IEventThisPlaceHolder);
+    (event: "contextDisposed" | "contextChanged",
+        listener: (
+            codeDetails: IFluidCodeDetails,
+            previousCodeDetails: IFluidCodeDetails | undefined,
+            target: IEventThisPlaceHolder) => void);
     (event: "disconnected" | "attaching" | "attached", listener: () => void);
     (event: "closed", listener: (error?: ICriticalContainerError) => void);
     (event: "warning", listener: (error: ContainerWarning) => void);

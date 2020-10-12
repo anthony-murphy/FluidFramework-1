@@ -84,10 +84,10 @@ const tests = (args: ICompatTestArgs) => {
         assert.strictEqual(container.attachState, AttachState.Detached, "Container should be detached");
         assert.strictEqual(container.closed, false, "Container should be open");
         assert.strictEqual(container.deltaManager.inbound.length, 0, "Inbound queue should be empty");
-        assert.strictEqual(container.getQuorum().getMembers().size, 0, "Quorum should not contain any memebers");
+        assert.strictEqual(container.getQuorum().getMembers().size, 0, "Quorum should not contain any members");
         assert.strictEqual(container.connectionState, ConnectionState.Disconnected,
             "Container should be in disconnected state!!");
-        assert.strictEqual(container.chaincodePackage.package, pkg.package,
+        assert.strictEqual(container.getQuorum().get("code").package, pkg.package,
             "Package should be same as provided");
         assert.strictEqual(container.id, "", "Detached container's id should be empty string");
         assert.strictEqual(container.clientDetails.capabilities.interactive, true,
