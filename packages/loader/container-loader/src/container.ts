@@ -21,7 +21,6 @@ import {
     IContainerEvents,
     IDeltaManager,
     IFluidCodeDetails,
-    ILoader,
     LoaderHeader,
     IRuntimeState,
     ICriticalContainerError,
@@ -96,6 +95,8 @@ import { PrefetchDocumentStorageService } from "./prefetchDocumentStorageService
 import { parseUrl, convertProtocolAndAppSummaryToSnapshotTree } from "./utils";
 import { NullRuntimeCodeDetails } from "./nullRuntime";
 
+const detachedContainerRefSeqNumber = 0;
+
 interface ILocalSequencedClient extends ISequencedClient {
     shouldHaveLeft?: boolean;
 }
@@ -144,7 +145,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         codeLoader: ICodeLoader,
         options: any,
         scope: IFluidObject,
-        loader: ILoader,
+        loader: Loader,
         request: IRequest,
         resolvedUrl: IFluidResolvedUrl,
         urlResolver: IUrlResolver,
@@ -388,7 +389,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         public readonly options: any,
         private readonly scope: IFluidObject,
         private readonly codeLoader: ICodeLoader,
-        private readonly loader: ILoader,
+        private readonly loader: Loader,
         private readonly serviceFactory: IDocumentServiceFactory,
         private readonly urlResolver: IUrlResolver,
         config: IContainerConfig,
@@ -423,6 +424,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
             {
                 docId: () => this.id,
                 containerAttachState: () => this._attachState,
+                containerLoaded: () => this.loaded,
             });
 
         // Prefix all events in this file with container-loader
@@ -569,6 +571,9 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
             if (parsedUrl === undefined) {
                 throw new Error("Unable to parse Url");
             }
+
+            this.loader.cacheContainer(this, request, parsedUrl);
+
             const [, docId] = parsedUrl.id.split("/");
             this._id = decodeURI(docId);
 
@@ -1013,7 +1018,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
     private async createDetached(source: IFluidCodeDetails) {
         const attributes: IDocumentAttributes = {
             branch: "",
-            sequenceNumber: 0,
+            sequenceNumber: detachedContainerRefSeqNumber,
             term: 1,
             minimumSequenceNumber: 0,
         };
