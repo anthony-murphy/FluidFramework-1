@@ -1573,24 +1573,25 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         const loader = new RelativeLoader(this.loader, () => this.originalRequest);
 
         const previousCodeDetails = this._context?.codeDetails;
-            this._context = await ContainerContext.createOrLoad(
-                this,
-                this.scope,
-                this.codeLoader,
-                codeDetails,
-                snapshot,
-                attributes,
-                new DeltaManagerProxy(this._deltaManager),
-                new QuorumProxy(this.protocolHandler.quorum),
-                loader,
-                (warning: ContainerWarning) => this.raiseContainerWarning(warning),
-                (type, contents, batch, metadata) => this.submitContainerMessage(type, contents, batch, metadata),
-                (message) => this.submitSignal(message),
-                async (message) => this.snapshot(message),
-                (error?: ICriticalContainerError) => this.close(error),
-                Container.version,
-                previousRuntimeState,
-            );
+
+        this._context = await ContainerContext.createOrLoad(
+            this,
+            this.scope,
+            this.codeLoader,
+            codeDetails,
+            snapshot,
+            attributes,
+            new DeltaManagerProxy(this._deltaManager),
+            new QuorumProxy(this.protocolHandler.quorum),
+            loader,
+            (warning: ContainerWarning) => this.raiseContainerWarning(warning),
+            (type, contents, batch, metadata) => this.submitContainerMessage(type, contents, batch, metadata),
+            (message) => this.submitSignal(message),
+            async (message) => this.snapshot(message),
+            (error?: ICriticalContainerError) => this.close(error),
+            Container.version,
+            previousRuntimeState,
+        );
 
         loader.resolveContainer(this);
         this.emit("contextChanged", codeDetails, previousCodeDetails, this);
@@ -1601,7 +1602,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
      */
     private async createDetachedContext(attributes: IDocumentAttributes, snapshot?: ISnapshotTree) {
         const codeDetails = this.emitAndGetContextProposal();
-        if (codeDetails === undefined) {
+        if (codeDetails === undefined || codeDetails === NullRuntimeCodeDetails) {
             throw new Error("Code proposal must exit for detached create flow.");
         }
         await this.loadContext(codeDetails, attributes, snapshot);
