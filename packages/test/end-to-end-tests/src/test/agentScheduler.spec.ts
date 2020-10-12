@@ -11,6 +11,7 @@ import { IAgentScheduler } from "@fluidframework/runtime-definitions";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { OpProcessingController } from "@fluidframework/test-utils";
 import { generateTestWithCompat, ICompatLocalTestObjectProvider, TestDataObject } from "./compatUtils";
+import * as old from "./oldVersion";
 
 const tests = (args: ICompatLocalTestObjectProvider) => {
     const leader = "leader";
@@ -90,8 +91,8 @@ const tests = (args: ICompatLocalTestObjectProvider) => {
     });
 
     describe("Multiple clients", () => {
-        let container1: IContainer;
-        let container2: IContainer;
+        let container1: IContainer | old.IContainer;
+        let container2: IContainer | old.IContainer;
         let scheduler1: IAgentScheduler;
         let scheduler2: IAgentScheduler;
 
