@@ -761,7 +761,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
     }
 
     private async reloadContextCore(): Promise<void> {
-        const codeDetails = this.emitAndGetContextProposal();
+        const codeDetails = this.emitAndGetCodeProposalForContextLoad();
 
         if (JSON.stringify(codeDetails) === JSON.stringify(this.context.codeDetails)) {
             return;
@@ -996,7 +996,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         // instantiateRuntime which will want to know existing state.  Wait for these promises to finish.
         [this._protocolHandler] = await Promise.all([protocolHandlerP, loadDetailsP]);
 
-        const codeDetails = this.emitAndGetContextProposal();
+        const codeDetails = this.emitAndGetCodeProposalForContextLoad();
         await this.loadContext(codeDetails, attributes, maybeSnapshotTree);
 
         // Propagate current connection state through the system.
@@ -1204,7 +1204,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         return protocol;
     }
 
-    private emitAndGetContextProposal(): IFluidCodeDetails {
+    private emitAndGetCodeProposalForContextLoad(): IFluidCodeDetails {
         const quorum = this.protocolHandler.quorum;
 
         let pkg = quorum.get("code");
@@ -1215,7 +1215,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         }
 
         this.emit(
-            "contextProposed",
+            "codeProposed",
             pkg,
             this._context?.codeDetails,
             (details: IFluidCodeDetails)=>{pkg = details;},
@@ -1607,7 +1607,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
      * Creates a new, unattached container context
      */
     private async createDetachedContext(attributes: IDocumentAttributes, snapshot?: ISnapshotTree) {
-        const codeDetails = this.emitAndGetContextProposal();
+        const codeDetails = this.emitAndGetCodeProposalForContextLoad();
         if (codeDetails === undefined || codeDetails === NullRuntimeCodeDetails) {
             throw new Error("Code proposal must exit for detached create flow.");
         }
