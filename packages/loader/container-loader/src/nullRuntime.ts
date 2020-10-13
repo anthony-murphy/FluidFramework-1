@@ -16,7 +16,6 @@ import {
     IRuntimeFactory,
     IRuntimeState,
     AttachState,
-    IFluidCodeDetails,
 } from "@fluidframework/container-definitions";
 import {
     ISequencedDocumentMessage,
@@ -24,12 +23,6 @@ import {
     ITree,
     SummaryType,
 } from "@fluidframework/protocol-definitions";
-import { pkgVersion } from "./packageVersion";
-
-export const NullRuntimeCodeDetails: IFluidCodeDetails = {
-    package: `NullRuntime@${pkgVersion}`,
-    config: {},
-};
 
 export class NullRuntime extends EventEmitter implements IRuntime {
     public get IFluidSerializer(): IFluidSerializer {

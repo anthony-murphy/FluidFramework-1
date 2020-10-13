@@ -93,7 +93,6 @@ import { Loader, RelativeLoader } from "./loader";
 import { pkgVersion } from "./packageVersion";
 import { PrefetchDocumentStorageService } from "./prefetchDocumentStorageService";
 import { parseUrl, convertProtocolAndAppSummaryToSnapshotTree } from "./utils";
-import { NullRuntimeCodeDetails } from "./nullRuntime";
 
 const detachedContainerRefSeqNumber = 0;
 
@@ -418,6 +417,10 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         return this._deltaManager.clientDetails;
     }
 
+    public get chaincodePackage(): IFluidCodeDetails | undefined {
+        return this._context?.codeDetails;
+    }
+
     /**
      * Flag indicating whether the document already existed at the time of load
      */
@@ -530,7 +533,6 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
                 {
                     eventName: "ContainerClose",
                     sequenceNumber: error.sequenceNumber ?? this._deltaManager.lastSequenceNumber,
-                    loading: !this.loaded,
                 },
                 error,
             );
@@ -778,9 +780,6 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         }
     }
 
-    /**
-     * {@deprecated} Use hasContext and contextCodeDetails
-     */
     public hasNullRuntime() {
         return this.context.hasNullRuntime();
     }
@@ -821,7 +820,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
     }
 
     private async reloadContextCore(): Promise<void> {
-        const codeDetails = this.getCodeProposal();
+        const codeDetails = this.getCodeDetailsFromQuorum();
 
         let reloadCanceled = false;
         this.emit(
@@ -1063,7 +1062,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         // instantiateRuntime which will want to know existing state.  Wait for these promises to finish.
         [this._protocolHandler] = await Promise.all([protocolHandlerP, loadDetailsP]);
 
-        const codeDetails = this.getCodeProposal();
+        const codeDetails = this.getCodeDetailsFromQuorum();
         await this.loadContext(codeDetails, attributes, maybeSnapshotTree);
 
         // Propagate current connection state through the system.
@@ -1271,7 +1270,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         return protocol;
     }
 
-    private getCodeProposal(): IFluidCodeDetails {
+    private getCodeDetailsFromQuorum(): IFluidCodeDetails {
         const quorum = this.protocolHandler.quorum;
 
         let pkg = quorum.get("code");
@@ -1282,13 +1281,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         }
 
         const maybeCodeDetails = pkg as Partial<IFluidCodeDetails>;
-        if (maybeCodeDetails === undefined) {
-            this.logger.send({
-                eventName: "CodeProposalUndefined",
-                category: "warning",
-            });
-            pkg = NullRuntimeCodeDetails;
-        } else if (typeof maybeCodeDetails?.package !== "string"
+        if (typeof maybeCodeDetails?.package !== "string"
             && !isFluidPackage(maybeCodeDetails?.package)) {
             this.logger.send({
                     eventName: "CodeProposalNotIFluidCodeDetails",
@@ -1628,6 +1621,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         previousRuntimeState: IRuntimeState = {},
     ) {
         assert(this._context === undefined || this._context.disposed, "Existing context not disposed");
+
         // The relative loader will proxy requests to '/' to the loader itself assuming no non-cache flags
         // are set. Global requests will still go directly to the loader
         const loader = new RelativeLoader(this.loader, () => this.originalRequest);
@@ -1661,8 +1655,8 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
      * Creates a new, unattached container context
      */
     private async createDetachedContext(attributes: IDocumentAttributes, snapshot?: ISnapshotTree) {
-        const codeDetails = this.getCodeProposal();
-        if (codeDetails === undefined || codeDetails === NullRuntimeCodeDetails) {
+        const codeDetails = this.getCodeDetailsFromQuorum();
+        if (codeDetails === undefined) {
             throw new Error("Code proposal must exist for detached create flow.");
         }
         await this.loadContext(codeDetails, attributes, snapshot);

@@ -18,13 +18,11 @@ import {
     IDeltaManager,
     ILoader,
     IRuntime,
-    IRuntimeFactory,
     IRuntimeState,
     ICriticalContainerError,
     ContainerWarning,
     AttachState,
     IFluidCodeDetails,
-    IFluidModule,
 } from "@fluidframework/container-definitions";
 import { IDocumentStorageService } from "@fluidframework/driver-definitions";
 import {
@@ -41,8 +39,11 @@ import {
     ISummaryTree,
     IVersion,
 } from "@fluidframework/protocol-definitions";
+import { PerformanceEvent } from "@fluidframework/telemetry-utils";
 import { Container } from "./container";
-import { NullChaincode, NullRuntime, NullRuntimeCodeDetails } from "./nullRuntime";
+import { NullChaincode, NullRuntime } from "./nullRuntime";
+
+const PackageNotFactoryError = "Code package does not implement IRuntimeFactory";
 
 export class ContainerContext implements IContainerContext {
     public static async createOrLoad(
@@ -270,13 +271,20 @@ export class ContainerContext implements IContainerContext {
     }
 
     private async load() {
-        let entrypoint: IFluidModule | undefined;
-        if (this.codeDetails !== NullRuntimeCodeDetails) {
-            entrypoint = await this.codeLoader.load(this.codeDetails);
+        if (this.codeDetails === undefined) {
+            const runtimeFactory =  new NullChaincode();
+            this._runtime = await runtimeFactory.instantiateRuntime(this);
+            return;
         }
-        const runtimeFactory: IRuntimeFactory =
-            entrypoint?.fluidExport?.IRuntimeFactory ?? new NullChaincode();
 
-        this._runtime = await runtimeFactory.instantiateRuntime(this);
+        const fluidModule = await PerformanceEvent.timedExecAsync(this.logger, { eventName: "CodeLoad" },
+            async () => this.codeLoader.load(this.codeDetails),
+        );
+
+        const maybeFactory = fluidModule.fluidExport.IRuntimeFactory;
+        if (maybeFactory === undefined) {
+            throw new Error(PackageNotFactoryError);
+        }
+        this._runtime = await maybeFactory.instantiateRuntime(this);
     }
 }
