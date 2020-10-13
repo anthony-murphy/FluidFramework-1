@@ -272,8 +272,8 @@ export class ContainerContext implements IContainerContext {
 
     private async load() {
         if (this.codeDetails === undefined) {
-            const runtimeFactory =  new NullChaincode();
-            this._runtime = await runtimeFactory.instantiateRuntime(this);
+            const nullChaincode =  new NullChaincode();
+            this._runtime = await nullChaincode.instantiateRuntime(this);
             return;
         }
 
@@ -281,7 +281,7 @@ export class ContainerContext implements IContainerContext {
             async () => this.codeLoader.load(this.codeDetails),
         );
 
-        const maybeFactory = fluidModule.fluidExport.IRuntimeFactory;
+        const maybeFactory = fluidModule?.fluidExport?.IRuntimeFactory;
         if (maybeFactory === undefined) {
             throw new Error(PackageNotFactoryError);
         }
