@@ -1452,7 +1452,9 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         }
 
         const state = this._connectionState === ConnectionState.Connected;
-        this.context.setConnectionState(state, this.clientId);
+        if (!this.context.disposed) {
+            this.context.setConnectionState(state, this.clientId);
+        }
         this.protocolHandler.quorum.setConnectionState(state, this.clientId);
         raiseConnectedEvent(this.logger, this, state, this.clientId);
 
