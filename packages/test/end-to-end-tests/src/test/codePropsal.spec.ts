@@ -101,7 +101,7 @@ describe("CodeProposal.EndToEnd", () => {
         for (let i = 0; i < containers.length; i++) {
             const expectedEvents = new Set<string>();
             containerEvents.push(expectedEvents);
-            for (const event of ["codeProposed", "contextDisposed", "contextChanged"]) {
+            for (const event of ["contextReloading", "contextDisposed", "contextChanged"]) {
                 expectedEvents.add(event);
                 containers[i].once(event,(c)=>{
                     expectedEvents.delete(event);
@@ -128,7 +128,7 @@ describe("CodeProposal.EndToEnd", () => {
 
     it("Code Proposal Rejection", async () => {
         for (let i = 0; i < containers.length; i++) {
-            for (const event of ["codeProposed", "contextDisposed", "contextChanged"]) {
+            for (const event of ["contextReloading", "contextDisposed", "contextChanged"]) {
                 containers[i].once(event, (c)=>{
                     assert.fail(`containers[${i}]: ${event}: no event should emit`);
                 });
@@ -153,7 +153,7 @@ describe("CodeProposal.EndToEnd", () => {
         const containerEvents: Set<string>[] = [];
         const expectedEvents = new Set<string>();
         containerEvents.push(expectedEvents);
-        for (const event of ["codeProposed", "contextDisposed", "contextChanged"]) {
+        for (const event of ["contextReloading", "contextDisposed", "contextChanged"]) {
             expectedEvents.add(event);
             containers[0].once(event,(c)=>{
                 expectedEvents.delete(event);
@@ -164,7 +164,7 @@ describe("CodeProposal.EndToEnd", () => {
             });
         }
 
-        containers[1].once("codeProposed",()=>{
+        containers[1].once("contextReloading",()=>{
             containers[1].once("contextDisposed",()=>{
                 containers[1].close();
                 containers[1].once("contextChanged",()=>{
@@ -187,11 +187,11 @@ describe("CodeProposal.EndToEnd", () => {
             `containers[0]: unfired events: ${JSON.stringify([... containerEvents.values()])}`);
     });
 
-    it("Overwrite on Code Proposal", async () => {
+    it("Keep Existing Context on Code Proposal", async () => {
         const containerEvents: Set<string>[] = [];
         const expectedEvents = new Set<string>();
         containerEvents.push(expectedEvents);
-        for (const event of ["codeProposed", "contextDisposed", "contextChanged"]) {
+        for (const event of ["contextReloading", "contextDisposed", "contextChanged"]) {
             expectedEvents.add(event);
             containers[0].once(event,(c)=>{
                 expectedEvents.delete(event);
@@ -202,8 +202,8 @@ describe("CodeProposal.EndToEnd", () => {
             });
         }
 
-        containers[1].once("codeProposed",(c,p, overwrite)=>{
-            overwrite(p);
+        containers[1].once("contextReloading",(c,p, cancel)=>{
+            cancel();
             containers[1].once("contextDisposed",()=>{
                 assert.fail("containers[1]: contextDisposed should not fire");
             });

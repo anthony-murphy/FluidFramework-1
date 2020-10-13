@@ -79,11 +79,11 @@ export interface IContainerEvents extends IEvent {
      * @param opsBehind - number of ops this client is behind (if present).
      */
     (event: "connect", listener: (opsBehind?: number) => void);
-    (event: "codeProposed",
+    (event: "contextReloading",
         listener: (
             proposedCodeDetails: IFluidCodeDetails,
             currentCodeDetails: IFluidCodeDetails | undefined,
-            overrideProposedCode: (codeDetails: IFluidCodeDetails) => void) => void,
+            cancel: () => void) => void,
             target: IEventThisPlaceHolder);
     (event: "contextDisposed" | "contextChanged",
         listener: (

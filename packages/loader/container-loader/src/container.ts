@@ -761,9 +761,16 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
     }
 
     private async reloadContextCore(): Promise<void> {
-        const codeDetails = this.emitAndGetCodeProposalForContextLoad();
+        const codeDetails = this.getCodeProposal();
 
-        if (JSON.stringify(codeDetails) === JSON.stringify(this.context.codeDetails)) {
+        let reloadCanceled = false;
+        this.emit(
+            "contextReloading",
+            codeDetails,
+            this.context.codeDetails,
+            ()=> reloadCanceled = true);
+
+        if (reloadCanceled) {
             return;
         }
 
@@ -996,7 +1003,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         // instantiateRuntime which will want to know existing state.  Wait for these promises to finish.
         [this._protocolHandler] = await Promise.all([protocolHandlerP, loadDetailsP]);
 
-        const codeDetails = this.emitAndGetCodeProposalForContextLoad();
+        const codeDetails = this.getCodeProposal();
         await this.loadContext(codeDetails, attributes, maybeSnapshotTree);
 
         // Propagate current connection state through the system.
@@ -1204,7 +1211,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         return protocol;
     }
 
-    private emitAndGetCodeProposalForContextLoad(): IFluidCodeDetails {
+    private getCodeProposal(): IFluidCodeDetails {
         const quorum = this.protocolHandler.quorum;
 
         let pkg = quorum.get("code");
@@ -1213,13 +1220,6 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         if (pkg === undefined) {
             pkg = quorum.get("code2");
         }
-
-        this.emit(
-            "codeProposed",
-            pkg,
-            this._context?.codeDetails,
-            (details: IFluidCodeDetails)=>{pkg = details;},
-            this);
 
         const maybeCodeDetails = pkg as Partial<IFluidCodeDetails>;
         if (maybeCodeDetails === undefined) {
@@ -1609,9 +1609,9 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
      * Creates a new, unattached container context
      */
     private async createDetachedContext(attributes: IDocumentAttributes, snapshot?: ISnapshotTree) {
-        const codeDetails = this.emitAndGetCodeProposalForContextLoad();
+        const codeDetails = this.getCodeProposal();
         if (codeDetails === undefined || codeDetails === NullRuntimeCodeDetails) {
-            throw new Error("Code proposal must exit for detached create flow.");
+            throw new Error("Code proposal must exist for detached create flow.");
         }
         await this.loadContext(codeDetails, attributes, snapshot);
     }
