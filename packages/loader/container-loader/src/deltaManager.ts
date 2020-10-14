@@ -156,6 +156,8 @@ export class DeltaManager
     private lastProcessedSequenceNumber: number = 0;
     private baseTerm: number = 0;
 
+    private previouslyProcessedMessage: ISequencedDocumentMessage | undefined;
+
     // The sequence number we initially loaded from
     private initSequenceNumber: number = 0;
 
@@ -825,7 +827,7 @@ export class DeltaManager
 
         this.stopSequenceNumberUpdate();
 
-        // This raises "disconnect" event
+        // This raises "disconnect" event if we have active connection.
         this.disconnectFromDeltaStream(error !== undefined ? `${error.message}` : "Container closed");
 
         this._inbound.clear();
@@ -921,7 +923,6 @@ export class DeltaManager
         if (this.closed) {
             // Raise proper events, Log telemetry event and close connection.
             this.disconnectFromDeltaStream(`Disconnect on close`);
-            assert(!connection.connected); // Check we indeed closed it!
             return;
         }
 
@@ -1072,6 +1073,8 @@ export class DeltaManager
         this._outbound.clear();
         this.emit("disconnect", reason);
 
+        // Avoid re-entrancy - remove all listeners before closing!
+        connection.removeAllListeners();
         connection.close();
     }
 
@@ -1089,9 +1092,8 @@ export class DeltaManager
     ) {
         // We quite often get protocol errors before / after observing nack/disconnect
         // we do not want to run through same sequence twice.
-        if (connection !== this.connection) {
-            return;
-        }
+        // We should correctly unregister all event listeners not to re-enter here again!
+        assert(connection === this.connection);
 
         this.disconnectFromDeltaStream(error.message);
 
@@ -1139,6 +1141,16 @@ export class DeltaManager
         }
     }
 
+    // returns parts of message (in string format) that should never change for a given message.
+    // Used for message comparison. It attempts to avoid comparing fields that potentially may differ.
+    // for example, it's not clear if serverMetadata or timestamp property is a property of message or server state.
+    // We only extract the most obvious fields that are sufficient (with high probability) to detect sequence number
+    // reuse.
+    // Also payload goes to telemetry, so no PII, including content!!
+    private comparableMessagePayload(m: ISequencedDocumentMessage) {
+        return `${m.clientId}-${m.type}-${m.minimumSequenceNumber}-${m.referenceSequenceNumber}`;
+    }
+
     private enqueueMessages(
         messages: ISequencedDocumentMessage[],
         telemetryEventSuffix: string = "OutOfOrderMessage",
@@ -1171,12 +1183,31 @@ export class DeltaManager
                 if (duplicateEnd === undefined || duplicateEnd < message.sequenceNumber) {
                     duplicateEnd = message.sequenceNumber;
                 }
+
+                // Validate that we do not have data loss, i.e. sequencing is reset and started again
+                // with numbers that this client already observed before.
+                if (this.previouslyProcessedMessage?.sequenceNumber === message.sequenceNumber) {
+                    const message1 = this.comparableMessagePayload(this.previouslyProcessedMessage);
+                    const message2 = this.comparableMessagePayload(message);
+                    if (message1 !== message2) {
+                        const error = {
+                            errorType: ContainerErrorType.dataCorruption,
+                            message: "Two messages with same seq# and different payload!",
+                            clientId: this.connection?.details.clientId,
+                            sequenceNumber: message.sequenceNumber,
+                            message1,
+                            message2,
+                        };
+                        this.close(error);
+                    }
+                }
             } else if (message.sequenceNumber !== this.lastQueuedSequenceNumber + 1) {
                 this.pending.push(message);
                 // eslint-disable-next-line @typescript-eslint/no-floating-promises
                 this.fetchMissingDeltas(telemetryEventSuffix, this.lastQueuedSequenceNumber, message.sequenceNumber);
             } else {
                 this.lastQueuedSequenceNumber = message.sequenceNumber;
+                this.previouslyProcessedMessage = message;
                 this._inbound.push(message);
             }
         }
