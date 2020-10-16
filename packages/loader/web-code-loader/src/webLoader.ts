@@ -15,7 +15,7 @@ import {
 import { ScriptManager } from "./scriptManager";
 
 export class WebCodeLoader implements ICodeLoader {
-    private readonly loadedModules = new Map<string, Promise<IFluidModule> | IFluidModule>();
+    private readonly loadedModules = new Map<IResolvedFluidCodeDetails, Promise<IFluidModule> | IFluidModule>();
     private readonly scriptManager = new ScriptManager();
 
     constructor(
@@ -27,14 +27,11 @@ export class WebCodeLoader implements ICodeLoader {
         maybeFluidModule?: Promise<IFluidModule> | IFluidModule,
     ): Promise<void> {
         const resolved = await this.codeResolver.resolveCodeDetails(source);
-        if (resolved.resolvedPackageCacheId !== undefined
-            && this.loadedModules.has(resolved.resolvedPackageCacheId)) {
+        if (this.loadedModules.has(resolved)) {
             return;
         }
         const fluidModule = maybeFluidModule ?? this.load(source);
-        if (resolved.resolvedPackageCacheId !== undefined) {
-            this.loadedModules.set(resolved.resolvedPackageCacheId, fluidModule);
-        }
+        this.loadedModules.set(resolved, fluidModule);
     }
 
     public async preCache(source: IFluidCodeDetails) {
@@ -52,17 +49,14 @@ export class WebCodeLoader implements ICodeLoader {
         source: IFluidCodeDetails,
     ): Promise<IFluidModule> {
         const resolved = await this.codeResolver.resolveCodeDetails(source);
-        if (resolved.resolvedPackageCacheId !== undefined) {
-            const maybePkg = this.loadedModules.get(resolved.resolvedPackageCacheId);
-            if (maybePkg !== undefined) {
-                return maybePkg;
-            }
+        const maybePkg = this.loadedModules.get(resolved);
+        if (maybePkg !== undefined) {
+            return maybePkg;
         }
 
         const fluidModuleP = this.loadModuleFromResolvedCodeDetails(resolved);
-        if (resolved.resolvedPackageCacheId !== undefined) {
-            this.loadedModules.set(resolved.resolvedPackageCacheId, fluidModuleP);
-        }
+        this.loadedModules.set(resolved, fluidModuleP);
+
         return fluidModuleP;
     }
 

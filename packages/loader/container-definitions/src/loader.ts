@@ -15,7 +15,7 @@ import { IEvent, IEventProvider, IEventThisPlaceHolder } from "@fluidframework/c
 import { IDeltaManager } from "./deltas";
 import { ICriticalContainerError, ContainerWarning } from "./error";
 import { IFluidModule } from "./fluidModule";
-import { IFluidCodeDetails, IFluidPackage } from "./fluidPackage";
+import { IFluidCodeDetails, IFluidPackage, isFluidCodeDetails, isFluidPackage } from "./fluidPackage";
 import { AttachState } from "./runtime";
 
 /**
@@ -37,10 +37,12 @@ export interface IResolvedFluidCodeDetails extends IFluidCodeDetails {
      * A resolved version of the Fluid package. All Fluid browser file entries should be absolute urls.
      */
     readonly resolvedPackage: Readonly<IFluidPackage>;
-    /**
-     * If not undefined, this id will be used to cache the entry point for the code package
-     */
-    readonly resolvedPackageCacheId: string | undefined;
+}
+
+export function isResolvedFluidCodeDetails(codeDetails: any): codeDetails is IResolvedFluidCodeDetails {
+    const maybeResolved = codeDetails as Partial<IResolvedFluidCodeDetails> | undefined;
+    return isFluidCodeDetails(codeDetails)
+        && isFluidPackage(maybeResolved?.resolvedPackage);
 }
 
 /**
@@ -79,17 +81,11 @@ export interface IContainerEvents extends IEvent {
      * @param opsBehind - number of ops this client is behind (if present).
      */
     (event: "connect", listener: (opsBehind?: number) => void);
-    (event: "contextReloading",
-        listener: (
-            proposedCodeDetails: IFluidCodeDetails,
-            currentCodeDetails: IFluidCodeDetails | undefined,
-            cancel: () => void) => void,
-            target: IEventThisPlaceHolder);
     (event: "contextDisposed" | "contextChanged",
         listener: (
             codeDetails: IFluidCodeDetails,
             previousCodeDetails: IFluidCodeDetails | undefined,
-            target: IEventThisPlaceHolder) => void);
+            container: IEventThisPlaceHolder) => void);
     (event: "disconnected" | "attaching" | "attached", listener: () => void);
     (event: "closed", listener: (error?: ICriticalContainerError) => void);
     (event: "warning", listener: (error: ContainerWarning) => void);

@@ -19,6 +19,7 @@ import {
     IProxyLoaderFactory,
     LoaderHeader,
     IFluidCodeDetails,
+    IFluidCodeResolver,
 } from "@fluidframework/container-definitions";
 import { Deferred, performance } from "@fluidframework/common-utils";
 import { ChildLogger, DebugLogger, PerformanceEvent } from "@fluidframework/telemetry-utils";
@@ -157,6 +158,8 @@ export interface ILoaderProps {
      */
     readonly codeLoader: ICodeLoader;
 
+    readonly codeResolver?: IFluidCodeResolver;
+
     /**
      * A property bag of options used by various layers
      * to control features
@@ -202,6 +205,8 @@ export interface ILoaderServices {
      * for running a container once it is loaded.
      */
     readonly codeLoader: ICodeLoader;
+
+    readonly codeResolver: IFluidCodeResolver | undefined;
 
     /**
      * A property bag of options used by various layers
@@ -265,6 +270,7 @@ export class Loader extends EventEmitter implements ILoader {
             urlResolver: createCachedResolver(MultiUrlResolver.create(loaderProps.urlResolver)),
             documentServiceFactory: MultiDocumentServiceFactory.create(loaderProps.documentServiceFactory),
             codeLoader: loaderProps.codeLoader,
+            codeResolver: loaderProps.codeResolver,
             options: loaderProps.options ?? {},
             scope: loaderProps.scope ?? {},
             subLogger: DebugLogger.mixinDebugLogger("fluid:telemetry", loaderProps.logger, { loaderId: uuid() }),

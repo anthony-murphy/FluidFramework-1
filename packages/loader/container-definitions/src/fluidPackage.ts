@@ -43,7 +43,7 @@ export interface IFluidPackage {
     /**
      * This object represents the Fluid specific properties of the package
      */
-    fluid: {
+    fluid?: {
         /**
          * The name of the of the environment. This should be something like browser, or node
          * and contain the necessary targets for loading this code in that environment.
@@ -65,7 +65,7 @@ export interface IFluidPackage {
 export const isFluidPackage = (pkg: any): pkg is Readonly<IFluidPackage> =>
     typeof pkg === "object"
     && typeof pkg?.name === "string"
-    && typeof pkg?.fluid === "object";
+    && pkg?.fluid === undefined || typeof pkg?.fluid === "object";
 
 /**
  * Package manager configuration. Provides a key value mapping of config values
@@ -87,5 +87,10 @@ export interface IFluidCodeDetails {
     /**
      * Configuration details. This includes links to the package manager and base CDNs.
      */
-    readonly config: IFluidCodeDetailsConfig;
+    readonly config?: IFluidCodeDetailsConfig;
 }
+
+export const isFluidCodeDetails = (details: any): details is Readonly<IFluidPackage> =>
+    typeof details === "object"
+    && (typeof details?.package === "string" || isFluidPackage(details?.package))
+    && (details?.config === undefined || typeof details?.config === "object");

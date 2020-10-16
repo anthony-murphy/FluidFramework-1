@@ -26,6 +26,7 @@ import {
     IThrottlingWarning,
     AttachState,
     isFluidPackage,
+    isResolvedFluidCodeDetails,
 } from "@fluidframework/container-definitions";
 import { CreateContainerError, GenericError } from "@fluidframework/container-utils";
 import {
@@ -481,6 +482,11 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         return this.protocolHandler.quorum;
     }
 
+    public async proposeRuntimeCodeDetails(codeDetails: IFluidCodeDetails) {
+        assert(!isResolvedFluidCodeDetails(codeDetails), "cannot propose resolved code");
+        return this.getQuorum().propose("code", codeDetails);
+    }
+
     public close(error?: ICriticalContainerError) {
         if (this._closed) {
             return;
@@ -791,17 +797,20 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
     }
 
     private async reloadContextCore(): Promise<void> {
-        const codeDetails = this.getCodeDetailsFromQuorum();
+        let codeDetails: IFluidCodeDetails = this.getCodeDetailsFromQuorum();
 
-        let reloadCanceled = false;
-        this.emit(
-            "contextReloading",
-            codeDetails,
-            this.context.codeDetails,
-            ()=> reloadCanceled = true);
-
-        if (reloadCanceled) {
-            return;
+        if (!this.hasNullRuntime() && this.loader.services.codeResolver !== undefined) {
+            const resolved = await this.loader.services.codeResolver.resolveCodeDetails(codeDetails);
+            codeDetails = resolved;
+            if (this._context?.codeDetails !== undefined) {
+                const contextCodeDetails = isResolvedFluidCodeDetails(this._context.codeDetails)
+                    ? this._context.codeDetails
+                    : await this.loader.services.codeResolver.resolveCodeDetails(this._context.codeDetails);
+                // if the resolved code is equivalent to the propose code we will keep the exiting context
+                if (resolved === contextCodeDetails) {
+                        return;
+                }
+            }
         }
 
         await Promise.all([
@@ -811,10 +820,12 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         const previousContextState = await this.context.snapshotRuntimeState();
 
         this.context.dispose();
-        this.emit("contextDisposed",
-            codeDetails,
-            this.context.codeDetails,
-            this);
+        if (!this.hasNullRuntime()) {
+            this.emit("contextDisposed",
+                codeDetails,
+                this.context.codeDetails,
+                this);
+        }
 
         if (!this.closed) {
             let snapshot: ISnapshotTree | undefined;

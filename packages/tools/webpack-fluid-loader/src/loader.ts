@@ -114,8 +114,16 @@ function makeSideBySideDiv(divId: string) {
 }
 
 class WebpackCodeResolver implements IFluidCodeResolver {
+    private readonly cache = new Map<string, IResolvedFluidCodeDetails>();
+
     constructor(private readonly options: IBaseRouteOptions) { }
     async resolveCodeDetails(details: IFluidCodeDetails): Promise<IResolvedFluidCodeDetails> {
+        const parse = extractPackageIdentifierDetails(details.package);
+        if (this.cache.has(parse.fullId)) {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            return this.cache.get(parse.fullId)!;
+        }
+
         const baseUrl = details.config.cdn ?? `http://localhost:${this.options.port}`;
         let pkg = details.package;
         if (typeof pkg === "string") {
@@ -127,8 +135,7 @@ class WebpackCodeResolver implements IFluidCodeResolver {
         }
         const browser =
             resolveFluidPackageEnvironment(pkg.fluid.browser, baseUrl);
-        const parse = extractPackageIdentifierDetails(pkg);
-        return {
+        const resolved = {
             ...details,
             resolvedPackage: {
                 ...pkg,
@@ -137,8 +144,9 @@ class WebpackCodeResolver implements IFluidCodeResolver {
                     browser,
                 },
             },
-            resolvedPackageCacheId: parse.fullId,
         };
+        this.cache.set(parse.fullId, resolved);
+        return resolved;
     }
 }
 
