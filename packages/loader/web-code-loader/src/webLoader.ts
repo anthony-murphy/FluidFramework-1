@@ -11,16 +11,20 @@ import {
     IResolvedFluidCodeDetails,
     isFluidBrowserPackage,
 } from "@fluidframework/container-definitions";
-import { IFluidCodeDetails } from "@fluidframework/core-interfaces";
+import { IFluidCodeDetails, IProvideFluidCodeDetailsComparer } from "@fluidframework/core-interfaces";
 import { ScriptManager } from "./scriptManager";
 
-export class WebCodeLoader implements ICodeLoader {
+export class WebCodeLoader implements ICodeLoader, Partial<IProvideFluidCodeDetailsComparer> {
     private readonly loadedModules = new Map<string, Promise<IFluidModule> | IFluidModule>();
     private readonly scriptManager = new ScriptManager();
 
     constructor(
-        private readonly codeResolver: IFluidCodeResolver,
+        private readonly codeResolver: IFluidCodeResolver & Partial<IProvideFluidCodeDetailsComparer>,
         private readonly allowList?: ICodeAllowList) { }
+
+    public get IFluidCodeDetailsComparer() {
+        return this.codeResolver.IFluidCodeDetailsComparer;
+    }
 
     public async seedModule(
         source: IFluidCodeDetails,

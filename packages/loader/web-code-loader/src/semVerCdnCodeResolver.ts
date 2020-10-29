@@ -4,14 +4,24 @@
  */
 
 import {
+    IFluidBrowserPackage,
     IFluidCodeResolver, IResolvedFluidCodeDetails, isFluidBrowserPackage,
 } from "@fluidframework/container-definitions";
-import { IFluidCodeDetails } from "@fluidframework/core-interfaces";
+import { IFluidCodeDetails, IFluidCodeDetailsComparer } from "@fluidframework/core-interfaces";
 import fetch from "isomorphic-fetch";
+ import * as semver from "semver";
 import {
     extractPackageIdentifierDetails,
+    IPackageIdentifierDetails,
     resolveFluidPackageEnvironment,
  } from "./utils";
+
+export interface ISerVerCdnPackage extends IFluidBrowserPackage {
+    version: string;
+}
+
+const isSerVerCdnPackage = (pkg: any): pkg is ISerVerCdnPackage =>
+    typeof pkg.version === "string" && pkg.range === "string" && isFluidBrowserPackage(pkg);
 
 class FluidPackage {
     private resolveP: Promise<IResolvedFluidCodeDetails> | undefined;
@@ -35,7 +45,7 @@ class FluidPackage {
             maybePkg = this.codeDetails.package;
         }
 
-        if (!isFluidBrowserPackage(maybePkg)) {
+        if (!isSerVerCdnPackage(maybePkg)) {
             throw new Error(`Package ${maybePkg?.name} not a Fluid module.`);
         }
         const browser = resolveFluidPackageEnvironment(
@@ -65,7 +75,58 @@ class FluidPackage {
  * a per scope cdn, `config["@package_scope:cdn"]`. A scope specific cdn base will take precedence over
  * the global cdn.
  */
-export class SemVerCdnCodeResolver implements IFluidCodeResolver {
+export class SemVerCdnCodeResolver implements IFluidCodeResolver, IFluidCodeDetailsComparer {
+    get IFluidCodeDetailsComparer() {return this;}
+
+    public async satisfies(candidate: IFluidCodeDetails, constraint: IFluidCodeDetails): Promise<boolean> {
+        const candidateVer =
+            this.getSemVer(
+                extractPackageIdentifierDetails(candidate.package));
+
+        const constraintParsed =
+            extractPackageIdentifierDetails(constraint.package);
+
+        if (candidateVer === undefined || constraintParsed.version === undefined) {
+            return false;
+        }
+
+        return semver.satisfies(candidateVer, constraintParsed.version);
+    }
+
+    public async compare(a: IFluidCodeDetails, b: IFluidCodeDetails): Promise<number | undefined> {
+        const aVer =
+            this.getSemVer(
+                extractPackageIdentifierDetails(a.package));
+
+        const bVer =
+            this.getSemVer(
+                extractPackageIdentifierDetails(b.package));
+
+        if (aVer === undefined || bVer === undefined) {
+            return undefined;
+        }
+
+        return semver.compare(aVer, bVer);
+    }
+
+    private getSemVer(details: IPackageIdentifierDetails): semver.SemVer | undefined {
+        if (typeof details?.version === "string") {
+            // eslint-disable-next-line no-null/no-null
+            if (semver.valid(details.version) !== null) {
+                return semver.parse(details.version) ?? undefined;
+            }
+
+            // it's a range, so get the min possible version
+            // eslint-disable-next-line no-null/no-null
+            if (semver.validRange(details.version) !== null) {
+                return semver.minVersion(details.version) ?? undefined;
+            }
+
+            return semver.coerce(details.version) ?? undefined;
+        }
+        return undefined;
+    }
+
     // Cache goes CDN -> package -> entrypoint
     private readonly fluidPackageCache = new Map<string, FluidPackage>();
 
