@@ -6,10 +6,10 @@
 import { IDisposable, ITelemetryBaseLogger, ITelemetryLogger } from "@fluidframework/common-definitions";
 import { assert, Deferred, Lazy } from "@fluidframework/common-utils";
 import { ChildLogger } from "@fluidframework/telemetry-utils";
-import { FluidDataStoreContext } from "./dataStoreContext";
+import { FluidDataStoreContext, LocalFluidDataStoreContext } from "./dataStoreContext";
 
  export class DataStoreContexts implements Iterable<[string,FluidDataStoreContext]>, IDisposable {
-    public readonly notBoundContexts = new Set<string>();
+    private readonly notBoundContexts = new Set<string>();
 
     // Attached and loaded context proxies
     private readonly _contexts = new Map<string, FluidDataStoreContext>();
@@ -48,8 +48,18 @@ import { FluidDataStoreContext } from "./dataStoreContext";
     public has(id: string) {
         return this._contexts.has(id);
     }
+    public get(id: string): FluidDataStoreContext | undefined {
+        return this._contexts.get(id);
+    }
 
-    public setupNew(context: FluidDataStoreContext) {
+    public hasUnbound(id: string) {
+        return this.notBoundContexts.has(id);
+    }
+    public get unboundCount() {
+        return this.notBoundContexts.size;
+    }
+
+    public setUnbound(context: LocalFluidDataStoreContext) {
         const id = context.id;
         assert(!this._contexts.has(id), "Creating store with existing ID");
         this.notBoundContexts.add(id);
@@ -58,22 +68,30 @@ import { FluidDataStoreContext } from "./dataStoreContext";
         this._contexts.set(id, context);
     }
 
-    public ensureDeferred(id: string): Deferred<FluidDataStoreContext> {
-        const deferred = this.contextsDeferred.get(id);
-        if (deferred) { return deferred; }
-        const newDeferred = new Deferred<FluidDataStoreContext>();
-        this.contextsDeferred.set(id, newDeferred);
-        return newDeferred;
+    public getUnbound(id: string): LocalFluidDataStoreContext {
+        assert(this.notBoundContexts.has(id),
+        "Store to be bound should be in not bounded set");
+        return this._contexts.get(id) as LocalFluidDataStoreContext;
     }
 
-    public getDeferred(id: string): Deferred<FluidDataStoreContext> {
+    public bind(id: string) {
+        const context = this.getUnbound(id);
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const deferred = this.contextsDeferred.get(id)!;
         assert(!!deferred);
-        return deferred;
+        this.notBoundContexts.delete(id);
+        deferred.resolve(context);
     }
 
-    public setNew(id: string, context?: FluidDataStoreContext) {
+    public async getBound(id: string, wait: boolean): Promise<FluidDataStoreContext> {
+        const deferredContext = this.ensureDeferred(id);
+        if (!wait && !deferredContext.isCompleted) {
+            return Promise.reject(new Error(`DataStore ${id} does not exist`));
+        }
+        return deferredContext.promise;
+    }
+
+    public setBound(id: string, context: FluidDataStoreContext) {
         assert(!!context);
         assert(!this._contexts.has(id));
         this._contexts.set(id, context);
@@ -81,14 +99,11 @@ import { FluidDataStoreContext } from "./dataStoreContext";
         deferred.resolve(context);
     }
 
-    public get(id: string): FluidDataStoreContext {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        const context = this._contexts.get(id)!;
-        assert(!!context);
-        return context;
-    }
-
-    public tryGet(id: string): FluidDataStoreContext | undefined {
-        return this._contexts.get(id);
+    private  ensureDeferred(id: string): Deferred<FluidDataStoreContext> {
+        const deferred = this.contextsDeferred.get(id);
+        if (deferred) { return deferred; }
+        const newDeferred = new Deferred<FluidDataStoreContext>();
+        this.contextsDeferred.set(id, newDeferred);
+        return newDeferred;
     }
  }

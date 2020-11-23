@@ -110,7 +110,7 @@ export class DataStores implements IDisposable {
                     snapshotTree,
                     isRootDataStore ?? true);
             }
-            this.contexts.setNew(key, dataStoreContext);
+            this.contexts.setBound(key, dataStoreContext);
         }
     }
 
@@ -119,7 +119,7 @@ export class DataStores implements IDisposable {
         // The local object has already been attached
         if (local) {
             assert(this.pendingAttach.has(attachMessage.id));
-            this.contexts.tryGet(attachMessage.id)?.emit("attached");
+            this.contexts.get(attachMessage.id)?.emit("attached");
             this.pendingAttach.delete(attachMessage.id);
             return;
         }
@@ -168,7 +168,7 @@ export class DataStores implements IDisposable {
             pkg);
 
         // Resolve pending gets and store off any new ones
-       this.contexts.setNew(attachMessage.id, remotedFluidDataStoreContext);
+       this.contexts.setBound(attachMessage.id, remotedFluidDataStoreContext);
 
         // Equivalent of nextTick() - Prefetch once all current ops have completed
         // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -176,10 +176,7 @@ export class DataStores implements IDisposable {
     }
 
     public  bindFluidDataStore(fluidDataStoreRuntime: IFluidDataStoreChannel): void {
-        assert(this.contexts.notBoundContexts.has(fluidDataStoreRuntime.id),
-            "Store to be bound should be in not bounded set");
-        this.contexts.notBoundContexts.delete(fluidDataStoreRuntime.id);
-        const context = this.contexts.get(fluidDataStoreRuntime.id) as LocalFluidDataStoreContext;
+        const context = this.contexts.getUnbound(fluidDataStoreRuntime.id);
         // If the container is detached, we don't need to send OP or add to pending attach because
         // we will summarize it while uploading the create new summary and make it known to other
         // clients.
@@ -193,8 +190,7 @@ export class DataStores implements IDisposable {
         }
 
         // Resolve the deferred so other local stores can access it.
-        const deferred = this.contexts.getDeferred(fluidDataStoreRuntime.id);
-        deferred.resolve(context);
+       this.contexts.bind(fluidDataStoreRuntime.id);
     }
 
     public createDetachedDataStoreCore(
@@ -214,7 +210,7 @@ export class DataStores implements IDisposable {
             undefined,
             isRoot,
         );
-        this.contexts.setupNew(context);
+        this.contexts.setUnbound(context);
         return context;
     }
 
@@ -232,7 +228,7 @@ export class DataStores implements IDisposable {
             isRoot,
             props,
         );
-        this.contexts.setupNew(context);
+        this.contexts.setUnbound(context);
         return context;
     }
 
