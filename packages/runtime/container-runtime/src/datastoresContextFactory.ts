@@ -12,85 +12,110 @@ import {
     CreateChildSummarizerNodeParam,
     CreateChildSummarizerNodeFn,
     CreateSummarizerNodeSource,
+    IFluidDataStoreContextDetached,
 } from "@fluidframework/runtime-definitions";
 import {
-    FluidDataStoreContext,
-    LocalDetachedFluidDataStoreContext,
-    LocalFluidDataStoreContext,
     RemotedFluidDataStoreContext,
     IFluidDataStoreAttributes,
     currentSnapshotFormatVersion,
     createAttributesBlob,
+    IFluidDataStoreContextImpl,
 } from "./dataStoreContext";
+import {
+    ILocalFluidDataStoreContextImpl,
+    LocalFluidDataStoreContext,
+    LocalDetachedFluidDataStoreContext,
+} from "./localDataStoreContext";
 import { ContainerRuntime } from ".";
 
 export interface IDataStoreContextFactory{
 
-    readonly attachState: AttachState;
+    createFromSnapshot(
+        id: string,
+        snapshot: ISnapshotTree | string,
+        bindChannel: (attachState: AttachState, channel: IFluidDataStoreChannel) => void,
+    ): IFluidDataStoreContextImpl;
 
-    createFromSnapshotAttached(id: string, snapshot: ISnapshotTree | string): FluidDataStoreContext;
-    createDetachedContextFromSnapshot(
-        id: string, snapshot: ISnapshotTree,
-        bindChannel: (channel: IFluidDataStoreChannel) => void): FluidDataStoreContext;
-    createFromAttachMessage(sequenceNumber: number, attachMessage: InboundAttachMessage): FluidDataStoreContext;
+    createFromAttachMessage(sequenceNumber: number, attachMessage: InboundAttachMessage): IFluidDataStoreContextImpl;
+
     createDetachedDataStoreCore(
         pkg: Readonly<string[]>,
         isRoot: boolean,
         id: string,
-        bindChannel: (channel: IFluidDataStoreChannel) => void): LocalDetachedFluidDataStoreContext;
+        bindChannel: (attachState: AttachState, channel: IFluidDataStoreChannel) => void,
+    ): ILocalFluidDataStoreContextImpl & IFluidDataStoreContextDetached;
+
     _createFluidDataStoreContext(
-        pkg: string[], id: string, isRoot: boolean, props: any | undefined,
-        bindChannel: (channel: IFluidDataStoreChannel) => void): LocalFluidDataStoreContext;
+        pkg: string[],
+        id: string,
+        isRoot: boolean,
+        props: any | undefined,
+        bindChannel: (attachState: AttachState, channel: IFluidDataStoreChannel) => void,
+    ): ILocalFluidDataStoreContextImpl;
 }
 
 export class DataStoresContextFactory implements IDataStoreContextFactory {
-    constructor(
+    public static create(
+        runtime: ContainerRuntime,
+        getCreateChildSummarizerNodeFn:
+        (id: string, createParam: CreateChildSummarizerNodeParam)  => CreateChildSummarizerNodeFn,
+    ): IDataStoreContextFactory {
+            return new DataStoresContextFactory(runtime, getCreateChildSummarizerNodeFn);
+        }
+
+    private constructor(
         private readonly runtime: ContainerRuntime,
         private readonly getCreateChildSummarizerNodeFn:
             (id: string, createParam: CreateChildSummarizerNodeParam)  => CreateChildSummarizerNodeFn) {}
 
     get attachState() {return this.runtime.attachState;}
 
-    createFromSnapshotAttached(id: string, snapshot: ISnapshotTree | string): FluidDataStoreContext {
-        return new RemotedFluidDataStoreContext(
-            id,
-            snapshot,
-            this.runtime,
-            this.runtime.storage,
-            this.runtime.scope,
-            this.getCreateChildSummarizerNodeFn(id, { type: CreateSummarizerNodeSource.FromSummary }));
-    }
-    createDetachedContextFromSnapshot(id: string, snapshotTree: ISnapshotTree,
-        bindChannel: (channel: IFluidDataStoreChannel) => void): FluidDataStoreContext {
-        let pkgFromSnapshot: string[];
-
-        // Need to rip through snapshot.
-        const { pkg, snapshotFormatVersion, isRootDataStore }
-            = readAndParseFromBlobs<IFluidDataStoreAttributes>(
-                snapshotTree.blobs,
-                snapshotTree.blobs[".component"]);
-        // Use the snapshotFormatVersion to determine how the pkg is encoded in the snapshot.
-        // For snapshotFormatVersion = "0.1", pkg is jsonified, otherwise it is just a string.
-        // However the feature of loading a detached container from snapshot, is added when the
-        // snapshotFormatVersion is "0.1", so we don't expect it to be anything else.
-        if (snapshotFormatVersion === currentSnapshotFormatVersion) {
-            pkgFromSnapshot = JSON.parse(pkg) as string[];
+    createFromSnapshot(
+        id: string,
+        snapshot: ISnapshotTree | string,
+        bindChannel: (attachState: AttachState, channel: IFluidDataStoreChannel) => void) {
+        if (this.attachState !== AttachState.Detached) {
+            return new RemotedFluidDataStoreContext(
+                id,
+                snapshot,
+                this.runtime,
+                this.runtime.storage,
+                this.runtime.scope,
+                this.getCreateChildSummarizerNodeFn(id, { type: CreateSummarizerNodeSource.FromSummary }));
         } else {
-            throw new Error(`Invalid snapshot format version ${snapshotFormatVersion}`);
+            if (typeof snapshot !== "object") {
+                throw new Error("Snapshot should be there to load from!!");
+            }
+            let pkgFromSnapshot: string[];
+
+            // Need to rip through snapshot.
+            const { pkg, snapshotFormatVersion, isRootDataStore }
+                = readAndParseFromBlobs<IFluidDataStoreAttributes>(
+                    snapshot.blobs,
+                    snapshot.blobs[".component"]);
+            // Use the snapshotFormatVersion to determine how the pkg is encoded in the snapshot.
+            // For snapshotFormatVersion = "0.1", pkg is jsonified, otherwise it is just a string.
+            // However the feature of loading a detached container from snapshot, is added when the
+            // snapshotFormatVersion is "0.1", so we don't expect it to be anything else.
+            if (snapshotFormatVersion === currentSnapshotFormatVersion) {
+                pkgFromSnapshot = JSON.parse(pkg) as string[];
+            } else {
+                throw new Error(`Invalid snapshot format version ${snapshotFormatVersion}`);
+            }
+            return new LocalFluidDataStoreContext(
+                id,
+                pkgFromSnapshot,
+                this.runtime,
+                this.runtime.storage,
+                this.runtime.scope,
+                this.getCreateChildSummarizerNodeFn(id, { type: CreateSummarizerNodeSource.FromSummary }),
+                (channel)=>bindChannel(this.runtime.attachState, channel),
+                snapshot,
+                isRootDataStore ?? true);
         }
-        return new LocalFluidDataStoreContext(
-            id,
-            pkgFromSnapshot,
-            this.runtime,
-            this.runtime.storage,
-            this.runtime.scope,
-            this.getCreateChildSummarizerNodeFn(id, { type: CreateSummarizerNodeSource.FromSummary }),
-            bindChannel,
-            snapshotTree,
-            isRootDataStore ?? true);
     }
 
-    createFromAttachMessage(sequenceNumber: number, attachMessage: InboundAttachMessage): FluidDataStoreContext {
+    createFromAttachMessage(sequenceNumber: number, attachMessage: InboundAttachMessage) {
         const flatBlobs = new Map<string, string>();
         let snapshotTree: ISnapshotTree | null = null;
         if (attachMessage.snapshot) {
@@ -122,7 +147,7 @@ export class DataStoresContextFactory implements IDataStoreContextFactory {
         pkg: Readonly<string[]>,
         isRoot: boolean,
         id: string,
-        bindChannel: (channel: IFluidDataStoreChannel) => void): LocalDetachedFluidDataStoreContext
+        bindChannel: (attachState: AttachState, channel: IFluidDataStoreChannel) => void)
     {
         return new LocalDetachedFluidDataStoreContext(
             id,
@@ -131,7 +156,7 @@ export class DataStoresContextFactory implements IDataStoreContextFactory {
             this.runtime.storage,
             this.runtime.scope,
             this.getCreateChildSummarizerNodeFn(id, { type: CreateSummarizerNodeSource.Local }),
-            bindChannel,
+            (channel)=>bindChannel(this.runtime.attachState, channel),
             undefined,
             isRoot,
         );
@@ -139,7 +164,7 @@ export class DataStoresContextFactory implements IDataStoreContextFactory {
 
     _createFluidDataStoreContext(
         pkg: string[], id: string, isRoot: boolean, props: any | undefined,
-        bindChannel: (channel: IFluidDataStoreChannel) => void) {
+        bindChannel: (attachState: AttachState, channel: IFluidDataStoreChannel) => void) {
         return new LocalFluidDataStoreContext(
             id,
             pkg,
@@ -147,7 +172,7 @@ export class DataStoresContextFactory implements IDataStoreContextFactory {
             this.runtime.storage,
             this.runtime.scope,
             this.getCreateChildSummarizerNodeFn(id, { type: CreateSummarizerNodeSource.Local }),
-            bindChannel,
+            (channel)=>bindChannel(this.runtime.attachState, channel),
             undefined,
             isRoot,
             props,

@@ -34,12 +34,10 @@ import { assert, Lazy } from "@fluidframework/common-utils";
 import { v4 as uuid } from "uuid";
 import { TreeTreeEntry } from "@fluidframework/protocol-base";
 import { normalizeAndPrefixGCNodeIds } from "@fluidframework/garbage-collector";
-import { DataStoreContexts } from "./dataStoreContexts";
 import { nonDataStorePaths } from "./containerRuntime";
-import {
-    FluidDataStoreContext,
- } from "./dataStoreContext";
 import { IDataStoreContextFactory } from "./datastoresContextFactory";
+import { isLocalFluidDataStoreContext } from "./localDataStoreContext";
+import { DataStoreContextManger } from "./dataStoreContexts";
 
  /**
   * This class encapsulates data store handling. Currently it is only used by the container runtime,
@@ -54,15 +52,16 @@ export class DataStores implements IDisposable {
     private readonly logger: ITelemetryLogger;
 
     private readonly disposeOnce = new Lazy<void>(()=>this.contexts.dispose());
-    private readonly contexts: DataStoreContexts;
+
+    private readonly contexts: DataStoreContextManger;
 
     constructor(
         private readonly baseSnapshot: ISnapshotTree | undefined,
         private readonly submitAttachFn: (attachContent: any) => void,
         private readonly contextFactory: IDataStoreContextFactory,
-        baseLogger: ITelemetryBaseLogger,
+        baseLogger: ITelemetryBaseLogger | undefined,
     ) {
-        this.contexts = new DataStoreContexts(baseLogger);
+        this.contexts = new DataStoreContextManger(baseLogger);
         this.logger = ChildLogger.create(baseLogger);
         // Extract stores stored inside the snapshot
         const fluidDataStores = new Map<string, ISnapshotTree | string>();
@@ -78,22 +77,16 @@ export class DataStores implements IDisposable {
 
         // Create a context for each of them
         for (const [key, value] of fluidDataStores) {
-            let dataStoreContext: FluidDataStoreContext;
-            // If we have a detached container, then create local data store contexts.
-            if (this.contextFactory.attachState !== AttachState.Detached) {
-                dataStoreContext = this.contextFactory.createFromSnapshotAttached(key, value);
-            } else {
-                if (typeof value !== "object") {
-                    throw new Error("Snapshot should be there to load from!!");
-                }
-                dataStoreContext =
-                    this.contextFactory.createDetachedContextFromSnapshot(
-                        key,
-                        value,
-                        (channel) => this.bindFluidDataStore(channel));
-            }
-            this.contexts.addBoundOrRemoted(dataStoreContext);
+            this.contexts.addBoundOrRemoted(
+                this.contextFactory.createFromSnapshot(
+                    key,
+                    value,
+                    this.bindFluidDataStore.bind(this)));
         }
+    }
+
+    public get size() {
+        return this.contexts.size;
     }
 
     public processAttachMessage(message: ISequencedDocumentMessage, local: boolean) {
@@ -130,7 +123,7 @@ export class DataStores implements IDisposable {
         Promise.resolve().then(async () => remotedFluidDataStoreContext.realize());
     }
 
-    private bindFluidDataStore(fluidDataStoreRuntime: IFluidDataStoreChannel): void {
+    private bindFluidDataStore(attachState: AttachState, fluidDataStoreRuntime: IFluidDataStoreChannel): void {
         const id = fluidDataStoreRuntime.id;
         const localContext = this.contexts.getUnbound(id);
         assert(!!localContext, "Could not find unbound context to bind");
@@ -138,7 +131,7 @@ export class DataStores implements IDisposable {
         // If the container is detached, we don't need to send OP or add to pending attach because
         // we will summarize it while uploading the create new summary and make it known to other
         // clients.
-        if (this.contextFactory.attachState !== AttachState.Detached) {
+        if (attachState !== AttachState.Detached) {
             localContext.emit("attaching");
             const message = localContext.generateAttachMessage();
 
@@ -159,7 +152,7 @@ export class DataStores implements IDisposable {
             pkg,
             isRoot,
             id,
-            (channel) => this.bindFluidDataStore(channel));
+            this.bindFluidDataStore.bind(this));
         this.contexts.addUnbound(context);
         return context;
     }
@@ -170,7 +163,7 @@ export class DataStores implements IDisposable {
             id,
             isRoot,
             props,
-            (channel) => this.bindFluidDataStore(channel));
+            this.bindFluidDataStore.bind(this));
         this.contexts.addUnbound(context);
         return context;
     }
@@ -344,12 +337,13 @@ export class DataStores implements IDisposable {
                 .map(([key, value]) => {
                     let dataStoreSummary: ISummarizeResult;
                     if (value.isLoaded) {
+                        assert(isLocalFluidDataStoreContext(value), "Can only create summary for local contexts");
                         const snapshot = value.generateAttachMessage().snapshot;
                         dataStoreSummary = convertToSummaryTree(snapshot, true);
                     } else {
                         // If this data store is not yet loaded, then there should be no changes in the snapshot from
                         // which it was created as it is detached container. So just use the previous snapshot.
-                        assert(!!this.baseSnapshot,
+                        assert(this.baseSnapshot?.trees?.[key] !== undefined,
                             "BaseSnapshot should be there as detached container loaded from snapshot");
                         dataStoreSummary = convertSnapshotTreeToSummaryTree(this.baseSnapshot.trees[key]);
                     }

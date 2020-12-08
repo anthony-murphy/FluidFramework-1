@@ -6,13 +6,15 @@
 import { IDisposable, ITelemetryBaseLogger, ITelemetryLogger } from "@fluidframework/common-definitions";
 import { assert, Deferred, Lazy } from "@fluidframework/common-utils";
 import { ChildLogger } from "@fluidframework/telemetry-utils";
-import { FluidDataStoreContext, LocalFluidDataStoreContext } from "./dataStoreContext";
+import { IFluidDataStoreContextImpl } from "./dataStoreContext";
+import { ILocalFluidDataStoreContextImpl, isLocalFluidDataStoreContext } from "./localDataStoreContext";
 
- export class DataStoreContexts implements Iterable<[string,FluidDataStoreContext]>, IDisposable {
+ export class DataStoreContextManger implements
+    Iterable<[string, IFluidDataStoreContextImpl | ILocalFluidDataStoreContextImpl]>, IDisposable {
     private readonly notBoundContexts = new Set<string>();
 
     /** Attached and loaded context proxies */
-    private readonly _contexts = new Map<string, FluidDataStoreContext>();
+    private readonly _contexts = new Map<string, IFluidDataStoreContextImpl>();
 
     /**
      * List of pending context waiting either to be bound or to arrive from another client.
@@ -21,13 +23,13 @@ import { FluidDataStoreContext, LocalFluidDataStoreContext } from "./dataStoreCo
      * so that a caller may await the deferred's promise until such a time as the context is fully ready.
      * This is a superset of _contexts, since contexts remain here once the Deferred resolves.
      */
-    private readonly deferredContexts = new Map<string, Deferred<FluidDataStoreContext>>();
+    private readonly deferredContexts = new Map<string, Deferred<IFluidDataStoreContextImpl>>();
 
     private readonly disposeOnce = new Lazy<void>(()=>{
         // close/stop all store contexts
         for (const [fluidDataStoreId, contextD] of this.deferredContexts) {
             contextD.promise.then((context) => {
-                context.dispose();
+                    context.dispose();
             }).catch((contextError) => {
                 this._logger.sendErrorEvent({
                     eventName: "FluidDataStoreContextDisposeError",
@@ -40,13 +42,17 @@ import { FluidDataStoreContext, LocalFluidDataStoreContext } from "./dataStoreCo
 
     private readonly _logger: ITelemetryLogger;
 
-    constructor(baseLogger: ITelemetryBaseLogger) {
+    constructor(baseLogger: ITelemetryBaseLogger | undefined) {
         this._logger = ChildLogger.create(baseLogger);
     }
 
-    [Symbol.iterator](): Iterator<[string, FluidDataStoreContext]> {
+    [Symbol.iterator](): Iterator<[string, IFluidDataStoreContextImpl]> {
          return this._contexts.entries();
      }
+
+    public get size() {
+        return this._contexts.size;
+    }
 
     public get disposed() { return this.disposeOnce.evaluated;}
     public readonly dispose = () => this.disposeOnce.value;
@@ -63,7 +69,7 @@ import { FluidDataStoreContext, LocalFluidDataStoreContext } from "./dataStoreCo
         return this._contexts.has(id);
     }
 
-    public get(id: string): FluidDataStoreContext | undefined {
+    public get(id: string): IFluidDataStoreContextImpl | undefined {
         return this._contexts.get(id);
     }
 
@@ -71,19 +77,22 @@ import { FluidDataStoreContext, LocalFluidDataStoreContext } from "./dataStoreCo
      * Return the unbound local context with the given id,
      * or undefined if it's not found or not unbound.
      */
-    public getUnbound(id: string): LocalFluidDataStoreContext | undefined {
+    public getUnbound(id: string): ILocalFluidDataStoreContextImpl | undefined {
         const context = this._contexts.get(id);
-        if (context === undefined || !this.notBoundContexts.has(id)) {
+        if (
+            context === undefined
+            || !this.notBoundContexts.has(id)
+            || !isLocalFluidDataStoreContext(context)) {
             return undefined;
         }
 
-        return this._contexts.get(id) as LocalFluidDataStoreContext;
+        return context;
     }
 
     /**
      * Add the given context, marking it as to-be-bound
      */
-    public addUnbound(context: LocalFluidDataStoreContext) {
+    public addUnbound(context: ILocalFluidDataStoreContextImpl) {
         const id = context.id;
         assert(!this._contexts.has(id), "Creating store with existing ID");
 
@@ -95,11 +104,11 @@ import { FluidDataStoreContext, LocalFluidDataStoreContext } from "./dataStoreCo
 
     /**
      * Get the context with the given id, once it exists locally and is attached.
-     * e.g. If created locally, it must be bound, or if created remotely then it's fine as soon as it's sync'd in.
+     * e.g. If created locally, it must be bound, or if created remotely then it's fine as soon as it's synced in.
      * @param id The id of the context to get
      * @param wait If false, return undefined if the context isn't present and ready now. Otherwise, wait for it.
      */
-    public async getBoundOrRemoted(id: string, wait: boolean): Promise<FluidDataStoreContext | undefined> {
+    public async getBoundOrRemoted(id: string, wait: boolean): Promise<IFluidDataStoreContextImpl | undefined> {
         const deferredContext = this.ensureDeferred(id);
 
         if (!wait && !deferredContext.isCompleted) {
@@ -109,11 +118,11 @@ import { FluidDataStoreContext, LocalFluidDataStoreContext } from "./dataStoreCo
         return deferredContext.promise;
     }
 
-    private ensureDeferred(id: string): Deferred<FluidDataStoreContext> {
+    private ensureDeferred(id: string): Deferred<IFluidDataStoreContextImpl> {
         const deferred = this.deferredContexts.get(id);
         if (deferred) { return deferred; }
 
-        const newDeferred = new Deferred<FluidDataStoreContext>();
+        const newDeferred = new Deferred<IFluidDataStoreContextImpl>();
         this.deferredContexts.set(id, newDeferred);
         return newDeferred;
     }
@@ -147,7 +156,7 @@ import { FluidDataStoreContext, LocalFluidDataStoreContext } from "./dataStoreCo
      * This could be because it's a local context that's been bound, or because it's a remote context.
      * @param context - The context to add
      */
-    public addBoundOrRemoted(context: FluidDataStoreContext) {
+    public addBoundOrRemoted(context: IFluidDataStoreContextImpl) {
         const id = context.id;
         assert(!this._contexts.has(id), "Creating store with existing ID");
 

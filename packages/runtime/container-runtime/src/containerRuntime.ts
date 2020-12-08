@@ -696,7 +696,7 @@ export class ContainerRuntime extends TypedEventEmitter<IContainerRuntimeEvents>
         this.dataStores = new DataStores(
             context.baseSnapshot,
             (attachMsg) => this.submit(ContainerMessageType.Attach, attachMsg),
-            new DataStoresContextFactory(
+            DataStoresContextFactory.create(
                 this,
                 (id: string, createParam: CreateChildSummarizerNodeParam) =>
                     (summarizeInternal: SummarizeInternalFn) => this.summarizerNode.createChild(
@@ -1307,6 +1307,7 @@ export class ContainerRuntime extends TypedEventEmitter<IContainerRuntimeEvents>
     }
 
     public createSummary(): ISummaryTree {
+        assert(this.attachState === AttachState.Detached, "Should only be called in detached container");
         const summaryTree = this.dataStores.createSummary();
         this.addContainerBlobsToSummary(summaryTree);
         return summaryTree.summary;

@@ -22,10 +22,10 @@ import { createRootSummarizerNodeWithGC } from "@fluidframework/runtime-utils";
 import { IsoBuffer, TelemetryNullLogger } from "@fluidframework/common-utils";
 import {
     IFluidDataStoreAttributes,
-    LocalFluidDataStoreContext,
     RemotedFluidDataStoreContext,
 } from "../dataStoreContext";
 import { ContainerRuntime } from "../containerRuntime";
+import { LocalFluidDataStoreContext } from "../localDataStoreContext";
 
 describe("Data Store Context Tests", () => {
     const dataStoreId = "Test1";
