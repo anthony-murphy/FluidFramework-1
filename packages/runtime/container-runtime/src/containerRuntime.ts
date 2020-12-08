@@ -115,6 +115,7 @@ import { PendingStateManager } from "./pendingStateManager";
 import { pkgVersion } from "./packageVersion";
 import { BlobManager } from "./blobManager";
 import { DataStores } from "./dataStores";
+import { DataStoresContextFactory } from "./datastoresContextFactory";
 
 const chunksBlobName = ".chunks";
 const blobsTreeName = ".blobs";
@@ -694,14 +695,15 @@ export class ContainerRuntime extends TypedEventEmitter<IContainerRuntimeEvents>
 
         this.dataStores = new DataStores(
             context.baseSnapshot,
-            this,
             (attachMsg) => this.submit(ContainerMessageType.Attach, attachMsg),
-            (id: string, createParam: CreateChildSummarizerNodeParam) =>
-                (summarizeInternal: SummarizeInternalFn) => this.summarizerNode.createChild(
-                    summarizeInternal,
-                    id,
-                    createParam,
-                ),
+            new DataStoresContextFactory(
+                this,
+                (id: string, createParam: CreateChildSummarizerNodeParam) =>
+                    (summarizeInternal: SummarizeInternalFn) => this.summarizerNode.createChild(
+                        summarizeInternal,
+                        id,
+                        createParam,
+                    )),
             this._logger);
 
         this.blobManager = new BlobManager(
@@ -1688,8 +1690,7 @@ export class ContainerRuntime extends TypedEventEmitter<IContainerRuntimeEvents>
         } else {
             this.emit("notleader");
         }
-
-        this.dataStores.updateLeader();
+        this.dataStores.updateLeader(this._leader);
 
         if (this.leader) {
             this.runTaskAnalyzer();

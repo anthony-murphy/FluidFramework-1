@@ -11,9 +11,6 @@ import {
     SummaryType,
 } from "@fluidframework/protocol-definitions";
 import {
-    CreateChildSummarizerNodeFn,
-    CreateChildSummarizerNodeParam,
-    CreateSummarizerNodeSource,
     IAttachMessage,
     IChannelSummarizeResult,
     IEnvelope,
@@ -33,22 +30,16 @@ import {
 } from "@fluidframework/runtime-utils";
 import { ChildLogger } from "@fluidframework/telemetry-utils";
 import { AttachState } from "@fluidframework/container-definitions";
-import { BlobCacheStorageService, buildSnapshotTree, readAndParseFromBlobs } from "@fluidframework/driver-utils";
 import { assert, Lazy } from "@fluidframework/common-utils";
 import { v4 as uuid } from "uuid";
 import { TreeTreeEntry } from "@fluidframework/protocol-base";
 import { normalizeAndPrefixGCNodeIds } from "@fluidframework/garbage-collector";
 import { DataStoreContexts } from "./dataStoreContexts";
-import { ContainerRuntime, nonDataStorePaths } from "./containerRuntime";
+import { nonDataStorePaths } from "./containerRuntime";
 import {
     FluidDataStoreContext,
-    RemotedFluidDataStoreContext,
-    IFluidDataStoreAttributes,
-    currentSnapshotFormatVersion,
-    LocalFluidDataStoreContext,
-    createAttributesBlob,
-    LocalDetachedFluidDataStoreContext,
  } from "./dataStoreContext";
+import { IDataStoreContextFactory } from "./datastoresContextFactory";
 
  /**
   * This class encapsulates data store handling. Currently it is only used by the container runtime,
@@ -63,16 +54,15 @@ export class DataStores implements IDisposable {
     private readonly logger: ITelemetryLogger;
 
     private readonly disposeOnce = new Lazy<void>(()=>this.contexts.dispose());
+    private readonly contexts: DataStoreContexts;
 
     constructor(
         private readonly baseSnapshot: ISnapshotTree | undefined,
-        private readonly runtime: ContainerRuntime,
         private readonly submitAttachFn: (attachContent: any) => void,
-        private readonly getCreateChildSummarizerNodeFn:
-            (id: string, createParam: CreateChildSummarizerNodeParam)  => CreateChildSummarizerNodeFn,
+        private readonly contextFactory: IDataStoreContextFactory,
         baseLogger: ITelemetryBaseLogger,
-        private readonly contexts: DataStoreContexts = new DataStoreContexts(baseLogger),
     ) {
+        this.contexts = new DataStoreContexts(baseLogger);
         this.logger = ChildLogger.create(baseLogger);
         // Extract stores stored inside the snapshot
         const fluidDataStores = new Map<string, ISnapshotTree | string>();
@@ -90,50 +80,17 @@ export class DataStores implements IDisposable {
         for (const [key, value] of fluidDataStores) {
             let dataStoreContext: FluidDataStoreContext;
             // If we have a detached container, then create local data store contexts.
-            if (this.runtime.attachState !== AttachState.Detached) {
-                dataStoreContext = new RemotedFluidDataStoreContext(
-                    key,
-                    value,
-                    this.runtime,
-                    this.runtime.storage,
-                    this.runtime.scope,
-                    this.getCreateChildSummarizerNodeFn(key, { type: CreateSummarizerNodeSource.FromSummary }));
+            if (this.contextFactory.attachState !== AttachState.Detached) {
+                dataStoreContext = this.contextFactory.createFromSnapshotAttached(key, value);
             } else {
-                let pkgFromSnapshot: string[];
                 if (typeof value !== "object") {
                     throw new Error("Snapshot should be there to load from!!");
                 }
-                const snapshotTree = value;
-                // Need to rip through snapshot.
-                const { pkg, snapshotFormatVersion, isRootDataStore }
-                    = readAndParseFromBlobs<IFluidDataStoreAttributes>(
-                        snapshotTree.blobs,
-                        snapshotTree.blobs[".component"]);
-                // Use the snapshotFormatVersion to determine how the pkg is encoded in the snapshot.
-                // For snapshotFormatVersion = "0.1", pkg is jsonified, otherwise it is just a string.
-                // However the feature of loading a detached container from snapshot, is added when the
-                // snapshotFormatVersion is "0.1", so we don't expect it to be anything else.
-                if (snapshotFormatVersion === currentSnapshotFormatVersion) {
-                    pkgFromSnapshot = JSON.parse(pkg) as string[];
-                } else {
-                    throw new Error(`Invalid snapshot format version ${snapshotFormatVersion}`);
-                }
-
-                /**
-                 * If there is no isRootDataStore in the attributes blob, set it to true. This will ensure that data
-                 * stores in older documents are not garbage collected incorrectly. This may lead to additional roots
-                 * in the document but they won't break.
-                 */
-                dataStoreContext = new LocalFluidDataStoreContext(
-                    key,
-                    pkgFromSnapshot,
-                    this.runtime,
-                    this.runtime.storage,
-                    this.runtime.scope,
-                    this.getCreateChildSummarizerNodeFn(key, { type: CreateSummarizerNodeSource.FromSummary }),
-                    (cr: IFluidDataStoreChannel) => this.bindFluidDataStore(cr),
-                    snapshotTree,
-                    isRootDataStore ?? true);
+                dataStoreContext =
+                    this.contextFactory.createDetachedContextFromSnapshot(
+                        key,
+                        value,
+                        (channel) => this.bindFluidDataStore(channel));
             }
             this.contexts.addBoundOrRemoted(dataStoreContext);
         }
@@ -161,32 +118,9 @@ export class DataStores implements IDisposable {
             throw error;
         }
 
-        const flatBlobs = new Map<string, string>();
-        let snapshotTree: ISnapshotTree | null = null;
-        if (attachMessage.snapshot) {
-            snapshotTree = buildSnapshotTree(attachMessage.snapshot.entries, flatBlobs);
-        }
-
-        // Include the type of attach message which is the pkg of the store to be
-        // used by RemotedFluidDataStoreContext in case it is not in the snapshot.
-        const pkg = [attachMessage.type];
-        const remotedFluidDataStoreContext = new RemotedFluidDataStoreContext(
-            attachMessage.id,
-            snapshotTree,
-            this.runtime,
-            new BlobCacheStorageService(this.runtime.storage, flatBlobs),
-            this.runtime.scope,
-            this.getCreateChildSummarizerNodeFn(
-                attachMessage.id,
-                {
-                    type: CreateSummarizerNodeSource.FromAttach,
-                    sequenceNumber: message.sequenceNumber,
-                    snapshot: attachMessage.snapshot ?? {
-                        id: null,
-                        entries: [createAttributesBlob(pkg, true /* isRootDataStore */)],
-                    },
-                }),
-            pkg);
+        const remotedFluidDataStoreContext = this.contextFactory.createFromAttachMessage(
+            message.sequenceNumber,
+            attachMessage);
 
         // Resolve pending gets and store off any new ones
        this.contexts.addBoundOrRemoted(remotedFluidDataStoreContext);
@@ -196,7 +130,7 @@ export class DataStores implements IDisposable {
         Promise.resolve().then(async () => remotedFluidDataStoreContext.realize());
     }
 
-    public  bindFluidDataStore(fluidDataStoreRuntime: IFluidDataStoreChannel): void {
+    private bindFluidDataStore(fluidDataStoreRuntime: IFluidDataStoreChannel): void {
         const id = fluidDataStoreRuntime.id;
         const localContext = this.contexts.getUnbound(id);
         assert(!!localContext, "Could not find unbound context to bind");
@@ -204,7 +138,7 @@ export class DataStores implements IDisposable {
         // If the container is detached, we don't need to send OP or add to pending attach because
         // we will summarize it while uploading the create new summary and make it known to other
         // clients.
-        if (this.runtime.attachState !== AttachState.Detached) {
+        if (this.contextFactory.attachState !== AttachState.Detached) {
             localContext.emit("attaching");
             const message = localContext.generateAttachMessage();
 
@@ -221,34 +155,22 @@ export class DataStores implements IDisposable {
         isRoot: boolean,
         id = uuid()): IFluidDataStoreContextDetached
     {
-        const context = new LocalDetachedFluidDataStoreContext(
-            id,
+        const context = this.contextFactory.createDetachedDataStoreCore(
             pkg,
-            this.runtime,
-            this.runtime.storage,
-            this.runtime.scope,
-            this.getCreateChildSummarizerNodeFn(id, { type: CreateSummarizerNodeSource.Local }),
-            (cr: IFluidDataStoreChannel) => this.bindFluidDataStore(cr),
-            undefined,
             isRoot,
-        );
+            id,
+            (channel) => this.bindFluidDataStore(channel));
         this.contexts.addUnbound(context);
         return context;
     }
 
     public _createFluidDataStoreContext(pkg: string[], id: string, isRoot: boolean, props?: any) {
-        const context = new LocalFluidDataStoreContext(
-            id,
+        const context = this.contextFactory._createFluidDataStoreContext(
             pkg,
-            this.runtime,
-            this.runtime.storage,
-            this.runtime.scope,
-            this.getCreateChildSummarizerNodeFn(id, { type: CreateSummarizerNodeSource.Local }),
-            (cr: IFluidDataStoreChannel) => this.bindFluidDataStore(cr),
-            undefined,
+            id,
             isRoot,
             props,
-        );
+            (channel) => this.bindFluidDataStore(channel));
         this.contexts.addUnbound(context);
         return context;
     }
@@ -256,9 +178,9 @@ export class DataStores implements IDisposable {
     public get disposed() {return this.disposeOnce.evaluated;}
     public readonly dispose = () => this.disposeOnce.value;
 
-    public updateLeader() {
+    public updateLeader(leader: boolean) {
         for (const [, context] of this.contexts) {
-            context.updateLeader(this.runtime.leader);
+            context.updateLeader(leader);
         }
     }
 
