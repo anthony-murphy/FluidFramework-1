@@ -50,55 +50,57 @@ function createMockChannel(id: string) {
 }
 
 describe("DataStores", () => {
-    it("Load from undefined snapshot",()=>{
-        const dataStores = new DataStores(
-            undefined /* baseSnapshot */,
-            ()=>{} /* submitAttach */,
-            new MockContextFactory(),
-            undefined,
-        );
-        assert(dataStores !== undefined);
-        assert(dataStores.size === 0);
-    });
+    describe("Load", ()=>{
+        it("Load from undefined snapshot",()=>{
+            const dataStores = new DataStores(
+                undefined /* baseSnapshot */,
+                ()=>{} /* submitAttach */,
+                new MockContextFactory(),
+                undefined,
+            );
+            assert(dataStores !== undefined);
+            assert(dataStores.size === 0);
+        });
 
-    it("Load from empty snapshot",()=>{
-        const snapshot: ISnapshotTree = {
-            ... emptyTree,
-            trees: nonDataStoreTrees,
-        };
-        const dataStores = new DataStores(
-            snapshot,
-            ()=>{} /* submitAttach */,
-            new MockContextFactory(),
-            undefined,
-        );
-        assert(dataStores !== undefined);
-        assert(dataStores.size === 0);
-    });
+        it("Load from empty snapshot",()=>{
+            const snapshot: ISnapshotTree = {
+                ... emptyTree,
+                trees: nonDataStoreTrees,
+            };
+            const dataStores = new DataStores(
+                snapshot,
+                ()=>{} /* submitAttach */,
+                new MockContextFactory(),
+                undefined,
+            );
+            assert(dataStores !== undefined);
+            assert(dataStores.size === 0);
+        });
 
-    it("Load from snapshot with datastore",async ()=>{
-        const dataStores = new DataStores(
-            snapshotWithDataStore,
-            ()=>{} /* submitAttach */,
-            {
-                ... new MockContextFactory(),
-                createFromSnapshot: (id)=> {
-                    assert(id === someDataStoreId);
-                    const ds: Partial<IFluidDataStoreContextImpl> = {
-                        id,
-                        realize: async ()=>createMockChannel(id),
-                    };
-                    return ds as IFluidDataStoreContextImpl;
+        it("Load from snapshot with datastore",async ()=>{
+            const dataStores = new DataStores(
+                snapshotWithDataStore,
+                ()=>{} /* submitAttach */,
+                {
+                    ... new MockContextFactory(),
+                    createFromSnapshot: (id)=> {
+                        assert(id === someDataStoreId);
+                        const ds: Partial<IFluidDataStoreContextImpl> = {
+                            id,
+                            realize: async ()=>createMockChannel(id),
+                        };
+                        return ds as IFluidDataStoreContextImpl;
+                    },
                 },
-            },
-            undefined,
-        );
-        assert(dataStores !== undefined);
-        assert(dataStores.size === 1);
-        assert(await dataStores.getDataStore(someDataStoreId, false) !== undefined);
+                undefined,
+            );
+            assert(dataStores !== undefined);
+            assert(dataStores.size === 1);
+            assert(await dataStores.getDataStore(someDataStoreId, false) !== undefined);
+        });
     });
 
-    describe("Create and bind datastore", ()=>{
+    describe("Create and bind", ()=>{
         let dataStores: DataStores;
         let contextFactory: IDataStoreContextFactory;
         beforeEach(async () => {
@@ -186,7 +188,7 @@ describe("DataStores", () => {
         });
     });
 
-    describe("Create datastore with existing id", ()=>{
+    describe("Create with existing id", ()=>{
         let dataStores: DataStores;
         let contextFactory: IDataStoreContextFactory;
         beforeEach(async () => {
