@@ -126,8 +126,9 @@ export class TableSlice extends DataObject<{}, ITableSliceConfig> implements ITa
     protected async hasInitialized() {
         this.maybeValues = await this.doc.getRange(this.root.get(ConfigKey.valuesKey));
 
-        this.root.on("op", this.emitOp);
-        this.doc.on("op", this.emitOp);
+        // deprecating op, but still emit in case we missed necessary usages
+        this.root.on("deprecated-op", this.emitOp);
+        this.doc.on("deprecated-op", this.emitOp);
     }
 
     private async ensureDoc() {
@@ -159,6 +160,6 @@ export class TableSlice extends DataObject<{}, ITableSliceConfig> implements ITa
     }
 
     private readonly emitOp = (...args: any[]) => {
-        this.emit("op", ...args);
+        this.emit("deprecated-op", ...args);
     };
 }

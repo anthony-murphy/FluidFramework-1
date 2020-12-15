@@ -13,7 +13,9 @@ import { IPendingProposal, IQuorum, ISequencedDocumentMessage } from "@fluidfram
 // subset of IContainerRuntime used by UpgradeManager
 export interface IUpgradeRuntime {
     getQuorum(): IQuorum;
-    on(event: "op", listener: (message: ISequencedDocumentMessage) => void): this;
+    deltaManager: {
+        on(event: "op", listener: (message: ISequencedDocumentMessage) => void),
+    }
 }
 
 export interface IUpgradeFnConfig {
@@ -49,7 +51,7 @@ async function defaultUpgradeFn(runtime: IUpgradeRuntime, config: IUpgradeFnConf
         promises.push(new Promise<string>((resolve) => {
             const timer = new Timer(opTime, () => resolve("no ops"));
             timer.start();
-            runtime.on("op", () => timer.start());
+            runtime.deltaManager.on("op", () => timer.start());
         }));
     }
 

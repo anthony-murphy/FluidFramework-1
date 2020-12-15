@@ -214,7 +214,7 @@ const tests = (args: ILocalTestObjectProvider) => {
         // Create a sub data store of type TestFluidObject.
         const dataStore1 = await createFluidObject(dataStore.context, "default");
         const defP = new Deferred();
-        container.on("op", (op: ISequencedDocumentMessage) => {
+        container.deltaManager.on("op", (op: ISequencedDocumentMessage) => {
             if (op.contents?.type === DataStoreMessageType.Attach) {
                 assert.strictEqual(op.contents.contents.id, dataStore1.context.id,
                     "There should be an attach op for created data store");

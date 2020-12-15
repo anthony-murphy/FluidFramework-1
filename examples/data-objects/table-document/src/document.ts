@@ -13,7 +13,6 @@ import {
     SparseMatrix,
     SequenceDeltaEvent,
 } from "@fluidframework/sequence";
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
 import { IEvent } from "@fluidframework/common-definitions";
 import { CellRange } from "./cellrange";
 import { TableDocumentType } from "./componentTypes";
@@ -23,8 +22,6 @@ import { TableSlice } from "./slice";
 import { ITable, TableDocumentItem } from "./table";
 
 export interface ITableDocumentEvents extends IEvent {
-    (event: "op",
-        listener: (op: ISequencedDocumentMessage, local: boolean, target: SharedNumberSequence | SparseMatrix) => void);
     (event: "sequenceDelta",
         listener: (delta: SequenceDeltaEvent, target: SharedNumberSequence | SparseMatrix) => void);
 }
@@ -161,9 +158,10 @@ export class TableDocument extends DataObject<{}, {}, ITableDocumentEvents> impl
         this.maybeRows = await maybeRowsHandle.get();
         this.maybeCols = await maybeColsHandle.get();
 
-        this.forwardEvent(this.maybeCols, "op", "sequenceDelta");
-        this.forwardEvent(this.maybeRows, "op", "sequenceDelta");
-        this.forwardEvent(this.matrix, "op", "sequenceDelta");
+        // deprecating op, but still emit in case we missed necessary usages
+        this.forwardEvent(this.maybeCols, "deprecated-op", "sequenceDelta");
+        this.forwardEvent(this.maybeRows, "deprecated-op", "sequenceDelta");
+        this.forwardEvent(this.matrix, "deprecated-op", "sequenceDelta");
     }
 
     private readonly localRefToRowCol = (localRef: LocalReference) => {

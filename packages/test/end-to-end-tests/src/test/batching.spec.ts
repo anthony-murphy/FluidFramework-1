@@ -234,7 +234,7 @@ const tests = (args: ITestObjectProvider) => {
                 verifyBatchMetadata(dataObject2BatchMessages);
             });
 
-            it("can send and receive single batch op that is manually flushed", async () => {
+            it.only("can send and receive single batch op that is manually flushed", async () => {
                 // Manually flush a single message as a batch.
                 dataObject2.context.containerRuntime.setFlushMode(FlushMode.Manual);
                 dataObject2map1.set("key1", "value1");

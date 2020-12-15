@@ -9,7 +9,8 @@ import {
     IChannelAttributes,
     IChannelFactory,
 } from "@fluidframework/datastore-definitions";
-import { ISharedObject, ISharedObjectEvents } from "@fluidframework/shared-object-base";
+import { ISharedObject } from "@fluidframework/shared-object-base";
+import { IErrorEvent } from "@fluidframework/common-definitions";
 
 /**
  * Consensus Register Collection channel factory interface
@@ -30,7 +31,7 @@ export interface IConsensusRegisterCollectionFactory extends IChannelFactory {
     create(document: IFluidDataStoreRuntime, id: string): IConsensusRegisterCollection;
 }
 
-export interface IConsensusRegisterCollectionEvents extends ISharedObjectEvents {
+export interface IConsensusRegisterCollectionEvents extends IErrorEvent {
     (event: "atomicChanged" | "versionChanged", listener: (key: string, value: any, local: boolean) => void);
 }
 

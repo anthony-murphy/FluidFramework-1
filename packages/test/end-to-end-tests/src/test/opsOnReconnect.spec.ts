@@ -100,7 +100,7 @@ describe("Ops on Reconnect", () => {
     async function setupSecondContainersDataObject(): Promise<ITestFluidObject> {
         const loader = await createLoader();
         const container2 = await loader.resolve({ url: documentLoadUrl });
-        container2.on("op", (containerMessage: ISequencedDocumentMessage) => {
+        container2.deltaManager.on("op", (containerMessage: ISequencedDocumentMessage) => {
             if (!isRuntimeMessage(containerMessage)) {
                 return;
             }

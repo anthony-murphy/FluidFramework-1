@@ -54,12 +54,9 @@ describe("Map", () => {
 
             it("should fire correct map events", async () => {
                 const dummyMap = map;
-                let called1: boolean = false;
                 let called2: boolean = false;
-                dummyMap.on("op", (agr1, arg2, arg3) => called1 = true);
                 dummyMap.on("valueChanged", (agr1, arg2, arg3, arg4) => called2 = true);
                 dummyMap.set("marco", "polo");
-                assert.equal(called1, false, "did not receive op event");
                 assert.equal(called2, true, "did not receive valueChanged event");
             });
 

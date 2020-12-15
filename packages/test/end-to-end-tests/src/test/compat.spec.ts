@@ -75,7 +75,7 @@ describe("loader/runtime compatibility", () => {
             assert.strictEqual(await dataObject._root.wait(test[0]), test[1]);
 
             // wait for summary ack/nack
-            await new Promise((resolve, reject) => container.on("op", (op) => {
+            await new Promise((resolve, reject) => container.deltaManager.on("op", (op) => {
                 if (op.type === "summaryAck") {
                     resolve();
                 } else if (op.type === "summaryNack") {

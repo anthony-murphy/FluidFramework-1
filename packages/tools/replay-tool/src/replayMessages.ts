@@ -228,7 +228,7 @@ class Document {
 
         this.snapshotFileName = `${this.fromOp}`;
 
-        this.container.on("op", (message: ISequencedDocumentMessage) => {
+        this.container.deltaManager.on("op", (message: ISequencedDocumentMessage) => {
             this.documentSeqNumber = message.sequenceNumber;
             if (this.currentOp === this.documentSeqNumber) {
                 this.resolveC();

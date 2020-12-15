@@ -4,7 +4,7 @@
  */
 
 import { v4 as uuid } from "uuid";
-import { ITelemetryErrorEvent, ITelemetryLogger } from "@fluidframework/common-definitions";
+import { IErrorEvent, IEvent, ITelemetryErrorEvent, ITelemetryLogger } from "@fluidframework/common-definitions";
 import { assert } from "@fluidframework/common-utils";
 import { AttachState } from "@fluidframework/container-definitions";
 import { IFluidHandle, IFluidSerializer } from "@fluidframework/core-interfaces";
@@ -20,12 +20,12 @@ import { convertToSummaryTreeWithStats, FluidSerializer } from "@fluidframework/
 import { ChildLogger, EventEmitterWithErrorHandling } from "@fluidframework/telemetry-utils";
 import { SharedObjectHandle } from "./handle";
 import { SummarySerializer } from "./summarySerializer";
-import { ISharedObject, ISharedObjectEvents } from "./types";
+import { ISharedObject } from "./types";
 
 /**
  *  Base class from which all shared objects derive
  */
-export abstract class SharedObject<TEvent extends ISharedObjectEvents = ISharedObjectEvents>
+export abstract class SharedObject<TEvent extends IEvent = IErrorEvent>
     extends EventEmitterWithErrorHandling<TEvent> implements ISharedObject<TEvent> {
     /**
      * @param obj - The thing to check if it is a SharedObject
@@ -243,7 +243,7 @@ export abstract class SharedObject<TEvent extends ISharedObjectEvents = ISharedO
      */
     public getGCData(): IGCData {
         // We run the full summarize logic to get the list of outbound routes from this object. This is a little
-        // expensive but its okay for now. It will be udpated to not use full summarize and make it more efficient.
+        // expensive but its okay for now. It will be updated to not use full summarize and make it more efficient.
         // See: https://github.com/microsoft/FluidFramework/issues/4547
 
         // Set _isSummarizing to true. This flag is used to ensure that we only use SummarySerializer (created below)
@@ -475,9 +475,10 @@ export abstract class SharedObject<TEvent extends ISharedObjectEvents = ISharedO
      * For messages from a remote client, this will be undefined.
      */
     private process(message: ISequencedDocumentMessage, local: boolean, localOpMetadata: unknown) {
-        this.emit("pre-op", message, local, this);
-        this.processCore(message, local, localOpMetadata);
-        this.emit("op", message, local, this);
+      // deprecating op and pre-op, but still emit incase we missed necessary usages
+      this.emit("deprecated-pre-op", message, local, this);
+      this.processCore(message, local, localOpMetadata);
+      this.emit("deprecated-op", message, local, this);
     }
 
     /**

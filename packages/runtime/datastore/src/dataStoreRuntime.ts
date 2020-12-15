@@ -528,7 +528,8 @@ IFluidDataStoreChannel, IFluidDataStoreRuntime, IFluidHandleContext {
             default:
         }
 
-        this.emit("op", message);
+        // deprecating op, but still emit in case we missed necessary usages
+        this.emit("deprecated-op", message);
     }
 
     public processSignal(message: IInboundSignalMessage, local: boolean) {

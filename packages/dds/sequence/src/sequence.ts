@@ -24,9 +24,8 @@ import {
     makeHandlesSerializable,
     parseHandles,
     SharedObject,
-    ISharedObjectEvents,
 } from "@fluidframework/shared-object-base";
-import { IEventThisPlaceHolder } from "@fluidframework/common-definitions";
+import { IErrorEvent, IEventThisPlaceHolder } from "@fluidframework/common-definitions";
 
 import { debug } from "./debug";
 import {
@@ -41,7 +40,7 @@ const snapshotFileName = "header";
 const contentPath = "content";
 
 export interface ISharedSegmentSequenceEvents
-    extends ISharedObjectEvents {
+    extends IErrorEvent {
 
     (event: "sequenceDelta", listener: (event: SequenceDeltaEvent, target: IEventThisPlaceHolder) => void);
     (event: "maintenance",

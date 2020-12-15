@@ -7,7 +7,6 @@ import * as api from "@fluid-internal/client-api";
 import { ILoader } from "@fluidframework/container-definitions";
 import { ISharedMap } from "@fluidframework/map";
 import * as MergeTree from "@fluidframework/merge-tree";
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
 import { IFluidDataStoreRuntime } from "@fluidframework/datastore-definitions";
 import { ISharedString } from "@fluidframework/sequence";
 // eslint-disable-next-line import/no-internal-modules
@@ -262,7 +261,9 @@ export async function typeChunk(
             processCounter.increment(time);
         });
 
-        a.ss.on("op", (message: ISequencedDocumentMessage, local) => {
+        a.ss.on("sequenceDelta", (event) => {
+            const local = event.isLocal;
+            const message = event.opArgs.sequencedMessage;
             totalOps++;
             if (message.traces &&
                 message.clientSequenceNumber &&

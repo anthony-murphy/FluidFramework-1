@@ -400,7 +400,7 @@ export class Loader extends EventEmitter implements ILoader {
                     }
                 }
 
-                container.on("op", opHandler);
+                container.deltaManager.on("op", opHandler);
             });
         }
 

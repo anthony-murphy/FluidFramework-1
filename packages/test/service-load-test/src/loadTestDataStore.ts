@@ -34,7 +34,7 @@ class LoadTestDataStore extends DataObject implements ILoadTest {
     private sentCount = 0;
     private state: string = "not started";
     protected async hasInitialized() {
-        this.root.on("op", () => {
+        this.runtime.deltaManager.on("op", () => {
             this.opCount++;
         });
     }

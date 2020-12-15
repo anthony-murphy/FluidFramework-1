@@ -8,7 +8,6 @@ import { IContainer, ILoader } from "@fluidframework/container-definitions";
 import { IFluidCodeDetails } from "@fluidframework/core-interfaces";
 import { IUrlResolver } from "@fluidframework/driver-definitions";
 import { LocalResolver } from "@fluidframework/local-driver";
-import { MessageType } from "@fluidframework/protocol-definitions";
 import { SharedString } from "@fluidframework/sequence";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { LocalDeltaConnectionServer, ILocalDeltaConnectionServer } from "@fluidframework/server-local-server";
@@ -87,19 +86,15 @@ describe("LocalTestServer", () => {
             // sharedString1.removeText(0, 1);
             // await opProcessingController.process();
 
-            sharedString1.on("op", (msg, local) => {
-                if (!local) {
-                    if (msg.type === MessageType.Operation) {
-                        user1ReceivedMsgCount = user1ReceivedMsgCount + 1;
-                    }
+            sharedString1.on("sequenceDelta", (event) => {
+                if (!event.isLocal) {
+                    user1ReceivedMsgCount = user1ReceivedMsgCount + 1;
                 }
             });
 
-            sharedString2.on("op", (msg, local) => {
-                if (!local) {
-                    if (msg.type === MessageType.Operation) {
-                        user2ReceivedMsgCount = user2ReceivedMsgCount + 1;
-                    }
+            sharedString2.on("sequenceDelta", (event) => {
+                if (!event.isLocal) {
+                    user2ReceivedMsgCount = user2ReceivedMsgCount + 1;
                 }
             });
 

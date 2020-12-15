@@ -96,7 +96,7 @@ export class GridView {
         this.inputBox.addEventListener("keydown", this.cellKeyDown);
         this.inputBox.addEventListener("input", this.cellInput);
 
-        this.doc.on("op", this.invalidate);
+        this.doc.on("sequenceDelta", this.invalidate);
 
         const blank = headerTemplate.clone();
         this.cols.appendChild(blank);

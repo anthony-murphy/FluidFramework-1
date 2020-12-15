@@ -1565,7 +1565,8 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         // Allow the protocol handler to process the message
         const result = this.protocolHandler.processMessage(message, local);
 
-        this.emit("op", message);
+        // deprecating op, but still emit in case we missed necessary usages
+        this.emit("deprecated-op", message);
 
         return result;
     }
