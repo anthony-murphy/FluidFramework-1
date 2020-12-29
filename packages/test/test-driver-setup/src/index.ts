@@ -6,6 +6,5 @@
 export * from "./getTestDriver";
 export * from "./interfaces";
 export * from "./localServerDriverConfig";
-export * from "./mochaHooks";
 export * from "./odspDriverConfig";
 export * from "./tinyliciousDriverConfig";

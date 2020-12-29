@@ -3,6 +3,7 @@
  * Licensed under the MIT License.
  */
 
+import assert from "assert";
 import fs from "fs";
 import { IRequest } from "@fluidframework/core-interfaces";
 import { IDocumentServiceFactory, IUrlResolver } from "@fluidframework/driver-definitions";
@@ -35,11 +36,15 @@ export class OdspDriverConfig implements ITestDriverConfig {
     public readonly type = "odsp";
     private readonly odspTokenManager = new OdspTokenManager(odspTokensCache);
     private readonly config: IOdspConfig;
+    private readonly password: string;
 
     private readonly dir = Date.now().toString();
 
     constructor() {
         this.config = JSON.parse(fs.readFileSync("./testConfig.json", "utf-8"));
+        const password = process.env.fluid__odsp__password;
+        assert(password, "Missing password");
+        this.password = password;
     }
 
     createDocumentServiceFactory(): IDocumentServiceFactory {
@@ -48,7 +53,7 @@ export class OdspDriverConfig implements ITestDriverConfig {
                 const tokens = await this.odspTokenManager.getOdspTokens(
                     this.config.server,
                     getMicrosoftConfiguration(),
-                    passwordTokenConfig(this.config.username, password),
+                    passwordTokenConfig(this.config.username, this.password),
                     refresh,
                 );
                 return tokens.accessToken;
@@ -57,7 +62,7 @@ export class OdspDriverConfig implements ITestDriverConfig {
                 const tokens = await this.odspTokenManager.getPushTokens(
                     this.config.server,
                     getMicrosoftConfiguration(),
-                    passwordTokenConfig(this.config.username, password),
+                    passwordTokenConfig(this.config.username, this.password),
                     refresh,
                 );
                 return tokens.accessToken;

@@ -5,26 +5,20 @@
 
 import assert from "assert";
 import * as moniker from "moniker";
-import { v4 as uuid } from "uuid";
 import { IRequest, IFluidCodeDetails } from "@fluidframework/core-interfaces";
 import { AttachState } from "@fluidframework/container-definitions";
 import { Loader } from "@fluidframework/container-loader";
-import { IUrlResolver } from "@fluidframework/driver-definitions";
+import { IDocumentServiceFactory, IUrlResolver } from "@fluidframework/driver-definitions";
 import {
     LocalCodeLoader,
     TestFluidObjectFactory,
     ITestFluidObject,
 } from "@fluidframework/test-utils";
 import { SharedMap } from "@fluidframework/map";
-import {
-    RouterliciousDocumentServiceFactory,
-    DefaultErrorTracking,
-    ITokenProvider } from "@fluidframework/routerlicious-driver";
-import { InsecureTokenProvider, InsecureUrlResolver } from "@fluidframework/test-runtime-utils";
-import { IUser } from "@fluidframework/protocol-definitions";
 import { Deferred } from "@fluidframework/common-utils";
 import { IFluidDataStoreContext } from "@fluidframework/runtime-definitions";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
+import { getTestDriverConfig, ITestDriverConfig } from "@fluidframework/test-driver-setup";
 
 describe(`r11s End-To-End tests`, () => {
     const codeDetails: IFluidCodeDetails = {
@@ -34,30 +28,16 @@ describe(`r11s End-To-End tests`, () => {
     const mapId1 = "mapId1";
     const mapId2 = "mapId2";
 
+    let driverConfig: ITestDriverConfig;
     let request: IRequest;
     let loader: Loader;
 
-    interface ITestParameters {
-        fluidHost: string;
-        bearerSecret: string
-        tenantId: string;
-        tenantSecret: string;
-    }
-
-    function createTestLoader(urlResolver: IUrlResolver, tokenProvider: ITokenProvider): Loader {
+    function createTestLoader(urlResolver: IUrlResolver, documentServiceFactory: IDocumentServiceFactory): Loader {
         const factory: TestFluidObjectFactory = new TestFluidObjectFactory([
             [mapId1, SharedMap.getFactory()],
             [mapId2, SharedMap.getFactory()],
         ]);
         const codeLoader = new LocalCodeLoader([[codeDetails, factory]]);
-        const documentServiceFactory = new RouterliciousDocumentServiceFactory(
-            tokenProvider,
-            false,
-            new DefaultErrorTracking(),
-            false,
-            true,
-            undefined,
-        );
         return new Loader({
             urlResolver,
             documentServiceFactory,
@@ -74,53 +54,16 @@ describe(`r11s End-To-End tests`, () => {
             "");
     });
 
-    const getUser = (): IUser => ({
-        id: uuid(),
-    });
-
-    function getParameters(): ITestParameters {
-        const bearerSecret = process.env.fluid__webpack__bearerSecret;
-        const tenantId = process.env.fluid__webpack__tenantId ?? "fluid";
-        const tenantSecret = process.env.fluid__webpack__tenantSecret;
-        const fluidHost = process.env.fluid__webpack__fluidHost;
-
-        assert(bearerSecret, "Missing bearer secret");
-        assert(tenantId, "Missing tenantId");
-        assert(tenantSecret, "Missing tenant secret");
-        assert(fluidHost, "Missing Fluid host");
-
-        return {
-            fluidHost,
-            bearerSecret,
-            tenantId,
-            tenantSecret,
-        };
-    }
-
-    function getResolver(params: ITestParameters): InsecureUrlResolver {
-        const urlResolver =  new InsecureUrlResolver(
-            params.fluidHost,
-            params.fluidHost.replace("www", "alfred"),
-            params.fluidHost.replace("www", "historian"),
-            params.tenantId,
-            params.bearerSecret,
-            true);
-        return urlResolver;
-    }
-
     beforeEach(async () => {
-        const params = getParameters();
-        const urlResolver = getResolver(params);
-        const documentId = moniker.choose();
-        request = urlResolver.createCreateNewRequest(documentId);
+        driverConfig = getTestDriverConfig();
 
-        const tokenProvider = new InsecureTokenProvider(
-            params.tenantId,
-            documentId,
-            params.tenantSecret,
-            getUser(),
+        const documentId = moniker.choose();
+        request = driverConfig.createCreateNewRequest(documentId);
+
+        loader = createTestLoader(
+            driverConfig.createUrlResolver(),
+            driverConfig.createDocumentServiceFactory(),
         );
-        loader = createTestLoader(urlResolver, tokenProvider);
     });
 
     it("Container creation in r11s", async () => {
@@ -147,10 +90,8 @@ describe(`r11s End-To-End tests`, () => {
         assert(container.resolvedUrl, "attached container should have resolved URL");
 
         // Now load the container from another loader.
-        const params = getParameters();
-        const urlResolver2 = getResolver(params);
-        const tokenProvider2 = new InsecureTokenProvider(params.tenantId, container.id, params.tenantSecret, getUser());
-        const loader2 = createTestLoader(urlResolver2, tokenProvider2);
+        const urlResolver2 = driverConfig.createUrlResolver();
+        const loader2 = createTestLoader(urlResolver2, driverConfig.createDocumentServiceFactory());
         // Create a new request url from the resolvedUrl of the first container.
         const requestUrl2 = await urlResolver2.getAbsoluteUrl(container.resolvedUrl, "");
         const container2 = await loader2.resolve({ url: requestUrl2 });

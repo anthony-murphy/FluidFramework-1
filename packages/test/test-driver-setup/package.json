@@ -58,6 +58,7 @@
     "@fluidframework/routerlicious-driver": "^0.32.0",
     "@fluidframework/server-local-server": "^0.1016.1",
     "@fluidframework/test-runtime-utils": "^0.32.0",
+    "@fluidframework/tinylicious-driver": "^0.32.0",
     "@fluidframework/tool-utils": "^0.32.0",
     "uuid": "^8.3.1"
   },
