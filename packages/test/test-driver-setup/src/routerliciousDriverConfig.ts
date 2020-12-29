@@ -36,8 +36,6 @@ export class RouterliciousDriverConfig implements ITestDriverConfig {
 
     createDocumentServiceFactory(): RouterliciousDocumentServiceFactory {
         const tokenProvider = new InsecureTokenProvider(
-            this.tenantId,
-            uuid() /** document id? */,
             this.tenantSecret,
             {
                 id: uuid(),

@@ -5,15 +5,24 @@
 import { Lazy } from "@fluidframework/common-utils";
 import { LocalServerDriverConfig } from "./localServerDriverConfig";
 import { OdspDriverConfig } from "./odspDriverConfig";
+import { RouterliciousDriverConfig } from "./routerliciousDriverConfig";
 import { TinyliciousDriverConfig } from "./tinyliciousDriverConfig";
 
-const testDriver = new Lazy(()=>{
+export type TestDriverConfigs =
+    LocalServerDriverConfig
+    | TinyliciousDriverConfig
+    | RouterliciousDriverConfig
+    | OdspDriverConfig;
+
+const testDriver = new Lazy<TestDriverConfigs>(()=>{
     switch (process.env.fluid__test__driver__type) {
         case undefined:
         case "local":
             return new LocalServerDriverConfig();
         case "tinylicious":
             return new TinyliciousDriverConfig();
+        case "routerlicious":
+            return new RouterliciousDriverConfig();
         case "odsp":
             return new OdspDriverConfig();
         default:
@@ -22,4 +31,4 @@ const testDriver = new Lazy(()=>{
 });
 
 export const getTestDriverConfig =
-    (): LocalServerDriverConfig | TinyliciousDriverConfig | OdspDriverConfig => testDriver.value;
+    (): TestDriverConfigs => testDriver.value;

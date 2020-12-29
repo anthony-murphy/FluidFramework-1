@@ -20,7 +20,9 @@ import { IFluidDataStoreContext } from "@fluidframework/runtime-definitions";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { getTestDriverConfig, ITestDriverConfig } from "@fluidframework/test-driver-setup";
 
-describe(`r11s End-To-End tests`, () => {
+const driverConfig: ITestDriverConfig = getTestDriverConfig();
+
+describe(`${driverConfig.type} End-To-End tests`, () => {
     const codeDetails: IFluidCodeDetails = {
         package: "detachedContainerTestPackage1",
         config: {},
@@ -28,7 +30,6 @@ describe(`r11s End-To-End tests`, () => {
     const mapId1 = "mapId1";
     const mapId2 = "mapId2";
 
-    let driverConfig: ITestDriverConfig;
     let request: IRequest;
     let loader: Loader;
 
@@ -55,8 +56,6 @@ describe(`r11s End-To-End tests`, () => {
     });
 
     beforeEach(async () => {
-        driverConfig = getTestDriverConfig();
-
         const documentId = moniker.choose();
         request = driverConfig.createCreateNewRequest(documentId);
 
