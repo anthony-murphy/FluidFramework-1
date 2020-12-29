@@ -17,7 +17,7 @@ export class TinyliciousDriverConfig implements ITestDriverConfig {
 
     createDocumentServiceFactory(): RouterliciousDocumentServiceFactory {
         return new RouterliciousDocumentServiceFactory(
-            new InsecureTinyliciousTokenProvider(""));
+            new InsecureTinyliciousTokenProvider());
     }
     createUrlResolver(): InsecureTinyliciousUrlResolver {
         return new InsecureTinyliciousUrlResolver();
