@@ -8,7 +8,7 @@ import { IContainer, IFluidModule } from "@fluidframework/container-definitions"
 import { IFluidRouter } from "@fluidframework/core-interfaces";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { TestObjectProvider, ChannelFactoryRegistry } from "@fluidframework/test-utils";
-import { LocalServerDriverConfig, TestDriverConfig } from "@fluidframework/test-drivers";
+import { TestDriverConfig } from "@fluidframework/test-drivers";
 import {
     generateCompatTest,
     createOldPrimedDataStoreFactory,
@@ -18,8 +18,11 @@ import {
     ITestObjectProvider,
     OldTestDataObject,
     TestDataObject,
+    ITestContainerConfig,
 } from "./compatUtils";
 import * as old from "./oldVersion";
+
+const containerConfig: ITestContainerConfig = { runtimeOptions:{ summaryOverrides:{ maxOps: 1 } } };
 
 async function loadContainer(
     docId: string,
@@ -29,7 +32,7 @@ async function loadContainer(
     const testObjectProvider = new TestObjectProvider(
         driver,
         (reg?: ChannelFactoryRegistry) => fluidModule as IFluidModule);
-    return testObjectProvider.loadTestContainer(docId);
+    return testObjectProvider.loadTestContainer(docId, containerConfig);
 }
 
 async function loadContainerWithOldLoader(
@@ -40,7 +43,7 @@ async function loadContainerWithOldLoader(
     const testObjectProvider = new old.TestObjectProvider(
         driver,
         (reg?: ChannelFactoryRegistry) => fluidModule as old.IFluidModule);
-    return testObjectProvider.loadTestContainer(docId);
+    return testObjectProvider.loadTestContainer(docId, containerConfig);
 }
 
 const tests = function(args: ITestObjectProvider) {
@@ -51,16 +54,8 @@ const tests = function(args: ITestObjectProvider) {
         let documentId: string;
 
         beforeEach(async function() {
-            const driver = args.driverConfig as LocalServerDriverConfig;
-            if (driver.type === "local") {
-                await driver.reset({
-                    serviceConfiguration: {
-                        summary: { maxOps: 1 },
-                    },
-                });
-            }
             documentId = Date.now().toString();
-            container = await args.makeTestContainer(documentId);
+            container = await args.makeTestContainer(documentId, containerConfig);
             container.on("warning", () => containerError = true);
             container.on("closed", (error) => containerError = containerError || error !== undefined);
 
