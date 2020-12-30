@@ -142,7 +142,6 @@ describe("Loader.request", () => {
             url: driver.createContainerUrl(documentId),
             headers: { [LoaderHeader.pause]: true },
         });
-        opProcessingController.addDeltaManagers(container2.deltaManager);
 
         // create a new data store using the original container
         const newDataStore = await testSharedDataObjectFactory2.createInstance(dataStore1._context.containerRuntime);
@@ -165,6 +164,7 @@ describe("Loader.request", () => {
         }
 
         (container2 as Container).resume();
+        opProcessingController.addDeltaManagers(container2.deltaManager);
 
         // Flush all the ops
         await opProcessingController.process();
