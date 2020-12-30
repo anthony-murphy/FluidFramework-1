@@ -28,13 +28,15 @@ const testContainerConfig: ITestContainerConfig = {
 const tests = (args: ITestObjectProvider) => {
     let sharedString1: SharedString;
     let sharedString2: SharedString;
-
+    let docId: string;
     beforeEach(async () => {
-        const container1 = await args.makeTestContainer(testContainerConfig) as Container;
+        docId = Date.now().toString();
+
+        const container1 = await args.makeTestContainer(docId, testContainerConfig) as Container;
         const dataObject1 = await requestFluidObject<ITestFluidObject>(container1, "default");
         sharedString1 = await dataObject1.getSharedObject<SharedString>(stringId);
 
-        const container2 = await args.loadTestContainer(testContainerConfig) as Container;
+        const container2 = await args.loadTestContainer(docId, testContainerConfig) as Container;
         const dataObject2 = await requestFluidObject<ITestFluidObject>(container2, "default");
         sharedString2 = await dataObject2.getSharedObject<SharedString>(stringId);
     });
@@ -59,7 +61,7 @@ const tests = (args: ITestObjectProvider) => {
         await args.opProcessingController.process();
 
         // Create a initialize a new container with the same id.
-        const newContainer = await args.loadTestContainer(testContainerConfig) as Container;
+        const newContainer = await args.loadTestContainer(docId, testContainerConfig) as Container;
         const newComponent = await requestFluidObject<ITestFluidObject>(newContainer, "default");
         const newSharedString = await newComponent.getSharedObject<SharedString>(stringId);
         assert.equal(
@@ -68,5 +70,5 @@ const tests = (args: ITestObjectProvider) => {
 };
 
 describe("SharedString", () => {
-    generateTest(tests, { tinylicious: true });
+    generateTest(tests);
 });

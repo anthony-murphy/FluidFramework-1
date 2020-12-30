@@ -6,6 +6,7 @@
 import { strict as assert } from "assert";
 import { IDeltaManager } from "@fluidframework/container-definitions";
 import { IDocumentMessage, ISequencedDocumentMessage, MessageType } from "@fluidframework/protocol-definitions";
+import { getTestDriverConfig } from "@fluidframework/test-driver-setup";
 import { debug } from "./debug";
 
 // An IDeltaManager alias to be used within this class.
@@ -198,8 +199,9 @@ export class OpProcessingController {
      * Yields control in the JavaScript event loop.
      */
     public static async yield(): Promise<void> {
+        const driver = getTestDriverConfig();
         await new Promise<void>((resolve) => {
-            setTimeout(resolve, 0);
+            setTimeout(resolve, driver.type === "local" ? 0 : 100);
         });
     }
 
@@ -250,7 +252,10 @@ export class OpProcessingController {
         // Wait for all pending ops to be processed.
         await this.yieldWhileDeltaManagersHaveWork(
             monitors,
-            (deltaManager) => !deltaManager.inbound.idle || !deltaManager.outbound.idle);
+            (deltaManager) =>
+            !deltaManager.inbound.idle
+            || !deltaManager.outbound.idle
+            || !deltaManager.inboundSignal.idle);
     }
 
     /**

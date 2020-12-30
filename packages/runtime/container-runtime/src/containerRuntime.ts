@@ -213,6 +213,8 @@ export interface IContainerRuntimeOptions {
     // Delay before first attempt to spawn summarizing container
     initialSummarizerDelayMs?: number;
 
+    summaryOverrides?: Partial<ISummaryConfiguration>;
+
     // Flag that enables running garbage collection to delete unused Fluid objects.
     runGC?: boolean;
 }
@@ -622,9 +624,11 @@ export class ContainerRuntime extends TypedEventEmitter<IContainerRuntimeEvents>
     }
 
     private get summaryConfiguration() {
-        return this.context.serviceConfiguration
-            ? { ...DefaultSummaryConfiguration, ...this.context.serviceConfiguration.summary }
-            : DefaultSummaryConfiguration;
+        return {
+            ... DefaultSummaryConfiguration,
+            ... this.context?.serviceConfiguration?.summary,
+            ... this.runtimeOptions.summaryOverrides,
+         };
     }
 
     private _disposed = false;

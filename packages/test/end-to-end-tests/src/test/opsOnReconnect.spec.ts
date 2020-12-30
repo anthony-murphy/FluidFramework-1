@@ -15,7 +15,6 @@ import {
 } from "@fluidframework/container-runtime";
 import { IContainerRuntime } from "@fluidframework/container-runtime-definitions";
 import { IFluidCodeDetails, IFluidHandle, IFluidLoadable } from "@fluidframework/core-interfaces";
-import { IUrlResolver } from "@fluidframework/driver-definitions";
 import { LocalDocumentServiceFactory, LocalResolver } from "@fluidframework/local-driver";
 import { SharedMap, SharedDirectory } from "@fluidframework/map";
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
@@ -43,7 +42,7 @@ describe("Ops on Reconnect", () => {
         config: {},
     };
 
-    let urlResolver: IUrlResolver;
+    let urlResolver: LocalResolver;
     let deltaConnectionServer: ILocalDeltaConnectionServer;
     let documentServiceFactory: LocalDocumentServiceFactory;
     let opProcessingController: OpProcessingController;
@@ -59,7 +58,7 @@ describe("Ops on Reconnect", () => {
      * Waits for the "connected" event from the given container.
      */
     async function waitForContainerReconnection(container: Container): Promise<void> {
-        await new Promise((resolve) => container.once("connected", () => resolve()));
+        await new Promise<void>((resolve) => container.once("connected", () => resolve()));
     }
 
     async function createLoader(): Promise<ILoader> {
@@ -94,7 +93,7 @@ describe("Ops on Reconnect", () => {
 
     async function createContainer(): Promise<IContainer> {
         const loader = await createLoader();
-        return createAndAttachContainer(documentId, codeDetails, loader, urlResolver);
+        return createAndAttachContainer(codeDetails, loader, urlResolver.createCreateNewRequest(documentId));
     }
 
     async function setupSecondContainersDataObject(): Promise<ITestFluidObject> {

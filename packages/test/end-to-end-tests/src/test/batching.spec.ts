@@ -67,14 +67,15 @@ const tests = (args: ITestObjectProvider) => {
     }
 
     beforeEach(async () => {
+        const docId = Date.now().toString();
         // Create a Container for the first client.
-        const container1 = await args.makeTestContainer(testContainerConfig);
+        const container1 = await args.makeTestContainer(docId, testContainerConfig);
         dataObject1 = await requestFluidObject<ITestFluidObject>(container1, "default");
         dataObject1map1 = await dataObject1.getSharedObject<SharedMap>(map1Id);
         dataObject1map2 = await dataObject1.getSharedObject<SharedMap>(map2Id);
 
         // Load the Container that was created by the first client.
-        const container2 = await args.loadTestContainer(testContainerConfig);
+        const container2 = await args.loadTestContainer(docId, testContainerConfig);
         dataObject2 = await requestFluidObject<ITestFluidObject>(container2, "default");
         dataObject2map1 = await dataObject2.getSharedObject<SharedMap>(map1Id);
         dataObject2map2 = await dataObject2.getSharedObject<SharedMap>(map2Id);
@@ -500,5 +501,5 @@ const tests = (args: ITestObjectProvider) => {
 };
 
 describe("Batching", () => {
-    generateTest(tests, { tinylicious: true });
+    generateTest(tests);
 });

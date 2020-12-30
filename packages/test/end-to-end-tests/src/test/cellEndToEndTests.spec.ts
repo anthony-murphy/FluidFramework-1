@@ -33,20 +33,21 @@ const tests = (args: ITestObjectProvider) => {
     let sharedCell1: ISharedCell;
     let sharedCell2: ISharedCell;
     let sharedCell3: ISharedCell;
-
+    let docId: string;
     beforeEach(async () => {
+        docId = Date.now().toString();
         // Create a Container for the first client.
-        const container1 = await args.makeTestContainer(testContainerConfig);
+        const container1 = await args.makeTestContainer(docId, testContainerConfig);
         dataObject1 = await requestFluidObject<ITestFluidObject>(container1, "default");
         sharedCell1 = await dataObject1.getSharedObject<SharedCell>(cellId);
 
         // Load the Container that was created by the first client.
-        const container2 = await args.loadTestContainer(testContainerConfig);
+        const container2 = await args.loadTestContainer(docId, testContainerConfig);
         const dataObject2 = await requestFluidObject<ITestFluidObject>(container2, "default");
         sharedCell2 = await dataObject2.getSharedObject<SharedCell>(cellId);
 
         // Load the Container that was created by the first client.
-        const container3 = await args.loadTestContainer(testContainerConfig);
+        const container3 = await args.loadTestContainer(docId, testContainerConfig);
         const dataObject3 = await requestFluidObject<ITestFluidObject>(container3, "default");
         sharedCell3 = await dataObject3.getSharedObject<SharedCell>(cellId);
 
@@ -215,5 +216,5 @@ const tests = (args: ITestObjectProvider) => {
 };
 
 describe("Cell", () => {
-    generateTest(tests, { tinylicious: true });
+    generateTest(tests);
 });

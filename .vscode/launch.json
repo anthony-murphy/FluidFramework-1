@@ -236,6 +236,8 @@
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "stopOnEntry": false,
             "env": {
+                // "FLUID_TEST_VERBOSE": "1",
+                "fluid__test__driver":"tinylicious",
                 "TS_NODE_PROJECT": "${fileDirname}/tsconfig.json",
             },
             "args": ["--no-timeouts", "--exit", "--require", "ts-node/register","${file}", ],

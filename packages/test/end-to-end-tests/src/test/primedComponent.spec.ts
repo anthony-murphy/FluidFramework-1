@@ -25,9 +25,10 @@ class TestDataObject extends DataObject {
 
 const tests = (args: ITestObjectProvider) => {
     let dataObject: TestDataObject;
-
+    let docId: string;
     beforeEach(async () => {
-        const container = await args.makeTestContainer() as Container;
+        docId = Date.now().toString();
+        const container = await args.makeTestContainer(docId) as Container;
         dataObject = await requestFluidObject<TestDataObject>(container, "default");
     });
 
@@ -40,7 +41,7 @@ const tests = (args: ITestObjectProvider) => {
         const value2 = await handle2.get();
         assert(value2 === "aaaa", "Could not get blob from shared object in the dataObject");
 
-        const container2 = await args.loadTestContainer() as Container;
+        const container2 = await args.loadTestContainer(docId) as Container;
         const dataObject2 = await requestFluidObject<TestDataObject>(container2, "default");
         const blobHandle = await dataObject2.root.wait<IFluidHandle<string>>("key");
         const value = await blobHandle.get();
@@ -49,5 +50,5 @@ const tests = (args: ITestObjectProvider) => {
 };
 
 describe("DataObject", () => {
-    generateTest(tests, { tinylicious: true });
+    generateTest(tests);
 });

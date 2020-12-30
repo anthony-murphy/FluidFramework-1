@@ -25,17 +25,16 @@ import { MessageType, ISequencedDocumentMessage } from "@fluidframework/protocol
 import { DataStoreMessageType } from "@fluidframework/datastore";
 import { ContainerMessageType } from "@fluidframework/container-runtime";
 import { convertContainerToDriverSerializedFormat, requestFluidObject } from "@fluidframework/runtime-utils";
+import { ensureFluidResolvedUrl } from "@fluidframework/driver-utils";
 import {
-    ILocalTestObjectProvider,
-    generateLocalTest,
-    generateLocalNonCompatTest,
+    ITestObjectProvider,
     ITestContainerConfig,
     DataObjectFactoryType,
+    generateTest,
+    generateNonCompatTest,
 } from "./compatUtils";
 
 const detachedContainerRefSeqNumber = 0;
-
-const documentId = "detachedContainerTest";
 
 const sharedStringId = "ss1Key";
 const sharedMapId = "sm1Key";
@@ -64,9 +63,10 @@ const testContainerConfig: ITestContainerConfig = {
     registry,
 };
 
-const tests = (args: ILocalTestObjectProvider) => {
+const tests = (args: ITestObjectProvider) => {
     let request: IRequest;
     let loader: Loader;
+    let documentId: string;
     const pkg = args.defaultCodeDetails;
 
     const createFluidObject = (async (
@@ -79,7 +79,8 @@ const tests = (args: ILocalTestObjectProvider) => {
     });
 
     beforeEach(async () => {
-        request = args.urlResolver.createCreateNewRequest(documentId);
+        documentId = Date.now().toString();
+        request = args.driverConfig.createCreateNewRequest(documentId);
         loader = args.makeTestLoader(testContainerConfig) as Loader;
     });
 
@@ -255,6 +256,7 @@ const tests = (args: ILocalTestObjectProvider) => {
         const snapshotTree = container.serialize();
         const summaryForAttach = convertContainerToDriverSerializedFormat(snapshotTree);
         const resolvedUrl = await args.urlResolver.resolve(request);
+        ensureFluidResolvedUrl(resolvedUrl);
         const service = await args.documentServiceFactory.createContainer(summaryForAttach as any, resolvedUrl);
         const absoluteUrl = await args.urlResolver.getAbsoluteUrl(service.resolvedUrl, "/");
 
@@ -611,16 +613,18 @@ const tests = (args: ILocalTestObjectProvider) => {
 };
 
 describe("Detached Container", () => {
-    generateLocalTest(tests);
+    generateTest(tests);
 
     // non compat test
-    generateLocalNonCompatTest((args: ILocalTestObjectProvider) => {
+    generateNonCompatTest((args: ITestObjectProvider) => {
         let request: IRequest;
         let loader: Loader;
+        let documentId: string;
         const pkg = args.defaultCodeDetails;
 
         beforeEach(async () => {
-            request = args.urlResolver.createCreateNewRequest(documentId);
+            documentId = Date.now().toString();
+            request = args.driverConfig.createCreateNewRequest(documentId);
             loader = args.makeTestLoader(testContainerConfig) as Loader;
         });
 

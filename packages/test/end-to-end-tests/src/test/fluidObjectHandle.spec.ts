@@ -22,15 +22,17 @@ const tests = (args: ITestObjectProvider) => {
     let secondContainerObject1: TestDataObject;
 
     beforeEach(async () => {
+        const docId = Date.now().toString();
+
         // Create a Container for the first client.
-        const firstContainer = await args.makeTestContainer();
+        const firstContainer = await args.makeTestContainer(docId);
         firstContainerObject1 = await requestFluidObject<TestDataObject>(firstContainer, "default");
         const containerRuntime1 = firstContainerObject1._context.containerRuntime;
         const dataStore = await containerRuntime1.createDataStore(TestDataObject.type);
         firstContainerObject2 = await requestFluidObject<TestDataObject>(dataStore, "");
 
         // Load the Container that was created by the first client.
-        const secondContainer = await args.loadTestContainer();
+        const secondContainer = await args.loadTestContainer(docId);
         secondContainerObject1 = await requestFluidObject<TestDataObject>(secondContainer, "default");
 
         await args.opProcessingController.process();
@@ -164,5 +166,5 @@ const tests = (args: ITestObjectProvider) => {
 };
 
 describe("FluidObjectHandle", () => {
-    generateTest(tests, { tinylicious: true });
+    generateTest(tests);
 });

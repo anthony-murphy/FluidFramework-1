@@ -26,10 +26,12 @@ const tests = (args: ITestObjectProvider) => {
     let dataObject2: ITestFluidObject;
 
     beforeEach(async () => {
-        const container1 = await args.makeTestContainer(testContainerConfig) as Container;
+        const docId = Date.now().toString();
+
+        const container1 = await args.makeTestContainer(docId, testContainerConfig) as Container;
         dataObject1 = await requestFluidObject<ITestFluidObject>(container1, "default");
 
-        const container2 = await args.loadTestContainer(testContainerConfig) as Container;
+        const container2 = await args.loadTestContainer(docId, testContainerConfig) as Container;
         dataObject2 = await requestFluidObject<ITestFluidObject>(container2, "default");
     });
 

@@ -25,4 +25,8 @@ export class TinyliciousDriverConfig implements ITestDriverConfig {
     createCreateNewRequest(testId: string): IRequest {
         return createTinyliciousCreateNewRequest(testId);
     }
+    createContainerUrl(testId: string): string {
+        return `http://localhost:3000/${testId}`;
+    }
+    public async reset() {}
 }

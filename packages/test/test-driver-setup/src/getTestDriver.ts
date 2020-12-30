@@ -14,19 +14,30 @@ export type TestDriverConfigs =
     | RouterliciousDriverConfig
     | OdspDriverConfig;
 
+const envVar = "fluid__test__driver";
+const cmdArg = "--test-driver=";
+
 const testDriver = new Lazy<TestDriverConfigs>(()=>{
-    switch (process.env.fluid__test__driver__type) {
+    const arg = process.argv.find((v)=>v.toLocaleLowerCase().startsWith(cmdArg))?.toLocaleLowerCase();
+    const type = process.env[envVar]?.toLocaleLowerCase() ?? arg?.replace(cmdArg, "");
+
+    switch (type) {
         case undefined:
+        case "":
         case "local":
             return new LocalServerDriverConfig();
+
         case "tinylicious":
             return new TinyliciousDriverConfig();
+
         case "routerlicious":
             return new RouterliciousDriverConfig();
+
         case "odsp":
             return new OdspDriverConfig();
+
         default:
-            throw new Error(`No driver registered for type ${process.env.fluid__test__driver__type}`);
+            throw new Error(`No driver registered for type ${type}`);
     }
 });
 

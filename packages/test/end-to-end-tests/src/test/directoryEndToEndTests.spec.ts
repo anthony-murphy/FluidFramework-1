@@ -33,18 +33,19 @@ const tests = (args: ITestObjectProvider) => {
     let sharedDirectory3: ISharedDirectory;
 
     beforeEach(async () => {
+        const docId = Date.now().toString();
         // Create a Container for the first client.
-        const container1 = await args.makeTestContainer(testContainerConfig);
+        const container1 = await args.makeTestContainer(docId, testContainerConfig);
         dataObject1 = await requestFluidObject<ITestFluidObject>(container1, "default");
         sharedDirectory1 = await dataObject1.getSharedObject<SharedDirectory>(directoryId);
 
         // Load the Container that was created by the first client.
-        const container2 = await args.loadTestContainer(testContainerConfig);
+        const container2 = await args.loadTestContainer(docId, testContainerConfig);
         const dataObject2 = await requestFluidObject<ITestFluidObject>(container2, "default");
         sharedDirectory2 = await dataObject2.getSharedObject<SharedDirectory>(directoryId);
 
         // Load the Container that was created by the first client.
-        const container3 = await args.loadTestContainer(testContainerConfig);
+        const container3 = await args.loadTestContainer(docId, testContainerConfig);
         const dataObject3 = await requestFluidObject<ITestFluidObject>(container3, "default");
         sharedDirectory3 = await dataObject3.getSharedObject<SharedDirectory>(directoryId);
 
@@ -627,5 +628,5 @@ const tests = (args: ITestObjectProvider) => {
 };
 
 describe("Directory", () => {
-    generateTest(tests, { tinylicious: true });
+    generateTest(tests);
 });

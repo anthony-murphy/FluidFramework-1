@@ -17,9 +17,10 @@ const tests = (args: ITestObjectProvider) => {
 
     describe("Single client", () => {
         let scheduler: IAgentScheduler;
-
+        let docId: string;
         beforeEach(async () => {
-            const container = await args.makeTestContainer();
+            docId = Date.now().toString();
+            const container = await args.makeTestContainer(docId);
             scheduler = await requestFluidObject<TaskManager>(container, taskSchedulerId)
                 .then((taskManager) => taskManager.IAgentScheduler);
 
@@ -90,10 +91,12 @@ const tests = (args: ITestObjectProvider) => {
         let container2: IContainer | old.IContainer;
         let scheduler1: IAgentScheduler;
         let scheduler2: IAgentScheduler;
+        let docId: string;
 
         beforeEach(async () => {
+            docId = Date.now().toString();
             // Create a new Container for the first document.
-            container1 = await args.makeTestContainer();
+            container1 = await args.makeTestContainer(docId);
             scheduler1 = await requestFluidObject<TaskManager>(container1, taskSchedulerId)
                 .then((taskManager) => taskManager.IAgentScheduler);
             const dataObject1 = await requestFluidObject<TestDataObject>(container1, "default");
@@ -104,7 +107,7 @@ const tests = (args: ITestObjectProvider) => {
             await args.opProcessingController.process();
 
             // Load existing Container for the second document.
-            container2 = await args.loadTestContainer();
+            container2 = await args.loadTestContainer(docId);
             scheduler2 = await requestFluidObject<TaskManager>(container2, taskSchedulerId)
                 .then((taskManager) => taskManager.IAgentScheduler);
             const dataObject2 = await requestFluidObject<TestDataObject>(container2, "default");

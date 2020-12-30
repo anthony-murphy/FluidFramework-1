@@ -91,15 +91,15 @@ describe("context reload", function() {
         await containers[0].getQuorum().propose("code", codeDetails(version));
         // wait for "contextChanged" events on all containers
         return Promise.all(containers.map(
-            async (container) => new Promise((resolve, reject) =>
+            async (container) => new Promise<void>((resolve, reject) =>
                 container.on("contextChanged", (code: IFluidCodeDetails) =>
                     // eslint-disable-next-line prefer-promise-reject-errors
                     typeof code.package === "object" && code.package.version === version ? resolve() : reject()))));
     };
 
-    async function createContainer(packageEntries, server, urlResolver): Promise<IContainer> {
+    async function createContainer(packageEntries, server, urlResolver: LocalResolver): Promise<IContainer> {
         const loader: ILoader = createLocalLoader(packageEntries, server, urlResolver);
-        return createAndAttachContainer(documentId, defaultCodeDetails, loader, urlResolver);
+        return createAndAttachContainer(defaultCodeDetails, loader, urlResolver.createCreateNewRequest(documentId));
     }
 
     async function loadContainer(packageEntries, server, urlResolver): Promise<IContainer> {
@@ -156,7 +156,7 @@ describe("context reload", function() {
 
             // wait for summary ack/nack (non-immediate summary will result in test timeout)
             // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-            await new Promise((resolve, reject) => this.container.on("op", (op) => {
+            await new Promise<void>((resolve, reject) => this.container.on("op", (op) => {
                 if (op.type === "summaryAck") {
                     resolve();
                 } else if (op.type === "summaryNack") {

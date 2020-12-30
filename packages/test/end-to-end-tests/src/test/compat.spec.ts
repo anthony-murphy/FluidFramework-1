@@ -6,49 +6,61 @@
 import { strict as assert } from "assert";
 import { IContainer, IFluidModule } from "@fluidframework/container-definitions";
 import { IFluidRouter } from "@fluidframework/core-interfaces";
-import { ISummaryConfiguration } from "@fluidframework/protocol-definitions";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
-import { LocalTestObjectProvider, ChannelFactoryRegistry } from "@fluidframework/test-utils";
-import { ILocalDeltaConnectionServer } from "@fluidframework/server-local-server";
+import { TestObjectProvider, ChannelFactoryRegistry } from "@fluidframework/test-utils";
+import { LocalServerDriverConfig, TestDriverConfigs } from "@fluidframework/test-driver-setup";
 import {
-    generateLocalCompatTest,
+    generateCompatTest,
     createOldPrimedDataStoreFactory,
     createOldRuntimeFactory,
     createPrimedDataStoreFactory,
     createRuntimeFactory,
-    ILocalTestObjectProvider,
+    ITestObjectProvider,
     OldTestDataObject,
     TestDataObject,
 } from "./compatUtils";
 import * as old from "./oldVersion";
 
 async function loadContainer(
+    docId: string,
     fluidModule: IFluidModule | old.IFluidModule,
-    deltaConnectionServer: ILocalDeltaConnectionServer,
+    driver: TestDriverConfigs | old.TestDriverConfigs,
 ): Promise<IContainer> {
-    const localTestObjectProvider = new LocalTestObjectProvider(
-        (reg?: ChannelFactoryRegistry) => fluidModule as IFluidModule, undefined, deltaConnectionServer);
-    return localTestObjectProvider.loadTestContainer();
+    const testObjectProvider = new TestObjectProvider(
+        driver,
+        (reg?: ChannelFactoryRegistry) => fluidModule as IFluidModule);
+    return testObjectProvider.loadTestContainer(docId);
 }
 
 async function loadContainerWithOldLoader(
+    docId: string,
     fluidModule: IFluidModule | old.IFluidModule,
-    deltaConnectionServer: ILocalDeltaConnectionServer,
+    driver: TestDriverConfigs | old.TestDriverConfigs,
 ): Promise<old.IContainer> {
-    const localTestObjectProvider = new old.LocalTestObjectProvider(
-        (reg?: ChannelFactoryRegistry) => fluidModule as old.IFluidModule, undefined, deltaConnectionServer);
-    return localTestObjectProvider.loadTestContainer();
+    const testObjectProvider = new old.TestObjectProvider(
+        driver,
+        (reg?: ChannelFactoryRegistry) => fluidModule as old.IFluidModule);
+    return testObjectProvider.loadTestContainer(docId);
 }
 
-describe("loader/runtime compatibility", () => {
-    const tests = function(args: ILocalTestObjectProvider) {
+const tests = function(args: ITestObjectProvider) {
+    describe("loader/runtime compatibility", () => {
         let container: IContainer | old.IContainer;
         let dataObject: TestDataObject | OldTestDataObject;
         let containerError: boolean = false;
+        let documentId: string;
 
         beforeEach(async function() {
-            assert(args.deltaConnectionServer !== undefined);
-            container = await args.makeTestContainer();
+            const driver = args.driverConfig as LocalServerDriverConfig;
+            if (driver.type === "local") {
+                await driver.reset({
+                    serviceConfiguration: {
+                        summary: { maxOps: 1 },
+                    },
+                });
+            }
+            documentId = Date.now().toString();
+            container = await args.makeTestContainer(documentId);
             container.on("warning", () => containerError = true);
             container.on("closed", (error) => containerError = containerError || error !== undefined);
 
@@ -75,7 +87,7 @@ describe("loader/runtime compatibility", () => {
             assert.strictEqual(await dataObject._root.wait(test[0]), test[1]);
 
             // wait for summary ack/nack
-            await new Promise((resolve, reject) => container.on("op", (op) => {
+            await new Promise<void>((resolve, reject) => container.on("op", (op) => {
                 if (op.type === "summaryAck") {
                     resolve();
                 } else if (op.type === "summaryNack") {
@@ -91,23 +103,29 @@ describe("loader/runtime compatibility", () => {
 
             const containersP: Promise<IContainer | old.IContainer>[] = [
                 loadContainer( // new everything
+                    documentId,
                     { fluidExport: createRuntimeFactory(TestDataObject.type, createPrimedDataStoreFactory()) },
-                    args.deltaConnectionServer),
+                    args.driverConfig),
                 loadContainerWithOldLoader( // old loader, new container/data store runtimes
+                    documentId,
                     { fluidExport: createRuntimeFactory(TestDataObject.type, createPrimedDataStoreFactory()) },
-                    args.deltaConnectionServer),
+                    args.driverConfig),
                 loadContainerWithOldLoader( // old everything
+                    documentId,
                     { fluidExport: createOldRuntimeFactory(TestDataObject.type, createOldPrimedDataStoreFactory()) },
-                    args.deltaConnectionServer),
+                    args.driverConfig),
                 loadContainer( // new loader, old container/data store runtimes
+                    documentId,
                     { fluidExport: createOldRuntimeFactory(TestDataObject.type, createOldPrimedDataStoreFactory()) },
-                    args.deltaConnectionServer),
+                    args.driverConfig),
                 loadContainer( // new loader/container runtime, old data store runtime
+                    documentId,
                     { fluidExport: createRuntimeFactory(TestDataObject.type, createOldPrimedDataStoreFactory()) },
-                    args.deltaConnectionServer),
+                    args.driverConfig),
                 loadContainerWithOldLoader( // old loader/container runtime, new data store runtime
+                    documentId,
                     { fluidExport: createOldRuntimeFactory(TestDataObject.type, createPrimedDataStoreFactory()) },
-                    args.deltaConnectionServer),
+                    args.driverConfig),
             ];
 
             const dataObjects = await Promise.all(containersP.map(async (containerP) => containerP.then(
@@ -128,10 +146,7 @@ describe("loader/runtime compatibility", () => {
             // get every value from initial data store
             test2.map(async (testVal) => assert.strictEqual(await dataObject._root.wait(testVal), testVal));
         });
-    };
-
-    generateLocalCompatTest(tests, {
-        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-        serviceConfiguration: { summary: { maxOps: 1 } as ISummaryConfiguration },
     });
-});
+};
+
+generateCompatTest(tests);

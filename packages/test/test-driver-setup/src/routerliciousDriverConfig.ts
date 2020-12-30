@@ -33,6 +33,9 @@ export class RouterliciousDriverConfig implements ITestDriverConfig {
         this.tenantSecret = tenantSecret;
         this.fluidHost = fluidHost;
     }
+    createContainerUrl(testId: string): string {
+        return `${this.fluidHost}/${encodeURIComponent(this.tenantId)}/${encodeURIComponent(testId)}`;
+    }
 
     createDocumentServiceFactory(): RouterliciousDocumentServiceFactory {
         const tokenProvider = new InsecureTokenProvider(
@@ -63,4 +66,6 @@ export class RouterliciousDriverConfig implements ITestDriverConfig {
     createCreateNewRequest(testId: string): IRequest {
         return this.createUrlResolver().createCreateNewRequest(testId);
     }
+
+    public async reset() {}
 }

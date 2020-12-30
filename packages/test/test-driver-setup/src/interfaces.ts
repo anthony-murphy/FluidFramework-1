@@ -10,4 +10,6 @@ export interface ITestDriverConfig{
     createDocumentServiceFactory(): IDocumentServiceFactory;
     createUrlResolver(): IUrlResolver;
     createCreateNewRequest(testId: string): IRequest;
+    createContainerUrl(testId: string): string;
+    reset(): Promise<void>;
 }

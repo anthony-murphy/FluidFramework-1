@@ -38,13 +38,16 @@ export class OdspDriverConfig implements ITestDriverConfig {
     private readonly config: IOdspConfig;
     private readonly password: string;
 
-    private readonly dir = Date.now().toString();
+    private dir = Date.now().toString();
 
     constructor() {
-        this.config = JSON.parse(fs.readFileSync("./testConfig.json", "utf-8"));
+        this.config = JSON.parse(fs.readFileSync("./odspConfig.json", "utf-8"));
         const password = process.env.fluid__odsp__password;
         assert(password, "Missing password");
         this.password = password;
+    }
+    createContainerUrl(testId: string): string {
+        throw new Error("Method not implemented.");
     }
 
     createDocumentServiceFactory(): IDocumentServiceFactory {
@@ -79,5 +82,9 @@ export class OdspDriverConfig implements ITestDriverConfig {
             this.dir,
             testId,
         );
+    }
+
+    public async reset() {
+        this.dir = Date.now().toString();
     }
 }

@@ -70,7 +70,9 @@ const tests = (args: ITestObjectProvider) => {
                 fluidDataObjectType: DataObjectFactoryType.Test,
                 registry,
             };
-            const container = await args.makeTestContainer(testContainerConfig);
+            const docId = Date.now().toString();
+
+            const container = await args.makeTestContainer(docId, testContainerConfig);
             const dataObject = await requestFluidObject<ITestFluidObject>(container, "default");
             sharedString = await dataObject.getSharedObject<SharedString>(stringId);
             sharedString.insertText(0, "012");
@@ -183,9 +185,10 @@ const tests = (args: ITestObjectProvider) => {
                 fluidDataObjectType: DataObjectFactoryType.Test,
                 registry,
             };
+            const docId = Date.now().toString();
 
             // Create a Container for the first client.
-            const container1 = await args.makeTestContainer(testContainerConfig);
+            const container1 = await args.makeTestContainer(docId, testContainerConfig);
             const dataObject1 = await requestFluidObject<ITestFluidObject>(container1, "default");
             const sharedString1 = await dataObject1.getSharedObject<SharedString>(stringId);
 
@@ -195,7 +198,7 @@ const tests = (args: ITestObjectProvider) => {
             assertIntervalsHelper(sharedString1, intervals1, [{ start: 1, end: 7 }]);
 
             // Load the Container that was created by the first client.
-            const container2 = await args.loadTestContainer(testContainerConfig);
+            const container2 = await args.loadTestContainer(docId, testContainerConfig);
             const dataObject2 = await requestFluidObject<ITestFluidObject>(container2, "default");
 
             await args.opProcessingController.process();
@@ -234,18 +237,20 @@ const tests = (args: ITestObjectProvider) => {
         let sharedMap3: ISharedMap;
 
         beforeEach(async () => {
+            const docId = Date.now().toString();
+
             // Create a Container for the first client.
-            const container1 = await args.makeTestContainer(testContainerConfig);
+            const container1 = await args.makeTestContainer(docId, testContainerConfig);
             dataObject1 = await requestFluidObject<ITestFluidObject>(container1, "default");
             sharedMap1 = await dataObject1.getSharedObject<SharedMap>(mapId);
 
             // Load the Container that was created by the first client.
-            const container2 = await args.loadTestContainer(testContainerConfig);
+            const container2 = await args.loadTestContainer(docId, testContainerConfig);
             const dataObject2 = await requestFluidObject<ITestFluidObject>(container2, "default");
             sharedMap2 = await dataObject2.getSharedObject<SharedMap>(mapId);
 
             // Load the Container that was created by the first client.
-            const container3 = await args.loadTestContainer(testContainerConfig);
+            const container3 = await args.loadTestContainer(docId, testContainerConfig);
             const dataObject3 = await requestFluidObject<ITestFluidObject>(container3, "default");
             sharedMap3 = await dataObject3.getSharedObject<SharedMap>(mapId);
         });
@@ -330,5 +335,5 @@ const tests = (args: ITestObjectProvider) => {
 };
 
 describe("SharedInterval", () => {
-    generateTest(tests, { tinylicious: true });
+    generateTest(tests);
 });

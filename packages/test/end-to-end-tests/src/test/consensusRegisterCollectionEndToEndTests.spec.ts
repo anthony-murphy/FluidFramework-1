@@ -46,18 +46,19 @@ function generate(name: string, ctor: ISharedObjectConstructor<IConsensusRegiste
         let sharedMap3: ISharedMap;
 
         beforeEach(async () => {
+            const docId = Date.now().toString();
             // Create a Container for the first client.
-            const container1 = await args.makeTestContainer(testContainerConfig);
+            const container1 = await args.makeTestContainer(docId, testContainerConfig);
             dataStore1 = await requestFluidObject<ITestFluidObject>(container1, "default");
             sharedMap1 = await dataStore1.getSharedObject<SharedMap>(mapId);
 
             // Load the Container that was created by the first client.
-            const container2 = await args.loadTestContainer(testContainerConfig);
+            const container2 = await args.loadTestContainer(docId, testContainerConfig);
             const dataStore2 = await requestFluidObject<ITestFluidObject>(container2, "default");
             sharedMap2 = await dataStore2.getSharedObject<SharedMap>(mapId);
 
             // Load the Container that was created by the first client.
-            const container3 = await args.loadTestContainer(testContainerConfig);
+            const container3 = await args.loadTestContainer(docId, testContainerConfig);
             const dataStore3 = await requestFluidObject<ITestFluidObject>(container3, "default");
             sharedMap3 = await dataStore3.getSharedObject<SharedMap>(mapId);
         });
@@ -67,6 +68,7 @@ function generate(name: string, ctor: ISharedObjectConstructor<IConsensusRegiste
             sharedMap1.set("collection", collection1.handle);
             await collection1.write("key1", "value1");
             await collection1.write("key2", "value2");
+            await args.opProcessingController.process();
 
             const [collection2Handle, collection3Handle] = await Promise.all([
                 sharedMap2.wait<IFluidHandle<IConsensusRegisterCollection>>("collection"),
@@ -102,6 +104,7 @@ function generate(name: string, ctor: ISharedObjectConstructor<IConsensusRegiste
             const write2P = collection2.write("key1", "value2");
             const write3P = collection3.write("key1", "value3");
             await Promise.all([write1P, write2P, write3P]);
+            await args.opProcessingController.process();
             const versions = collection1.readVersions("key1");
             assert(versions);
             assert.strictEqual(versions.length, 3, "Concurrent updates were not preserved");
@@ -129,23 +132,27 @@ function generate(name: string, ctor: ISharedObjectConstructor<IConsensusRegiste
             const write2P = collection2.write("key1", "value2");
             const write3P = collection3.write("key1", "value3");
             await Promise.all([write1P, write2P, write3P]);
+            await args.opProcessingController.process();
             const versions = collection1.readVersions("key1");
             assert(versions);
             assert.strictEqual(versions.length, 3, "Concurrent updates were not preserved");
 
             await collection3.write("key1", "value4");
+            await args.opProcessingController.process();
             const versions2 = collection1.readVersions("key1");
             assert(versions2);
             assert.strictEqual(versions2.length, 1, "Happened after value did not overwrite");
             assert.strictEqual(versions2[0], "value4", "Happened after value did not overwrite");
 
             await collection2.write("key1", "value5");
+            await args.opProcessingController.process();
             const versions3 = collection1.readVersions("key1");
             assert(versions3);
             assert.strictEqual(versions3.length, 1, "Happened after value did not overwrite");
             assert.strictEqual(versions3[0], "value5", "Happened after value did not overwrite");
 
             await collection1.write("key1", "value6");
+            await args.opProcessingController.process();
             const versions4 = collection1.readVersions("key1");
             assert(versions4);
             assert.strictEqual(versions4.length, 1, "Happened after value did not overwrite");
@@ -155,6 +162,7 @@ function generate(name: string, ctor: ISharedObjectConstructor<IConsensusRegiste
             const write8P = collection2.write("key1", "value8");
             const write9P = collection3.write("key1", "value9");
             await Promise.all([write7P, write8P, write9P]);
+            await args.opProcessingController.process();
             const versions5 = collection3.readVersions("key1");
             assert(versions5);
             assert.strictEqual(versions5.length, 3, "Concurrent happened after updates should overwrite and preserve");
@@ -163,6 +171,7 @@ function generate(name: string, ctor: ISharedObjectConstructor<IConsensusRegiste
             assert.strictEqual(versions5[2], "value9", "Incorrect update sequence");
 
             await collection2.write("key1", "value10");
+            await args.opProcessingController.process();
             const versions6 = collection2.readVersions("key1");
             assert(versions6);
             assert.strictEqual(versions6.length, 1, "Happened after value did not overwrite");
@@ -176,6 +185,7 @@ function generate(name: string, ctor: ISharedObjectConstructor<IConsensusRegiste
             sharedMap1.set("collection", collection1.handle);
             await collection1.write("handleA", sharedMap1.handle);
             await collection1.write("handleB", sharedMap1.handle);
+            await args.opProcessingController.process();
 
             // Pull the collection off of the 2nd container
             const collection2Handle =

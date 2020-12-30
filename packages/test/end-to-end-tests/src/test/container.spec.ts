@@ -16,15 +16,16 @@ import {
 import { LocalDocumentServiceFactory, LocalResolver } from "@fluidframework/local-driver";
 import { ILocalDeltaConnectionServer, LocalDeltaConnectionServer } from "@fluidframework/server-local-server";
 import { MockDocumentDeltaConnection } from "@fluid-internal/test-loader-utils";
-import { LocalCodeLoader, LocalTestObjectProvider } from "@fluidframework/test-utils";
+import { LocalCodeLoader, TestObjectProvider } from "@fluidframework/test-utils";
 import { ensureFluidResolvedUrl } from "@fluidframework/driver-utils";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
+import { getTestDriverConfig } from "@fluidframework/test-driver-setup";
 import { createPrimedDataStoreFactory, createRuntimeFactory, TestDataObject } from "./compatUtils";
 
-const id = "fluid-test://localhost/containerTest";
-const testRequest: IRequest = { url: id };
+const testDriver = getTestDriverConfig();
+const testRequest: IRequest = { url: testDriver.createContainerUrl("containerTest") };
 
-describe("Container", () => {
+describe(`${testDriver.type} Container`, () => {
     let testDeltaConnectionServer: ILocalDeltaConnectionServer;
     beforeEach(()=>{
         testDeltaConnectionServer = LocalDeltaConnectionServer.create();
@@ -188,9 +189,9 @@ describe("Container", () => {
             TestDataObject.type,
             createPrimedDataStoreFactory());
 
-        const localTestObjectProvider = new LocalTestObjectProvider(runtimeFactory, {});
-
-        const container = await localTestObjectProvider.makeTestContainer() as Container;
+        const testObjectProvider = new TestObjectProvider(testDriver, runtimeFactory);
+        const docId = Date.now().toString();
+        const container = await testObjectProvider.makeTestContainer(docId) as Container;
         const dataObject = await requestFluidObject<TestDataObject>(container, "default");
 
         let runCount = 0;

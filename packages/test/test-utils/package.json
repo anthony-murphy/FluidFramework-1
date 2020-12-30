@@ -65,6 +65,7 @@
     "@fluidframework/runtime-definitions": "^0.32.0",
     "@fluidframework/runtime-utils": "^0.32.0",
     "@fluidframework/server-local-server": "^0.1016.1",
+    "@fluidframework/test-driver-setup": "^0.32.0",
     "@fluidframework/test-runtime-utils": "^0.32.0",
     "assert": "^2.0.0",
     "debug": "^4.1.1",
