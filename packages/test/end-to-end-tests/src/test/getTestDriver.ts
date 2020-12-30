@@ -5,16 +5,16 @@ import {
     TinyliciousDriverConfig,
     OdspDriverConfig,
     RouterliciousDriverConfig,
+    TestDriverConfigTypes,
  // eslint-disable-next-line import/no-extraneous-dependencies
  } from "@fluidframework/test-driver-setup";
 import { TestDriverConfig } from "./oldVersion";
 
-const envVar = "fluid__test__driver";
-const cmdArg = "--test-driver=";
-
+const envVar = "E2E_TEST_DRIVER";
+type EnvVarTestDriverConfigTypes = TestDriverConfigTypes | "" | undefined;
 const testDriver = new Lazy<TestDriverConfig>(()=>{
-    const arg = process.argv.find((v)=>v.toLocaleLowerCase().startsWith(cmdArg))?.toLocaleLowerCase();
-    const type = process.env[envVar]?.toLocaleLowerCase() ?? arg?.replace(cmdArg, "");
+    const type =
+        process.env[envVar]?.toLocaleLowerCase() as EnvVarTestDriverConfigTypes;
 
     switch (type) {
         case undefined:
@@ -32,7 +32,7 @@ const testDriver = new Lazy<TestDriverConfig>(()=>{
             return new OdspDriverConfig();
 
         default:
-            throw new Error(`No driver registered for type ${type}`);
+            throw new Error(`No driver config registered for type "${type}"`);
     }
 });
 

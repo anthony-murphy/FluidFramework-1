@@ -30,6 +30,7 @@ interface IOdspConfig {
     server: string;
     driveId: string;
     username: string;
+    directory: string;
 }
 
 export class OdspDriverConfig implements ITestDriverConfig {
@@ -37,8 +38,6 @@ export class OdspDriverConfig implements ITestDriverConfig {
     private readonly odspTokenManager = new OdspTokenManager(odspTokensCache);
     private readonly config: IOdspConfig;
     private readonly password: string;
-
-    private dir = Date.now().toString();
 
     constructor() {
         this.config = JSON.parse(fs.readFileSync("./odspConfig.json", "utf-8"));
@@ -79,12 +78,11 @@ export class OdspDriverConfig implements ITestDriverConfig {
         return createOdspCreateContainerRequest(
             `https://${this.config.server}`,
             this.config.driveId,
-            this.dir,
-            testId,
+            this.config.directory,
+            `${testId}.fluid`,
         );
     }
 
     public async reset() {
-        this.dir = Date.now().toString();
     }
 }

@@ -4,6 +4,7 @@
  */
 
 import { strict as assert } from "assert";
+import { setTimeout } from "timers";
 import { Container } from "@fluidframework/container-loader";
 import { IInboundSignalMessage } from "@fluidframework/runtime-definitions";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
@@ -20,6 +21,22 @@ import {
 const testContainerConfig: ITestContainerConfig = {
     fluidDataObjectType: DataObjectFactoryType.Test,
 };
+
+const waitForSignal =
+    async (... signallers: {once(e: "signal", l: () => void)}[])=>
+        Promise.all(
+            signallers.map(
+                async (signaller, index) =>
+                    new Promise<void>((res,rej)=>{
+                            const to =
+                                setTimeout(
+                                    ()=>rej(new Error(`Singaller[${index}] Timeout`)),
+                                     100);
+                            signaller.once("signal", ()=>{
+                                clearTimeout(to);
+                                res();
+                            });
+                        })));
 
 const tests = (args: ITestObjectProvider) => {
     let dataObject1: ITestFluidObject;
@@ -53,12 +70,12 @@ const tests = (args: ITestObjectProvider) => {
             });
 
             dataObject1.runtime.submitSignal("TestSignal", true);
-            await args.opProcessingController.process();
+            await waitForSignal(dataObject1.runtime, dataObject2.runtime);
             assert.equal(user1SignalReceivedCount, 1, "client 1 did not received signal");
             assert.equal(user2SignalReceivedCount, 1, "client 2 did not received signal");
 
             dataObject2.runtime.submitSignal("TestSignal", true);
-            await args.opProcessingController.process();
+            await waitForSignal(dataObject1.runtime, dataObject2.runtime);
             assert.equal(user1SignalReceivedCount, 2, "client 1 did not received signal");
             assert.equal(user2SignalReceivedCount, 2, "client 2 did not received signal");
         });
@@ -82,12 +99,12 @@ const tests = (args: ITestObjectProvider) => {
             });
 
             user1ContainerRuntime.submitSignal("TestSignal", true);
-            await args.opProcessingController.process();
+            await waitForSignal(user1ContainerRuntime, user2ContainerRuntime);
             assert.equal(user1SignalReceivedCount, 1, "client 1 did not receive signal");
             assert.equal(user2SignalReceivedCount, 1, "client 2 did not receive signal");
 
             user2ContainerRuntime.submitSignal("TestSignal", true);
-            await args.opProcessingController.process();
+            await waitForSignal(user1ContainerRuntime, user2ContainerRuntime);
             assert.equal(user1SignalReceivedCount, 2, "client 1 did not receive signal");
             assert.equal(user2SignalReceivedCount, 2, "client 2 did not receive signal");
         });
@@ -128,14 +145,14 @@ const tests = (args: ITestObjectProvider) => {
         });
 
         user1ContainerRuntime.submitSignal("TestSignal", true);
-        await args.opProcessingController.process();
+        await waitForSignal(user1ContainerRuntime, user2ContainerRuntime);
         assert.equal(user1HostSignalReceivedCount, 1, "client 1 did not receive signal on host runtime");
         assert.equal(user2HostSignalReceivedCount, 1, "client 2 did not receive signal on host runtime");
         assert.equal(user1CompSignalReceivedCount, 0, "client 1 should not receive signal on data store runtime");
         assert.equal(user2CompSignalReceivedCount, 0, "client 2 should not receive signal on data store runtime");
 
         user2DataStoreRuntime.submitSignal("TestSignal", true);
-        await args.opProcessingController.process();
+        await waitForSignal(user1DtaStoreRuntime, user2DataStoreRuntime);
         assert.equal(user1HostSignalReceivedCount, 1, "client 1 should not receive signal on host runtime");
         assert.equal(user2HostSignalReceivedCount, 1, "client 2 should not receive signal on host runtime");
         assert.equal(user1CompSignalReceivedCount, 1, "client 1 did not receive signal on data store runtime");
