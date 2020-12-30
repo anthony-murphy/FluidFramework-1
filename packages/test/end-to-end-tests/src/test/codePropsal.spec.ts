@@ -20,7 +20,6 @@ import {
     TestFluidObjectFactory,
 } from "@fluidframework/test-utils";
 import { ISharedMap, SharedMap } from "@fluidframework/map";
-import { LocalResolver } from "@fluidframework/local-driver";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { getTestDriver } from "./getTestDriver";
 
@@ -58,7 +57,7 @@ describe("CodeProposal.EndToEnd", () => {
     let opProcessingController: OpProcessingController;
     let documentId: string;
 
-    function createLoader(urlResolver: LocalResolver) {
+    function createLoader() {
         const codeDetailsComparer: IFluidCodeDetailsComparer = {
             get IFluidCodeDetailsComparer() {return this;},
             compare: async (a, b)=>
@@ -87,8 +86,7 @@ describe("CodeProposal.EndToEnd", () => {
     }
 
     async function createContainer(code: IFluidCodeDetails): Promise<IContainer> {
-        const urlResolver = new LocalResolver();
-        const loader = createLoader(urlResolver);
+        const loader = createLoader();
         return createAndAttachContainer(
             code,
             loader,
@@ -96,8 +94,7 @@ describe("CodeProposal.EndToEnd", () => {
     }
 
     async function loadContainer(): Promise<IContainer> {
-        const urlResolver = new LocalResolver();
-        const loader = createLoader(urlResolver);
+        const loader = createLoader();
         return loader.resolve({ url: driver.createContainerUrl(documentId) });
     }
 

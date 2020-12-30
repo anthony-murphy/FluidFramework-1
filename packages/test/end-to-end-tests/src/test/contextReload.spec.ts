@@ -15,9 +15,7 @@ import {
     IRuntimeFactory,
 } from "@fluidframework/container-definitions";
 import { IFluidCodeDetails } from "@fluidframework/core-interfaces";
-import { LocalResolver } from "@fluidframework/local-driver";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
-import { LocalDeltaConnectionServer } from "@fluidframework/server-local-server";
 import {
     createAndAttachContainer,
     createLocalLoader,
@@ -212,8 +210,6 @@ describe("context reload", function() {
 
     describe("single container", () => {
         beforeEach(async function() {
-            this.deltaConnectionServer = LocalDeltaConnectionServer.create();
-            this.urlResolver = new LocalResolver();
             this.container = await createContainer(
                 [
                     [codeDetails(V1), createRuntimeFactory(TestDataStoreV1)],
@@ -286,8 +282,6 @@ describe("context reload", function() {
     describe("compat", () => {
         describe("old loader, new runtime", () => {
             beforeEach(async function() {
-                this.deltaConnectionServer = LocalDeltaConnectionServer.create();
-                this.urlResolver = new LocalResolver();
                 this.container = await createContainerWithOldLoader([
                     [codeDetails(V1), createOldRuntimeFactory(OldTestDataStoreV1)],
                     [codeDetails(V2), createRuntimeFactory(TestDataStoreV2)],
@@ -307,8 +301,6 @@ describe("context reload", function() {
         });
         describe("new loader, old runtime", () => {
             beforeEach(async function() {
-                this.deltaConnectionServer = LocalDeltaConnectionServer.create();
-                this.urlResolver = new LocalResolver();
                 this.container = await createContainer([
                     [codeDetails(V1), createRuntimeFactory(TestDataStoreV1)],
                     [codeDetails(V2), createOldRuntimeFactory(OldTestDataStoreV2)],
