@@ -35,15 +35,15 @@ export { Ink } from "old-ink";
 export { SharedMatrix } from "old-matrix";
 export { ConsensusQueue } from "old-ordered-collection";
 
-import { TestDriverConfigs } from "@fluidframework/test-driver-setup";
+import { TestDriverConfig } from "@fluidframework/test-driver-setup";
 import {  TestObjectProvider as currentTestObjectProvider } from "@fluidframework/test-utils";
 import { fluidEntryPoint } from "old-test-utils";
 
-export { TestDriverConfigs } from "@fluidframework/test-driver-setup";
+export { TestDriverConfig } from "@fluidframework/test-driver-setup";
 
 export class TestObjectProvider extends currentTestObjectProvider {
     constructor(
-        driverConfig: TestDriverConfigs,
+        driverConfig: TestDriverConfig,
         createFluidEntryPoint: (testContainerConfig?: any) => fluidEntryPoint,
         ) {
             super(driverConfig, createFluidEntryPoint as any);

@@ -6,7 +6,6 @@
 import { strict as assert } from "assert";
 import { IDeltaManager } from "@fluidframework/container-definitions";
 import { IDocumentMessage, ISequencedDocumentMessage, MessageType } from "@fluidframework/protocol-definitions";
-import { getTestDriverConfig } from "@fluidframework/test-driver-setup";
 import { debug } from "./debug";
 
 // An IDeltaManager alias to be used within this class.
@@ -198,10 +197,9 @@ export class OpProcessingController {
     /**
      * Yields control in the JavaScript event loop.
      */
-    public static async yield(): Promise<void> {
-        const driver = getTestDriverConfig();
+    public static async yield(timeout: number = 0): Promise<void> {
         await new Promise<void>((resolve) => {
-            setTimeout(resolve, driver.type === "local" ? 0 : 100);
+            setTimeout(resolve, timeout);
         });
     }
 
@@ -219,7 +217,9 @@ export class OpProcessingController {
     /**
      * @param deltaConnectionServerMonitor - delta connection server monitor to tell whether we have pending work
      */
-    public constructor(private readonly deltaConnectionServerMonitor?: IDeltaConnectionServerMonitor) { }
+    public constructor(
+        private readonly deltaConnectionServerMonitor?: IDeltaConnectionServerMonitor,
+        private readonly yieldTimeout: number = 0) { }
 
     /**
      * Add a collection of delta managers by adding them to the local collection.
@@ -371,7 +371,7 @@ export class OpProcessingController {
     ): Promise<void> {
         let working: boolean;
         do {
-            await OpProcessingController.yield();
+            await OpProcessingController.yield(this.yieldTimeout);
             if (!this.deltaConnectionServerMonitor) {
                 working = false;
                 let latestSequenceNumber = -1;

@@ -8,7 +8,7 @@ import { IContainer, IFluidModule } from "@fluidframework/container-definitions"
 import { IFluidRouter } from "@fluidframework/core-interfaces";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { TestObjectProvider, ChannelFactoryRegistry } from "@fluidframework/test-utils";
-import { LocalServerDriverConfig, TestDriverConfigs } from "@fluidframework/test-driver-setup";
+import { LocalServerDriverConfig, TestDriverConfig } from "@fluidframework/test-driver-setup";
 import {
     generateCompatTest,
     createOldPrimedDataStoreFactory,
@@ -24,7 +24,7 @@ import * as old from "./oldVersion";
 async function loadContainer(
     docId: string,
     fluidModule: IFluidModule | old.IFluidModule,
-    driver: TestDriverConfigs | old.TestDriverConfigs,
+    driver: TestDriverConfig | old.TestDriverConfig,
 ): Promise<IContainer> {
     const testObjectProvider = new TestObjectProvider(
         driver,
@@ -35,7 +35,7 @@ async function loadContainer(
 async function loadContainerWithOldLoader(
     docId: string,
     fluidModule: IFluidModule | old.IFluidModule,
-    driver: TestDriverConfigs | old.TestDriverConfigs,
+    driver: TestDriverConfig | old.TestDriverConfig,
 ): Promise<old.IContainer> {
     const testObjectProvider = new old.TestObjectProvider(
         driver,

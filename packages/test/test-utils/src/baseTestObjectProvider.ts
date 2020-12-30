@@ -6,7 +6,7 @@
 import { Loader, waitContainerToCatchUp } from "@fluidframework/container-loader";
 import { IFluidCodeDetails } from "@fluidframework/core-interfaces";
 import { IUrlResolver, IDocumentServiceFactory } from "@fluidframework/driver-definitions";
-import { TestDriverConfigs } from "@fluidframework/test-driver-setup";
+import { TestDriverConfig } from "@fluidframework/test-driver-setup";
 import { fluidEntryPoint, LocalCodeLoader } from "./localCodeLoader";
 import { createAndAttachContainer } from "./localLoader";
 import { OpProcessingController } from "./opProcessingController";
@@ -30,7 +30,7 @@ export class TestObjectProvider {
      * and factory for TestFluidObject
      */
     constructor(
-        public readonly driverConfig: TestDriverConfigs,
+        public readonly driverConfig: TestDriverConfig,
         private readonly createFluidEntryPoint: (testContainerConfig?: any) => fluidEntryPoint,
     ) {
     }
@@ -55,8 +55,10 @@ export class TestObjectProvider {
 
     get opProcessingController() {
         if (!this._opProcessingController) {
-            this._opProcessingController = new OpProcessingController(
-                this.driverConfig.type === "local" ? this.driverConfig.server : undefined);
+            this._opProcessingController =
+                this.driverConfig.type === "local"
+                    ? new OpProcessingController(this.driverConfig.server)
+                    : new OpProcessingController(undefined, 25);
         }
         return this._opProcessingController;
     }

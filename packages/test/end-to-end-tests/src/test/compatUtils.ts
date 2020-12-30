@@ -31,8 +31,9 @@ import {
     OpProcessingController,
     TestObjectProvider,
 } from "@fluidframework/test-utils";
-import { getTestDriverConfig, TestDriverConfigs } from "@fluidframework/test-driver-setup";
+import { TestDriverConfig } from "@fluidframework/test-driver-setup";
 import * as old from "./oldVersion";
+import { getTestDriverConfig } from "./getTestDriver";
 
 /* eslint-enable import/no-extraneous-dependencies */
 
@@ -51,7 +52,7 @@ export interface ITestObjectProvider {
     defaultCodeDetails: IFluidCodeDetails | old.IFluidCodeDetails,
     opProcessingController: OpProcessingController | old.OpProcessingController,
 
-    readonly driverConfig: TestDriverConfigs | old.TestDriverConfigs
+    readonly driverConfig: TestDriverConfig | old.TestDriverConfig
 }
 
 export interface ITestOptions {
@@ -246,7 +247,7 @@ export const generateCompatTest = (
                 ) as any as IRuntimeFactory;
 
             const localTestObjectProvider = new TestObjectProvider(
-                getTestDriverConfig(),
+                driver,
                 runtimeFactory,
             );
 
@@ -266,7 +267,7 @@ export const generateCompatTest = (
                 );
 
             const localTestObjectProvider = new TestObjectProvider(
-                getTestDriverConfig(),
+                driver,
                 runtimeFactory,
             );
 
@@ -286,7 +287,7 @@ export const generateCompatTest = (
                 );
 
             const localTestObjectProvider = new old.TestObjectProvider(
-                getTestDriverConfig(),
+                driver,
                 runtimeFactory,
             );
 
