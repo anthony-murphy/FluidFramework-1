@@ -218,6 +218,9 @@ export interface IContainerRuntimeOptions {
 
     // Flag that enables running garbage collection to delete unused Fluid objects.
     runGC?: boolean;
+
+    // Override summary configurations
+    summaryConfigOverrides?: Partial<ISummaryConfiguration>;
 }
 
 interface IRuntimeMessageMetadata {
@@ -625,7 +628,7 @@ export class ContainerRuntime extends TypedEventEmitter<IContainerRuntimeEvents>
     }
 
     private get summaryConfiguration() {
-        return {
+        return  {
             ... DefaultSummaryConfiguration,
             ... this.context?.serviceConfiguration?.summary,
             ... this.runtimeOptions.summaryConfigOverrides,
