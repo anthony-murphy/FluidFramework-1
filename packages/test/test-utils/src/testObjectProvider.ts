@@ -6,7 +6,7 @@
 import { Loader, waitContainerToCatchUp } from "@fluidframework/container-loader";
 import { IFluidCodeDetails } from "@fluidframework/core-interfaces";
 import { IUrlResolver, IDocumentServiceFactory } from "@fluidframework/driver-definitions";
-import { TestDriverConfig } from "@fluidframework/test-driver-setup";
+import { TestDriverConfig } from "@fluidframework/test-drivers";
 import { fluidEntryPoint, LocalCodeLoader } from "./localCodeLoader";
 import { createAndAttachContainer } from "./localLoader";
 import { OpProcessingController } from "./opProcessingController";

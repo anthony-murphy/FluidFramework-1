@@ -8,7 +8,7 @@ import { IContainer, IFluidModule } from "@fluidframework/container-definitions"
 import { IFluidRouter } from "@fluidframework/core-interfaces";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { TestObjectProvider, ChannelFactoryRegistry } from "@fluidframework/test-utils";
-import { LocalServerDriverConfig, TestDriverConfig } from "@fluidframework/test-driver-setup";
+import { LocalServerDriverConfig, TestDriverConfig } from "@fluidframework/test-drivers";
 import {
     generateCompatTest,
     createOldPrimedDataStoreFactory,

@@ -7,7 +7,7 @@ import {
     RouterliciousDriverConfig,
     TestDriverConfigTypes,
  // eslint-disable-next-line import/no-extraneous-dependencies
- } from "@fluidframework/test-driver-setup";
+ } from "@fluidframework/test-drivers";
 import { TestDriverConfig } from "./oldVersion";
 
 const envVar = "E2E_TEST_DRIVER";

@@ -11,7 +11,7 @@ import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { SharedString } from "@fluidframework/sequence";
 import { v4 as uuid } from "uuid";
 import { ReferenceType } from "@fluidframework/merge-tree";
-import { LocalServerDriverConfig } from "@fluidframework/test-driver-setup";
+import { LocalServerDriverConfig } from "@fluidframework/test-drivers";
 import { ITestObjectProvider, ITestContainerConfig, TestDataObject, generateNonCompatTest } from "./compatUtils";
 
 const testContainerConfig: ITestContainerConfig = {

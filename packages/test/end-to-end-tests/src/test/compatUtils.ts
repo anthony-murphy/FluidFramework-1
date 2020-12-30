@@ -31,7 +31,7 @@ import {
     OpProcessingController,
     TestObjectProvider,
 } from "@fluidframework/test-utils";
-import { TestDriverConfig } from "@fluidframework/test-driver-setup";
+import { TestDriverConfig } from "@fluidframework/test-drivers";
 import * as old from "./oldVersion";
 import { getTestDriverConfig } from "./getTestDriver";
 
