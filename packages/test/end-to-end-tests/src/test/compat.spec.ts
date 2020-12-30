@@ -7,7 +7,7 @@ import { strict as assert } from "assert";
 import { IContainer, IFluidModule } from "@fluidframework/container-definitions";
 import { IFluidRouter } from "@fluidframework/core-interfaces";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
-import { TestObjectProvider, ChannelFactoryRegistry } from "@fluidframework/test-utils";
+import { TestObjectProvider } from "@fluidframework/test-utils";
 import { TestDriver } from "@fluidframework/test-drivers";
 import {
     generateCompatTest,
@@ -35,19 +35,19 @@ async function loadContainer(
 ): Promise<IContainer> {
     const testObjectProvider = new TestObjectProvider(
         driver,
-        (reg?: ChannelFactoryRegistry) => fluidModule as IFluidModule);
-    return testObjectProvider.loadTestContainer(docId, containerConfig);
+        () => fluidModule as IFluidModule);
+    return testObjectProvider.loadTestContainer(docId);
 }
 
 async function loadContainerWithOldLoader(
     docId: string,
     fluidModule: IFluidModule | old.IFluidModule,
     driver: TestDriver | old.TestDriver,
-): Promise<old.IContainer> {
+): Promise<IContainer | old.IContainer> {
     const testObjectProvider = new old.TestObjectProvider(
         driver,
-        (reg?: ChannelFactoryRegistry) => fluidModule as old.IFluidModule);
-    return testObjectProvider.loadTestContainer(docId, containerConfig);
+        () => fluidModule as old.IFluidModule);
+    return testObjectProvider.loadTestContainer(docId);
 }
 
 const tests = function(args: ITestObjectProvider) {
@@ -65,7 +65,7 @@ const tests = function(args: ITestObjectProvider) {
             }
 
             documentId = Date.now().toString();
-            container = await args.makeTestContainer(documentId, containerConfig);
+            container = await args.makeTestContainer(documentId);
             container.on("warning", () => containerError = true);
             container.on("closed", (error) => containerError = containerError || error !== undefined);
 

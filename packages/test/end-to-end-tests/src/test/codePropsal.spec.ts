@@ -35,7 +35,7 @@ function isCodeProposalTestPackage(pkg: unknown): pkg is ICodeProposalTestPackag
     && isFluidPackage(maybe);
 }
 
-describe.only("CodeProposal.EndToEnd", () => {
+describe("CodeProposal.EndToEnd", () => {
     const packageV1: ICodeProposalTestPackage = {
         name: "test",
         version: 1,
