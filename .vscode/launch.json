@@ -236,7 +236,8 @@
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "stopOnEntry": false,
             "env": {
-                // "FLUID_TEST_VERBOSE": "1",
+                "FLUID_TEST_VERBOSE": "1",
+                "DEBUG": "fluid:test-utils:*",
                 // "E2E_TEST_DRIVER": "tinylicious", // or "routerlicious",
                 "TS_NODE_PROJECT": "${fileDirname}/tsconfig.json",
             },
@@ -245,7 +246,7 @@
             "skipFiles": [
                 "<node_internals>/**/*.js"
             ],
-            "preLaunchTask": "fluid-build $cwd"
+            "preLaunchTask": "fluid-build $cwd -s tsc"
         }
 
     ]

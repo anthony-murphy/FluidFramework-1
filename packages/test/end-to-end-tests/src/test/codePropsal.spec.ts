@@ -35,7 +35,7 @@ function isCodeProposalTestPackage(pkg: unknown): pkg is ICodeProposalTestPackag
     && isFluidPackage(maybe);
 }
 
-describe("CodeProposal.EndToEnd", () => {
+describe.only("CodeProposal.EndToEnd", () => {
     const packageV1: ICodeProposalTestPackage = {
         name: "test",
         version: 1,
@@ -148,12 +148,10 @@ describe("CodeProposal.EndToEnd", () => {
             });
         }
 
-        const res = await Promise.all([
-            containers[0].proposeCodeDetails(proposal),
-            opProcessingController.process(),
-        ]);
+        const res = await containers[0].proposeCodeDetails(proposal);
+        await opProcessingController.process();
 
-        assert.strictEqual(res[0], true, "Code propsal should be accepted");
+        assert.strictEqual(res, true, "Code propsal should be accepted");
 
         for (let i = 0; i < containers.length; i++) {
             assert.strictEqual(containers[i].closed, false, `containers[${i}] should not be closed`);
@@ -184,12 +182,10 @@ describe("CodeProposal.EndToEnd", () => {
                 p.reject();
             });
 
-        const res = await Promise.all([
-            containers[0].proposeCodeDetails(proposal),
-            opProcessingController.process(),
-        ]);
+        const res = await containers[0].proposeCodeDetails(proposal);
+        await opProcessingController.process();
 
-        assert.strictEqual(res[0], false, "Code propsal should be rejected");
+        assert.strictEqual(res, false, "Code propsal should be rejected");
 
         for (let i = 0; i < containers.length; i++) {
             assert.strictEqual(containers[i].closed, false, `containers[${i}] should not be closed`);
@@ -218,12 +214,10 @@ describe("CodeProposal.EndToEnd", () => {
             });
         });
 
-        const res = await Promise.all([
-            containers[0].proposeCodeDetails(proposal),
-            opProcessingController.process(),
-        ]);
+        const res = await containers[0].proposeCodeDetails(proposal);
+        await opProcessingController.process();
 
-        assert.strictEqual(res[0], true, "Code propsal should be accepted");
+        assert.strictEqual(res, true, "Code propsal should be accepted");
         assert.strictEqual(containers[0].closed, false, "containers[0] should not be closed");
         assert.deepStrictEqual(
             containers[0].codeDetails,
@@ -244,12 +238,10 @@ describe("CodeProposal.EndToEnd", () => {
             });
         }
         const proposal: IFluidCodeDetails = { package: packageV1dot5 };
-        const res = await Promise.all([
-            containers[0].proposeCodeDetails(proposal),
-            opProcessingController.process(),
-        ]);
+        const res = await containers[0].proposeCodeDetails(proposal);
+        await opProcessingController.process();
 
-        assert.strictEqual(res[0], true, "Code propsal should be accepted");
+        assert.strictEqual(res, true, "Code propsal should be accepted");
 
         for (let i = 0; i < containers.length; i++) {
             assert.strictEqual(containers[i].closed, false, `containers[${i}] should not be closed`);

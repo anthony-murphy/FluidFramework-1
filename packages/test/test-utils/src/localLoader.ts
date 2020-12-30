@@ -11,6 +11,7 @@ import {
 import { Loader } from "@fluidframework/container-loader";
 import { IFluidCodeDetails, IRequest } from "@fluidframework/core-interfaces";
 import { ITestDriver } from "@fluidframework/test-drivers";
+import { DebugLogger } from "../../../loader/driver-utils/node_modules/@fluidframework/telemetry-utils/dist";
 import { fluidEntryPoint, LocalCodeLoader } from "./localCodeLoader";
 
 /**
@@ -28,6 +29,7 @@ export function createLocalLoader(
         urlResolver: driver.createUrlResolver(),
         documentServiceFactory: driver.createDocumentServiceFactory(),
         codeLoader,
+        logger: DebugLogger.create("test"),
     });
 }
 

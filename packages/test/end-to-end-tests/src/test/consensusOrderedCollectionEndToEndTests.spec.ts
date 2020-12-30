@@ -20,6 +20,7 @@ import {
     ITestFluidObject,
     ChannelFactoryRegistry,
 } from "@fluidframework/test-utils";
+import * as old from "./oldVersion";
 import {
     generateTest,
     ITestObjectProvider,
@@ -45,8 +46,8 @@ function generate(
     name: string, ctor: ISharedObjectConstructor<IConsensusOrderedCollection>,
     input: any[], output: any[]) {
     const tests = (args: ITestObjectProvider) => {
-        let container1: IContainer;
-        let container2: IContainer;
+        let container1: IContainer | old.IContainer;
+        let container2: IContainer | old.IContainer;
         let dataStore1: ITestFluidObject;
         let dataStore2: ITestFluidObject;
         let sharedMap1: ISharedMap;
