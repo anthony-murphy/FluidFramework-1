@@ -10,9 +10,7 @@ import {
 } from "@fluidframework/container-definitions";
 import { Loader } from "@fluidframework/container-loader";
 import { IFluidCodeDetails, IRequest } from "@fluidframework/core-interfaces";
-import { IUrlResolver } from "@fluidframework/driver-definitions";
-import { LocalDocumentServiceFactory } from "@fluidframework/local-driver";
-import { ILocalDeltaConnectionServer } from "@fluidframework/server-local-server";
+import { ITestDriver } from "@fluidframework/test-drivers";
 import { fluidEntryPoint, LocalCodeLoader } from "./localCodeLoader";
 
 /**
@@ -22,15 +20,13 @@ import { fluidEntryPoint, LocalCodeLoader } from "./localCodeLoader";
  */
 export function createLocalLoader(
     packageEntries: Iterable<[IFluidCodeDetails, fluidEntryPoint]>,
-    deltaConnectionServer: ILocalDeltaConnectionServer,
-    urlResolver: IUrlResolver,
+    driver: ITestDriver,
 ): ILoader {
-    const documentServiceFactory = new LocalDocumentServiceFactory(deltaConnectionServer);
     const codeLoader: ICodeLoader = new LocalCodeLoader(packageEntries);
 
     return new Loader({
-        urlResolver,
-        documentServiceFactory,
+        urlResolver: driver.createUrlResolver(),
+        documentServiceFactory: driver.createDocumentServiceFactory(),
         codeLoader,
     });
 }

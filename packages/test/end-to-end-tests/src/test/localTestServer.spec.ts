@@ -6,11 +6,9 @@
 import { strict as assert } from "assert";
 import { IContainer, ILoader } from "@fluidframework/container-definitions";
 import { IFluidCodeDetails } from "@fluidframework/core-interfaces";
-import { LocalResolver } from "@fluidframework/local-driver";
 import { MessageType } from "@fluidframework/protocol-definitions";
 import { SharedString } from "@fluidframework/sequence";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
-import { LocalDeltaConnectionServer, ILocalDeltaConnectionServer } from "@fluidframework/server-local-server";
 import {
     createAndAttachContainer,
     createLocalLoader,
@@ -18,10 +16,10 @@ import {
     ITestFluidObject,
     TestFluidObjectFactory,
 } from "@fluidframework/test-utils";
+import { LocalServerTestDriver } from "@fluidframework/test-drivers";
+import { getTestDriver } from "./getTestDriver";
 
 describe("LocalTestServer", () => {
-    const documentId = "localServerTest";
-    const documentLoadUrl = `fluid-test://localhost/${documentId}`;
     const stringId = "stringKey";
     const codeDetails: IFluidCodeDetails = {
         package: "localServerTestPackage",
@@ -29,9 +27,9 @@ describe("LocalTestServer", () => {
     };
     const factory = new TestFluidObjectFactory([[stringId, SharedString.getFactory()]]);
 
-    let deltaConnectionServer: ILocalDeltaConnectionServer;
-    let urlResolver: LocalResolver;
+    let localDriver: LocalServerTestDriver;
     let opProcessingController: OpProcessingController;
+    let documentId: string;
     let container1: IContainer;
     let container2: IContainer;
     let dataObject1: ITestFluidObject;
@@ -40,19 +38,26 @@ describe("LocalTestServer", () => {
     let sharedString2: SharedString;
 
     async function createContainer(): Promise<IContainer> {
-        const loader: ILoader = createLocalLoader([[codeDetails, factory]], deltaConnectionServer, urlResolver);
-        return createAndAttachContainer(codeDetails, loader, urlResolver.createCreateNewRequest(documentId));
+        const loader: ILoader = createLocalLoader([[codeDetails, factory]], localDriver);
+        return createAndAttachContainer(codeDetails, loader, localDriver.createCreateNewRequest(documentId));
     }
 
     async function loadContainer(): Promise<IContainer> {
-        const loader: ILoader = createLocalLoader([[codeDetails, factory]], deltaConnectionServer, urlResolver);
-        return loader.resolve({ url: documentLoadUrl });
+        const loader: ILoader = createLocalLoader([[codeDetails, factory]], localDriver);
+        return loader.resolve({ url: localDriver.createContainerUrl(documentId) });
     }
 
-    beforeEach(async () => {
-        deltaConnectionServer = LocalDeltaConnectionServer.create();
-        urlResolver = new LocalResolver();
+    before(function() {
+        const driver = getTestDriver();
+        if (driver.type === "local") {
+            localDriver = driver;
+        } else {
+            this.skip();
+        }
+    });
 
+    beforeEach(async () => {
+        documentId = Date.now().toString();
         // Create a Container for the first client.
         container1 = await createContainer();
         dataObject1 = await requestFluidObject<ITestFluidObject>(container1, "default");
@@ -63,7 +68,7 @@ describe("LocalTestServer", () => {
         dataObject2 = await requestFluidObject<ITestFluidObject>(container2, "default");
         sharedString2 = await dataObject2.getSharedObject<SharedString>(stringId);
 
-        opProcessingController = new OpProcessingController(deltaConnectionServer);
+        opProcessingController = new OpProcessingController(localDriver.server);
         opProcessingController.addDeltaManagers(container1.deltaManager, container2.deltaManager);
     });
 
@@ -129,9 +134,5 @@ describe("LocalTestServer", () => {
             assert.equal(user1ReceivedMsgCount, 1, "User1 received message count is incorrect");
             assert.equal(user2ReceivedMsgCount, 2, "User2 received message count is incorrect");
         });
-    });
-
-    afterEach(async () => {
-        await deltaConnectionServer.webSocketServer.close();
     });
 });

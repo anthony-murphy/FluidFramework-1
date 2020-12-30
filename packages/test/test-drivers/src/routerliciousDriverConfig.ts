@@ -9,7 +9,6 @@ import { RouterliciousDocumentServiceFactory, DefaultErrorTracking } from "@flui
 import { InsecureTokenProvider, InsecureUrlResolver } from "@fluidframework/test-runtime-utils";
 import { v4 as uuid } from "uuid";
 import { ITestDriver } from "./interfaces";
-import { TinyliciousTestDriver } from "./tinyliciousDriverConfig";
 
 export class RouterliciousTestDriver implements ITestDriver {
     public static createFromEnv() {

@@ -24,6 +24,7 @@ import {
     OpProcessingController,
 } from "@fluidframework/test-utils";
 import * as old from "./oldVersion";
+import { getTestDriver } from "./getTestDriver";
 
 const V1 = "0.1.0";
 const V2 = "0.2.0";
@@ -76,8 +77,8 @@ class OldTestDataStoreV2 extends OldTestDataStore {
 }
 
 describe("context reload", function() {
-    const documentId = "contextReloadTest";
-    const documentLoadUrl = `fluid-test://localhost/${documentId}`;
+    let documentId: string;
+    const driver = getTestDriver();
     const codeDetails = (version: string): old.IFluidCodeDetails => {
         return {
             package: { name: TestDataStore.type, version } as unknown as old.IFluidPackage,
@@ -97,19 +98,25 @@ describe("context reload", function() {
                     typeof code.package === "object" && code.package.version === version ? resolve() : reject()))));
     };
 
-    async function createContainer(packageEntries, server, urlResolver: LocalResolver): Promise<IContainer> {
-        const loader: ILoader = createLocalLoader(packageEntries, server, urlResolver);
-        return createAndAttachContainer(defaultCodeDetails, loader, urlResolver.createCreateNewRequest(documentId));
+    async function createContainer(packageEntries): Promise<IContainer> {
+        const loader: ILoader = createLocalLoader(packageEntries, driver);
+        return createAndAttachContainer(defaultCodeDetails, loader, driver.createCreateNewRequest(documentId));
     }
 
-    async function loadContainer(packageEntries, server, urlResolver): Promise<IContainer> {
-        const loader: ILoader = createLocalLoader(packageEntries, server, urlResolver);
-        return loader.resolve({ url: documentLoadUrl });
+    async function loadContainer(packageEntries): Promise<IContainer> {
+        const loader: ILoader = createLocalLoader(packageEntries, driver);
+        return loader.resolve({ url: driver.createContainerUrl(documentId) });
     }
 
-    async function createContainerWithOldLoader(packageEntries, server, urlResolver): Promise<old.IContainer> {
-        const loader = old.createLocalLoader(packageEntries, server, urlResolver);
-        return old.createAndAttachContainer(documentId, defaultCodeDetails, loader, urlResolver);
+    async function createContainerWithOldLoader(packageEntries): Promise<old.IContainer> {
+        const loader = new old.Loader({
+            codeLoader: new old.LocalCodeLoader(packageEntries),
+            documentServiceFactory: driver.createDocumentServiceFactory() as any as old.IDocumentServiceFactory,
+            urlResolver: driver.createUrlResolver(),
+        });
+        const container = await loader.createDetachedContainer(defaultCodeDetails);
+        await container.attach(driver.createCreateNewRequest(documentId));
+        return container;
     }
 
     const createRuntimeFactory = (dataStore): IRuntimeFactory => {
@@ -132,6 +139,7 @@ describe("context reload", function() {
 
     const tests = function() {
         beforeEach(async function() {
+            documentId = Date.now().toString();
             // make sure container errors fail the test
             this.containerError = false;
             this.container.on("warning", () => this.containerError = true);
@@ -210,9 +218,7 @@ describe("context reload", function() {
                 [
                     [codeDetails(V1), createRuntimeFactory(TestDataStoreV1)],
                     [codeDetails(V2), createRuntimeFactory(TestDataStoreV2)],
-                ],
-                this.deltaConnectionServer,
-                this.urlResolver);
+                ]);
             this.dataStoreV1 = await requestFluidObject<TestDataStore>(this.container, "default");
             assert.strictEqual(this.dataStoreV1.version, TestDataStoreV1.version);
 
@@ -229,9 +235,7 @@ describe("context reload", function() {
 
     describe("two containers", () => {
         it("loads version 2", async () => {
-            const deltaConnectionServer = LocalDeltaConnectionServer.create();
-            const urlResolver = new LocalResolver();
-            const opProcessingController = new OpProcessingController(deltaConnectionServer);
+            const opProcessingController = new OpProcessingController();
 
             const packageEntries = [
                 [codeDetails(V1), createRuntimeFactory(TestDataStoreV1)],
@@ -239,8 +243,8 @@ describe("context reload", function() {
             ];
 
             const containers: IContainer[] = [];
-            containers.push(await createContainer(packageEntries, deltaConnectionServer, urlResolver));
-            containers.push(await loadContainer(packageEntries, deltaConnectionServer, urlResolver));
+            containers.push(await createContainer(packageEntries));
+            containers.push(await loadContainer(packageEntries));
 
             let success = true;
             containers.map((container) => container.on("warning", () => success = false));
@@ -287,7 +291,7 @@ describe("context reload", function() {
                 this.container = await createContainerWithOldLoader([
                     [codeDetails(V1), createOldRuntimeFactory(OldTestDataStoreV1)],
                     [codeDetails(V2), createRuntimeFactory(TestDataStoreV2)],
-                ], this.deltaConnectionServer, this.urlResolver);
+                ]);
                 this.dataStoreV1 = await requestFluidObject<OldTestDataStore>(this.container, "default");
                 assert.strictEqual(this.dataStoreV1.version, TestDataStoreV1.version);
 
@@ -308,9 +312,7 @@ describe("context reload", function() {
                 this.container = await createContainer([
                     [codeDetails(V1), createRuntimeFactory(TestDataStoreV1)],
                     [codeDetails(V2), createOldRuntimeFactory(OldTestDataStoreV2)],
-                ],
-                this.deltaConnectionServer,
-                this.urlResolver);
+                ]);
                 this.dataStoreV1 = await requestFluidObject<TestDataStore>(this.container, "default");
                 assert.strictEqual(this.dataStoreV1.version, TestDataStoreV1.version);
 
