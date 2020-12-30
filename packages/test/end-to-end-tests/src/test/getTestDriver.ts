@@ -26,10 +26,10 @@ const testDriver = new Lazy<TestDriverConfig>(()=>{
             return new TinyliciousDriverConfig();
 
         case "routerlicious":
-            return new RouterliciousDriverConfig();
+            return RouterliciousDriverConfig.createFromEnv();
 
         case "odsp":
-            return new OdspDriverConfig();
+            return  OdspDriverConfig.createFromEnv();
 
         default:
             throw new Error(`No driver config registered for type "${type}"`);

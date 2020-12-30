@@ -18,6 +18,7 @@ import {
     odspTokensCache,
     getMicrosoftConfiguration,
 } from "@fluidframework/tool-utils";
+import { IClientConfig } from "@fluidframework/odsp-doclib-utils";
 import { ITestDriverConfig } from "./interfaces";
 
 const passwordTokenConfig = (username, password): OdspTokenConfig => ({
@@ -26,7 +27,7 @@ const passwordTokenConfig = (username, password): OdspTokenConfig => ({
     password,
 });
 
-interface IOdspConfig {
+export interface IOdspConfig extends IClientConfig {
     server: string;
     driveId: string;
     username: string;
@@ -34,16 +35,26 @@ interface IOdspConfig {
 }
 
 export class OdspDriverConfig implements ITestDriverConfig {
-    public readonly type = "odsp";
-    private readonly odspTokenManager = new OdspTokenManager(odspTokensCache);
-    private readonly config: IOdspConfig;
-    private readonly password: string;
-
-    constructor() {
-        this.config = JSON.parse(fs.readFileSync("./odspConfig.json", "utf-8"));
+    public static createFromEnv() {
+        const config = JSON.parse(fs.readFileSync("./odspConfig.json", "utf-8"));
         const password = process.env.fluid__odsp__password;
         assert(password, "Missing password");
-        this.password = password;
+        return new OdspDriverConfig(
+            {
+                ...config,
+                ... getMicrosoftConfiguration(),
+            },
+            password,
+        );
+    }
+
+    public readonly type = "odsp";
+    private readonly odspTokenManager = new OdspTokenManager(odspTokensCache);
+
+    constructor(
+        private readonly config: IOdspConfig,
+        private readonly password: string) {
+
     }
     createContainerUrl(testId: string): string {
         throw new Error("Method not implemented.");
@@ -54,7 +65,7 @@ export class OdspDriverConfig implements ITestDriverConfig {
             async (_siteUrl: string, refresh: boolean, _claims?: string) => {
                 const tokens = await this.odspTokenManager.getOdspTokens(
                     this.config.server,
-                    getMicrosoftConfiguration(),
+                    this.config,
                     passwordTokenConfig(this.config.username, this.password),
                     refresh,
                 );
@@ -63,7 +74,7 @@ export class OdspDriverConfig implements ITestDriverConfig {
             async (refresh: boolean, _claims?: string) => {
                 const tokens = await this.odspTokenManager.getPushTokens(
                     this.config.server,
-                    getMicrosoftConfiguration(),
+                    this.config,
                     passwordTokenConfig(this.config.username, this.password),
                     refresh,
                 );
@@ -83,6 +94,5 @@ export class OdspDriverConfig implements ITestDriverConfig {
         );
     }
 
-    public async reset() {
-    }
+    public async reset() { }
 }

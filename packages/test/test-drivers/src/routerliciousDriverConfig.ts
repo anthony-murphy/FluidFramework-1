@@ -11,14 +11,7 @@ import { v4 as uuid } from "uuid";
 import { ITestDriverConfig } from "./interfaces";
 
 export class RouterliciousDriverConfig implements ITestDriverConfig {
-    public readonly type = "routerlicious";
-
-    private readonly bearerSecret: string;
-    private readonly tenantId: string;
-    private readonly tenantSecret: string;
-    private readonly fluidHost: string;
-
-    constructor() {
+    public static createFromEnv() {
         const bearerSecret = process.env.fluid__webpack__bearerSecret;
         const tenantId = process.env.fluid__webpack__tenantId ?? "fluid";
         const tenantSecret = process.env.fluid__webpack__tenantSecret;
@@ -28,11 +21,23 @@ export class RouterliciousDriverConfig implements ITestDriverConfig {
         assert(tenantSecret, "Missing tenant secret");
         assert(fluidHost, "Missing Fluid host");
 
-        this.bearerSecret = bearerSecret;
-        this.tenantId = tenantId;
-        this.tenantSecret = tenantSecret;
-        this.fluidHost = fluidHost;
+        return new RouterliciousDriverConfig(
+            bearerSecret,
+            tenantId,
+            tenantSecret,
+            fluidHost,
+        );
     }
+
+    public readonly type = "routerlicious";
+
+    constructor(
+        private readonly bearerSecret: string,
+        private readonly tenantId: string,
+        private readonly tenantSecret: string,
+        private readonly fluidHost: string) {
+    }
+
     createContainerUrl(testId: string): string {
         return `${this.fluidHost}/${encodeURIComponent(this.tenantId)}/${encodeURIComponent(testId)}`;
     }

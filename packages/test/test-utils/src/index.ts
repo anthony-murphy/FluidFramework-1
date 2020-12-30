@@ -4,7 +4,7 @@
  */
 
 export * from "./interfaces";
-export * from "./baseTestObjectProvider";
+export * from "./testObjectProvider";
 export * from "./localLoader";
 export * from "./localCodeLoader";
 export * from "./opProcessingController";
