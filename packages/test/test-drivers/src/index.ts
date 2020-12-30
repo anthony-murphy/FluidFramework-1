@@ -3,16 +3,16 @@
  * Licensed under the MIT License.
  */
 
-import { LocalServerDriverConfig } from "./localServerDriverConfig";
-import { OdspDriverConfig } from "./odspDriverConfig";
-import { RouterliciousDriverConfig } from "./routerliciousDriverConfig";
-import { TinyliciousDriverConfig } from "./tinyliciousDriverConfig";
+import { LocalServerTestDriver } from "./localServerDriverConfig";
+import { OdspTestDriver } from "./odspDriverConfig";
+import { RouterliciousTestDriver } from "./routerliciousDriverConfig";
+import { TinyliciousTestDriver } from "./tinyliciousDriverConfig";
 
-export type TestDriverConfig =
-    LocalServerDriverConfig
-    | TinyliciousDriverConfig
-    | RouterliciousDriverConfig
-    | OdspDriverConfig;
+export type TestDriver =
+    LocalServerTestDriver
+    | TinyliciousTestDriver
+    | RouterliciousTestDriver
+    | OdspTestDriver;
 
 export * from "./interfaces";
 export * from "./localServerDriverConfig";

@@ -6,7 +6,7 @@
 import { Loader, waitContainerToCatchUp } from "@fluidframework/container-loader";
 import { IFluidCodeDetails } from "@fluidframework/core-interfaces";
 import { IUrlResolver, IDocumentServiceFactory } from "@fluidframework/driver-definitions";
-import { TestDriverConfig } from "@fluidframework/test-drivers";
+import { TestDriver } from "@fluidframework/test-drivers";
 import { fluidEntryPoint, LocalCodeLoader } from "./localCodeLoader";
 import { createAndAttachContainer } from "./localLoader";
 import { OpProcessingController } from "./opProcessingController";
@@ -30,7 +30,7 @@ export class TestObjectProvider {
      * and factory for TestFluidObject
      */
     constructor(
-        public readonly driverConfig: TestDriverConfig,
+        public readonly driver: TestDriver,
         private readonly createFluidEntryPoint: (testContainerConfig?: any) => fluidEntryPoint,
     ) {
     }
@@ -41,14 +41,14 @@ export class TestObjectProvider {
 
     get documentServiceFactory() {
         if (!this._documentServiceFactory) {
-            this._documentServiceFactory = this.driverConfig.createDocumentServiceFactory();
+            this._documentServiceFactory = this.driver.createDocumentServiceFactory();
         }
         return this._documentServiceFactory;
     }
 
     get urlResolver() {
         if (!this._defaultUrlResolver) {
-            this._defaultUrlResolver = this.driverConfig.createUrlResolver();
+            this._defaultUrlResolver = this.driver.createUrlResolver();
         }
         return this._defaultUrlResolver;
     }
@@ -56,8 +56,8 @@ export class TestObjectProvider {
     get opProcessingController() {
         if (!this._opProcessingController) {
             this._opProcessingController =
-                this.driverConfig.type === "local"
-                    ? new OpProcessingController(this.driverConfig.server)
+                this.driver.type === "local"
+                    ? new OpProcessingController(this.driver.server)
                     : new OpProcessingController(undefined, 25);
         }
         return this._opProcessingController;
@@ -92,7 +92,7 @@ export class TestObjectProvider {
             await createAndAttachContainer(
                 defaultCodeDetails,
                 loader,
-                this.driverConfig.createCreateNewRequest(documentId));
+                this.driver.createCreateNewRequest(documentId));
         this.opProcessingController.addDeltaManagers(container.deltaManager);
         return container;
     }
@@ -104,7 +104,7 @@ export class TestObjectProvider {
      */
     public async loadTestContainer(documentId: string, testContainerConfig?: any) {
         const loader = this.makeTestLoader(testContainerConfig);
-        const container = await loader.resolve({ url: this.driverConfig.createContainerUrl(documentId) });
+        const container = await loader.resolve({ url: this.driver.createContainerUrl(documentId) });
         await waitContainerToCatchUp(container);
         this.opProcessingController.addDeltaManagers(container.deltaManager);
         return container;
@@ -114,6 +114,5 @@ export class TestObjectProvider {
         this._documentServiceFactory = undefined;
         this._defaultUrlResolver = undefined;
         this._opProcessingController = undefined;
-        await this.driverConfig.reset();
     }
 }

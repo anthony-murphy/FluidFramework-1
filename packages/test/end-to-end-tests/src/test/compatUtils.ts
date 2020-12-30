@@ -31,9 +31,9 @@ import {
     OpProcessingController,
     TestObjectProvider,
 } from "@fluidframework/test-utils";
-import { TestDriverConfig } from "@fluidframework/test-drivers";
+import { TestDriver } from "@fluidframework/test-drivers";
 import * as old from "./oldVersion";
-import { getTestDriverConfig } from "./getTestDriver";
+import { getTestDriver } from "./getTestDriver";
 
 /* eslint-enable import/no-extraneous-dependencies */
 
@@ -52,7 +52,7 @@ export interface ITestObjectProvider {
     defaultCodeDetails: IFluidCodeDetails | old.IFluidCodeDetails,
     opProcessingController: OpProcessingController | old.OpProcessingController,
 
-    readonly driverConfig: TestDriverConfig | old.TestDriverConfig
+    readonly driver: TestDriver | old.TestDriver
 }
 
 export interface ITestOptions {
@@ -190,7 +190,7 @@ function getOldDataStoreFactory(containerOptions?: ITestContainerConfig) {
 export const generateNonCompatTest = (
     tests: (compatArgs: ITestObjectProvider) => void,
 ) => {
-    const driver = getTestDriverConfig();
+    const driver = getTestDriver();
     describe(`${driver.type} non-compat`, () => {
         // Run with all current versions
         const runtimeFactory = (containerOptions?: ITestContainerConfig) =>
@@ -216,7 +216,7 @@ export const generateNonCompatTest = (
 export const generateCompatTest = (
     tests: (compatArgs: ITestObjectProvider) => void,
 ) => {
-    const driver = getTestDriverConfig();
+    const driver = getTestDriver();
     describe(driver.type, ()=>{
         describe(`compat - old loader, new runtime`, function() {
             const runtimeFactory = (containerOptions?: any) =>
@@ -303,7 +303,7 @@ export const generateCompatTest = (
 export const generateTest = (
     tests: (compatArgs: ITestObjectProvider) => void,
 ) => {
-    const testDriver = getTestDriverConfig();
+    const testDriver = getTestDriver();
     describe(testDriver.type, () => {
         generateNonCompatTest(tests);
         generateCompatTest(tests);

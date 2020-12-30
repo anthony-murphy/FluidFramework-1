@@ -80,7 +80,7 @@ const tests = (args: ITestObjectProvider) => {
 
     beforeEach(async () => {
         documentId = Date.now().toString();
-        request = args.driverConfig.createCreateNewRequest(documentId);
+        request = args.driver.createCreateNewRequest(documentId);
         loader = args.makeTestLoader(testContainerConfig) as Loader;
     });
 
@@ -624,7 +624,7 @@ describe("Detached Container", () => {
 
         beforeEach(async () => {
             documentId = Date.now().toString();
-            request = args.driverConfig.createCreateNewRequest(documentId);
+            request = args.driver.createCreateNewRequest(documentId);
             loader = args.makeTestLoader(testContainerConfig) as Loader;
         });
 

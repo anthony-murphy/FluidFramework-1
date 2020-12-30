@@ -8,7 +8,7 @@ import { IContainer, IFluidModule } from "@fluidframework/container-definitions"
 import { IFluidRouter } from "@fluidframework/core-interfaces";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { TestObjectProvider, ChannelFactoryRegistry } from "@fluidframework/test-utils";
-import { TestDriverConfig } from "@fluidframework/test-drivers";
+import { TestDriver } from "@fluidframework/test-drivers";
 import {
     generateCompatTest,
     createOldPrimedDataStoreFactory,
@@ -22,12 +22,16 @@ import {
 } from "./compatUtils";
 import * as old from "./oldVersion";
 
-const containerConfig: ITestContainerConfig = { runtimeOptions:{ summaryOverrides:{ maxOps: 1 } } };
+const containerConfig: ITestContainerConfig = {
+    runtimeOptions:{
+        summaryConfigOverrides: { maxOps: 1 },
+    },
+};
 
 async function loadContainer(
     docId: string,
     fluidModule: IFluidModule | old.IFluidModule,
-    driver: TestDriverConfig | old.TestDriverConfig,
+    driver: TestDriver | old.TestDriver,
 ): Promise<IContainer> {
     const testObjectProvider = new TestObjectProvider(
         driver,
@@ -38,7 +42,7 @@ async function loadContainer(
 async function loadContainerWithOldLoader(
     docId: string,
     fluidModule: IFluidModule | old.IFluidModule,
-    driver: TestDriverConfig | old.TestDriverConfig,
+    driver: TestDriver | old.TestDriver,
 ): Promise<old.IContainer> {
     const testObjectProvider = new old.TestObjectProvider(
         driver,
@@ -54,6 +58,12 @@ const tests = function(args: ITestObjectProvider) {
         let documentId: string;
 
         beforeEach(async function() {
+            // for backcompat only, as the old runtime doesn't support summaryConfigOverrides.
+            // this should be removed in 0.33
+            if (args.driver.type === "local") {
+                await args.driver.reset({ serviceConfiguration:{ summary:{ maxOps: 1 } } });
+            }
+
             documentId = Date.now().toString();
             container = await args.makeTestContainer(documentId, containerConfig);
             container.on("warning", () => containerError = true);
@@ -99,28 +109,58 @@ const tests = function(args: ITestObjectProvider) {
             const containersP: Promise<IContainer | old.IContainer>[] = [
                 loadContainer( // new everything
                     documentId,
-                    { fluidExport: createRuntimeFactory(TestDataObject.type, createPrimedDataStoreFactory()) },
-                    args.driverConfig),
+                    {
+                        fluidExport: createRuntimeFactory(
+                            TestDataObject.type,
+                            createPrimedDataStoreFactory(),
+                            containerConfig.runtimeOptions),
+                    },
+                    args.driver),
                 loadContainerWithOldLoader( // old loader, new container/data store runtimes
                     documentId,
-                    { fluidExport: createRuntimeFactory(TestDataObject.type, createPrimedDataStoreFactory()) },
-                    args.driverConfig),
+                    {
+                        fluidExport: createRuntimeFactory(
+                            TestDataObject.type,
+                            createPrimedDataStoreFactory(),
+                            containerConfig.runtimeOptions),
+                    },
+                    args.driver),
                 loadContainerWithOldLoader( // old everything
                     documentId,
-                    { fluidExport: createOldRuntimeFactory(TestDataObject.type, createOldPrimedDataStoreFactory()) },
-                    args.driverConfig),
+                    {
+                        fluidExport: createOldRuntimeFactory(
+                            TestDataObject.type,
+                            createOldPrimedDataStoreFactory(),
+                            containerConfig.runtimeOptions),
+                    },
+                    args.driver),
                 loadContainer( // new loader, old container/data store runtimes
                     documentId,
-                    { fluidExport: createOldRuntimeFactory(TestDataObject.type, createOldPrimedDataStoreFactory()) },
-                    args.driverConfig),
+                    {
+                        fluidExport: createOldRuntimeFactory(
+                            TestDataObject.type,
+                            createOldPrimedDataStoreFactory(),
+                            containerConfig.runtimeOptions),
+                    },
+                    args.driver),
                 loadContainer( // new loader/container runtime, old data store runtime
                     documentId,
-                    { fluidExport: createRuntimeFactory(TestDataObject.type, createOldPrimedDataStoreFactory()) },
-                    args.driverConfig),
+                    {
+                        fluidExport: createRuntimeFactory(
+                            TestDataObject.type,
+                            createOldPrimedDataStoreFactory(),
+                            containerConfig.runtimeOptions),
+                    },
+                    args.driver),
                 loadContainerWithOldLoader( // old loader/container runtime, new data store runtime
                     documentId,
-                    { fluidExport: createOldRuntimeFactory(TestDataObject.type, createPrimedDataStoreFactory()) },
-                    args.driverConfig),
+                    {
+                        fluidExport: createOldRuntimeFactory(
+                            TestDataObject.type,
+                            createPrimedDataStoreFactory(),
+                            containerConfig.runtimeOptions),
+                    },
+                    args.driver),
             ];
 
             const dataObjects = await Promise.all(containersP.map(async (containerP) => containerP.then(

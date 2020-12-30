@@ -8,9 +8,10 @@ import { IRequest } from "@fluidframework/core-interfaces";
 import { RouterliciousDocumentServiceFactory, DefaultErrorTracking } from "@fluidframework/routerlicious-driver";
 import { InsecureTokenProvider, InsecureUrlResolver } from "@fluidframework/test-runtime-utils";
 import { v4 as uuid } from "uuid";
-import { ITestDriverConfig } from "./interfaces";
+import { ITestDriver } from "./interfaces";
+import { TinyliciousTestDriver } from "./tinyliciousDriverConfig";
 
-export class RouterliciousDriverConfig implements ITestDriverConfig {
+export class RouterliciousTestDriver implements ITestDriver {
     public static createFromEnv() {
         const bearerSecret = process.env.fluid__webpack__bearerSecret;
         const tenantId = process.env.fluid__webpack__tenantId ?? "fluid";
@@ -21,25 +22,34 @@ export class RouterliciousDriverConfig implements ITestDriverConfig {
         assert(tenantSecret, "Missing tenant secret");
         assert(fluidHost, "Missing Fluid host");
 
-        return new RouterliciousDriverConfig(
+        return new RouterliciousTestDriver(
             bearerSecret,
             tenantId,
             tenantSecret,
             fluidHost,
+            process.env.BUILD_BUILD_ID,
         );
     }
 
     public readonly type = "routerlicious";
-
+    private readonly testIdPrefix: string;
     constructor(
         private readonly bearerSecret: string,
         private readonly tenantId: string,
         private readonly tenantSecret: string,
-        private readonly fluidHost: string) {
+        private readonly fluidHost: string,
+        testIdPrefix: string | undefined,
+    ) {
+        this.testIdPrefix = `${testIdPrefix ?? ""}-`;
+    }
+
+    public createDocumentId(testId: string) {
+        return this.testIdPrefix + testId;
     }
 
     createContainerUrl(testId: string): string {
-        return `${this.fluidHost}/${encodeURIComponent(this.tenantId)}/${encodeURIComponent(testId)}`;
+        // eslint-disable-next-line max-len
+        return `${this.fluidHost}/${encodeURIComponent(this.tenantId)}/${encodeURIComponent(this.createDocumentId(testId))}`;
     }
 
     createDocumentServiceFactory(): RouterliciousDocumentServiceFactory {
@@ -69,8 +79,6 @@ export class RouterliciousDriverConfig implements ITestDriverConfig {
                 true);
     }
     createCreateNewRequest(testId: string): IRequest {
-        return this.createUrlResolver().createCreateNewRequest(testId);
+        return this.createUrlResolver().createCreateNewRequest(this.createDocumentId(testId));
     }
-
-    public async reset() {}
 }

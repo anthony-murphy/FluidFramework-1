@@ -213,7 +213,8 @@ export interface IContainerRuntimeOptions {
     // Delay before first attempt to spawn summarizing container
     initialSummarizerDelayMs?: number;
 
-    summaryOverrides?: Partial<ISummaryConfiguration>;
+    // Override summary configurations
+    summaryConfigOverrides?: Partial<ISummaryConfiguration>;
 
     // Flag that enables running garbage collection to delete unused Fluid objects.
     runGC?: boolean;
@@ -627,7 +628,7 @@ export class ContainerRuntime extends TypedEventEmitter<IContainerRuntimeEvents>
         return {
             ... DefaultSummaryConfiguration,
             ... this.context?.serviceConfiguration?.summary,
-            ... this.runtimeOptions.summaryOverrides,
+            ... this.runtimeOptions.summaryConfigOverrides,
          };
     }
 

@@ -18,9 +18,9 @@ import { SharedMap } from "@fluidframework/map";
 import { Deferred } from "@fluidframework/common-utils";
 import { IFluidDataStoreContext } from "@fluidframework/runtime-definitions";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
-import { getTestDriverConfig } from "./getTestDriver";
+import { getTestDriver } from "./getTestDriver";
 
-const driverConfig = getTestDriverConfig();
+const driverConfig = getTestDriver();
 
 describe(`${driverConfig.type} End-To-End tests`, () => {
     const codeDetails: IFluidCodeDetails = {

@@ -18,9 +18,9 @@ import { LocalCodeLoader, TestObjectProvider } from "@fluidframework/test-utils"
 import { ensureFluidResolvedUrl } from "@fluidframework/driver-utils";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { createPrimedDataStoreFactory, createRuntimeFactory, TestDataObject } from "./compatUtils";
-import { getTestDriverConfig } from "./getTestDriver";
+import { getTestDriver } from "./getTestDriver";
 
-const testDriver = getTestDriverConfig();
+const testDriver = getTestDriver();
 const testRequest: IRequest = { url: testDriver.createContainerUrl("containerTest") };
 
 describe(`${testDriver.type} Container`, () => {
@@ -197,9 +197,5 @@ describe(`${testDriver.type} Container`, () => {
         assert.strictEqual(container.readonly, true);
 
         assert.strictEqual(runCount, 1);
-    });
-
-    afterEach(async () => {
-        await testDriver.reset();
     });
 });

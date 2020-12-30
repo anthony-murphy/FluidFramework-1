@@ -19,7 +19,7 @@ import {
     getMicrosoftConfiguration,
 } from "@fluidframework/tool-utils";
 import { IClientConfig } from "@fluidframework/odsp-doclib-utils";
-import { ITestDriverConfig } from "./interfaces";
+import { ITestDriver } from "./interfaces";
 
 const passwordTokenConfig = (username, password): OdspTokenConfig => ({
     type: "password",
@@ -34,12 +34,17 @@ export interface IOdspConfig extends IClientConfig {
     directory: string;
 }
 
-export class OdspDriverConfig implements ITestDriverConfig {
+export class OdspTestDriver implements ITestDriver {
     public static createFromEnv() {
-        const config = JSON.parse(fs.readFileSync("./odspConfig.json", "utf-8"));
+        const config = JSON.parse(fs.readFileSync("./odspConfig.json", "utf-8")) as IOdspConfig;
         const password = process.env.fluid__odsp__password;
         assert(password, "Missing password");
-        return new OdspDriverConfig(
+
+        if (process.env.BUILD_BUILD_ID !== undefined) {
+            config.directory = `${process.env.BUILD_BUILD_ID}/${config.directory}`;
+        }
+
+        return new OdspTestDriver(
             {
                 ...config,
                 ... getMicrosoftConfiguration(),
@@ -50,12 +55,9 @@ export class OdspDriverConfig implements ITestDriverConfig {
 
     public readonly type = "odsp";
     private readonly odspTokenManager = new OdspTokenManager(odspTokensCache);
-
     constructor(
-        private readonly config: IOdspConfig,
-        private readonly password: string) {
-
-    }
+        private readonly config: Readonly<IOdspConfig>,
+        private readonly password: string) { }
     createContainerUrl(testId: string): string {
         throw new Error("Method not implemented.");
     }
@@ -93,6 +95,4 @@ export class OdspDriverConfig implements ITestDriverConfig {
             `${testId}.fluid`,
         );
     }
-
-    public async reset() { }
 }

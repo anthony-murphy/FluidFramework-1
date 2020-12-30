@@ -10,9 +10,9 @@ import {
     InsecureTinyliciousTokenProvider,
     InsecureTinyliciousUrlResolver,
 } from "@fluidframework/tinylicious-driver";
-import { ITestDriverConfig } from "./interfaces";
+import { ITestDriver } from "./interfaces";
 
-export class TinyliciousDriverConfig implements ITestDriverConfig {
+export class TinyliciousTestDriver implements ITestDriver {
     public readonly type = "tinylicious";
 
     createDocumentServiceFactory(): RouterliciousDocumentServiceFactory {
@@ -28,5 +28,4 @@ export class TinyliciousDriverConfig implements ITestDriverConfig {
     createContainerUrl(testId: string): string {
         return `http://localhost:3000/${testId}`;
     }
-    public async reset() {}
 }

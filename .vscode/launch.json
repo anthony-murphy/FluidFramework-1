@@ -237,7 +237,7 @@
             "stopOnEntry": false,
             "env": {
                 // "FLUID_TEST_VERBOSE": "1",
-                // "E2E_TEST_DRIVER": "tinylicious" or "routerlicious",
+                // "E2E_TEST_DRIVER": "tinylicious", // or "routerlicious",
                 "TS_NODE_PROJECT": "${fileDirname}/tsconfig.json",
             },
             "args": ["--no-timeouts", "--exit", "--require", "ts-node/register","${file}", ],

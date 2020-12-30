@@ -8,11 +8,11 @@ import {
     LocalResolver,
     createLocalResolverCreateNewRequest,
 } from "@fluidframework/local-driver";
-import { LocalDeltaConnectionServer } from "@fluidframework/server-local-server";
 import { ISummaryConfiguration } from "@fluidframework/protocol-definitions";
-import { ITestDriverConfig } from "./interfaces";
+import { LocalDeltaConnectionServer } from "@fluidframework/server-local-server";
+import { ITestDriver } from "./interfaces";
 
-export class LocalServerDriverConfig implements ITestDriverConfig {
+export class LocalServerTestDriver implements ITestDriver {
     private _server = LocalDeltaConnectionServer.create();
 
     public readonly type = "local";
@@ -29,9 +29,13 @@ export class LocalServerDriverConfig implements ITestDriverConfig {
     }
 
     createContainerUrl(testId: string): string {
-        return `fluid-test://localhost/${testId}`;
+        return `http://localhost/${testId}`;
     }
 
+    /**
+     * @deprecated - We only need this for some back-compat cases. Once we have a release with
+     * all the test driver changes, this will be removed in 0.33
+     */
     public async reset(options?: {serviceConfiguration?: {summary?: Partial<ISummaryConfiguration>}}) {
         await this._server?.webSocketServer.close();
         this._server = LocalDeltaConnectionServer.create(undefined, options?.serviceConfiguration as any);

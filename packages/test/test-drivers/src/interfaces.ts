@@ -5,13 +5,12 @@
 import { IRequest } from "@fluidframework/core-interfaces";
 import { IDocumentServiceFactory, IUrlResolver } from "@fluidframework/driver-definitions";
 
-export type TestDriverConfigTypes = "local" | "tinylicious" | "routerlicious" | "odsp";
+export type TestDriverTypes = "local" | "tinylicious" | "routerlicious" | "odsp";
 
-export interface ITestDriverConfig{
-    type: TestDriverConfigTypes;
+export interface ITestDriver{
+    type: TestDriverTypes;
     createDocumentServiceFactory(): IDocumentServiceFactory;
     createUrlResolver(): IUrlResolver;
     createCreateNewRequest(testId: string): IRequest;
     createContainerUrl(testId: string): string;
-    reset(): Promise<void>;
 }
