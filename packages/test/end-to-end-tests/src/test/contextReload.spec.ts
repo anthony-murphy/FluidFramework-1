@@ -218,15 +218,11 @@ describe("context reload", function() {
             this.dataStoreV1 = await requestFluidObject<TestDataStore>(this.container, "default");
             assert.strictEqual(this.dataStoreV1.version, TestDataStoreV1.version);
 
-            this.opProcessingController = new OpProcessingController(this.deltaConnectionServer);
+            this.opProcessingController = new OpProcessingController();
             this.opProcessingController.addDeltaManagers(this.container.deltaManager);
         });
 
         tests();
-
-        afterEach(async function() {
-            await this.deltaConnectionServer.webSocketServer.close();
-        });
     });
 
     describe("two containers", () => {
@@ -289,15 +285,11 @@ describe("context reload", function() {
                 this.dataStoreV1 = await requestFluidObject<OldTestDataStore>(this.container, "default");
                 assert.strictEqual(this.dataStoreV1.version, TestDataStoreV1.version);
 
-                this.opProcessingController = new old.OpProcessingController(this.deltaConnectionServer);
+                this.opProcessingController = new old.OpProcessingController();
                 this.opProcessingController.addDeltaManagers(this.container.deltaManager);
             });
 
             tests();
-
-            afterEach(async function() {
-                await this.deltaConnectionServer.webSocketServer.close();
-            });
         });
         describe("new loader, old runtime", () => {
             beforeEach(async function() {
@@ -308,15 +300,11 @@ describe("context reload", function() {
                 this.dataStoreV1 = await requestFluidObject<TestDataStore>(this.container, "default");
                 assert.strictEqual(this.dataStoreV1.version, TestDataStoreV1.version);
 
-                this.opProcessingController = new OpProcessingController(this.deltaConnectionServer);
+                this.opProcessingController = new OpProcessingController();
                 this.opProcessingController.addDeltaManagers(this.container.deltaManager);
             });
 
             tests();
-
-            afterEach(async function() {
-                await this.deltaConnectionServer.webSocketServer.close();
-            });
         });
     });
 });

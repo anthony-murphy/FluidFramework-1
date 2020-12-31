@@ -103,7 +103,7 @@ describe("LocalLoader", () => {
         return loader.resolve({ url: driver.createContainerUrl(documentId) });
     }
 
-    describe("1 dataObject", () => {
+    describe("one dataObject", () => {
         let dataObject: TestDataObject;
 
         beforeEach(async () => {
@@ -118,7 +118,7 @@ describe("LocalLoader", () => {
         });
     });
 
-    describe("2 dataObjects", () => {
+    describe("two dataObjects", () => {
         beforeEach(async () => {
             documentId = Date.now().toString();
             opProcessingController = new OpProcessingController();
@@ -183,7 +183,7 @@ describe("LocalLoader", () => {
     });
 
     describe("Distributed data types", () => {
-        describe("1 data type", () => {
+        describe("one data type", () => {
             let text: SharedString;
 
             beforeEach(async () => {
@@ -199,7 +199,7 @@ describe("LocalLoader", () => {
             });
         });
 
-        describe("2 data types", () => {
+        describe("two data types", () => {
             let dataObject1: ITestFluidObject;
             let dataObject2: ITestFluidObject;
             let text1: SharedString;
