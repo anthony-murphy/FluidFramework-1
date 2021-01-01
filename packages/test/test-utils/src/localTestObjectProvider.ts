@@ -79,9 +79,9 @@ export class LocalTestObjectProvider<TestContainerConfigType>
      * The object can continue to be used afterwards
      */
     public async reset() {
+        await super.reset();
         await this._deltaConnectionServer?.webSocketServer.close();
         this._deltaConnectionServer = undefined;
         this._documentServiceFactory = undefined;
-        this._opProcessingController = undefined;
     }
 }

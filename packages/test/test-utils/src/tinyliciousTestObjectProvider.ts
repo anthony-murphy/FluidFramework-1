@@ -61,8 +61,8 @@ export class TinyliciousTestObjectProvider<TestContainerConfigType>
     }
 
     public async reset() {
+        await super.reset();
         this._documentServiceFactory = undefined;
-        this._opProcessingController = undefined;
         this._documentId = undefined;
     }
 }

@@ -19,7 +19,7 @@ const defaultCodeDetails: IFluidCodeDetails = {
  * Shared base class for test object provider.  Contain code for loader and container creation and loading
  */
 export abstract class BaseTestObjectProvider<TestContainerConfigType> {
-    protected _opProcessingController: OpProcessingController | undefined;
+    private _opProcessingController: OpProcessingController | undefined;
 
     /**
      * Manage objects for loading and creating container, including the driver, loader, and OpProcessingController
@@ -89,5 +89,9 @@ export abstract class BaseTestObjectProvider<TestContainerConfigType> {
         await waitContainerToCatchUp(container);
         this.opProcessingController.addDeltaManagers(container.deltaManager);
         return container;
+    }
+
+    public async reset() {
+        this._opProcessingController = undefined;
     }
 }
