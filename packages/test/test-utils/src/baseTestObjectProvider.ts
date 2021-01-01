@@ -19,6 +19,8 @@ const defaultCodeDetails: IFluidCodeDetails = {
  * Shared base class for test object provider.  Contain code for loader and container creation and loading
  */
 export abstract class BaseTestObjectProvider<TestContainerConfigType> {
+    protected _opProcessingController: OpProcessingController | undefined;
+
     /**
      * Manage objects for loading and creating container, including the driver, loader, and OpProcessingController
      * @param createFluidEntryPoint - callback to create a fluidEntryPoint, with an optiona; set of channel name
@@ -36,8 +38,12 @@ export abstract class BaseTestObjectProvider<TestContainerConfigType> {
 
     abstract get documentServiceFactory(): IDocumentServiceFactory;
     abstract get urlResolver(): IUrlResolver;
-    abstract get opProcessingController(): OpProcessingController;
-
+    get opProcessingController() {
+        if (!this._opProcessingController) {
+            this._opProcessingController = new OpProcessingController();
+        }
+        return this._opProcessingController;
+    }
     protected abstract get documentId(): string;
     protected abstract get documentLoadUrl(): string;
 

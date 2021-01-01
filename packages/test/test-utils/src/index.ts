@@ -12,3 +12,4 @@ export * from "./opProcessingController";
 export * from "./testContainerRuntimeFactory";
 export * from "./testFluidObject";
 export * from "./tinyliciousTestObjectProvider";
+export * from "./timeoutUtils";

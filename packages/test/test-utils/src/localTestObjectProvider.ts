@@ -9,7 +9,6 @@ import { IClientConfiguration } from "@fluidframework/protocol-definitions";
 import { ILocalDeltaConnectionServer, LocalDeltaConnectionServer } from "@fluidframework/server-local-server";
 import { BaseTestObjectProvider } from "./baseTestObjectProvider";
 import { fluidEntryPoint } from "./localCodeLoader";
-import { OpProcessingController } from "./opProcessingController";
 
 const defaultDocumentId = "defaultDocumentId";
 
@@ -30,7 +29,6 @@ export class LocalTestObjectProvider<TestContainerConfigType>
     extends BaseTestObjectProvider<TestContainerConfigType> {
     private _documentServiceFactory: IDocumentServiceFactory | undefined;
     private _defaultUrlResolver: LocalResolver | undefined;
-    private _opProcessingController: OpProcessingController | undefined;
 
     /**
      * Create a set of object to
@@ -66,13 +64,6 @@ export class LocalTestObjectProvider<TestContainerConfigType>
             this._defaultUrlResolver = new LocalResolver();
         }
         return this._defaultUrlResolver;
-    }
-
-    get opProcessingController() {
-        if (!this._opProcessingController) {
-            this._opProcessingController = new OpProcessingController(this.deltaConnectionServer);
-        }
-        return this._opProcessingController;
     }
 
     get documentId() {

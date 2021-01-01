@@ -10,7 +10,6 @@ import { InsecureTokenProvider, InsecureUrlResolver } from "@fluidframework/test
 import { v4 as uuid } from "uuid";
 import { BaseTestObjectProvider } from "./baseTestObjectProvider";
 import { fluidEntryPoint } from "./localCodeLoader";
-import { OpProcessingController } from "./opProcessingController";
 
 /**
  * Test object provider that target Tinylicious
@@ -20,7 +19,6 @@ export class TinyliciousTestObjectProvider<TestContainerConfigType>
     private _documentId: string | undefined;
     private _documentServiceFactory: IDocumentServiceFactory | undefined;
     private _urlResolver: IUrlResolver | undefined;
-    private _opProcessingController: OpProcessingController | undefined;
 
     constructor(
         createFluidEntryPoint: (testContainerConfig?: TestContainerConfigType) => fluidEntryPoint,
@@ -60,13 +58,6 @@ export class TinyliciousTestObjectProvider<TestContainerConfigType>
                 true);
         }
         return this._urlResolver;
-    }
-
-    get opProcessingController() {
-        if (!this._opProcessingController) {
-            this._opProcessingController = new OpProcessingController();
-        }
-        return this._opProcessingController;
     }
 
     public async reset() {

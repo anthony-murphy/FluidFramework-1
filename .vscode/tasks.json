@@ -31,7 +31,9 @@
                 "--root",
                 "${workspaceRoot}",
                 "--vscode",
-                "${fileDirname}"
+                "${fileDirname}",
+                "-s",
+                "tsc"
             ],
             "group": "build",
             "problemMatcher": [
