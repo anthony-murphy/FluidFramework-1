@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-export const defaultTimeoutDurationMs = 25;
+export const defaultTimeoutDurationMs = 250;
 
  export interface TimeoutWithError{
     durationMs?: number;
@@ -32,12 +32,12 @@ export const defaultTimeoutDurationMs = 25;
 
         executor(
             (value) => {
-                clearTimeout(timeout);
                 res(value);
+                clearTimeout(timeout);
             },
             (reason) => {
-                clearTimeout(timeout);
                 rej(reason);
+                clearTimeout(timeout);
             });
     });
 }
@@ -53,9 +53,9 @@ export async function waitEvent<T>(
             emitter.once(event,()=>res());
         },
         timeoutOptions.reject === false
-        ? timeoutOptions
-        : {
-            ...timeoutOptions,
-            errorMsg: timeoutOptions.errorMsg ?? `Event Timeout: ${event}`,
-        });
+            ? timeoutOptions
+            : {
+                ...timeoutOptions,
+                errorMsg: timeoutOptions.errorMsg ?? `Event Timeout: ${event}`,
+            });
 }
