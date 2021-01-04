@@ -145,32 +145,26 @@ export class LocalDocumentDeltaConnection
         super();
 
         this.submitManager = new BatchManager<IDocumentMessage[]>((submitType, work) => {
-            const clientId = this.details.clientId;
-            setTimeout(() => {
-                this.socket.emit(
-                    submitType,
-                    clientId,
-                    work,
-                    (error) => {
-                        if (error) {
-                            debug("Emit error", error);
-                        }
-                    });
-                },
-                0);
-        });
+            this.socket.emit(
+                submitType,
+                this.details.clientId,
+                work,
+                (error) => {
+                    if (error) {
+                        debug("Emit error", error);
+                    }
+                });
 
-        this.on("newListener", (event, listener) => {
-            if (!this.subscribedEvents.has(event)) {
-                this.subscribedEvents.add(event);
-                this.socket.on(
-                    event,
-                    (...args: any[]) => {
-                        setTimeout(
-                            () => this.emit(event, ...args),
-                            0);
-                    });
-                }
+            this.on("newListener", (event, listener) => {
+                if (!this.subscribedEvents.has(event)) {
+                    this.subscribedEvents.add(event);
+                    this.socket.on(
+                        event,
+                        (...args: any[]) => {
+                            this.emit(event, ...args);
+                        });
+                    }
+            });
         });
     }
 
@@ -178,8 +172,12 @@ export class LocalDocumentDeltaConnection
      * Submits a new delta operation to the server
      */
     public submit(messages: IDocumentMessage[]): void {
-        this.submitManager.add("submitOp", messages);
-        this.submitManager.drain();
+        // We use a promise resolve to force a turn break given message processing is sync
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        Promise.resolve().then(() => {
+            this.submitManager.add("submitOp", messages);
+            this.submitManager.drain();
+        });
     }
 
     /**
