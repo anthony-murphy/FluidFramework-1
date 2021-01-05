@@ -55,10 +55,7 @@ export class TestObjectProvider {
 
     get opProcessingController() {
         if (!this._opProcessingController) {
-            this._opProcessingController =
-                this.driver.type === "local"
-                    ? new OpProcessingController(this.driver.server)
-                    : new OpProcessingController(undefined, 25);
+            this._opProcessingController = new OpProcessingController();
         }
         return this._opProcessingController;
     }
