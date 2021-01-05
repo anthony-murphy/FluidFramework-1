@@ -74,8 +74,7 @@ class OldTestDataStoreV2 extends OldTestDataStore {
     }
 }
 
-describe("context reload", function() {
-    let documentId: string;
+describe.only("context reload", function() {
     const driver = getTestDriver();
     const codeDetails = (version: string): old.IFluidCodeDetails => {
         return {
@@ -96,24 +95,24 @@ describe("context reload", function() {
                     typeof code.package === "object" && code.package.version === version ? resolve() : reject()))));
     };
 
-    async function createContainer(packageEntries): Promise<IContainer> {
+    async function createContainer(docId: string, packageEntries): Promise<IContainer> {
         const loader: ILoader = createLocalLoader(packageEntries, driver);
-        return createAndAttachContainer(defaultCodeDetails, loader, driver.createCreateNewRequest(documentId));
+        return createAndAttachContainer(defaultCodeDetails, loader, driver.createCreateNewRequest(docId));
     }
 
-    async function loadContainer(packageEntries): Promise<IContainer> {
+    async function loadContainer(docId: string, packageEntries): Promise<IContainer> {
         const loader: ILoader = createLocalLoader(packageEntries, driver);
-        return loader.resolve({ url: driver.createContainerUrl(documentId) });
+        return loader.resolve({ url: driver.createContainerUrl(docId) });
     }
 
-    async function createContainerWithOldLoader(packageEntries): Promise<old.IContainer> {
+    async function createContainerWithOldLoader(docId: string, packageEntries): Promise<old.IContainer> {
         const loader = new old.Loader({
             codeLoader: new old.LocalCodeLoader(packageEntries),
             documentServiceFactory: driver.createDocumentServiceFactory() as any as old.IDocumentServiceFactory,
             urlResolver: driver.createUrlResolver(),
         });
         const container = await loader.createDetachedContainer(defaultCodeDetails);
-        await container.attach(driver.createCreateNewRequest(documentId));
+        await container.attach(driver.createCreateNewRequest(docId));
         return container;
     }
 
@@ -135,9 +134,8 @@ describe("context reload", function() {
         );
     };
 
-    const tests = function() {
+    const tests = function(documentId: string) {
         beforeEach(async function() {
-            documentId = Date.now().toString();
             // make sure container errors fail the test
             this.containerError = false;
             this.container.on("warning", () => this.containerError = true);
@@ -209,8 +207,11 @@ describe("context reload", function() {
     };
 
     describe("single container", () => {
+        let documentId: string = "";
         beforeEach(async function() {
+            documentId = Date.now().toString();
             this.container = await createContainer(
+                documentId,
                 [
                     [codeDetails(V1), createRuntimeFactory(TestDataStoreV1)],
                     [codeDetails(V2), createRuntimeFactory(TestDataStoreV2)],
@@ -222,7 +223,7 @@ describe("context reload", function() {
             this.opProcessingController.addDeltaManagers(this.container.deltaManager);
         });
 
-        tests();
+        tests(documentId);
     });
 
     describe("two containers", () => {
@@ -234,9 +235,10 @@ describe("context reload", function() {
                 [codeDetails(V2), createRuntimeFactory(TestDataStoreV2)],
             ];
 
+            const documentId = Date.now().toString();
             const containers: IContainer[] = [];
-            containers.push(await createContainer(packageEntries));
-            containers.push(await loadContainer(packageEntries));
+            containers.push(await createContainer(documentId, packageEntries));
+            containers.push(await loadContainer(documentId, packageEntries));
 
             let success = true;
             containers.map((container) => container.on("warning", () => success = false));
@@ -277,23 +279,29 @@ describe("context reload", function() {
 
     describe("compat", () => {
         describe("old loader, new runtime", () => {
+            let documentId: string = "";
             beforeEach(async function() {
-                this.container = await createContainerWithOldLoader([
-                    [codeDetails(V1), createOldRuntimeFactory(OldTestDataStoreV1)],
-                    [codeDetails(V2), createRuntimeFactory(TestDataStoreV2)],
-                ]);
+                documentId = Date.now().toString();
+                this.container = await createContainerWithOldLoader(
+                    documentId, [
+                        [codeDetails(V1), createOldRuntimeFactory(OldTestDataStoreV1)],
+                        [codeDetails(V2), createRuntimeFactory(TestDataStoreV2)],
+                    ]);
                 this.dataStoreV1 = await requestFluidObject<OldTestDataStore>(this.container, "default");
                 assert.strictEqual(this.dataStoreV1.version, TestDataStoreV1.version);
 
-                this.opProcessingController = new old.OpProcessingController();
+                this.opProcessingController = new OpProcessingController();
                 this.opProcessingController.addDeltaManagers(this.container.deltaManager);
             });
 
-            tests();
+            tests(documentId);
         });
         describe("new loader, old runtime", () => {
+            let documentId: string = "";
             beforeEach(async function() {
-                this.container = await createContainer([
+                documentId = Date.now().toString();
+                this.container = await createContainer(
+                    documentId,[
                     [codeDetails(V1), createRuntimeFactory(TestDataStoreV1)],
                     [codeDetails(V2), createOldRuntimeFactory(OldTestDataStoreV2)],
                 ]);
@@ -304,7 +312,7 @@ describe("context reload", function() {
                 this.opProcessingController.addDeltaManagers(this.container.deltaManager);
             });
 
-            tests();
+            tests(documentId);
         });
     });
 });

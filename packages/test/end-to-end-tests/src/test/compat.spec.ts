@@ -9,6 +9,7 @@ import { IFluidRouter } from "@fluidframework/core-interfaces";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { TestObjectProvider } from "@fluidframework/test-utils";
 import { TestDriver } from "@fluidframework/test-drivers";
+import { IContainerRuntimeOptions } from "@fluidframework/container-runtime";
 import {
     generateCompatTest,
     createOldPrimedDataStoreFactory,
@@ -18,7 +19,6 @@ import {
     ITestObjectProvider,
     OldTestDataObject,
     TestDataObject,
-    ITestContainerConfig,
 } from "./compatUtils";
 import * as old from "./oldVersion";
 
