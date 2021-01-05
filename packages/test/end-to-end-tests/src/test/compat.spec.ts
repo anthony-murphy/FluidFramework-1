@@ -22,10 +22,8 @@ import {
 } from "./compatUtils";
 import * as old from "./oldVersion";
 
-const containerConfig: ITestContainerConfig = {
-    runtimeOptions:{
-        summaryConfigOverrides: { maxOps: 1 },
-    },
+const runtimeOptions: IContainerRuntimeOptions = {
+     summaryConfigOverrides: { maxOps: 1 },
 };
 
 async function loadContainer(
@@ -113,7 +111,7 @@ const tests = function(args: ITestObjectProvider) {
                         fluidExport: createRuntimeFactory(
                             TestDataObject.type,
                             createPrimedDataStoreFactory(),
-                            containerConfig.runtimeOptions),
+                            runtimeOptions),
                     },
                     args.driver),
                 loadContainerWithOldLoader( // old loader, new container/data store runtimes
@@ -122,7 +120,7 @@ const tests = function(args: ITestObjectProvider) {
                         fluidExport: createRuntimeFactory(
                             TestDataObject.type,
                             createPrimedDataStoreFactory(),
-                            containerConfig.runtimeOptions),
+                            runtimeOptions),
                     },
                     args.driver),
                 loadContainerWithOldLoader( // old everything
@@ -131,7 +129,7 @@ const tests = function(args: ITestObjectProvider) {
                         fluidExport: createOldRuntimeFactory(
                             TestDataObject.type,
                             createOldPrimedDataStoreFactory(),
-                            containerConfig.runtimeOptions),
+                            runtimeOptions),
                     },
                     args.driver),
                 loadContainer( // new loader, old container/data store runtimes
@@ -140,7 +138,7 @@ const tests = function(args: ITestObjectProvider) {
                         fluidExport: createOldRuntimeFactory(
                             TestDataObject.type,
                             createOldPrimedDataStoreFactory(),
-                            containerConfig.runtimeOptions),
+                            runtimeOptions),
                     },
                     args.driver),
                 loadContainer( // new loader/container runtime, old data store runtime
@@ -149,7 +147,7 @@ const tests = function(args: ITestObjectProvider) {
                         fluidExport: createRuntimeFactory(
                             TestDataObject.type,
                             createOldPrimedDataStoreFactory(),
-                            containerConfig.runtimeOptions),
+                            runtimeOptions),
                     },
                     args.driver),
                 loadContainerWithOldLoader( // old loader/container runtime, new data store runtime
@@ -158,7 +156,7 @@ const tests = function(args: ITestObjectProvider) {
                         fluidExport: createOldRuntimeFactory(
                             TestDataObject.type,
                             createPrimedDataStoreFactory(),
-                            containerConfig.runtimeOptions),
+                            runtimeOptions),
                     },
                     args.driver),
             ];
