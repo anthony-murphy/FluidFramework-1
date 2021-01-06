@@ -9,6 +9,7 @@ import { IContainer } from "@fluidframework/container-definitions";
 import { taskSchedulerId } from "@fluidframework/container-runtime";
 import { IAgentScheduler } from "@fluidframework/runtime-definitions";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
+import { Container } from "@fluidframework/container-loader";
 import { generateTest, ITestObjectProvider, TestDataObject } from "./compatUtils";
 import * as old from "./oldVersion";
 
@@ -29,6 +30,9 @@ const tests = (args: ITestObjectProvider) => {
             // Set a key in the root map. The Container is created in "read" mode and so it cannot currently pick
             // tasks. Sending an op will switch it to "write" mode.
             dataObject._root.set("tempKey", "tempValue");
+            if (!(container as Container).connected) {
+                await new Promise<void>((resolve)=>container.once("connected", ()=>resolve()));
+            }
             await args.opProcessingController.process();
         });
 
@@ -101,6 +105,10 @@ const tests = (args: ITestObjectProvider) => {
                 .then((taskManager) => taskManager.IAgentScheduler);
             const dataObject1 = await requestFluidObject<TestDataObject>(container1, "default");
 
+            if (!(container1 as Container).connected) {
+                await new Promise<void>((resolve)=>container1.once("connected", ()=>resolve()));
+            }
+
             // Set a key in the root map. The Container is created in "read" mode and so it cannot currently pick
             // tasks. Sending an op will switch it to "write" mode.
             dataObject1._root.set("tempKey1", "tempValue1");
@@ -111,6 +119,10 @@ const tests = (args: ITestObjectProvider) => {
             scheduler2 = await requestFluidObject<TaskManager>(container2, taskSchedulerId)
                 .then((taskManager) => taskManager.IAgentScheduler);
             const dataObject2 = await requestFluidObject<TestDataObject>(container2, "default");
+
+            if (!(container2 as Container).connected) {
+                await new Promise<void>((resolve)=>container1.once("connected", ()=>resolve()));
+            }
 
             // Set a key in the root map. The Container is created in "read" mode and so it cannot currently pick
             // tasks. Sending an op will switch it to "write" mode.
