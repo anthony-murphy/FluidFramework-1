@@ -83,7 +83,7 @@ class OldTestDataStoreV2 extends OldTestDataStore {
     }
 }
 
-describe("context reload", function() {
+describe.only("context reload", function() {
     const driver = getTestDriver();
     const codeDetails = (version: string): old.IFluidCodeDetails => {
         return {
@@ -94,14 +94,15 @@ describe("context reload", function() {
     const defaultCodeDetails = codeDetails(V1);
 
     const proposeAndWaitForReload = async (version: string, ...containers: IContainer[]) => {
-        // propose
-        await containers[0].getQuorum().propose("code", codeDetails(version));
         // wait for "contextChanged" events on all containers
-        return Promise.all(containers.map(
+        const contextChangedP = Promise.all(containers.map(
             async (c) => new Promise<void>((resolve, reject) =>
                 c.on("contextChanged", (code: IFluidCodeDetails) =>
                     // eslint-disable-next-line prefer-promise-reject-errors
                     typeof code.package === "object" && code.package.version === version ? resolve() : reject()))));
+        // propose
+        await containers[0].getQuorum().propose("code", codeDetails(version));
+        return contextChangedP;
     };
 
     async function createContainer(docId: string, packageEntries): Promise<IContainer> {
