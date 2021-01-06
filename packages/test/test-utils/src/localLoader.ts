@@ -7,11 +7,11 @@ import {
     ICodeLoader,
     IContainer,
     ILoader,
+    ILoaderOptions,
 } from "@fluidframework/container-definitions";
 import { Loader } from "@fluidframework/container-loader";
 import { IFluidCodeDetails, IRequest } from "@fluidframework/core-interfaces";
 import { ITestDriver } from "@fluidframework/test-drivers";
-import { DebugLogger } from "../../../loader/driver-utils/node_modules/@fluidframework/telemetry-utils/dist";
 import { fluidEntryPoint, LocalCodeLoader } from "./localCodeLoader";
 
 /**
@@ -22,6 +22,7 @@ import { fluidEntryPoint, LocalCodeLoader } from "./localCodeLoader";
 export function createLocalLoader(
     packageEntries: Iterable<[IFluidCodeDetails, fluidEntryPoint]>,
     driver: ITestDriver,
+    options?: ILoaderOptions,
 ): ILoader {
     const codeLoader: ICodeLoader = new LocalCodeLoader(packageEntries);
 
@@ -29,7 +30,7 @@ export function createLocalLoader(
         urlResolver: driver.createUrlResolver(),
         documentServiceFactory: driver.createDocumentServiceFactory(),
         codeLoader,
-        logger: DebugLogger.create("test"),
+        options,
     });
 }
 

@@ -83,7 +83,7 @@ class OldTestDataStoreV2 extends OldTestDataStore {
     }
 }
 
-describe("context reload", function() {
+describe("context reload (hot-swap)", function() {
     const driver = getTestDriver();
     const codeDetails = (version: string): old.IFluidCodeDetails => {
         return {

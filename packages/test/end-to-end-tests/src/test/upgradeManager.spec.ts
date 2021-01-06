@@ -38,7 +38,7 @@ class TestDataObject extends DataObject {
     public get _root() { return this.root; }
 }
 
-describe("UpgradeManager", () => {
+describe("UpgradeManager (hot-swap)", () => {
     const documentId = "upgradeManagerTest";
     const documentLoadUrl = `fluid-test://localhost/${documentId}`;
     const codeDetails: IFluidCodeDetails = {
@@ -57,6 +57,7 @@ describe("UpgradeManager", () => {
             urlResolver,
             documentServiceFactory,
             codeLoader,
+            options: { hotSwapContext: true },
         });
 
         return createAndAttachContainer(codeDetails, loader, urlResolver.createCreateNewRequest(documentId));
@@ -68,6 +69,7 @@ describe("UpgradeManager", () => {
             urlResolver,
             documentServiceFactory,
             codeLoader,
+            options: { hotSwapContext: true },
         });
 
         return loader.resolve({ url: documentLoadUrl });
