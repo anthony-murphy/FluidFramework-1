@@ -37,8 +37,10 @@ export class SharedStringFactory implements IChannelFactory {
         const maybeMarker = MergeTree.Marker.fromJSONObject(spec);
         if (maybeMarker) { return maybeMarker; }
     }
-    constructor(private readonly mixin?: ISharedStringMixin) {
-
+    /**
+    * @param mixin - deprecated - prototype mixin to adjust shared string behavior.
+    */
+    private constructor(private readonly mixin?: ISharedStringMixin) {
     }
 
     public get type() {
