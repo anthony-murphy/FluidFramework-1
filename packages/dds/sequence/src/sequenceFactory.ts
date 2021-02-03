@@ -17,6 +17,8 @@ import { SharedObjectSequence } from "./sharedObjectSequence";
 import { IJSONRunSegment, SubSequence } from "./sharedSequence";
 import { SharedString } from "./sharedString";
 
+export type ISharedStringMixin = (sharedString: SharedString) => void;
+
 export class SharedStringFactory implements IChannelFactory {
     // TODO rename back to https://graph.microsoft.com/types/mergeTree/string once paparazzi is able to dynamically
     // load code
@@ -34,6 +36,9 @@ export class SharedStringFactory implements IChannelFactory {
 
         const maybeMarker = MergeTree.Marker.fromJSONObject(spec);
         if (maybeMarker) { return maybeMarker; }
+    }
+    constructor(private readonly mixin?: ISharedStringMixin) {
+
     }
 
     public get type() {
@@ -54,12 +59,14 @@ export class SharedStringFactory implements IChannelFactory {
         attributes: IChannelAttributes): Promise<SharedString> {
         const sharedString = new SharedString(runtime, id, attributes);
         await sharedString.load(services);
+        this.mixin(sharedString);
         return sharedString;
     }
 
     public create(document: IFluidDataStoreRuntime, id: string): SharedString {
         const sharedString = new SharedString(document, id, this.attributes);
         sharedString.initializeLocal();
+        this.mixin(sharedString);
         return sharedString;
     }
 }
