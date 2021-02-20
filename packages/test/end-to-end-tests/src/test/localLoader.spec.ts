@@ -6,7 +6,7 @@
 import { strict as assert } from "assert";
 import { DataObject, DataObjectFactory, IDataObjectProps } from "@fluidframework/aqueduct";
 import { IContainer, ILoader } from "@fluidframework/container-definitions";
-import { IFluidHandle, IFluidCodeDetails } from "@fluidframework/core-interfaces";
+import { IFluidHandle, IFluidCodeDetails, IRequest } from "@fluidframework/core-interfaces";
 import { SharedCounter } from "@fluidframework/counter";
 import { IFluidDataStoreRuntime } from "@fluidframework/datastore-definitions";
 import { IFluidDataStoreFactory } from "@fluidframework/runtime-definitions";
@@ -108,12 +108,12 @@ describe("LocalLoader", () => {
             codeDetails, loader, driver.createCreateNewRequest(documentId));
     }
 
-    async function loadContainer(documentId: string, factory: IFluidDataStoreFactory): Promise<IContainer> {
+    async function loadContainer(request: IRequest, factory: IFluidDataStoreFactory): Promise<IContainer> {
         const loader: ILoader = createLoader(
             [[codeDetails, factory]],
             driver.createDocumentServiceFactory(),
             driver.createUrlResolver());
-        return loader.resolve({ url: driver.createContainerUrl(documentId) });
+        return loader.resolve(request);
     }
 
     describe("1 dataObject", () => {
@@ -142,8 +142,9 @@ describe("LocalLoader", () => {
             // Create / load both instance of TestDataObject before applying ops.
             const container1 = await createContainer(documentId, testDataObjectFactory);
             const dataObject1 = await requestFluidObject<TestDataObject>(container1, "default");
-
-            const container2 = await loadContainer(documentId, testDataObjectFactory);
+            const url = await container1.getAbsoluteUrl("/");
+            assert(url);
+            const container2 = await loadContainer({url}, testDataObjectFactory);
             const dataObject2 = await requestFluidObject<TestDataObject>(container2, "default");
 
             assert(dataObject1 !== dataObject2, "Each container must return a separate TestDataObject instance.");
@@ -176,9 +177,10 @@ describe("LocalLoader", () => {
 
             dataObject1.increment();
             assert.equal(dataObject1.value, 1, "Local update by 'dataObject1' must be promptly observable");
-
+            const url = await container1.getAbsoluteUrl("/");
+            assert(url);
             // Wait until ops are pending before opening second TestDataObject instance.
-            const container2 = await loadContainer(documentId, testDataObjectFactory);
+            const container2 = await loadContainer({url}, testDataObjectFactory);
             const dataObject2 = await requestFluidObject<TestDataObject>(container2, "default");
             assert(dataObject1 !== dataObject2, "Each container must return a separate TestDataObject instance.");
 
@@ -228,8 +230,9 @@ describe("LocalLoader", () => {
                 const container1 = await createContainer(documentId, factory);
                 dataObject1 = await requestFluidObject<ITestFluidObject>(container1, "default");
                 text1 = await dataObject1.getSharedObject<SharedString>("text");
-
-                const container2 = await loadContainer(documentId, factory);
+                const url = await container1.getAbsoluteUrl("/");
+                assert(url);
+                const container2 = await loadContainer({url}, factory);
                 dataObject2 = await requestFluidObject<ITestFluidObject>(container2, "default");
                 text2 = await dataObject2.getSharedObject<SharedString>("text");
 
@@ -262,8 +265,9 @@ describe("LocalLoader", () => {
 
                 container1 = await createContainer(documentId, testDataObjectFactory);
                 dataObject1 = await requestFluidObject<TestDataObject>(container1, "default");
-
-                container2 = await loadContainer(documentId, testDataObjectFactory);
+                const url = await container1.getAbsoluteUrl("/");
+                assert(url);
+                container2 = await loadContainer({url}, testDataObjectFactory);
                 dataObject2 = await requestFluidObject<TestDataObject>(container2, "default");
             });
 

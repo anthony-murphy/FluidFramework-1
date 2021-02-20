@@ -9,6 +9,7 @@ import {
     IFluidCodeDetails,
     IFluidCodeDetailsComparer,
     IFluidPackage,
+    IRequest,
     isFluidPackage,
 } from "@fluidframework/core-interfaces";
 import {
@@ -97,9 +98,9 @@ describe("CodeProposal.EndToEnd", () => {
         return createAndAttachContainer(code, loader, driver.createCreateNewRequest(documentId));
     }
 
-    async function loadContainer(documentId: string): Promise<IContainer> {
+    async function loadContainer(request: IRequest): Promise<IContainer> {
         const loader = createLoader();
-        return loader.resolve({ url: driver.createContainerUrl(documentId) });
+        return loader.resolve(request);
     }
 
     let containers: IContainer[];
@@ -115,9 +116,10 @@ describe("CodeProposal.EndToEnd", () => {
         opProcessingController.addDeltaManagers(containers[0].deltaManager);
 
         await opProcessingController.process();
-
+        const url = await containers[0].getAbsoluteUrl("/");
+        assert(url);
         // Load the Container that was created by the first client.
-        containers.push(await loadContainer(documentId));
+        containers.push(await loadContainer({url}));
         opProcessingController.addDeltaManagers(containers[1].deltaManager);
 
         assert.deepStrictEqual(

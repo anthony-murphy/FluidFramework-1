@@ -48,7 +48,7 @@ describe("Errors Types", () => {
         const id = createDocumentId();
         // Setup
         urlResolver = driver.createUrlResolver();
-        testRequest = { url: driver.createContainerUrl(id) };
+        testRequest = { url: driver.createCreateNewRequest(id).url };
         testResolved =
             await urlResolver.resolve(testRequest) as IFluidResolvedUrl;
         documentServiceFactory = driver.createDocumentServiceFactory();

@@ -11,7 +11,7 @@ import {
     IContainer,
 } from "@fluidframework/container-definitions";
 import { Container, Loader } from "@fluidframework/container-loader";
-import { IFluidCodeDetails } from "@fluidframework/core-interfaces";
+import { IFluidCodeDetails, IRequest } from "@fluidframework/core-interfaces";
 import { IFluidDataStoreRuntime } from "@fluidframework/datastore-definitions";
 import { IFluidDataStoreFactory } from "@fluidframework/runtime-definitions";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
@@ -59,7 +59,7 @@ describe("UpgradeManager (hot-swap)", () => {
             codeDetails, loader, driver.createCreateNewRequest(documentId));
     }
 
-    async function loadContainer(documentId: string, factory: IFluidDataStoreFactory): Promise<IContainer> {
+    async function loadContainer(request: IRequest, factory: IFluidDataStoreFactory): Promise<IContainer> {
         const codeLoader: ICodeLoader = new LocalCodeLoader([[codeDetails, factory]]);
         const loader = new Loader({
             urlResolver: driver.createUrlResolver(),
@@ -68,7 +68,7 @@ describe("UpgradeManager (hot-swap)", () => {
             options: { hotSwapContext: true },
         });
 
-        return loader.resolve({ url: driver.createContainerUrl(documentId) });
+        return loader.resolve(request);
     }
 
     beforeEach(async () => {
@@ -87,10 +87,11 @@ describe("UpgradeManager (hot-swap)", () => {
         // Create the first Container.
         const container1 = await createContainer(documentId, TestDataObject.getFactory());
         containers.push(container1);
-
+        const url = await container1.getAbsoluteUrl("/");
+        assert(url);
         // Load rest of the Containers.
         const restOfContainersP =
-            Array(clients - 1).fill(undefined).map(async () => loadContainer(documentId, TestDataObject.getFactory()));
+            Array(clients - 1).fill(undefined).map(async () => loadContainer({url}, TestDataObject.getFactory()));
         const restOfContainers = await Promise.all(restOfContainersP);
         containers.push(...restOfContainers);
 
@@ -165,8 +166,10 @@ describe("UpgradeManager (hot-swap)", () => {
         // Create the first Container.
         const container1 = await createContainer(documentId, TestDataObject.getFactory());
 
+        const url = await container1.getAbsoluteUrl("/");
+        assert(url);
         // Load the second Container.
-        const container2 = await loadContainer(documentId, TestDataObject.getFactory()) as Container;
+        const container2 = await loadContainer({url}, TestDataObject.getFactory()) as Container;
 
         const upgradeManager = new UpgradeManager((container1 as any).context.runtime);
 

@@ -14,7 +14,7 @@ import {
     ILoader,
     IRuntimeFactory,
 } from "@fluidframework/container-definitions";
-import { IFluidCodeDetails } from "@fluidframework/core-interfaces";
+import { IFluidCodeDetails, IRequest } from "@fluidframework/core-interfaces";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import {
     createAndAttachContainer,
@@ -97,7 +97,7 @@ describe("context reload (hot-swap)", function() {
             driver.createCreateNewRequest(documentId));
     }
 
-    async function loadContainer(packageEntries, documentId): Promise<IContainer> {
+    async function loadContainer(packageEntries, request: IRequest): Promise<IContainer> {
         const loader: ILoader = new Loader({
             codeLoader: new LocalCodeLoader(packageEntries),
             options:{ hotSwapContext: true },
@@ -105,7 +105,7 @@ describe("context reload (hot-swap)", function() {
             documentServiceFactory: driver.createDocumentServiceFactory(),
         });
         loaderContainerTracker.add(loader);
-        return loader.resolve({ url: driver.createContainerUrl(documentId) });
+        return loader.resolve(request);
     }
 
     const createRuntimeFactory = (dataStore): IRuntimeFactory => {
@@ -230,7 +230,9 @@ describe("context reload (hot-swap)", function() {
 
             const containers: IContainer[] = [];
             containers.push(await createContainer(packageEntries, docId));
-            containers.push(await loadContainer(packageEntries, docId));
+            const url = await containers[0].getAbsoluteUrl("/");
+            assert(url);
+            containers.push(await loadContainer(packageEntries, {url}));
 
             let success = true;
             containers.map((c) => c.on("warning", () => success = false));
