@@ -29,6 +29,7 @@ export class TestObjectProvider<TestContainerConfigType> {
     private _urlResolver: IUrlResolver | undefined;
     private _opProcessingController?: OpProcessingController;
     private _documentId?: string;
+    private url?: string;
 
     /**
      * Manage objects for loading and creating container, including the driver, loader, and OpProcessingController
@@ -105,6 +106,7 @@ export class TestObjectProvider<TestContainerConfigType> {
                 defaultCodeDetails,
                 loader,
                 this.driver.createCreateNewRequest(this.documentId));
+        this.url = await container.getAbsoluteUrl("/");
         this.opProcessingController.addDeltaManagers(container.deltaManager);
         return container;
     }
@@ -116,7 +118,8 @@ export class TestObjectProvider<TestContainerConfigType> {
      */
     public async loadTestContainer(testContainerConfig?: TestContainerConfigType) {
         const loader = this.makeTestLoader(testContainerConfig);
-        const container = await loader.resolve({ url: this.driver.createContainerUrl(this.documentId) });
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const container = await loader.resolve({ url: this.url! });
         await waitContainerToCatchUp(container);
         this.opProcessingController.addDeltaManagers(container.deltaManager);
         return container;
@@ -128,5 +131,6 @@ export class TestObjectProvider<TestContainerConfigType> {
         this._urlResolver = undefined;
         this._opProcessingController = undefined;
         this._documentId = undefined;
+        this.url = undefined;
     }
 }

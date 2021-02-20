@@ -45,15 +45,15 @@ async function initialize(testDriver: ITestDriver) {
     const testId = Date.now().toString();
     const request = testDriver.createCreateNewRequest(testId);
     await container.attach(request);
-
+    const url = await container.getAbsoluteUrl("/");
     container.close();
-
-    return testId;
+    assert(url);
+    return url;
 }
 
-async function load(testDriver: ITestDriver, testId: string) {
+async function load(testDriver: ITestDriver, url: string) {
     const loader = createLoader(testDriver);
-    const respond = await loader.request({ url: testDriver.createContainerUrl(testId) });
+    const respond = await loader.request({ url });
     // TODO: Error checking
     return respond.value as ILoadTest;
 }
@@ -63,7 +63,7 @@ async function main() {
         .version("0.0.1")
         .requiredOption("-t, --tenant <tenant>", "Which test tenant info to use from testConfig.json", "fluidCI")
         .requiredOption("-p, --profile <profile>", "Which test profile to use from testConfig.json", "ci")
-        .option("-u, --testId <testId>", "Load an existing data store rather than creating new")
+        .option("-u, --url <url>", "Load an existing data store rather than creating new")
         .option("-r, --runId <runId>", "run a child process with the given id. Requires --url option.")
         .option("-d, --debug", "Debug child processes via --inspect-brk")
         .option("-l, --log <filter>", "Filter debug logging. If not provided, uses DEBUG env variable.")
@@ -71,7 +71,7 @@ async function main() {
 
     const tenantArg: string = commander.tenant;
     const profileArg: string = commander.profile;
-    const testId: string | undefined = commander.testId;
+    const url: string | undefined = commander.url;
     const runId: number | undefined = commander.runId === undefined ? undefined : parseInt(commander.runId, 10);
     const debug: true | undefined = commander.debug;
     const log: string | undefined = commander.log;
@@ -119,11 +119,11 @@ async function main() {
     let result: number;
     // When runId is specified (with url), kick off a single test runner and exit when it's finished
     if (runId !== undefined) {
-        if (testId === undefined) {
-            console.error("Missing --testId argument needed to run child process");
+        if (url === undefined) {
+            console.error("Missing --url argument needed to run child process");
             process.exit(-1);
         }
-        result = await runnerProcess(loginInfo, profile, runId, testId);
+        result = await runnerProcess(loginInfo, profile, runId, url);
         process.exit(result);
     }
 
@@ -131,7 +131,7 @@ async function main() {
     result = await orchestratorProcess(
         { ...loginInfo, tenantFriendlyName: tenantArg },
         { ...profile, name: profileArg },
-        { testId, debug });
+        { url, debug });
     process.exit(result);
 }
 
@@ -142,7 +142,7 @@ async function runnerProcess(
     loginInfo: IOdspTestLoginInfo,
     profile: ILoadTestConfig,
     runId: number,
-    testId: string,
+    url: string,
 ): Promise<number> {
     try {
         const runConfig: IRunConfig = {
@@ -150,7 +150,7 @@ async function runnerProcess(
             testConfig: profile,
         };
         const testDriver = await OdspTestDriver.create(loginInfo, "stress");
-        const stressTest = await load(testDriver, testId);
+        const stressTest = await load(testDriver, url);
         await stressTest.run(runConfig);
         console.log(`${runId.toString().padStart(3)}> exit`);
         return 0;
@@ -167,15 +167,15 @@ async function runnerProcess(
 async function orchestratorProcess(
     loginInfo: IOdspTestLoginInfo & { tenantFriendlyName: string },
     profile: ILoadTestConfig & { name: string },
-    args: { testId?: string, debug?: true },
+    args: { url?: string, debug?: true },
 ): Promise<number> {
     const testDriver = await OdspTestDriver.create(loginInfo, "stress");
 
     // Create a new file if a url wasn't provided
-    const testId = args.testId ?? await initialize(testDriver);
+    const url = args.url ?? await initialize(testDriver);
 
     const estRunningTimeMin = Math.floor(2 * profile.totalSendCount / (profile.opRatePerMin * profile.numClients));
-    console.log(`Connecting to ${args.testId ? "existing" : "new"} Container targeting dataStore with URL:\n${testId}`);
+    console.log(`Connecting to ${args.url ? "existing" : "new"} Container targeting dataStore with URL:\n${url}`);
     console.log(`Authenticated as user: ${loginInfo.username}`);
     console.log(`Selected test profile: ${profile.name}`);
     console.log(`Estimated run time: ${estRunningTimeMin} minutes\n`);
@@ -187,7 +187,7 @@ async function orchestratorProcess(
             "--tenant", loginInfo.tenantFriendlyName,
             "--profile", profile.name,
             "--runId", i.toString(),
-            "--testId", testId];
+            "--url", url];
         if (args.debug) {
             const debugPort = 9230 + i; // 9229 is the default and will be used for the root orchestrator process
             childArgs.unshift(`--inspect-brk=${debugPort}`);

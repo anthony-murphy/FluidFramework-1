@@ -60,10 +60,6 @@ export class OdspTestDriver implements ITestDriver {
         private readonly defaultDirectory: string,
         ) { }
 
-    createContainerUrl(testId: string): string {
-        throw new Error("Method not implemented.");
-    }
-
     createDocumentServiceFactory(): IDocumentServiceFactory {
         const documentServiceFactory = new OdspDocumentServiceFactory(
             async (options: OdspResourceTokenFetchOptions) => {
@@ -90,6 +86,7 @@ export class OdspTestDriver implements ITestDriver {
     createUrlResolver(): IUrlResolver {
         return new OdspDriverUrlResolver();
     }
+
     createCreateNewRequest(testId: string): IRequest {
         return createOdspCreateContainerRequest(
             `https://${this.loginInfo.server}`,
