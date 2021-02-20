@@ -3,6 +3,8 @@
  * Licensed under the MIT License.
  */
 
+import assert from "assert";
+import fs from "fs";
 import { IRequest } from "@fluidframework/core-interfaces";
 import { IDocumentServiceFactory, IUrlResolver } from "@fluidframework/driver-definitions";
 import {
@@ -35,9 +37,66 @@ export interface IOdspTestLoginInfo {
 
 const odspTokenManager = new OdspTokenManager(odspTokensCache);
 
+export interface TenantConfig {
+    tenants: { [friendlyName: string]: ITestTenant | undefined };
+}
+
+/** Type modeling the tenant sub-structure of the testConfig.json file */
+export interface ITestTenant {
+    server: string,
+    username: string,
+    driveId: string,
+}
+
+export async function setupOdspConfig(config: TenantConfig) {
+    const loginAccounts = process.env.login__odsp__test__accounts;
+    assert(loginAccounts !== undefined, "Missing login__odsp__test__accounts");
+    // Expected format of login__odsp__test__accounts is simply string key-value pairs of username and password
+    const passwords: { [user: string]: string } = JSON.parse(loginAccounts);
+
+    const tenants = config.tenants;
+
+    if(Object.keys(passwords) !==
+        Object.keys(tenants).map((t)=>tenants[t]?.username)) {
+        console.log("we should have a password for every tenant");
+    }
+
+    for(const tenantName of Object.keys(tenants)) {
+        const tenant: ITestTenant | undefined = tenants[tenantName];
+        assert(tenant, `No Tenant: ${tenantName}`);
+
+        const password = passwords[tenant.username];
+
+        const loginInfo: IOdspTestLoginInfo = { server: tenant.server, username: tenant.username, password };
+
+        const odspTokens = await odspTokenManager.getOdspTokens(
+            loginInfo.server,
+            getMicrosoftConfiguration(),
+            passwordTokenConfig(loginInfo.username, loginInfo.password),
+            undefined /* forceRefresh */,
+            true /* forceReauth */,
+        );
+          tenant.driveId =  await getDriveId(loginInfo.server, "", undefined, { accessToken: odspTokens.accessToken });
+    }
+}
+
 export class OdspTestDriver implements ITestDriver {
     public static createFromEnv(): OdspTestDriver {
-        throw new Error("not supported");
+        const loginAccounts = process.env.login__odsp__test__accounts;
+        assert(loginAccounts !== undefined, "Missing login__odsp__test__accounts");
+        // Expected format of login__odsp__test__accounts is simply string key-value pairs of username and password
+        const passwords: { [user: string]: string } = JSON.parse(loginAccounts);
+
+        const config: {odsp: TenantConfig} = JSON.parse(fs.readFileSync(`${__dirname}/config.json`, "utf-8"));
+        const tenants = config.odsp.tenants;
+        const tenant: ITestTenant | undefined = tenants[Object.keys(tenants)[0]];
+        assert(tenant, "No Tenants");
+
+        const password = passwords[tenant.username];
+
+        const loginInfo: IOdspTestLoginInfo = { server: tenant.server, username: tenant.username, password };
+
+        return new OdspTestDriver(loginInfo, tenant.driveId, "test");
     }
     public static async create(loginInfo: IOdspTestLoginInfo, defaultDirectory: string) {
         const odspTokens = await odspTokenManager.getOdspTokens(
