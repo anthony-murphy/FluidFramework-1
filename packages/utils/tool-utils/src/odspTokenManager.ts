@@ -281,12 +281,8 @@ export const odspTokensCache: IAsyncCache<IOdspTokenManagerCacheKey, IOdspTokens
         }
         return saveRC(rc);
     },
+    // eslint-disable-next-line prefer-arrow/prefer-arrow-functions
     async lock<T>(callback: () => Promise<T>): Promise<T> {
-        const release = await lockRC();
-        try {
-            return await callback();
-        } finally {
-            await release();
-        }
+        return lockRC<T>(callback);
     },
 };

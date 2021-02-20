@@ -17,7 +17,7 @@ import {
     odspTokensCache,
     getMicrosoftConfiguration,
 } from "@fluidframework/tool-utils";
-import { getDriveId, getLoginPageUrl, getOdspScope, IOdspTokens } from "@fluidframework/odsp-doclib-utils";
+import { getDriveId} from "@fluidframework/odsp-doclib-utils";
 import { ITestDriver } from "@fluidframework/test-driver-definitions";
 import { pkgVersion } from "./packageVersion";
 
@@ -35,9 +35,11 @@ export interface IOdspTestLoginInfo {
 
 const odspTokenManager = new OdspTokenManager(odspTokensCache);
 
-async function getOdspTokens(loginInfo: IOdspTestLoginInfo): Promise<IOdspTokens> {
-    try {
-        // Ensure fresh tokens here so the test runners have them cached
+export class OdspTestDriver implements ITestDriver {
+    public static createFromEnv(): OdspTestDriver {
+        throw new Error("not supported");
+    }
+    public static async create(loginInfo: IOdspTestLoginInfo, defaultDirectory: string) {
         const odspTokens = await odspTokenManager.getOdspTokens(
             loginInfo.server,
             getMicrosoftConfiguration(),
@@ -45,37 +47,6 @@ async function getOdspTokens(loginInfo: IOdspTestLoginInfo): Promise<IOdspTokens
             undefined /* forceRefresh */,
             true /* forceReauth */,
         );
-        await odspTokenManager.getPushTokens(
-            loginInfo.server,
-            getMicrosoftConfiguration(),
-            passwordTokenConfig(loginInfo.username, loginInfo.password),
-            undefined /* forceRefresh */,
-            true /* forceReauth */,
-        );
-        return odspTokens;
-    } catch (ex) {
-        // Log the login page url in case the caller needs to allow consent for this app
-        const loginPageUrl =
-            getLoginPageUrl(
-                loginInfo.server,
-                getMicrosoftConfiguration(),
-                getOdspScope(loginInfo.server),
-                "http://localhost:7000/auth/callback",
-            );
-
-        console.log("You may need to allow consent for this app. Re-run the tool after allowing consent.");
-        console.log(`Go here allow the app: ${loginPageUrl}\n`);
-
-        throw ex;
-    }
-}
-
-export class OdspTestDriver implements ITestDriver {
-    public static createFromEnv(): OdspTestDriver {
-        throw new Error("not supported");
-    }
-    public static async create(loginInfo: IOdspTestLoginInfo, defaultDirectory: string) {
-        const odspTokens = await getOdspTokens(loginInfo);
         const driveId =  await getDriveId(loginInfo.server, "", undefined, { accessToken: odspTokens.accessToken });
         return new OdspTestDriver(loginInfo, driveId, defaultDirectory);
     }
