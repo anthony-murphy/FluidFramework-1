@@ -53,7 +53,9 @@ export async function lockRC<T>(callback: () => Promise<T>) {
         try{
             await lock(getRCFileName(), { realpath: false });
             locked = true;
-        }catch{ }
+        }catch{
+            await new Promise((resolve)=>setTimeout(resolve, 0));
+         }
     }while(!locked);
     try{
         return await callback();

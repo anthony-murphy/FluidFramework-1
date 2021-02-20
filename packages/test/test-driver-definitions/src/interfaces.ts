@@ -39,14 +39,4 @@ export interface ITestDriver{
      * as the test may not  work against all supported servers if done.
      */
     createCreateNewRequest(testId: string): IRequest;
-
-    /**
-     * Creates a container url that can be resolved by the url resolver for this driver.
-     * Repeated calls with the same test id will return the same test id.
-     * The test id may not map directly to any specific Fluid Framework concept.
-     * If you need more control you should disambiguate the driver based on its
-     * type, this should only be done it absolutely necessary for complex scenarios
-     * as the test may not  work against all supported servers if done.
-     */
-    // createContainerUrl(testId: string): Promise<string>;
 }
