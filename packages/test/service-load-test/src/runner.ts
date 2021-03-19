@@ -3,11 +3,18 @@
  * Licensed under the MIT License.
  */
 
+import { assert } from "console";
 import commander from "commander";
 import { TestDriverTypes } from "@fluidframework/test-driver-definitions";
 import { ILoadTestConfig } from "./testConfigFile";
 import { IRunConfig } from "./loadTestDataStore";
-import { createTestDriver, getProfile, load, safeExit } from "./utils";
+import { createTestDriver, getProfile, load, loggerP, safeExit } from "./utils";
+
+let logged = false;
+function logStatus(runId: number, message: string) {
+    console.log(`${runId.toString().padStart(3)}> ${message}`);
+    logged = true;
+}
 
 async function main() {
     commander
@@ -35,9 +42,17 @@ async function main() {
         console.error("Missing --testId argument needed to run child process");
         process.exit(-1);
     }
+    setInterval(
+        ()=>{
+            if(logged === false) {
+                logStatus(runId, "heartbeat");
+            }
+            logged = false;
+        },
+        5 * 60 * 1000);
     const result = await runnerProcess(driver, profile, runId, testId);
 
-    await safeExit(result);
+    await safeExit(result, testId, runId);
 }
 
 /**
@@ -57,9 +72,55 @@ async function runnerProcess(
 
         const testDriver = await createTestDriver(driver);
 
-        const stressTest = await load(testDriver, testId, runId);
-        await stressTest.run(runConfig, true);
-        console.log(`${runId.toString().padStart(3)}> exit`);
+        let reset = true;
+        let done = false;
+        while(!done) {
+            const {container, test} = await load(testDriver, testId, runId);
+
+            new Promise((res, rej)=>{
+                // wait for the container to connect write
+                container.once("closed", rej);
+                if(!container.deltaManager.active) {
+                    container.once("connected", res);
+                }
+            }).then(()=>{
+                const quorum = container.getQuorum();
+                const clientId = container.clientId;
+                // calculate the clients quorum position
+                const quorumIndex =
+                    clientId !== undefined && quorum.has(clientId)
+                        ? [... quorum.getMembers().entries()]
+                            .sort((a,b)=>b[1].sequenceNumber - a[1].sequenceNumber)
+                            .map((m)=>m[0])
+                            .indexOf(clientId)
+                        : profile.numClients;
+
+                assert(quorumIndex >= 0);
+
+                setTimeout(
+                    ()=>{
+                        if(!container.closed) {
+                            container.close();
+                        }
+                    },
+                    // bucket the clients, with bias towards the summarizer
+                    (((quorumIndex % 10) + 1) * profile.readWriteCycleMs) * ((quorumIndex % 2) + 1)
+                    // add some gitter up to half a cycle
+                    + (profile.readWriteCycleMs * Math.random()));
+            }).catch(()=>{});
+
+            try{
+                logStatus(runId, "running");
+                done = await test.run(runConfig, reset);
+                logStatus(runId, done ?  "finished" : "closed");
+            } finally{
+                reset = false;
+                if(!container.closed) {
+                    container.close();
+                }
+                await loggerP.then(async (l)=>l.flush({testId, runId}));
+            }
+        }
         return 0;
     } catch (e) {
         console.error(`${runId.toString().padStart(3)}> error: loading test`);
@@ -68,7 +129,8 @@ async function runnerProcess(
     }
 }
 
-main().catch(
+main()
+.catch(
     (error) => {
         console.error(error);
         process.exit(-1);
