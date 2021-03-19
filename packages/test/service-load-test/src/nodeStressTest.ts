@@ -73,8 +73,11 @@ async function orchestratorProcess(
         );
         p.push(new Promise((resolve) => process.on("close", resolve)));
     }
-    await Promise.all(p);
-    await safeExit(0, testId);
+    try{
+        await Promise.all(p);
+    } finally{
+        await safeExit(0, testId);
+    }
 }
 
 main().catch(
