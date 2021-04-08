@@ -4,6 +4,7 @@
  */
 
 import child_process from "child_process";
+import { Console } from "console";
 import commander from "commander";
 import { TestDriverTypes } from "@fluidframework/test-driver-definitions";
 import { ILoadTestConfig } from "./testConfigFile";
@@ -53,6 +54,13 @@ async function orchestratorProcess(
         ? await testDriver.createContainerUrl(args.testId)
         : await initialize(testDriver);
 
+    if(profile.timeoutMinutes) {
+        setTimeout(() => {
+            console.log("ERROR: Run Timeout");
+            safeExit(-1, url, undefined).catch(()=>{});
+        }, profile.timeoutMinutes * 60 * 1000);
+    }
+
     const estRunningTimeMin = Math.floor(2 * profile.totalSendCount / (profile.opRatePerMin * profile.numClients));
     console.log(`Connecting to ${args.testId ? "existing" : "new"} Container targeting with url:\n${url }`);
     console.log(`Selected test profile: ${profile.name}`);
@@ -82,7 +90,7 @@ async function orchestratorProcess(
         p.push(new Promise((resolve) => process.on("close", resolve)));
     }
     try{
-    await Promise.all(p);
+        await Promise.all(p);
     } finally{
         await safeExit(0, url);
     }

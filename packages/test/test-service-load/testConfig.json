@@ -5,7 +5,8 @@
             "progressIntervalMs": 15000,
             "numClients": 120,
             "totalSendCount": 10000,
-            "readWriteCycleMs": 30000
+            "readWriteCycleMs": 30000,
+            "timeoutMinutes": 55
         },
         "full": {
             "opRatePerMin": 30,
