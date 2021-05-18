@@ -38,6 +38,17 @@ export class SummaryTreeUploadManager implements ISummaryUploadManager {
         summaryTree: ISummaryTree,
         previousFullSnapshot: ISnapshotTreeEx | undefined,
     ): Promise<string> {
+        if(previousFullSnapshot?.trees[".app"] === undefined
+            && summaryTree.tree[".app"]?.type === SummaryType.Tree
+        ) {
+            summaryTree.tree =
+            {
+                ... summaryTree.tree[".app"].tree,
+                ... summaryTree.tree,
+                [".app"]: undefined,
+            };
+        }
+
         const entries = await Promise.all(Object.keys(summaryTree.tree).map(async (key) => {
             const entry = summaryTree.tree[key];
             const pathHandle = await this.writeSummaryTreeObject(entry, previousFullSnapshot);
