@@ -1476,7 +1476,7 @@ export class MergeTree {
     }
 
     findHistoricalPosition(pos: number, fromSeq: number, toSeq: number, clientId: number) {
-        return this.findHistoricalPositionFromClient(pos, fromSeq, toSeq, clientId);
+        return this.findHistorialPositionFromClient(pos, fromSeq, toSeq, clientId);
     }
 
     findHistorialPositionFromClient(pos: number, fromSeq: number, toSeq: number, clientId: number) {
@@ -2225,18 +2225,7 @@ export class MergeTree {
         const curSegSeq = segment.seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER - 2 : segment.seq ?? 0;
         const newSegSeq = seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER  : seq;
 
-        if (newSegSeq > curSegSeq) {
-            if (segment.removedSeq) {
-                const curSegRemoveSeq = segment.removedSeq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER - 1 : segment.removedSeq;
-                // was the segment removed before the new seg?
-                if (newSegSeq > curSegRemoveSeq) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        return false;
+        return newSegSeq > curSegSeq;
     }
 
     // Visit segments starting from node's left siblings, then up to node's parent
@@ -2331,7 +2320,7 @@ export class MergeTree {
                 console.log(`@tcli: ${glc(this, this.collabWindow.clientId)} len: ${len} pos: ${_pos} ${segInfo}`);
             }
 
-            if ((pos < len) || ((pos === len) && this.breakTie(pos, child, seq))) {
+            if ((_pos < len) || ((_pos === len) && this.breakTie(_pos, child, seq))) {
                 // Found entry containing pos
                 found = true;
                 if (!child.isLeaf()) {

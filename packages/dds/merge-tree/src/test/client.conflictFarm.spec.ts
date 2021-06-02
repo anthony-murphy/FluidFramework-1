@@ -63,7 +63,7 @@ export const longOptions: IConflictFarmConfig = {
 
 describe("MergeTree.Client", () => {
     const opts =
-    debugOptions;
+    defaultOptions;
     // debugOptions;
     // longOptions;
 
