@@ -29,8 +29,8 @@ const allOpertaions: TestOperation[] = [
 ];
 
 export const debugOptions: IConflictFarmConfig = {
-    minLength: { min: 1, max: 1 },
-    clients: { min: 2, max: 3 },
+    minLength: { min: 2, max: 2 },
+    clients: { min: 3, max: 4 },
     opsPerRoundRange: { min: 1, max: 128 },
     rounds: 8,
     operations: allOpertaions,
@@ -58,7 +58,7 @@ export const longOptions: IConflictFarmConfig = {
 
 describe("MergeTree.Client", () => {
     const opts =
-    defaultOptions;
+    debugOptions;
     // debugOptions;
     // longOptions;
 

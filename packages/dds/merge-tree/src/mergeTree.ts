@@ -1383,7 +1383,7 @@ export class MergeTree {
             segmentToScour = this.segmentsToScour!.get();
             // Only skip scouring if needs scour is explicitly false, not true or undefined
             if (segmentToScour.segment?.parent) {
-                const block = segmentToScour.segment!.parent;
+                const block = segmentToScour.segment.parent;
                 const childrenCopy: IMergeNode[] = [];
                 // console.log(`scouring from ${segmentToScour.segment.seq}`);
                 this.scourNode(block, childrenCopy);
@@ -2212,22 +2212,10 @@ export class MergeTree {
         }
 
         const segment = node;
-        const branchId = this.getBranchId(clientId);
-        const segmentBranchId = this.getBranchId(segment.clientId);
-        const removalInfo = this.getRemovalInfo(branchId, segmentBranchId, segment);
-
-        // if removedSeq is UnassignedSequenceNumber it impossible anyone saw the delete before this op
-        // otherwise everyone will see the delete before this op
-        if (removalInfo.removedSeq && removalInfo.removedSeq !== UnassignedSequenceNumber) {
-            return false;
-        }
-
         const curSegSeq = segment.seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER - 1 : segment.seq ?? 0;
         const newSegSeq = seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER  : seq;
 
         return newSegSeq > curSegSeq;
-
-        assert.fail();
     }
 
     // Visit segments starting from node's left siblings, then up to node's parent
@@ -2322,7 +2310,7 @@ export class MergeTree {
                 console.log(`@tcli: ${glc(this, this.collabWindow.clientId)} len: ${len} pos: ${_pos} ${segInfo}`);
             }
 
-            if ((pos < len) || ((pos === len) && pos === 0 && this.breakTie(child, seq, refSeq, clientId))) {
+            if ((_pos < len) || ((_pos === len) && this.breakTie(child, seq, refSeq, clientId))) {
                 // Found entry containing pos
                 found = true;
                 if (!child.isLeaf()) {
