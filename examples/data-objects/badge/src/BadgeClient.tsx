@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 import * as React from "react";
@@ -16,12 +16,13 @@ import { IBadgeClientProps, IBadgeType } from "./Badge.types";
 export const BadgeClient: React.FC<IBadgeClientProps> = ({ model }: IBadgeClientProps) => {
     // Setters
     const changeSelectedOption = (newItem: IBadgeType): void => {
-        if (newItem.key !== model.currentCell.get().key) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        if (newItem.key !== model.currentCell.get()!.key) {
             const len = model.historySequence.getItemCount();
             model.historySequence.insert(len, [
                 {
                     value: newItem,
-                    timestamp: new Date(),
+                    timestamp: new Date().toJSON(),
                 },
             ]);
             model.currentCell.set(newItem);
@@ -46,6 +47,7 @@ export const BadgeClient: React.FC<IBadgeClientProps> = ({ model }: IBadgeClient
     // Getters
     const getOptions = () => {
         // Spread iterable out into an array
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return [...model.optionsMap.values()];
     };
 
@@ -56,7 +58,8 @@ export const BadgeClient: React.FC<IBadgeClientProps> = ({ model }: IBadgeClient
     };
 
     const getSelectedOptionKey = () => {
-        return model.currentCell.get().key;
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        return model.currentCell.get()!.key;
     };
 
     // Store Fluid data in React state

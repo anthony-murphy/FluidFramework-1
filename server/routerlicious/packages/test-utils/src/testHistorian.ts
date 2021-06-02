@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -7,7 +7,7 @@ import { gitHashFile, IsoBuffer } from "@fluidframework/common-utils";
 import * as git from "@fluidframework/gitresources";
 import { IHistorian } from "@fluidframework/server-services-client";
 import { ICollection, IDb } from "@fluidframework/server-services-core";
-import uuid from "uuid";
+import { v4 as uuid } from "uuid";
 import { TestDb } from "./testCollection";
 
 export class TestHistorian implements IHistorian {

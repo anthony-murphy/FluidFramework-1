@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -122,6 +122,7 @@ export async function initializeState<
         local: boolean,
     ) => {
         const handle = storedHandleMap.get<IFluidHandle>(change.key);
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (handle !== undefined && !state.fluidObjectMap?.has(handle.absolutePath)) {
             state.fluidObjectMap?.set(handle.absolutePath, {
                 isListened: false,

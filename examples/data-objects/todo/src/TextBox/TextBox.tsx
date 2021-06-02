@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 import { DataObject } from "@fluidframework/aqueduct";
@@ -18,6 +18,7 @@ export const TextBoxName = `${pkg.name as string}-textbox`;
  * TextBox is a really simple component that uses the CollaborativeTextArea to provide a
  * collaborative textarea.
  */
+// eslint-disable-next-line @typescript-eslint/ban-types
 export class TextBox extends DataObject<{}, string> implements IFluidHTMLView {
     public get IFluidHTMLView() { return this; }
 

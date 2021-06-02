@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -59,7 +59,7 @@ export class MountableView implements IFluidMountableView {
     }
 
     /**
-     * {@inheritDoc @fluidframework/view-interfaces#IFluidMountableViewClass.mount}
+     * {@inheritDoc @fluidframework/view-interfaces#IFluidMountableView.mount}
      */
     public mount(container: HTMLElement) {
         if (this.containerElement !== undefined) {
@@ -98,7 +98,7 @@ export class MountableView implements IFluidMountableView {
     }
 
     /**
-     * {@inheritDoc @fluidframework/view-interfaces#IFluidMountableViewClass.unmount}
+     * {@inheritDoc @fluidframework/view-interfaces#IFluidMountableView.unmount}
      */
     public unmount() {
         // Do nothing if we are already unmounted.

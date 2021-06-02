@@ -1,9 +1,8 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
-import { strict as assert } from "assert";
 import {
     IFluidHandleContext,
     IRequest,
@@ -33,8 +32,7 @@ export class ContainerFluidHandleContext implements IFluidHandleContext {
     }
 
     public attachGraph(): void {
-        assert(false, "can't attach container runtime form within container!");
-        return;
+        throw new Error("can't attach container runtime form within container!");
     }
 
     public get isAttached() {

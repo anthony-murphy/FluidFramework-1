@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -22,7 +22,7 @@ import { PrimitivesInstantiationFactory } from "./primitivesInstantiationFactory
  * components.
  */
 export const fluidExport = new ContainerRuntimeFactoryWithDefaultDataStore(
-    PrimitivesName,
+    PrimitivesInstantiationFactory,
     new Map([
         [PrimitivesName, Promise.resolve(PrimitivesInstantiationFactory)],
     ]),

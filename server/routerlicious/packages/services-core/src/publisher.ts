@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -26,6 +26,12 @@ export interface IPublisher {
      * Used to send messages to a topic
      */
     to(topic: string): ITopic;
+
+    /**
+     * Used to emit an event to a topic
+     * This will be used in place of "to().emit()" when defined
+     */
+    emit?(topic: string, event: string, ...args: any[]): Promise<void>;
 
     /**
      * Closes the publisher

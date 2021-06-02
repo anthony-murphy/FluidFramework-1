@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -73,7 +73,6 @@ export class GatewayResourcesFactory implements utils.IResourcesFactory<GatewayR
 
         const alfred = new Alfred(
             appTenants,
-            config.get("worker:alfredUrl"),
             config.get("worker:blobStorageUrl"),
             config.get("gateway:auth:endpoint"));
 

@@ -1,13 +1,15 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
-import { PromiseCache } from "@fluidframework/common-utils";
+import { parse } from "url";
+import { assert, PromiseCache } from "@fluidframework/common-utils";
 import {
     IRequest,
 } from "@fluidframework/core-interfaces";
 import {
+    IFluidResolvedUrl,
     IResolvedUrl,
     IUrlResolver,
 } from "@fluidframework/driver-definitions";
@@ -53,6 +55,20 @@ export class ContainerUrlResolver implements IUrlResolver {
         resolvedUrl: IResolvedUrl,
         relativeUrl: string,
     ): Promise<string> {
-        throw new Error("Not implmented");
+        const fluidResolvedUrl = resolvedUrl as IFluidResolvedUrl;
+
+        const parsedUrl = parse(fluidResolvedUrl.url);
+        // eslint-disable-next-line no-null/no-null
+        assert(parsedUrl.pathname !== null, 0x0b7 /* "Pathname should be defined" */);
+        const [, tenantId, documentId] = parsedUrl.pathname.split("/");
+        assert(!!tenantId && !!documentId,
+            0x0b8 /* "'tenantId' and 'documentId' must be defined, non-zero length strings." */);
+
+        let url = relativeUrl;
+        if (url.startsWith("/")) {
+            url = url.substr(1);
+        }
+        return `${this.baseUrl}/${encodeURIComponent(
+            tenantId)}/${encodeURIComponent(documentId)}${url ? `/${url}` : ``}`;
     }
 }

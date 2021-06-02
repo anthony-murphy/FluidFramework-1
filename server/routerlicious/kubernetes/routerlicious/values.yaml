@@ -16,6 +16,25 @@ alfred:
   tenants: []
   key: jwt_key
   maxNumberOfClientsPerDocument: 1000000
+  throttling:
+    restCalls:
+        maxPerMs: 1000000
+        maxBurst: 1000000
+        minCooldownIntervalInMs: 1000000
+        minThrottleIntervalInMs: 1000000
+    socketConnections:
+        maxPerMs: 1000000
+        maxBurst: 1000000
+        minCooldownIntervalInMs: 1000000
+        minThrottleIntervalInMs: 1000000
+    submitOps:
+        maxPerMs: 1000000
+        maxBurst: 1000000
+        minCooldownIntervalInMs: 1000000
+        minThrottleIntervalInMs: 1000000
+  socketIoAdapter:
+    enableCustomSocketIoAdapter: true
+    shouldDisableDefaultNamespace: false
 
 deli:
   name: deli
@@ -27,10 +46,6 @@ scriptorium:
 
 scribe:
   name: scribe
-  replicas: 8
-
-routemanager:
-  name: routemanager
   replicas: 8
 
 foreman:
@@ -52,9 +67,11 @@ zookeeper:
 
 mongodb:
   url: mongodb_url
+  expireAfterSeconds: -1
+  createCosmosDBIndexes: false
 
 rabbitmq:
-  connectionString: "connection_string"
+  connectionString: ""
 
 redis:
   url: redis_url
@@ -66,11 +83,17 @@ redis2:
   port: 6379
   tls: false
 
+redisForThrottling:
+  url: redis_url
+  port: 6379
+  tls: false
+
 kafka:
   topics:
     rawdeltas: rawdeltas
     deltas: deltas
   url: kafka_url:port
+  libname: rdkafka
 
 ingress:
   class: nginx-prod

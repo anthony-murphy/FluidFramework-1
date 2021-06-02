@@ -1,14 +1,11 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
-
-/* eslint-disable no-null/no-null */
 
 import { ICreateCommitParams, ICreateTreeEntry } from "@fluidframework/gitresources";
 import {
     generateServiceProtocolEntries,
-    IQuorumSnapshot,
     getQuorumTreeEntries,
     mergeAppAndProtocolTree,
 } from "@fluidframework/protocol-base";
@@ -57,9 +54,6 @@ export class SummaryWriter implements ISummaryWriter {
      * a git summary, commits the change, and finalizes the ref.
      * @param op - Operation that triggered the write
      * @param lastSummaryHead - Points to the last summary head if available
-     * @param protocolMinimumSequenceNumber - Minimum sequence number of current protocol state
-     * @param protocolSequenceNumber - Sequence number of current protocol state
-     * @param protocolSequenceNumber - State of quourum at protocol sequence number
      * @param checkpoint - State of the scribe service at current sequence number
      * @param pendingOps - List of unprocessed ops currently present in memory
      * @returns ISummaryWriteResponse; that represents the success or failure of the write, along with an
@@ -68,10 +62,7 @@ export class SummaryWriter implements ISummaryWriter {
     /* eslint-disable max-len */
     public async writeClientSummary(
         op: ISequencedDocumentAugmentedMessage,
-        lastSummaryHead: string,
-        protocolMinimumSequenceNumber: number,
-        protocolSequenceNumber: number,
-        quorumSnapshot: IQuorumSnapshot,
+        lastSummaryHead: string | undefined,
         checkpoint: IScribe,
         pendingOps: ISequencedOperationMessage[],
     ): Promise<ISummaryWriteResponse> {
@@ -87,15 +78,15 @@ export class SummaryWriter implements ISummaryWriter {
             // the client code just fetches the last summary which should be the same as existingRef sha.
             if (!existingRef ||
                 (lastSummaryHead !== content.head && existingRef.object.sha !== content.head)) {
-                    return {
-                        message: {
-                            errorMessage: `Proposed parent summary "${content.head}" does not match actual parent summary "${existingRef ? existingRef.object.sha : "n/a"}".`,
-                            summaryProposal: {
-                                summarySequenceNumber: op.sequenceNumber,
-                            },
+                return {
+                    message: {
+                        errorMessage: `Proposed parent summary "${content.head}" does not match actual parent summary "${existingRef ? existingRef.object.sha : "n/a"}".`,
+                        summaryProposal: {
+                            summarySequenceNumber: op.sequenceNumber,
                         },
-                        status: false,
-                    };
+                    },
+                    status: false,
+                };
             }
         } else if (existingRef) {
             return {
@@ -125,11 +116,11 @@ export class SummaryWriter implements ISummaryWriter {
             };
         }
 
-        // We should not accept a summary earlier than our current protocol state
-        if (op.referenceSequenceNumber < protocolSequenceNumber) {
+        // We should not accept this summary if it is less than current protocol sequence number
+        if (op.referenceSequenceNumber < checkpoint.protocolState.sequenceNumber) {
             return {
                 message: {
-                    errorMessage: `Proposed summary reference sequence number ${op.referenceSequenceNumber} is less than current sequence number ${op.sequenceNumber}`,
+                    errorMessage: `Proposed summary reference sequence number ${op.referenceSequenceNumber} is less than current sequence number ${checkpoint.protocolState.sequenceNumber}`,
                     summaryProposal: {
                         summarySequenceNumber: op.sequenceNumber,
                     },
@@ -142,13 +133,13 @@ export class SummaryWriter implements ISummaryWriter {
         const protocolEntries: ITreeEntry[] =
             getQuorumTreeEntries(
                 this.documentId,
-                protocolMinimumSequenceNumber,
-                protocolSequenceNumber,
+                checkpoint.protocolState.minimumSequenceNumber,
+                checkpoint.protocolState.sequenceNumber,
                 op.term ?? 1,
-                quorumSnapshot);
+                checkpoint.protocolState);
 
         // Generate a tree of logTail starting from protocol sequence number to summarySequenceNumber
-        const logTailEntries = await this.generateLogtailEntries(protocolSequenceNumber, op.sequenceNumber + 1, pendingOps);
+        const logTailEntries = await this.generateLogtailEntries(checkpoint.protocolState.sequenceNumber, op.sequenceNumber + 1, pendingOps);
 
         // Create service protocol entries combining scribe and deli states.
         const serviceProtocolEntries = generateServiceProtocolEntries(
@@ -156,9 +147,9 @@ export class SummaryWriter implements ISummaryWriter {
             JSON.stringify(checkpoint));
 
         const [logTailTree, protocolTree, serviceProtocolTree, appSummaryTree] = await Promise.all([
-            this.summaryStorage.createTree({ entries: logTailEntries, id: null }),
-            this.summaryStorage.createTree({ entries: protocolEntries, id: null }),
-            this.summaryStorage.createTree({ entries: serviceProtocolEntries, id: null }),
+            this.summaryStorage.createTree({ entries: logTailEntries }),
+            this.summaryStorage.createTree({ entries: protocolEntries }),
+            this.summaryStorage.createTree({ entries: serviceProtocolEntries }),
             this.summaryStorage.getTree(content.handle, false),
         ]);
 
@@ -251,8 +242,8 @@ export class SummaryWriter implements ISummaryWriter {
         // Fetch the last commit and summary tree. Create new trees with logTail and serviceProtocol.
         const lastCommit = await this.summaryStorage.getCommit(existingRef.object.sha);
         const [logTailTree, serviceProtocolTree, lastSummaryTree] = await Promise.all([
-            this.summaryStorage.createTree({ entries: logTailEntries, id: null }),
-            this.summaryStorage.createTree({ entries: serviceProtocolEntries, id: null }),
+            this.summaryStorage.createTree({ entries: logTailEntries }),
+            this.summaryStorage.createTree({ entries: serviceProtocolEntries }),
             this.summaryStorage.getTree(lastCommit.tree.sha, false),
         ]);
 

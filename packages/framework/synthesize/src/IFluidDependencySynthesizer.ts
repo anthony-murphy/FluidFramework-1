@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -57,7 +57,7 @@ export interface IFluidDependencySynthesizer extends IProvideFluidDependencySynt
      */
     synthesize<
         O extends IFluidObject,
-        R extends IFluidObject,>(
+        R extends IFluidObject>(
             optionalTypes: FluidObjectSymbolProvider<O>,
             requiredTypes: FluidObjectSymbolProvider<R>,
     ): AsyncFluidObjectProvider<FluidObjectKey<O>, FluidObjectKey<R>>;

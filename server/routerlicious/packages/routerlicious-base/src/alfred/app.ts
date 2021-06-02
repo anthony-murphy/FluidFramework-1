@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -9,18 +9,19 @@ import {
     IProducer,
     ITenantManager,
     MongoManager,
+    IThrottler,
 } from "@fluidframework/server-services-core";
 import * as bodyParser from "body-parser";
 import compression from "compression";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
-import safeStringify from "json-stringify-safe";
 import morgan from "morgan";
 import { Provider } from "nconf";
 import * as winston from "winston";
 import { IAlfredTenant } from "@fluidframework/server-services-client";
-import { getTenantIdFromRequest } from "../utils";
+import { bindCorrelationId } from "@fluidframework/server-services-utils";
+import { catch404, getTenantIdFromRequest, handleError } from "../utils";
 import * as alfredRoutes from "./routes";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
@@ -38,6 +39,7 @@ const stream = split().on("data", (message) => {
 export function create(
     config: Provider,
     tenantManager: ITenantManager,
+    throttler: IThrottler,
     storage: IDocumentStorage,
     appTenants: IAlfredTenant[],
     mongoManager: MongoManager,
@@ -76,10 +78,13 @@ export function create(
     app.use(bodyParser.json({ limit: requestSize }));
     app.use(bodyParser.urlencoded({ limit: requestSize, extended: false }));
 
+    app.use(bindCorrelationId());
+
     // Bind routes
     const routes = alfredRoutes.create(
         config,
         tenantManager,
+        throttler,
         mongoManager,
         storage,
         producer,
@@ -89,18 +94,11 @@ export function create(
     app.use(routes.api);
 
     // Catch 404 and forward to error handler
-    app.use((req, res, next) => {
-        const err = new Error("Not Found");
-        (err as any).status = 404;
-        next(err);
-    });
+    app.use(catch404());
 
     // Error handlers
 
-    app.use((err, req, res, next) => {
-        res.status(err.status || 500);
-        res.json({ error: safeStringify(err), message: err.message });
-    });
+    app.use(handleError());
 
     return app;
 }

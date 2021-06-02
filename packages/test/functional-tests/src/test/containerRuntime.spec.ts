@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -12,7 +12,7 @@ import {
     MessageType,
 } from "@fluidframework/protocol-definitions";
 import { DeltaManager } from "@fluidframework/container-loader";
-import { MockDocumentDeltaConnection, MockDocumentService } from "@fluid-internal/test-loader-utils";
+import { MockDocumentDeltaConnection, MockDocumentService } from "@fluidframework/test-loader-utils";
 import { ScheduleManager, DeltaScheduler } from "@fluidframework/container-runtime";
 
 describe("Container Runtime", () => {
@@ -31,11 +31,7 @@ describe("Container Runtime", () => {
         let batchEnd: number = 0;
 
         async function startDeltaManager() {
-            await deltaManager.connect();
-            deltaManager.inbound.resume();
-            deltaManager.outbound.resume();
-            deltaManager.inboundSignal.resume();
-            deltaManager.updateQuorumJoin();
+            await deltaManager.connect({ reason: "test" });
         }
 
         // Function to yield control in the Javascript event loop.
@@ -94,6 +90,7 @@ describe("Container Runtime", () => {
                 client as IClient,
                 DebugLogger.create("fluid:testDeltaManager"),
                 false,
+                () => false,
             );
 
             const emitter = new EventEmitter();

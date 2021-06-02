@@ -3,16 +3,6 @@ title: Total Order Broadcast & Eventual Consistency
 menuPosition: 2
 draft: true
 ---
-
-<!-- AUTO-GENERATED-CONTENT:START (INCLUDE:path=_includes/draft-doc.md) -->
-{{% callout warning "Draft!" %}}
-
-This documentation is a **Draft**. It is technically accurate but has not yet been reviewed for consistency and clarity.
-
-{{% /callout %}}
-
-<!-- AUTO-GENERATED-CONTENT:END -->
-
 ## Fluid Data: Operations all the way down
 
 Fluid data is different than data you might be familiar with. In Fluid, when data is changed, the change is modeled as
@@ -87,33 +77,39 @@ Fluid objects' data structures will be summarized.
 <!-- AUTO-GENERATED-CONTENT:START (INCLUDE:path=_includes/links.md) -->
 <!-- Links -->
 
+<!-- Concepts -->
+
+[Fluid container]: {{< relref "/docs/concepts/containers-runtime.md" >}}
+
 <!-- Packages -->
 
-[Aqueduct]: {{< relref "/apis/aqueduct.md" >}}
-[undo-redo]: {{< relref "/apis/undo-redo.md" >}}
+[Aqueduct]: {{< relref "/docs/apis/aqueduct.md" >}}
+[undo-redo]: {{< relref "/docs/apis/undo-redo.md" >}}
 
 <!-- Classes and interfaces -->
 
-[ContainerRuntimeFactoryWithDefaultDataStore]: {{< relref "/apis/aqueduct/containerruntimefactorywithdefaultdatastore.md" >}}
-[DataObject]: {{< relref "/apis/aqueduct/dataobject.md" >}}
-[DataObjectFactory]: {{< relref "/apis/aqueduct/dataobjectfactory.md" >}}
-[Ink]: {{< relref "/apis/ink/ink.md" >}}
-[SharedCell]: {{< relref "/apis/cell/sharedcell.md" >}}
+[ContainerRuntimeFactoryWithDefaultDataStore]: {{< relref "/docs/apis/aqueduct/containerruntimefactorywithdefaultdatastore.md" >}}
+[DataObject]: {{< relref "/docs/apis/aqueduct/dataobject.md" >}}
+[DataObjectFactory]: {{< relref "/docs/apis/aqueduct/dataobjectfactory.md" >}}
+[Ink]: {{< relref "/docs/apis/ink/ink.md" >}}
+[PureDataObject]: {{< relref "/docs/apis/aqueduct/puredataobject.md" >}}
+[PureDataObjectFactory]: {{< relref "/docs/apis/aqueduct/puredataobjectfactory.md" >}}
+[Quorum]: {{< relref "/docs/apis/protocol-base/quorum.md" >}}
+[SharedCell]: {{< relref "/docs/apis/cell/sharedcell.md" >}}
 [SharedCounter]: {{< relref "SharedCounter" >}}
-[SharedDirectory]: {{< relref "/apis/map/shareddirectory.md" >}}
-[SharedMap]: {{< relref "/apis/map/sharedmap.md" >}}
+[SharedDirectory]: {{< relref "/docs/apis/map/shareddirectory.md" >}}
+[SharedMap]: {{< relref "/docs/apis/map/sharedmap.md" >}}
 [SharedMatrix]: {{< relref "SharedMatrix" >}}
 [SharedNumberSequence]: {{< relref "SharedNumberSequence" >}}
-[SharedObjectSequence]: {{< relref "/apis/sequence/sharedobjectsequence.md" >}}
+[SharedObjectSequence]: {{< relref "/docs/apis/sequence/sharedobjectsequence.md" >}}
 [SharedSequence]: {{< relref "SharedSequence" >}}
 [SharedString]: {{< relref "SharedString" >}}
-[Quorum]: {{< relref "/apis/protocol-base/quorum.md" >}}
 
 <!-- Sequence methods -->
 
-[sequence.insert]: {{< relref "/apis/sequence/sharedsequence.md#sequence-sharedsequence-insert-Method" >}}
-[sequence.getItems]: {{< relref "/apis/sequence/sharedsequence.md#sequence-sharedsequence-getitems-Method" >}}
-[sequence.remove]: {{< relref "/apis/sequence/sharedsequence.md#sequence-sharedsequence-getitems-Method" >}}
-[sequenceDeltaEvent]: {{< relref "/apis/sequence/sequencedeltaevent.md" >}}
+[sequence.insert]: {{< relref "/docs/apis/sequence/sharedsequence.md#sequence-sharedsequence-insert-Method" >}}
+[sequence.getItems]: {{< relref "/docs/apis/sequence/sharedsequence.md#sequence-sharedsequence-getitems-Method" >}}
+[sequence.remove]: {{< relref "/docs/apis/sequence/sharedsequence.md#sequence-sharedsequence-getitems-Method" >}}
+[sequenceDeltaEvent]: {{< relref "/docs/apis/sequence/sequencedeltaevent.md" >}}
 
 <!-- AUTO-GENERATED-CONTENT:END -->

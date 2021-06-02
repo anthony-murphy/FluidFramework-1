@@ -1,7 +1,7 @@
 # Fluid
 
-The Fluid Framework is a TypeScript library for building distributed, real-time collaborative web
-applications.
+The Fluid Framework is a library for building distributed, real-time collaborative web
+applications using JavaScript or TypeScript.
 
 ## Getting started using the Fluid Framework
 
@@ -51,9 +51,8 @@ Dependencies between packages in various layers of the system are enforced via a
 [docs/PACKAGES.md](./docs/PACKAGES.md).
 
 ## Building
-
-In order to build the Fluid Framework, ensure that you have installed [Git](https://git-scm.com/downloads) and
-[Node.js](https://nodejs.org/).
+In order to build the Fluid Framework, ensure that you have installed [Git](https://git-scm.com/downloads) and the version of
+[Node.js](https://nodejs.org/) noted in the [.nvmrc file](https://raw.githubusercontent.com/microsoft/FluidFramework/main/.nvmrc).
 
 Note: we recommend using nvm (for [Windows](https://github.com/coreybutler/nvm-windows) or
 [MacOS/Linux](https://github.com/nvm-sh/nvm)) to install Node.js, in case you find yourself needing to install different
@@ -106,12 +105,13 @@ npm run test:coverage
 
 ### Mimic the official CI build
 
-_Note: The official build uses npm run test:full, which doesn’t work on Windows._
+Our CI pipelines run on Linux machines, and the npm scripts all have the `ci` prefix.
+To replicate the test steps from the CI pipeline locally, run the following commands for the packages or Lerna monorepos:
 
-```shell
-npm run test:coverage
-npm run test:copyresults
-```
+Run      | Non-Windows                | Windows                                               |
+---------|----------------------------|-------------------------------------------------------|
+PR       | `npm run ci:test`          | `npm run test:report && npm run test:copyresults`     |
+Official | `npm run ci:test:coverage` | `npm run test:coverage && npm run test:copyresults`   |
 
 ### Run tests from within VS Code
 

@@ -1,4 +1,4 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
+# Copyright (c) Microsoft Corporation and contributors. All rights reserved.
 # Licensed under the MIT License.
 
 # build-npm-package template to build NPM packages/projects
@@ -22,10 +22,18 @@ parameters:
 - name: taskTest
   type: string
   default: ci:test
- 
-- name: extraAuth
-  type: string
-  default:
+
+- name: taskBundleAnalysis
+  type: boolean
+  default: false
+
+- name: taskPublishBundleSizeArtifacts
+  type: boolean
+  default: false
+
+- name: taskPack
+  type: boolean
+  default: true
 
 - name: poolCG
   type: object
@@ -36,6 +44,11 @@ parameters:
   default: Lite
 
 - name: preCG
+  type: stepList
+  default: []
+
+# These should output results under an /nyc/ dir (anywhere in the repo) to get included in the published test results
+- name: additionalTests
   type: stepList
   default: []
 
@@ -50,10 +63,6 @@ parameters:
 - name: namespace
   type: boolean
   default: true
-
-- name: runBundleAnalysis
-  type: boolean
-  default: false
 
 - name: buildNumberInPatch
   type: string
@@ -71,6 +80,11 @@ parameters:
 trigger: none
 
 variables:
+  # We use 'chalk' to colorize output, which auto-detects color support in the
+  # running terminal.  The log output shown in Azure DevOps job runs only has
+  # basic ANSI color support though, so force that in the pipeline
+  - name: FORCE_COLOR
+    value: 1
   - template: include-vars.yml
     parameters:
       publishOverride: ${{ parameters.publishOverride }}
@@ -78,20 +92,29 @@ variables:
       buildNumberInPatch: ${{ parameters.buildNumberInPatch }}
 
 stages:
+  # Install / Build / Test Stage
   - stage: build
     displayName: Build Stage
     jobs:
       # Job - Build
-      - job: Build
+      - job: build
+        displayName: Build
         pool: ${{ parameters.poolBuild }}
         variables:
           testCoverage: ${{ and(eq(parameters.taskTest, 'ci:test'), ne(variables['Build.Reason'], 'PullRequest')) }}
           releaseBuildVar: $[variables.releaseBuild]
         steps:
+        # Setup
+        - checkout: self
+          clean: true
+          lfs: ${{ parameters.checkoutSubmodules }}
+          submodules: ${{ parameters.checkoutSubmodules }}
+
         - task: Bash@3
           displayName: Parameters
           inputs:
             targetType: 'inline'
+            workingDirectory: ${{ parameters.buildDirectory }}
             script: |
               # Show all task group conditions
 
@@ -104,6 +127,7 @@ stages:
                 releaseBuildOverride=${{ parameters.releaseBuildOverride }}
 
               Tasks Parameters:
+                BuildDir=${{ parameters.buildDirectory }}
                 Build=${{ parameters.taskBuild }}
                 Lint=${{ parameters.taskLint }}
                 Test=${{ parameters.taskTest }}
@@ -118,25 +142,38 @@ stages:
 
                 release=$(release)"
 
+              # Error checking
               if [[ "$(release)" == "release" ]]; then
                 if [[ "${{ variables.canRelease }}" == "False" ]]; then
                   echo "##vso[task.logissue type=error]Invalid branch ${{ variables['Build.SourceBranch'] }} for release"
                   exit -1;
                 fi
+
+                if [ -f "lerna.json" ]; then
+                  grep -e fluid.*-0 `find packages -name 'package.json'`
+                else
+                  grep -e fluid.*-0 `find . -name 'package.json'`
+                fi
+
+                if [[ $? == 0 ]]; then
+                  echo "##vso[task.logissue type=error]Release shouldn't contain prerelease dependencies"
+                  exit -1;
+                fi
               fi
 
-              if [[ "$(release)" != "none" ]]; then
+              if [[ "$(release)" == "prerelease" ]]; then
+                if [[ "${{ parameters.buildNumberInPatch }}" == "true" ]]; then
+                  echo "##vso[task.logissue type=error] Prerelease not allow for builds that put build number as the patch version"
+                  exit -1;
+                fi
+              fi
+
+              if [[ "$(release)" != "none" ]] && [[ "$(release)" != "" ]]; then
                 if [[ "${{ variables.publish }}" != "True" ]]; then
                   echo "##vso[task.logissue type=error]'$(release)'' is set but package is not published. Either the branch doesn't default to publish or it is skipped."
                   exit -1;
                 fi
               fi
-
-        # Setup
-        - checkout: self
-          clean: true
-          lfs: ${{ parameters.checkoutSubmodules }}
-          submodules: ${{ parameters.checkoutSubmodules }}
 
         # Install
         - task: UseNode@1
@@ -156,6 +193,7 @@ stages:
           parameters:
             buildDirectory: ${{ parameters.buildDirectory }}
             buildNumberInPatch: ${{ parameters.buildNumberInPatch }}
+            tagName: ${{ parameters.tagName }}
 
         # Build
         - ${{ if ne(parameters.taskBuild, 'false') }}:
@@ -177,6 +215,9 @@ stages:
 
         # Test
         - ${{ if ne(parameters.taskTest, 'false') }}:
+          # Run any additional tests first so their results can be copied to the ~/nyc dir and published below
+          - ${{ parameters.additionalTests }}
+
           # Test - No coverage
           - ${{ if ne(variables['testCoverage'], true) }}:
             - task: Npm@1
@@ -209,57 +250,74 @@ stages:
               testResultsFormat: 'JUnit'
               testResultsFiles: '**/*junit-report.xml'
               searchFolder: ${{ parameters.buildDirectory }}/nyc
-              mergeTestResults: true
+              mergeTestResults: false
             condition: succeededOrFailed()
 
         # Pack
-        - task: Bash@3
-          displayName: npm pack
-          inputs:
-            targetType: 'inline'
-            workingDirectory: ${{ parameters.buildDirectory }}
-            script: |
-              mkdir $(Build.ArtifactStagingDirectory)/pack/
-              if [ -f "lerna.json" ]; then
-                npx lerna exec --no-private --no-sort -- npm pack --unsafe-perm
-                npx lerna exec --no-private --no-sort --parallel -- mv -t $(Build.ArtifactStagingDirectory)/pack/ ./*.tgz
-              else
-                npm pack --unsafe-perm
-                mv -t $(Build.ArtifactStagingDirectory)/pack/ ./*.tgz
-              fi
+        - ${{ if ne(parameters.taskPack, false) }}:
+          - task: Bash@3
+            displayName: npm pack
+            inputs:
+              targetType: 'inline'
+              workingDirectory: ${{ parameters.buildDirectory }}
+              script: |
+                mkdir $(Build.ArtifactStagingDirectory)/pack/
+                if [ -f "lerna.json" ]; then
+                  npx lerna exec --no-private --no-sort -- npm pack --unsafe-perm
+                  npx lerna exec --no-private --no-sort --parallel -- mv -t $(Build.ArtifactStagingDirectory)/pack/ ./*.tgz
+                else
+                  npm pack --unsafe-perm
+                  mv -t $(Build.ArtifactStagingDirectory)/pack/ ./*.tgz
+                fi
 
-        - task: PublishBuildArtifacts@1
-          displayName: Publish Artifact - pack
-          inputs:
-            PathtoPublish: '$(Build.ArtifactStagingDirectory)/pack'
-            ArtifactName: 'pack'
-            publishLocation: 'Container'
+          - task: PublishBuildArtifacts@1
+            displayName: Publish Artifact - pack
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)/pack'
+              ArtifactName: 'pack'
+              publishLocation: 'Container'
 
-        # Collect bundle analysis
-        - ${{ if eq(parameters.runBundleAnalysis, true) }}:
+        # Collect/publish/run bundle analysis
+        - ${{ if eq(parameters.taskBundleAnalysis, true) }}:
           - task: Npm@1
-            displayName: npm run bundle-analysis
+            displayName: npm run bundle-analysis:collect
             inputs:
               command: 'custom'
               workingDir: ${{ parameters.buildDirectory }}
-              customCommand: 'run bundle-analysis'
+              customCommand: 'run bundle-analysis:collect'
 
           - task: PublishBuildArtifacts@1
             displayName: Publish Artifacts - bundle-analysis
-            condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+            condition:
+              and(
+                succeeded(),
+                ne(variables['Build.Reason'], 'PullRequest'),
+                eq(${{ parameters.taskPublishBundleSizeArtifacts }}, true)
+              )
             inputs:
               PathtoPublish: '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis'
               Artifactname: 'bundleAnalysis'
               publishLocation: 'Container'
 
-        # Docs
-        - ${{ if ne(parameters.taskBuildDocs, false) }}:
           - task: Npm@1
-            displayName: npm run build:docs
+            displayName: run bundle size comparison
+            condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+            env:
+              ADO_API_TOKEN: $(System.AccessToken)
+              DANGER_GITHUB_API_TOKEN: $(githubPublicRepoSecret)
             inputs:
               command: 'custom'
               workingDir: ${{ parameters.buildDirectory }}
-              customCommand: 'run build:docs'
+              customCommand: 'run bundle-analysis:run'
+
+        # Docs
+        - ${{ if ne(parameters.taskBuildDocs, false) }}:
+          - task: Npm@1
+            displayName: npm run ci:build:docs
+            inputs:
+              command: 'custom'
+              workingDir: ${{ parameters.buildDirectory }}
+              customCommand: 'run ci:build:docs'
 
           - task: PublishBuildArtifacts@1
             displayName: Publish Artifact - _api-extractor-temp
@@ -267,6 +325,18 @@ stages:
               PathtoPublish: '${{ parameters.buildDirectory }}/_api-extractor-temp'
               ArtifactName: '_api-extractor-temp'
               publishLocation: 'Container'
+
+        - task: Bash@3
+          displayName: Check for extraenous modified files
+          inputs:
+            targetType: 'inline'
+            script: |
+              git status | grep -v -E 'package.json|package-lock.json|packageVersion.ts|lerna.json|\(use' | grep '^\s' > git_status.log
+              if [ `cat git_status.log | wc -l` != "0" ]; then
+                cat git_status.log
+                echo "##vso[task.logissue type=error]Build should not create extraenous files"
+                exit -1;
+              fi
 
       # Job - Component detection
       - ${{ if eq(variables.componentDetection, true) }}:
@@ -293,7 +363,5 @@ stages:
   - ${{ if eq(variables.publish, true) }}:
     - template: include-publish-npm-package.yml
       parameters:
-        buildDirectory: ${{ parameters.buildDirectory }}
         namespace: ${{ parameters.namespace }}
         tagName: ${{ parameters.tagName }}
-        buildNumberInPatch: ${{ parameters.buildNumberInPatch }}

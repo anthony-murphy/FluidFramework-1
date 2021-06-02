@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -62,6 +62,7 @@ export class TestTenantManager implements ITenantManager {
             storage: this.tenant.storage,
             orderer: this.tenant.orderer,
             key: "test-tenant-key",
+            customData: {},
         });
     }
 

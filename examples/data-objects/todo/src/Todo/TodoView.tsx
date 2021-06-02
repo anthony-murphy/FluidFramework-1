@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -83,7 +83,7 @@ export class TodoView extends React.Component<TodoViewProps, TodoViewState> {
         const todoItemComponents = this.state.todoItemComponents.map((todoItemComponent) => (
             <TodoItemView
                 todoItemModel={todoItemComponent}
-                key={todoItemComponent.url}
+                key={todoItemComponent.handle.absolutePath}
             />
         ));
 

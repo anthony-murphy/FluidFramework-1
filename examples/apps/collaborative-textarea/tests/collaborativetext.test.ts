@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -63,6 +63,16 @@ describe("collaborativetext", () => {
         expect(ta1).toEqual("");
 
         setText(0, "hello");
+
+        await page.waitForFunction( async () => {
+                const divs = document.getElementsByClassName("text-area");
+                const textAreaElements = divs[0].getElementsByTagName("textarea");
+                const textarea = textAreaElements[0] as HTMLTextAreaElement;
+                if (textarea) {
+                    return textarea.value.includes("hello");
+                }
+            }, { timeout: 1000 }
+        );
 
         const ta12 = await getValue(0);
         expect(ta12).toEqual("hello");

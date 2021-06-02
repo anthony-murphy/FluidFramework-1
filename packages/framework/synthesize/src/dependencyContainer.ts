@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -58,6 +58,7 @@ export class DependencyContainer implements IFluidDependencySynthesizer {
      */
     public synthesize<
         O extends IFluidObject,
+        // eslint-disable-next-line @typescript-eslint/ban-types
         R extends IFluidObject = {}>(
             optionalTypes: FluidObjectSymbolProvider<O>,
             requiredTypes: FluidObjectSymbolProvider<R>,

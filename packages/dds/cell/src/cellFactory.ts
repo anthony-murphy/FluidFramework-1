@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -33,14 +33,16 @@ export class CellFactory implements IChannelFactory {
         return CellFactory.Attributes;
     }
 
+    /**
+     * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.load}
+     */
     public async load(
         runtime: IFluidDataStoreRuntime,
         id: string,
         services: IChannelServices,
-        branchId: string | undefined,
         attributes: IChannelAttributes): Promise<ISharedCell> {
         const cell = new SharedCell(id, runtime, attributes);
-        await cell.load(branchId, services);
+        await cell.load(services);
         return cell;
     }
 

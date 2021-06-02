@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 import { ISharedMap, IDirectoryValueChanged } from "@fluidframework/map";
@@ -608,7 +608,7 @@ export interface ISyncedState {
     /**
      * Get values from the synced state for a syncedStateId as key
      */
-    get: <T, >(key: string) => T;
+    get: <T>(key: string) => T | undefined;
     /**
      * Add a listener to the synced state using a provided callback
      */

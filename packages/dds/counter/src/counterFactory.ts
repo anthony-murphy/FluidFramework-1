@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -33,14 +33,16 @@ export class CounterFactory implements IChannelFactory {
         return CounterFactory.Attributes;
     }
 
+    /**
+     * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.load}
+     */
     public async load(
         runtime: IFluidDataStoreRuntime,
         id: string,
         services: IChannelServices,
-        branchId: string,
         attributes: IChannelAttributes): Promise<ISharedCounter> {
         const counter = new SharedCounter(id, runtime, attributes);
-        await counter.load(branchId, services);
+        await counter.load(services);
         return counter;
     }
 

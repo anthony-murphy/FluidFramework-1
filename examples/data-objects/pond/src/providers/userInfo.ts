@@ -1,18 +1,15 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
 import { EventEmitter } from "events";
 
-import {
-    IFluidHandleContext,
-    IFluidSerializer,
-} from "@fluidframework/core-interfaces";
+import { IFluidHandleContext } from "@fluidframework/core-interfaces";
 import { IQuorum } from "@fluidframework/protocol-definitions";
 import { DependencyContainer } from "@fluidframework/synthesize";
 import { IFluidDataStoreRegistry } from "@fluidframework/runtime-definitions";
-import { IContainerRuntime, IContainerRuntimeDirtyable } from "@fluidframework/container-runtime-definitions";
+import { IContainerRuntime } from "@fluidframework/container-runtime-definitions";
 
 import { IFluidUserInformation } from "../interfaces";
 
@@ -68,9 +65,7 @@ export class UserInfo extends EventEmitter implements IFluidUserInformation {
 export const userInfoFactory = async (dc: DependencyContainer) => {
     const s = dc.synthesize<IContainerRuntime>({
         IContainerRuntime,
-        IContainerRuntimeDirtyable,
         IFluidHandleContext,
-        IFluidSerializer,
         IFluidDataStoreRegistry,
     }, {});
     const containerRuntime = await s.IContainerRuntime;

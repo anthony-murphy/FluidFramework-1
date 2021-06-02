@@ -1,7 +1,9 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
+
+ /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import {
     IFluidObject,
@@ -34,7 +36,7 @@ export class ImageComponent implements
     public readonly preferInline = false;
     public handle: FluidObjectHandle;
 
-    constructor(public imageUrl: string, public url: string, path: string, context: IFluidHandleContext) {
+    constructor(public imageUrl: string, path: string, context: IFluidHandleContext) {
         this.handle = new FluidObjectHandle(this, path, context);
     }
 
@@ -80,7 +82,7 @@ export class ImageCollection extends LazyLoadedDataObject<ISharedDirectory> impl
         const id = `image-${Date.now()}`;
         this.root.set(id, "https://media.giphy.com/media/13V60VgE2ED7oc/giphy.gif");
         // Relying on valueChanged event to create the bar is error prone
-        return this.images.get(id);
+        return this.images.get(id)!;
     }
 
     public removeCollectionItem(instance: IFluidObject): void {
@@ -97,7 +99,6 @@ export class ImageCollection extends LazyLoadedDataObject<ISharedDirectory> impl
             .substr(1)
             .substr(0, !request.url.includes("/", 1) ? request.url.length : request.url.indexOf("/"));
 
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (!trimmed) {
             return {
                 mimeType: "fluid/object",
@@ -110,7 +111,7 @@ export class ImageCollection extends LazyLoadedDataObject<ISharedDirectory> impl
         // or at least to request a value >= a sequence number
         await this.root.wait(trimmed);
 
-        return this.images.get(trimmed).request({ url: trimmed.substr(1 + trimmed.length) });
+        return this.images.get(trimmed)!.request({ url: trimmed.substr(1 + trimmed.length) });
     }
 
     private initialize() {
@@ -118,22 +119,17 @@ export class ImageCollection extends LazyLoadedDataObject<ISharedDirectory> impl
             this.images.set(
                 key,
                 new ImageComponent(
-                    this.root.get(key),
-                    `${this.url}/${key}`,
+                    this.root.get(key)!,
                     key,
-                    this.runtime.IFluidHandleContext));
+                    this.runtime.objectsRoutingContext));
         }
 
         this.root.on("valueChanged", (changed) => {
-            if (this.images.has(changed.key)) {
-                // TODO add support for video playback values
-                // this.videoPlayers.get(changed.key).update(this.root.get(changed.key));
-            } else {
+            if (!this.images.has(changed.key)) {
                 const player = new ImageComponent(
-                    this.root.get(changed.key),
-                    `${this.url}/${changed.key}`,
+                    this.root.get(changed.key)!,
                     changed.key,
-                    this.runtime.IFluidHandleContext);
+                    this.runtime.objectsRoutingContext);
                 this.images.set(changed.key, player);
             }
         });

@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -7,13 +7,15 @@ import { EventEmitter } from "events";
 import {
     IConsumer,
     IQueuedMessage,
+    IPartitionConfig,
     IPartitionLambda,
     IPartitionLambdaFactory,
     ILogger,
+    LambdaCloseType,
+    IContextErrorData,
 } from "@fluidframework/server-services-core";
-import { AsyncQueue, queue } from "async";
+import { QueueObject, queue } from "async";
 import * as _ from "lodash";
-import { Provider } from "nconf";
 import { CheckpointManager } from "./checkpointManager";
 import { Context } from "./context";
 
@@ -22,37 +24,43 @@ import { Context } from "./context";
  * overall partition offset.
  */
 export class Partition extends EventEmitter {
-    private q: AsyncQueue<IQueuedMessage>;
-    private readonly lambdaP: Promise<IPartitionLambda>;
-    private lambda: IPartitionLambda;
+    private readonly q: QueueObject<IQueuedMessage>;
+    private lambdaP: Promise<IPartitionLambda> | undefined;
+    private lambda: IPartitionLambda | undefined;
     private readonly checkpointManager: CheckpointManager;
     private readonly context: Context;
+    private closed = false;
 
     constructor(
         private readonly id: number,
         leaderEpoch: number,
-        factory: IPartitionLambdaFactory,
+        factory: IPartitionLambdaFactory<IPartitionConfig>,
         consumer: IConsumer,
-        config: Provider,
         private readonly logger?: ILogger) {
         super();
 
         // Should we pass epoch with the context?
-        const clonedConfig = _.cloneDeep((config as any).get());
-        clonedConfig.leaderEpoch = leaderEpoch;
-        const partitionConfig = new Provider({}).defaults(clonedConfig).use("memory");
+        const partitionConfig: IPartitionConfig = { leaderEpoch };
 
         this.checkpointManager = new CheckpointManager(id, consumer);
-        this.context = new Context(this.checkpointManager);
-        this.context.on("error", (error: any, restart: boolean) => {
-            this.emit("error", error, restart);
+        this.context = new Context(this.checkpointManager, this.logger);
+        this.context.on("error", (error: any, errorData: IContextErrorData) => {
+            this.emit("error", error, errorData);
         });
 
         // Create the incoming message queue
         this.q = queue(
             (message: IQueuedMessage, callback) => {
                 try {
-                    this.lambda.handler(message);
+                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                    const optionalPromise = this.lambda!.handler(message);
+                    if (optionalPromise) {
+                        optionalPromise
+                            .then(callback as any)
+                            .catch(callback);
+                        return;
+                    }
+
                     callback();
                 } catch (error) {
                     callback(error);
@@ -65,24 +73,40 @@ export class Partition extends EventEmitter {
         this.lambdaP.then(
             (lambda) => {
                 this.lambda = lambda;
+                this.lambdaP = undefined;
                 this.q.resume();
             },
             (error) => {
-                this.emit("error", error, true);
+                if (this.closed) {
+                    return;
+                }
+
+                const errorData: IContextErrorData = {
+                    restart: true,
+                };
+                this.emit("error", error, errorData);
                 this.q.kill();
             });
 
-        // eslint-disable-next-line @typescript-eslint/unbound-method
-        this.q.error = (error) => {
-            this.emit("error", error, true);
-        };
+        this.q.error((error) => {
+            const errorData: IContextErrorData = {
+                restart: true,
+            };
+            this.emit("error", error, errorData);
+        });
     }
 
     public process(rawMessage: IQueuedMessage) {
-        this.q.push(rawMessage);
+        if (this.closed) {
+            return;
+        }
+
+        void this.q.push(rawMessage);
     }
 
-    public close(): void {
+    public close(closeType: LambdaCloseType): void {
+        this.closed = true;
+
         // Stop any pending message processing
         this.q.kill();
 
@@ -90,16 +114,27 @@ export class Partition extends EventEmitter {
         this.checkpointManager.close();
         this.context.close();
 
-        // Notify the lambda (should it be resolved) of the close
-        this.lambdaP.then(
-            (lambda) => {
-                lambda.close();
-            },
-            (error) => {
-                // Lambda never existed - no need to close
-            });
+        // Notify the lambda of the close
+        if (this.lambda) {
+            this.lambda.close(closeType);
+            this.lambda = undefined;
+        } else if (this.lambdaP) {
+            // asynchronously close the lambda since it's not created yet
+            this.lambdaP
+                .then(
+                    (lambda) => {
+                        lambda.close(closeType);
+                    },
+                    (error) => {
+                        // Lambda never existed - no need to close
+                    })
+                .finally(() => {
+                    this.lambda = undefined;
+                    this.lambdaP = undefined;
+                });
+        }
 
-        return;
+        this.removeAllListeners();
     }
 
     /**
@@ -117,10 +152,10 @@ export class Partition extends EventEmitter {
             // Wait until the queue is drained
             this.logger?.info(`Waiting for queue to drain for partition ${this.id}`);
 
-            this.q.drain = () => {
+            this.q.drain(() => {
                 this.logger?.info(`Drained partition ${this.id}`);
                 resolve();
-            };
+            });
         });
         await drainedP;
 

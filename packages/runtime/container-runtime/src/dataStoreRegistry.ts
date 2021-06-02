@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 import {
@@ -9,7 +9,7 @@ import {
 } from "@fluidframework/runtime-definitions";
 
 export class FluidDataStoreRegistry implements IFluidDataStoreRegistry {
-    private readonly map: Map<string, Promise<FluidDataStoreRegistryEntry>>;
+    private readonly map: Map<string, FluidDataStoreRegistryEntry | Promise<FluidDataStoreRegistryEntry>>;
 
     public get IFluidDataStoreRegistry() { return this; }
 

@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -32,14 +32,16 @@ export class ConsensusRegisterCollectionFactory implements IConsensusRegisterCol
         return ConsensusRegisterCollectionFactory.Attributes;
     }
 
+    /**
+     * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.load}
+     */
     public async load(
         runtime: IFluidDataStoreRuntime,
         id: string,
         services: IChannelServices,
-        branchId: string,
         attributes: IChannelAttributes): Promise<IConsensusRegisterCollection> {
         const collection = new ConsensusRegisterCollection(id, runtime, attributes);
-        await collection.load(branchId, services);
+        await collection.load(services);
         return collection;
     }
 

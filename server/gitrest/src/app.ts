@@ -1,19 +1,21 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
-import * as bodyParser from "body-parser";
-import * as cors from "cors";
+import { json, urlencoded } from "body-parser";
+import cors from "cors";
 // eslint-disable-next-line import/no-duplicates
-import * as express from "express";
-// eslint-disable-next-line no-duplicate-imports, import/no-duplicates
+import express from "express";
+// eslint-disable-next-line @typescript-eslint/no-duplicate-imports, import/no-duplicates
 import { Express } from "express";
-import * as morgan from "morgan";
-import * as nconf from "nconf";
+import morgan from "morgan";
+import nconf from "nconf";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import split = require("split");
 import * as winston from "winston";
+import { bindCorrelationId } from "@fluidframework/server-services-utils";
+import { IExternalStorageManager } from "./externalStorageManager";
 import * as routes from "./routes";
 import * as utils from "./utils";
 
@@ -24,19 +26,41 @@ const stream = split().on("data", (message) => {
     winston.info(message);
 });
 
-export function create(store: nconf.Provider) {
+export function create(
+    store: nconf.Provider,
+    externalStorageManager: IExternalStorageManager,
+) {
     // Express app configuration
     const app: Express = express();
 
-    app.use(morgan(store.get("logger:morganFormat"), { stream }));
+    const loggerFormat = store.get("logger:morganFormat");
+    if (loggerFormat === "json") {
+        app.use(morgan((tokens, req, res) => {
+            const messageMetaData = {
+                method: tokens.method(req, res),
+                url: tokens.url(req, res),
+                status: tokens.status(req, res),
+                contentLength: tokens.res(req, res, "content-length"),
+                responseTime: tokens["response-time"](req, res),
+                serviceName: "historian",
+                eventName: "http_requests",
+             };
+             winston.info("request log generated", { messageMetaData });
+             return undefined;
+        }, { stream }));
+    } else {
+        app.use(morgan(loggerFormat, { stream }));
+    }
 
     const requestSize = store.get("requestSizeLimit");
-    app.use(bodyParser.json({ limit: requestSize }));
-    app.use(bodyParser.urlencoded({ limit: requestSize, extended: false }));
+    app.use(json({ limit: requestSize }));
+    app.use(urlencoded({ limit: requestSize, extended: false }));
+
+    app.use(bindCorrelationId());
 
     app.use(cors());
     const repoManager = new utils.RepositoryManager(store.get("storageDir"));
-    const apiRoutes = routes.create(store, repoManager);
+    const apiRoutes = routes.create(store, repoManager, externalStorageManager);
     app.use(apiRoutes.git.blobs);
     app.use(apiRoutes.git.refs);
     app.use(apiRoutes.git.repos);
@@ -59,7 +83,6 @@ export function create(store: nconf.Provider) {
     // will print stacktrace
     if (app.get("env") === "development") {
         app.use((err, req, res, next) => {
-            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
             res.status(err.status || 500);
             res.json({
                 error: err,
@@ -71,7 +94,6 @@ export function create(store: nconf.Provider) {
     // production error handler
     // no stacktraces leaked to user
     app.use((err, req, res, next) => {
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         res.status(err.status || 500);
         res.json({
             error: {},

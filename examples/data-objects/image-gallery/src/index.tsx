@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -8,6 +8,7 @@ import {
     DataObject,
     DataObjectFactory,
 } from "@fluidframework/aqueduct";
+import { IEvent } from "@fluidframework/common-definitions";
 import { IFluidHTMLView } from "@fluidframework/view-interfaces";
 import React from "react";
 import ReactDOM from "react-dom";
@@ -16,7 +17,6 @@ import ImageGallery from "react-image-gallery";
 import "react-image-gallery/styles/css/image-gallery.css";
 // eslint-disable-next-line import/no-unassigned-import
 import "./Styles.css";
-import { ISharedMap } from "@fluidframework/map";
 
 const imageGalleryName = "@fluid-example/image-gallery";
 
@@ -54,7 +54,6 @@ export class ImageGalleryObject extends DataObject implements IFluidHTMLView {
     };
 
     imageGallery: ImageGallery | undefined;
-    images: ISharedMap | undefined;
 
     private readonly onSlide = (index) => {
         this.root.set("position", index);
@@ -81,24 +80,29 @@ export class ImageGalleryObject extends DataObject implements IFluidHTMLView {
 
         this.reactRender(div);
         if (this.imageGallery !== undefined) {
-            this.imageGallery.slideToIndex(this.root.get("position"));
+            this.imageGallery.slideToIndex(this.getPosition());
         }
 
         this.root.on("valueChanged", (_, local) => {
             if (local) {
                 return;
             }
-            const position = this.root.get<number>("position");
+
             if (this.imageGallery !== undefined) {
                 // This is a result of a remote slide, don't trigger onSlide for this slide
                 this.reactRender(div, () => this.reactRender(div));
-                this.imageGallery.slideToIndex(position);
+                this.imageGallery.slideToIndex(this.getPosition());
             }
         });
     }
+
+    private getPosition() {
+        return this.root.get<number>("position") ?? 0;
+    }
 }
 
-export const ImageGalleryInstantiationFactory = new DataObjectFactory(
+export const ImageGalleryInstantiationFactory = new DataObjectFactory<ImageGalleryObject, undefined, undefined, IEvent>
+(
     imageGalleryName,
     ImageGalleryObject,
     [],
@@ -106,7 +110,7 @@ export const ImageGalleryInstantiationFactory = new DataObjectFactory(
 );
 
 export const fluidExport = new ContainerRuntimeFactoryWithDefaultDataStore(
-    imageGalleryName,
+    ImageGalleryInstantiationFactory,
     new Map([
         [imageGalleryName, Promise.resolve(ImageGalleryInstantiationFactory)],
     ]),

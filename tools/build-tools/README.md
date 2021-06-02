@@ -1,6 +1,6 @@
 # @fluidframework/build-tools
 
-This package contains scripts and tools for Fluid Framework repo maintainance.  The main tool is `fluid-build` which is a node script written specifically for building the Fluid Framework packages and mono repo. While repo is set up officially to support building with lerna, this script tries to use the information to speed up build time by maximizing concurrent task and incremental build.
+This package contains scripts and tools for Fluid Framework repo maintenance.  The main tool is `fluid-build` which is a node script written specifically for building the Fluid Framework packages and mono repo. While repo is set up officially to support building with lerna, this script tries to use the information to speed up build time by maximizing concurrent task and incremental build.
 
 NOTE: There is a lot of assumption made in the tool about the commands parsing and dependencies and structure of the mono repo.  If these assumption changes, this tool will break and needs to be fixed up.  More work can be done to the tool to do it more formally and correctly.  But it should work for our current repo.
 
@@ -123,3 +123,7 @@ Currently, this task recognize whether it is the default tsc build to commonjs m
 #### Tslint/Eslint Task
 
 Tslint task only wait for the type definition from it's package dependencies.
+
+## Note about `fluid-bump-version`
+
+This tool assumes that you have a set a remote git ref to `microsoft/FluidFramework`. Note that this ref must be an HTTPS URL - if you are using an SSH ref and get an error saying that a remote cannot be found for the repo, then make sure you add another ref specifically for the HTTPS URL (even if you do not use it otherwise).

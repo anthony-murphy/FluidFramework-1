@@ -1,9 +1,8 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
-import { IServiceConfiguration } from "@fluidframework/protocol-definitions";
 import { IPubSub, LocalOrderer } from "@fluidframework/server-memory-orderer";
 import { GitManager, IHistorian } from "@fluidframework/server-services-client";
 import {
@@ -12,8 +11,10 @@ import {
     ILogger,
     IOrderer,
     IOrdererManager,
+    IServiceConfiguration,
     ITaskMessageSender,
     ITenantManager,
+    TokenGenerator,
 } from "@fluidframework/server-services-core";
 
 export class LocalOrdererManager implements IOrdererManager {
@@ -25,12 +26,20 @@ export class LocalOrdererManager implements IOrdererManager {
         private readonly tenantManager: ITenantManager,
         private readonly taskMessageSender: ITaskMessageSender,
         private readonly permission: any, // Can probably remove
-        private readonly maxMessageSize: number,
+        private readonly tokenGenerator: TokenGenerator,
         private readonly createHistorian: (tenant: string) => Promise<IHistorian>,
         private readonly logger: ILogger,
         private readonly serviceConfiguration?: Partial<IServiceConfiguration>,
         private readonly pubsub?: IPubSub,
     ) {
+    }
+
+    /**
+     * Closes all local orderers
+     */
+    public async close() {
+        await Promise.all(Array.from(this.map.values()).map(async (orderer) => (await orderer).close()));
+        this.map.clear();
     }
 
     /**
@@ -71,7 +80,7 @@ export class LocalOrdererManager implements IOrdererManager {
             this.taskMessageSender,
             this.tenantManager,
             this.permission,
-            this.maxMessageSize,
+            this.tokenGenerator,
             this.logger,
             gitManager,
             undefined /* ILocalOrdererSetup */,
@@ -81,7 +90,6 @@ export class LocalOrdererManager implements IOrdererManager {
             undefined /* foremanContext */,
             undefined /* scribeContext */,
             undefined /* deliContext */,
-            undefined /* clientTimeout */,
             this.serviceConfiguration);
 
         const lambdas = [
@@ -93,7 +101,7 @@ export class LocalOrdererManager implements IOrdererManager {
         ];
         await Promise.all(lambdas.map(async (l) => {
             if (l.state === "created") {
-                return new Promise((resolve) => l.once("started", () => resolve()));
+                return new Promise<void>((resolve) => l.once("started", () => resolve()));
             }
         }));
 

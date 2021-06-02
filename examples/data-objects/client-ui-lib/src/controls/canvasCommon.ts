@@ -1,13 +1,19 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
 import { IInkPoint, IPen } from "@fluidframework/ink";
 import { IPoint, IVector, Point, Vector } from "../ui";
-import { SegmentCircleInclusive } from "./overlayCanvas";
 // eslint-disable-next-line import/no-internal-modules
 import { Circle, IShape, Polygon } from "./shapes/index";
+
+enum SegmentCircleInclusive {
+    None,
+    Both,
+    Start,
+    End,
+}
 
 /**
  * Given start point and end point, get MixInk shapes to render. The returned MixInk

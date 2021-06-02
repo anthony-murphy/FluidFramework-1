@@ -1,17 +1,16 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
 import * as SearchMenu from "@fluid-example/search-menu";
 import * as api from "@fluid-internal/client-api";
-import { performanceNow } from "@fluidframework/common-utils";
+import { performance } from "@fluidframework/common-utils";
 import {
     IFluidObject,
     IFluidHandle,
     IFluidLoadable,
 } from "@fluidframework/core-interfaces";
-import { IGenericBlob } from "@fluidframework/container-definitions";
 import { IFluidObjectCollection } from "@fluid-example/fluid-object-interfaces";
 import * as types from "@fluidframework/map";
 import * as MergeTree from "@fluidframework/merge-tree";
@@ -23,7 +22,6 @@ import { HTMLViewAdapter } from "@fluidframework/view-adapters";
 import { IFluidHTMLView } from "@fluidframework/view-interfaces";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { handleFromLegacyUri } from "@fluidframework/request-handler";
-import { blobUploadHandler } from "../blob";
 import { CharacterCodes, Paragraph, Table } from "../text";
 import * as ui from "../ui";
 import { Cursor, IRange } from "./cursor";
@@ -492,12 +490,6 @@ const commands: IFlowViewCmd[] = [
     },
     {
         exec: (c, p, f) => {
-            f.insertNewCollectionComponent(f.videoPlayers);
-        },
-        key: "insert morton",
-    },
-    {
-        exec: (c, p, f) => {
             f.insertNewCollectionComponent(f.images);
         },
         key: "insert image",
@@ -757,8 +749,11 @@ function isComponentView(marker: MergeTree.Marker) {
 function renderSegmentIntoLine(
     segment: MergeTree.ISegment, segpos: number, refSeq: number,
     clientId: number, start: number, end: number, lineContext: ILineContext) {
+    let _start = start;
+    let _end = end;
+
     if (lineContext.lineDiv.linePos === undefined) {
-        lineContext.lineDiv.linePos = segpos + start;
+        lineContext.lineDiv.linePos = segpos + _start;
         lineContext.lineDiv.lineEnd = lineContext.lineDiv.linePos;
     }
     if (MergeTree.TextSegment.is(segment)) {
@@ -767,16 +762,16 @@ function renderSegmentIntoLine(
             // TODO: show math box if cursor in math
             lineContext.mathBuffer += segment.text;
         } else {
-            if (start < 0) {
-                start = 0;
+            if (_start < 0) {
+                _start = 0;
             }
-            if (end > segment.cachedLength) {
-                end = segment.cachedLength;
+            if (_end > segment.cachedLength) {
+                _end = segment.cachedLength;
             }
-            const text = segment.text.substring(start, end);
-            const textStartPos = segpos + start;
-            const textEndPos = segpos + end;
-            lineContext.span = makeSegSpan(lineContext.flowView, text, segment, start, segpos);
+            const text = segment.text.substring(_start, _end);
+            const textStartPos = segpos + _start;
+            const textEndPos = segpos + _end;
+            lineContext.span = makeSegSpan(lineContext.flowView, text, segment, _start, segpos);
             if ((lineContext.lineDiv.endPGMarker) && (lineContext.lineDiv.endPGMarker.properties.header)) {
                 lineContext.span.style.color = wordHeadingColor;
             }
@@ -820,7 +815,7 @@ function renderSegmentIntoLine(
                         .get()
                         .then(async (component) => {
                             if (!HTMLViewAdapter.canAdapt(component)) {
-                                return Promise.reject("component is not viewable");
+                                return Promise.reject(new Error("component is not viewable"));
                             }
 
                             return new HTMLViewAdapter(component);
@@ -1010,23 +1005,24 @@ function getWidthInLine(
     breakIndex: number,
     defaultFontstr: string,
     offset: number) {
+    let _offset = offset;
     let itemIndex = endPGMarker.cache.breaks[breakIndex].startItemIndex;
     let w = 0;
-    while (offset > 0) {
+    while (_offset > 0) {
         const item = endPGMarker.itemCache.items[itemIndex];
         if (!item || (item.type === Paragraph.ParagraphItemType.Marker)) {
             itemIndex++;
             break;
         }
         const blockItem = <Paragraph.IPGBlock>item;
-        if (blockItem.text.length > offset) {
+        if (blockItem.text.length > _offset) {
             const fontstr = item.fontstr || defaultFontstr;
-            const subw = domutils.getTextWidth(blockItem.text.substring(0, offset), fontstr);
+            const subw = domutils.getTextWidth(blockItem.text.substring(0, _offset), fontstr);
             return Math.floor(w + subw);
         } else {
             w += item.width;
         }
-        offset -= blockItem.text.length;
+        _offset -= blockItem.text.length;
         itemIndex++;
     }
     return Math.round(w);
@@ -1634,6 +1630,8 @@ export class Viewport {
         x: number, y: number,
         lineHeight: number,
         movingMarker = false) {
+        let _x = x;
+        let _y = y;
         if ((!flowView.movingInclusion.onTheMove) ||
             ((flowView.movingInclusion.onTheMove && (flowView.movingInclusion.marker !== marker)) ||
                 movingMarker)) {
@@ -1654,16 +1652,16 @@ export class Viewport {
                 if (irdoc.layout) {
                     h = Math.floor(w * irdoc.layout.ar);
                 }
-                if ((x + w) > this.width) {
-                    x -= w;
+                if ((_x + w) > this.width) {
+                    _x -= w;
                 }
-                x = Math.floor(x + dx);
-                if (x < minX) {
-                    x = 0;
+                _x = Math.floor(_x + dx);
+                if (_x < minX) {
+                    _x = 0;
                 }
-                y += lineHeight;
-                y = Math.floor(y + dy);
-                const exclu = makeExcludedRectangle(x, y, w, h, irdoc.referenceDocId);
+                _y += lineHeight;
+                _y = Math.floor(_y + dy);
+                const exclu = makeExcludedRectangle(_x, _y, w, h, irdoc.referenceDocId);
                 // This logic eventually triggers the marker to get moved based on the requiresUL property
                 if (movingMarker) {
                     exclu.requiresUL = true;
@@ -2327,7 +2325,7 @@ function renderFlow(layoutContext: ILayoutContext, targetTranslation: string, de
                                 // IFluidObject. Then you can go from IFluidHTMLView to IViewLayout.
                                 // Or should you query for each one individually.
                                 if (!HTMLViewAdapter.canAdapt(component)) {
-                                    return Promise.reject("component is not viewable");
+                                    return Promise.reject(new Error("component is not viewable"));
                                 }
 
                                 return new HTMLViewAdapter(component);
@@ -2357,7 +2355,6 @@ function renderFlow(layoutContext: ILayoutContext, targetTranslation: string, de
             currentPos++;
             segoff = undefined;
         } else if (asMarker && asMarker.hasRangeLabel("table")) {
-            // TODO: branches
             let tableView: Table.Table;
             if (asMarker.removedSeq === undefined) {
                 renderTable(asMarker, docContext, layoutContext, targetTranslation, deferredPGs);
@@ -2476,7 +2473,6 @@ function renderFlow(layoutContext: ILayoutContext, targetTranslation: string, de
     };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function makeMathSpan(mathSegpos: number, offsetFromSegpos: number) {
     const span = document.createElement("span") as ISegSpan;
     span.segPos = mathSegpos;
@@ -2973,45 +2969,6 @@ export interface IListReferenceDoc extends IReferenceDoc {
     selectionIndex: number;
 }
 
-export function makeBlobRef(blob: IGenericBlob, cb: (irdoc: IReferenceDoc) => void) {
-    /* eslint-disable default-case */
-    switch (blob.type) {
-        case "image": {
-            const image = document.createElement("img");
-            const irdocType = <IReferenceDocType>{
-                name: "image",
-            };
-            const irdoc = <IReferenceDoc>{
-                referenceDocId: blob.id,
-                type: irdocType,
-                url: blob.url,
-            };
-            image.src = blob.url;
-
-            image.onload = () => {
-                irdoc.layout = { ar: image.naturalHeight / image.naturalWidth, dx: 0, dy: 0 };
-                cb(irdoc);
-            };
-            break;
-        }
-        case "video": {
-            const video = document.createElement("video");
-            const irdocType = <IReferenceDocType>{
-                name: "video",
-            };
-            const irdoc = <IReferenceDoc>{
-                referenceDocId: blob.id,
-                type: irdocType,
-                url: blob.url,
-            };
-            video.src = blob.url;
-            cb(irdoc);
-            video.load();
-        }
-    }
-    /* eslint-enable default-case */
-}
-
 export interface IFlowViewModes {
     showBookmarks?: boolean;
     showComments?: boolean;
@@ -3076,7 +3033,6 @@ export class FlowView extends ui.Component implements SearchMenu.ISearchMenuHost
     public keypressHandler: (e: KeyboardEvent) => void;
     public keydownHandler: (e: KeyboardEvent) => void;
 
-    public videoPlayers: IFluidObjectCollection;
     public images: IFluidObjectCollection;
     public progressBars: IFluidObjectCollection;
 
@@ -3173,16 +3129,10 @@ export class FlowView extends ui.Component implements SearchMenu.ISearchMenuHost
 
         this.cursor = new FlowCursor(this.viewportDiv);
         this.setViewOption(this.options);
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        blobUploadHandler(
-            element,
-            this.collabDocument,
-            (incl: IGenericBlob) => this.insertBlobInternal(incl),
-        );
 
         // HACK: Expose "insertText" via window to Shared Browser Extension
         //       for 2018/Oct demo.
-        // eslint-disable-next-line dot-notation
+        // eslint-disable-next-line @typescript-eslint/dot-notation
         window["insertText"] = (text: string) => {
             this.sharedString.insertText(this.cursor.pos, text);
         };
@@ -3446,23 +3396,24 @@ export class FlowView extends ui.Component implements SearchMenu.ISearchMenuHost
     }
 
     public checkRow(lineDiv: ILineDiv, fn: (lineDiv: ILineDiv) => ILineDiv, rev?: boolean) {
-        let rowDiv = lineDiv as IRowDiv;
+        let _lineDiv = lineDiv;
+        let rowDiv = _lineDiv as IRowDiv;
         let oldRowDiv: IRowDiv;
         while (rowDiv && (rowDiv !== oldRowDiv) && rowDiv.rowView) {
             oldRowDiv = rowDiv;
-            lineDiv = undefined;
+            _lineDiv = undefined;
             for (const cell of rowDiv.rowView.cells) {
                 if (cell.div) {
                     const innerDiv = this.lineDivSelect(fn, (cell as ICellView).viewport.div, true, rev);
                     if (innerDiv) {
-                        lineDiv = innerDiv;
+                        _lineDiv = innerDiv;
                         rowDiv = innerDiv as IRowDiv;
                         break;
                     }
                 }
             }
         }
-        return lineDiv;
+        return _lineDiv;
     }
 
     public lineDivSelect(fn: (lineDiv: ILineDiv) => ILineDiv, viewportDiv: IViewportDiv, dive = false, rev?: boolean) {
@@ -3530,11 +3481,12 @@ export class FlowView extends ui.Component implements SearchMenu.ISearchMenuHost
     }
 
     public getSegSpan(span: ISegSpan): ISegSpan {
-        while (span.tagName === "SPAN") {
-            if (span.segPos) {
-                return span;
+        let _span = span;
+        while (_span.tagName === "SPAN") {
+            if (_span.segPos) {
+                return _span;
             } else {
-                span = span.parentElement as ISegSpan;
+                _span = _span.parentElement as ISegSpan;
             }
         }
     }
@@ -4626,30 +4578,15 @@ export class FlowView extends ui.Component implements SearchMenu.ISearchMenuHost
     private async openCollections() {
         const root = this.collabDocument.getRoot();
 
-        const [progressBars, math, videoPlayers, images] = await Promise.all([
+        const [progressBars, math, images] = await Promise.all([
             root.get<IFluidHandle>("progressBars").get(),
             root.get<IFluidHandle<IMathCollection>>("math").get(),
-            root.get<IFluidHandle>("videoPlayers").get(),
             root.get<IFluidHandle>("images").get(),
         ]);
 
         this.math = math;
         this.progressBars = progressBars.IFluidObjectCollection;
-        this.videoPlayers = videoPlayers.IFluidObjectCollection;
         this.images = images.IFluidObjectCollection;
-    }
-
-    private insertBlobInternal(blob: IGenericBlob) {
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        this.collabDocument.getBlob(blob.id)
-            .then((finalBlob) => {
-                makeBlobRef(finalBlob, (irdoc) => {
-                    const refProps = {
-                        [Paragraph.referenceProperty]: irdoc,
-                    };
-                    this.sharedString.insertMarker(this.cursor.pos, MergeTree.ReferenceType.Simple, refProps);
-                });
-            });
     }
 
     public copy() {
@@ -5091,7 +5028,7 @@ export class FlowView extends ui.Component implements SearchMenu.ISearchMenuHost
         this.render(0, true);
         if (clockStart > 0) {
             // eslint-disable-next-line max-len
-            console.log(`time to edit/impression: ${this.timeToEdit} time to load: ${Date.now() - clockStart}ms len: ${this.sharedString.getLength()} - ${performanceNow()}`);
+            console.log(`time to edit/impression: ${this.timeToEdit} time to load: ${Date.now() - clockStart}ms len: ${this.sharedString.getLength()} - ${performance.now()}`);
         }
         this.presenceSignal = new PresenceSignal(this.collabDocument.runtime);
         this.addPresenceSignal(this.presenceSignal);

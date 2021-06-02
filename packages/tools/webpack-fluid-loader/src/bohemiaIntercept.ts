@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -8,6 +8,7 @@ import fs from "fs";
 async function getPackage() {
     const executedDir = process.cwd();
     const pkgString = fs.readFileSync(`${executedDir}/package.json`);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return JSON.parse(pkgString as any);
 }
 
@@ -15,6 +16,7 @@ const localhostURL = "http://localhost:8080/";
 
 async function getFilePath() {
     const pkg = await getPackage();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return pkg.fluid.browser.umd.files[0];
 }
 

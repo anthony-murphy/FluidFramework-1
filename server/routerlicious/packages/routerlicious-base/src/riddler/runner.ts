@@ -1,16 +1,15 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
 import * as http from "http";
 import { Deferred } from "@fluidframework/common-utils";
-import { MongoManager } from "@fluidframework/server-services-core";
-import * as utils from "@fluidframework/server-services-utils";
+import { MongoManager, IRunner, ISecretManager } from "@fluidframework/server-services-core";
 import * as winston from "winston";
 import * as app from "./app";
 
-export class RiddlerRunner implements utils.IRunner {
+export class RiddlerRunner implements IRunner {
     private server: http.Server;
     private runningDeferred: Deferred<void>;
 
@@ -22,6 +21,7 @@ export class RiddlerRunner implements utils.IRunner {
         private readonly baseOrdererUrl: string,
         private readonly defaultHistorianUrl: string,
         private readonly defaultInternalHistorianUrl: string,
+        private readonly secretManager: ISecretManager,
     ) {
     }
 
@@ -36,7 +36,8 @@ export class RiddlerRunner implements utils.IRunner {
             this.loggerFormat,
             this.baseOrdererUrl,
             this.defaultHistorianUrl,
-            this.defaultInternalHistorianUrl);
+            this.defaultInternalHistorianUrl,
+            this.secretManager);
         riddler.set("port", this.port);
 
         this.server = http.createServer(riddler);

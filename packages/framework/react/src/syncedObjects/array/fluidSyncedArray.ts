@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -104,12 +104,14 @@ export function useSyncedArrayReducerFluid<
     viewKey: keyof SV,
     fluidKey: keyof SF,
     defaultViewState: SV,
+// eslint-disable-next-line @typescript-eslint/ban-types
 ): [ICombinedState<SV, SF, IFluidDataProps>, IFluidSyncedArrayReducer<SV, SF>, {}] {
     const syncedArrayReducer = generateSyncedArrayReducer(viewKey, fluidKey);
     return useReducerFluid<
         SV,
         SF,
         IFluidSyncedArrayReducer<SV, SF>,
+        // eslint-disable-next-line @typescript-eslint/ban-types
         {},
         IFluidDataProps
     >(

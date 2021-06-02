@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -28,18 +28,9 @@ export interface IConsumer {
     readonly topic: string;
 
     /**
-     * Commits consumer checkpoint offset.
+     * Returns true if the consumer is connected
      */
-    commitCheckpoint(partitionId: number, queuedMessage: IQueuedMessage): Promise<void>;
-
-    /**
-     * Event Handler.
-     */
-    on(event: "connected", listener: () => void): this;
-    on(event: "data", listener: (message: IQueuedMessage) => void): this;
-    on(event: "rebalancing", listener: (partitions: IPartition[]) => void): this;
-    on(event: "rebalanced", listener: (partitions: IPartitionWithEpoch[]) => void): this;
-    on(event: string, listener: (...args: any[]) => void): this;
+    isConnected(): boolean;
 
     /**
      * Closes the consumer.
@@ -55,6 +46,21 @@ export interface IConsumer {
      * Resumes retrival of messages
      */
     resume(): Promise<void>;
+
+    /**
+     * Commits consumer checkpoint offset.
+     */
+    commitCheckpoint(partitionId: number, queuedMessage: IQueuedMessage): Promise<void>;
+
+    /**
+     * Event handlers
+     */
+    on(event: "connected" | "disconnected" | "closed" | "paused" | "resumed", listener: () => void): this;
+    on(event: "data", listener: (message: IQueuedMessage) => void): this;
+    on(event: "rebalancing", listener: (partitions: IPartition[]) => void): this;
+    on(event: "rebalanced", listener: (partitions: IPartitionWithEpoch[]) => void): this;
+    on(event: string, listener: (...args: any[]) => void): this;
+    once(event: "connected" | "disconnected" | "closed" | "paused" | "resumed", listener: () => void): this;
 }
 
 /**
@@ -70,8 +76,14 @@ export interface IPendingMessage {
 
 export interface IProducer {
     /**
+     * Returns true if the producer is connected
+     */
+    isConnected(): boolean;
+
+    /**
      * Sends the message to a queue
      */
+    // eslint-disable-next-line @typescript-eslint/ban-types
     send(messages: object[], tenantId: string, documentId: string): Promise<void>;
 
     /**
@@ -82,9 +94,9 @@ export interface IProducer {
     /**
      * Event handlers
      */
-    on(event: "connected" | "disconnected" | "produced" | "throttled" | "error",
+    on(event: "connected" | "disconnected" | "closed" | "produced" | "throttled" | "error",
         listener: (...args: any[]) => void): this;
-    once(event: "connected" | "disconnected" | "produced" | "throttled" | "error",
+    once(event: "connected" | "disconnected" | "closed" | "produced" | "throttled" | "error",
         listener: (...args: any[]) => void): this;
 }
 
@@ -93,4 +105,5 @@ export interface IPendingBoxcar {
     tenantId: string;
     deferred: Deferred<void>;
     messages: any[];
+    partitionId?: number;
 }

@@ -1,17 +1,16 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
 import { ICreateTagParams, ITag } from "@fluidframework/gitresources";
 import { Router } from "express";
-import * as nconf from "nconf";
-import * as git from "nodegit";
+import nconf from "nconf";
+import git from "nodegit";
 import * as utils from "../../utils";
 
 async function tagToITag(tag: git.Tag): Promise<ITag> {
     const tagger = tag.tagger() as any;
-    // eslint-disable-next-line @typescript-eslint/await-thenable
     const target = await tag.target();
 
     return {
@@ -39,6 +38,7 @@ async function createTag(
     tag: ICreateTagParams): Promise<ITag> {
     const date = Date.parse(tag.tagger.date);
     if (isNaN(date)) {
+        // eslint-disable-next-line prefer-promise-reject-errors
         return Promise.reject("Invalid input");
     }
 

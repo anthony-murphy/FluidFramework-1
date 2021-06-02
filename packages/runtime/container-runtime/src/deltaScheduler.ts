@@ -1,10 +1,10 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
 import { ITelemetryLogger } from "@fluidframework/common-definitions";
-import { performanceNow } from "@fluidframework/common-utils";
+import { performance } from "@fluidframework/common-utils";
 import { IDeltaManager } from "@fluidframework/container-definitions";
 import {
     IDocumentMessage,
@@ -59,7 +59,7 @@ export class DeltaScheduler {
 
     public batchBegin() {
         if (!this.processingStartTime) {
-            this.processingStartTime = performanceNow();
+            this.processingStartTime = performance.now();
         }
     }
 
@@ -79,15 +79,15 @@ export class DeltaScheduler {
             }
 
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            const elapsedTime = performanceNow() - this.processingStartTime!;
+            const elapsedTime = performance.now() - this.processingStartTime!;
             if (elapsedTime > this.totalProcessingTime) {
                 // We have processed ops for more than the total processing time. So, pause the
                 // queue, yield the thread and schedule a resume.
 
                 // eslint-disable-next-line @typescript-eslint/no-floating-promises
-                this.deltaManager.inbound.systemPause();
+                this.deltaManager.inbound.pause();
                 setTimeout(() => {
-                    this.deltaManager.inbound.systemResume();
+                    this.deltaManager.inbound.resume();
                 });
 
                 this.processingStartTime = undefined;
@@ -110,7 +110,7 @@ export class DeltaScheduler {
             // Add the time taken for processing the final ops to the total processing time in the
             // telemetry log object.
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            this.schedulingLog.totalProcessingTime += performanceNow() - this.processingStartTime!;
+            this.schedulingLog.totalProcessingTime += performance.now() - this.processingStartTime!;
 
             this.logger.sendTelemetryEvent({
                 eventName: "InboundOpsProcessingTime",

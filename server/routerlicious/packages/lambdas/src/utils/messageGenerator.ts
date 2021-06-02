@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 import {
@@ -11,13 +11,19 @@ import {
     NackErrorType,
 } from "@fluidframework/protocol-definitions";
 
-export const createNackMessage = (code: number, type: NackErrorType, message: string): INack => ({
+export const createNackMessage = (
+    code: number,
+    type: NackErrorType,
+    message: string,
+    retryAfterInSec?: number,
+): INack => ({
     operation: undefined,
     sequenceNumber: -1,
     content: {
         code,
         type,
         message,
+        retryAfter: retryAfterInSec,
     },
 });
 

@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -36,4 +36,21 @@ export function compareBundles(baseline: BundleSummaries, compare: BundleSummari
   });
 
   return results;
+}
+
+/**
+ * Checks if a bundle comparison contains no size changes
+ * @param comparisons
+ */
+export function bundlesContainNoChanges(comparisons: BundleComparison[]): boolean {
+  for (const { commonBundleMetrics } of comparisons) {
+    let metrics = Object.values(commonBundleMetrics);
+    for (const { baseline, compare } of metrics) {
+      if (baseline.parsedSize !== compare.parsedSize) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 }

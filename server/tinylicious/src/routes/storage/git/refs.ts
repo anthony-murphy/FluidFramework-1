@@ -1,12 +1,12 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
 import { ICreateRefParams, IPatchRefParams, IRef } from "@fluidframework/gitresources";
 import { Router } from "express";
 import * as git from "isomorphic-git";
-import * as nconf from "nconf";
+import nconf from "nconf";
 import * as utils from "../utils";
 
 function refToIRef(ref: string, sha: string): IRef {

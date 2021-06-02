@@ -1,10 +1,9 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 import { strict as assert } from "assert";
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
-// eslint-disable-next-line import/no-extraneous-dependencies
 import random from "random-js";
 import { LocalReference } from "../localReference";
 import { IMergeTreeOp } from "../ops";
@@ -173,6 +172,7 @@ export function generateClientNames(): string[] {
     addClientNames("A", 26);
     addClientNames("a", 26);
     addClientNames("0", 17);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return clientNames;
 }
 

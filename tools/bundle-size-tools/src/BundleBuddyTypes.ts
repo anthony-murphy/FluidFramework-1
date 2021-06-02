@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -31,6 +31,15 @@ export interface BundleComparison {
 
   commonBundleMetrics: { [key: string]: { baseline: BundleMetric; compare: BundleMetric } };
 }
+
+/**
+ * The formatted message string of a bundle comparison along with the
+ * comparison data itself
+ */
+export type BundleComparisonResult = {
+  message: string,
+  comparison: BundleComparison[] | undefined,
+};
 
 /**
  * Functions used to process a webpack stats file and produce a set of metrics. Some processors may choose
