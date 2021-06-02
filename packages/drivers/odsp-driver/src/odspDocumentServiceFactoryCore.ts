@@ -1,9 +1,9 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
-import { ITelemetryBaseLogger, ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryBaseLogger } from "@fluidframework/common-definitions";
 import {
     IDocumentService,
     IDocumentServiceFactory,
@@ -11,27 +11,28 @@ import {
 } from "@fluidframework/driver-definitions";
 import { ISummaryTree } from "@fluidframework/protocol-definitions";
 import {
-    ChildLogger,
+    TelemetryLogger,
     PerformanceEvent,
 } from "@fluidframework/telemetry-utils";
 import { ensureFluidResolvedUrl } from "@fluidframework/driver-utils";
-import { IOdspResolvedUrl, HostStoragePolicy } from "./contracts";
+import {
+    TokenFetchOptions,
+    OdspResourceTokenFetchOptions,
+    TokenFetcher,
+    IPersistedCache,
+    HostStoragePolicy,
+} from "@fluidframework/odsp-driver-definitions";
 import {
     LocalPersistentCache,
-    createOdspCache,
     NonPersistentCache,
-    IPersistedCache,
 } from "./odspCache";
-import { OdspDocumentService } from "./odspDocumentService";
-import { INewFileInfo } from "./odspUtils";
-import { createNewFluidFile } from "./createFile";
 import {
-    StorageTokenFetcher,
-    PushTokenFetcher,
-    TokenFetchOptions,
-    isTokenFromCache,
-    tokenFromResponse,
-} from "./tokenFetch";
+    createOdspCacheAndTracker,
+    ICacheAndTracker,
+} from "./epochTracker";
+import { OdspDocumentService } from "./odspDocumentService";
+import { INewFileInfo, getOdspResolvedUrl, createOdspLogger, toInstrumentedOdspTokenFetcher } from "./odspUtils";
+import { createNewFluidFile } from "./createFile";
 
 /**
  * Factory for creating the sharepoint document service. Use this if you want to
@@ -52,7 +53,7 @@ export class OdspDocumentServiceFactoryCore implements IDocumentServiceFactory {
     ): Promise<IDocumentService> {
         ensureFluidResolvedUrl(createNewResolvedUrl);
 
-        let odspResolvedUrl = createNewResolvedUrl as IOdspResolvedUrl;
+        let odspResolvedUrl = getOdspResolvedUrl(createNewResolvedUrl);
         const [, queryString] = odspResolvedUrl.url.split("?");
 
         const searchParams = new URLSearchParams(queryString);
@@ -67,20 +68,34 @@ export class OdspDocumentServiceFactoryCore implements IDocumentServiceFactory {
             filename: odspResolvedUrl.fileName,
         };
 
-        const logger2 = ChildLogger.create(logger, "OdspDriver");
+        const odspLogger = createOdspLogger(logger);
+
+        const cacheAndTracker = createOdspCacheAndTracker(
+            this.persistedCache,
+            this.nonPersistentCache,
+            { resolvedUrl: odspResolvedUrl, docId: odspResolvedUrl.hashedDocumentId },
+            odspLogger);
+
         return PerformanceEvent.timedExecAsync(
-            logger2,
+            odspLogger,
             {
                 eventName: "CreateNew",
                 isWithSummaryUpload: true,
             },
             async (event) => {
                 odspResolvedUrl = await createNewFluidFile(
-                    this.toInstrumentedStorageTokenFetcher(logger2, odspResolvedUrl, this.getStorageToken),
+                    toInstrumentedOdspTokenFetcher(
+                        odspLogger,
+                        odspResolvedUrl,
+                        this.getStorageToken,
+                        true /* throwOnNullToken */,
+                    ),
                     newFileParams,
-                    logger2,
-                    createNewSummary);
-                const docService = this.createDocumentService(odspResolvedUrl, logger);
+                    odspLogger,
+                    createNewSummary,
+                    cacheAndTracker.epochTracker,
+                );
+                const docService = this.createDocumentServiceCore(odspResolvedUrl, odspLogger, cacheAndTracker);
                 event.end({
                     docId: odspResolvedUrl.hashedDocumentId,
                 });
@@ -89,17 +104,18 @@ export class OdspDocumentServiceFactoryCore implements IDocumentServiceFactory {
     }
 
     /**
-   * @param getStorageToken - function that can provide the storage token for a given site. This is
-   * is also referred to as the "VROOM" token in SPO.
-   * @param getWebsocketToken - function that can provide a token for accessing the web socket. This is also
-   * referred to as the "Push" token in SPO.
-   * @param storageFetchWrapper - if not provided FetchWrapper will be used
-   * @param deltasFetchWrapper - if not provided FetchWrapper will be used
-   * @param persistedCache - PersistedCache provided by host for use in this session.
-   */
+     * @param getStorageToken - function that can provide the storage token for a given site. This is
+     * is also referred to as the "Vroom" token in SPO.
+     * @param getWebsocketToken - function that can provide a token for accessing the web socket. This is also
+     * to as the "Push" token in SPO. If undefined then websocket token is expected to be returned with joinSession
+     * response payload.
+     * @param storageFetchWrapper - if not provided FetchWrapper will be used
+     * @param deltasFetchWrapper - if not provided FetchWrapper will be used
+     * @param persistedCache - PersistedCache provided by host for use in this session.
+     */
     constructor(
-        private readonly getStorageToken: StorageTokenFetcher,
-        private readonly getWebsocketToken: PushTokenFetcher,
+        private readonly getStorageToken: TokenFetcher<OdspResourceTokenFetchOptions>,
+        private readonly getWebsocketToken: TokenFetcher<OdspResourceTokenFetchOptions> | undefined,
         private readonly getSocketIOClient: () => Promise<SocketIOClientStatic>,
         protected persistedCache: IPersistedCache = new LocalPersistentCache(),
         private readonly hostPolicy: HostStoragePolicy = {},
@@ -110,59 +126,46 @@ export class OdspDocumentServiceFactoryCore implements IDocumentServiceFactory {
         resolvedUrl: IResolvedUrl,
         logger?: ITelemetryBaseLogger,
     ): Promise<IDocumentService> {
-        const odspLogger = ChildLogger.create(logger, "OdspDriver");
-        const cache = createOdspCache(
+        return this.createDocumentServiceCore(resolvedUrl, createOdspLogger(logger));
+    }
+
+    private async createDocumentServiceCore(
+        resolvedUrl: IResolvedUrl,
+        odspLogger: TelemetryLogger,
+        cacheAndTrackerArg?: ICacheAndTracker,
+    ): Promise<IDocumentService> {
+        const odspResolvedUrl = getOdspResolvedUrl(resolvedUrl);
+        const cacheAndTracker = cacheAndTrackerArg ?? createOdspCacheAndTracker(
             this.persistedCache,
             this.nonPersistentCache,
+            { resolvedUrl: odspResolvedUrl, docId: odspResolvedUrl.hashedDocumentId },
             odspLogger);
+
+        const storageTokenFetcher = toInstrumentedOdspTokenFetcher(
+            odspLogger,
+            odspResolvedUrl,
+            this.getStorageToken,
+            true /* throwOnNullToken */,
+        );
+
+        const webSocketTokenFetcher = this.getWebsocketToken === undefined
+            ? undefined
+            : async (options: TokenFetchOptions) => toInstrumentedOdspTokenFetcher(
+                odspLogger,
+                odspResolvedUrl,
+                this.getWebsocketToken!,
+                false /* throwOnNullToken */,
+            )(options, "GetWebsocketToken");
 
         return OdspDocumentService.create(
             resolvedUrl,
-            this.toInstrumentedStorageTokenFetcher(odspLogger, resolvedUrl as IOdspResolvedUrl, this.getStorageToken),
-            this.toInstrumentedPushTokenFetcher(odspLogger, this.getWebsocketToken),
+            storageTokenFetcher,
+            webSocketTokenFetcher,
             odspLogger,
             this.getSocketIOClient,
-            cache,
+            cacheAndTracker.cache,
             this.hostPolicy,
+            cacheAndTracker.epochTracker,
         );
-    }
-
-    private toInstrumentedStorageTokenFetcher(
-        logger: ITelemetryLogger,
-        resolvedUrl: IOdspResolvedUrl,
-        tokenFetcher: StorageTokenFetcher,
-    ): (options: TokenFetchOptions, name?: string) => Promise<string | null> {
-        return async (options: TokenFetchOptions, name?: string) => {
-            if (options.refresh) {
-                // Potential perf issue: Host should optimize and provide non-expired tokens on all critical paths.
-                // Exceptions: race conditions around expiration, revoked tokens, host that does not care
-                // (fluid-fetcher)
-                logger.sendTelemetryEvent({ eventName: "StorageTokenRefresh", hasClaims: !!options.claims });
-            }
-
-            return PerformanceEvent.timedExecAsync(
-                logger,
-                { eventName: `${name || "OdspDocumentService"}_GetToken` },
-                async (event) => tokenFetcher(resolvedUrl.siteUrl, options.refresh, options.claims)
-                .then((tokenResponse) => {
-                    event.end({ fromCache: isTokenFromCache(tokenResponse) });
-                    return tokenFromResponse(tokenResponse);
-                }));
-        };
-    }
-
-    private toInstrumentedPushTokenFetcher(
-        logger: ITelemetryLogger,
-        tokenFetcher: PushTokenFetcher,
-    ): (options: TokenFetchOptions) => Promise<string | null> {
-        return async (options: TokenFetchOptions) => {
-            return PerformanceEvent.timedExecAsync(
-                logger,
-                { eventName: "GetWebsocketToken" },
-                async (event) => tokenFetcher(options.refresh, options.claims).then((tokenResponse) => {
-                    event.end({ fromCache: isTokenFromCache(tokenResponse) });
-                    return tokenFromResponse(tokenResponse);
-                }));
-        };
     }
 }

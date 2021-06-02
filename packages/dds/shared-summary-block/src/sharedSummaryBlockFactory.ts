@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -55,10 +55,9 @@ export class SharedSummaryBlockFactory implements IChannelFactory {
         runtime: IFluidDataStoreRuntime,
         id: string,
         services: IChannelServices,
-        branchId: string,
         attributes: IChannelAttributes): Promise<ISharedObject> {
         const sharedSummaryBlock = new SharedSummaryBlock(id, runtime, attributes);
-        await sharedSummaryBlock.load(branchId, services);
+        await sharedSummaryBlock.load(services);
 
         return sharedSummaryBlock;
     }

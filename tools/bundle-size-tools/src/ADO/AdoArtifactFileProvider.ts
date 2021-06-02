@@ -1,9 +1,9 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
-import { strict as assert } from 'assert';
+import assert from 'assert';
 import { WebApi } from 'azure-devops-node-api';
 import { decompressStatsFile, unzipStream } from '../utilities';
 import JSZip from 'jszip';

@@ -1,23 +1,18 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
-import { strict as assert } from "assert";
 import { parse } from "url";
+import { assert } from "@fluidframework/common-utils";
 import { IRequest } from "@fluidframework/core-interfaces";
 import {
     IFluidResolvedUrl,
     IResolvedUrl,
     IUrlResolver,
-    CreateNewHeader,
+    DriverHeader,
 } from "@fluidframework/driver-definitions";
-import {
-    ITokenClaims,
-    IUser,
-} from "@fluidframework/protocol-definitions";
 import Axios from "axios";
-import jwt from "jsonwebtoken";
 
 /**
  * As the name implies this is not secure and should not be used in production. It simply makes the example easier
@@ -41,13 +36,12 @@ export class InsecureUrlResolver implements IUrlResolver {
         private readonly ordererUrl: string,
         private readonly storageUrl: string,
         private readonly tenantId: string,
-        private readonly tenantKey: string,
-        private readonly user: IUser,
         private readonly bearer: string,
+        private readonly isForNodeTest: boolean = false,
     ) { }
 
     public async resolve(request: IRequest): Promise<IResolvedUrl> {
-        if (request.headers?.[CreateNewHeader.createNew]) {
+        if (request.headers?.[DriverHeader.createNew]) {
             const [, queryString] = request.url.split("?");
 
             const searchParams = new URLSearchParams(queryString);
@@ -55,15 +49,20 @@ export class InsecureUrlResolver implements IUrlResolver {
             if (!fileName) {
                 throw new Error("FileName should be there!!");
             }
-            return this.resolveHelper(fileName);
+            return this.resolveHelper(fileName, "");
         }
         const parsedUrl = new URL(request.url);
-
         // If hosts match then we use the local tenant information. Otherwise we make a REST call out to the hosting
         // service using our bearer token.
-        if (parsedUrl.host === window.location.host) {
-            const documentId = parsedUrl.pathname.substr(1).split("/")[0];
-            return this.resolveHelper(documentId);
+        if (this.isForNodeTest) {
+            const [, documentId, tmpRelativePath] = parsedUrl.pathname.substr(1).split("/");
+            const relativePath = tmpRelativePath === undefined ? "" : tmpRelativePath;
+            return this.resolveHelper(documentId, relativePath, parsedUrl.search);
+        } else if (parsedUrl.host === window.location.host) {
+            const fullPath = parsedUrl.pathname.substr(1);
+            const documentId = fullPath.split("/")[0];
+            const documentRelativePath = fullPath.slice(documentId.length);
+            return this.resolveHelper(documentId, documentRelativePath);
         } else {
             const maybeResolvedUrl = this.cache.get(request.url);
             // eslint-disable-next-line @typescript-eslint/no-misused-promises
@@ -88,11 +87,14 @@ export class InsecureUrlResolver implements IUrlResolver {
         }
     }
 
-    private resolveHelper(documentId: string) {
+    private resolveHelper(documentId: string, documentRelativePath: string, queryParams: string = "") {
         const encodedTenantId = encodeURIComponent(this.tenantId);
         const encodedDocId = encodeURIComponent(documentId);
+        const host = new URL(this.ordererUrl).host;
+        const relativePath = !documentRelativePath || documentRelativePath.startsWith("/")
+            ? documentRelativePath : `/${documentRelativePath}`;
+        const documentUrl = `fluid://${host}/${encodedTenantId}/${encodedDocId}${relativePath}${queryParams}`;
 
-        const documentUrl = `fluid://${new URL(this.ordererUrl).host}/${encodedTenantId}/${encodedDocId}`;
         const deltaStorageUrl = `${this.ordererUrl}/deltas/${encodedTenantId}/${encodedDocId}`;
         const storageUrl = `${this.storageUrl}/repos/${encodedTenantId}`;
 
@@ -102,7 +104,8 @@ export class InsecureUrlResolver implements IUrlResolver {
                 ordererUrl: this.ordererUrl,
                 storageUrl,
             },
-            tokens: { jwt: this.auth(this.tenantId, documentId) },
+            id: documentId,
+            tokens: {},
             type: "fluid",
             url: documentUrl,
         };
@@ -114,7 +117,7 @@ export class InsecureUrlResolver implements IUrlResolver {
 
         const parsedUrl = parse(fluidResolvedUrl.url);
         const [, , documentId] = parsedUrl.pathname?.split("/");
-        assert(documentId);
+        assert(!!documentId, "Invalid document id from parsed URL");
 
         let url = relativeUrl;
         if (url.startsWith("/")) {
@@ -129,20 +132,9 @@ export class InsecureUrlResolver implements IUrlResolver {
         const createNewRequest: IRequest = {
             url: `${this.hostUrl}?fileName=${fileName}`,
             headers: {
-                [CreateNewHeader.createNew]: true,
+                [DriverHeader.createNew]: true,
             },
         };
         return createNewRequest;
-    }
-
-    private auth(tenantId: string, documentId: string) {
-        const claims: ITokenClaims = {
-            documentId,
-            scopes: ["doc:read", "doc:write", "summary:write"],
-            tenantId,
-            user: this.user,
-        };
-
-        return jwt.sign(claims, this.tenantKey);
     }
 }

@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -18,6 +18,6 @@ import { CollaborativeText } from "./fluid-object/";
  */
 
 export const CollaborativeTextContainer = new ContainerRuntimeFactoryWithDefaultDataStore(
-    CollaborativeText.Name,
+    CollaborativeText.getFactory(),
     [[CollaborativeText.Name, Promise.resolve(CollaborativeText.getFactory())]],
 );

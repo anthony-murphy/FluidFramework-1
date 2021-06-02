@@ -1,11 +1,10 @@
-/* eslint-disable no-null/no-null */
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
 import { strict as assert } from "assert";
-import { IsoBuffer, Uint8ArrayToString } from "@fluidframework/common-utils";
+import { IsoBuffer, stringToBuffer, Uint8ArrayToString } from "@fluidframework/common-utils";
 import {
     SummaryObject,
     ISummaryTree,
@@ -15,7 +14,7 @@ import {
     ITree,
 } from "@fluidframework/protocol-definitions";
 import { BlobTreeEntry, TreeTreeEntry } from "@fluidframework/protocol-base";
-import { convertToSummaryTree } from "../summaryUtils";
+import { convertToSummaryTree, utf8ByteLength } from "../summaryUtils";
 
 describe("Summary Utils", () => {
     describe("Convert to Summary Tree", () => {
@@ -51,10 +50,8 @@ describe("Summary Utils", () => {
             const base64Content = IsoBuffer.from("test-b64").toString("base64");
             bufferLength = IsoBuffer.from(base64Content, "base64").byteLength;
             inputTree = {
-                id: null,
                 entries: [
                     new TreeTreeEntry("t", {
-                        id: null,
                         entries: [
                             new BlobTreeEntry("bu8", "test-u8"),
                             new BlobTreeEntry("b64", base64Content, "base64"),
@@ -120,6 +117,26 @@ describe("Summary Utils", () => {
             assert.strictEqual(summaryResults.stats.treeNodeCount, 2);
             assert.strictEqual(summaryResults.stats.totalBlobSize,
                 bufferLength + IsoBuffer.from("test-blob").byteLength + IsoBuffer.from("test-u8").byteLength);
+        });
+    });
+
+    describe("utf8ByteLength()", () => {
+        it("gives correct utf8 byte length", () => {
+            const a = [
+                "prague is a city in europe",
+                "ᚠᛇᚻ᛫ᛒᛦᚦ᛫ᚠᚱᚩᚠᚢᚱ᛫ᚠᛁᚱᚪ᛫ᚷᛖᚻᚹᛦᛚᚳᚢᛗ",
+                "Τὴ γλῶσσα μοῦ ἔδωσαν ἑλληνικὴ",
+                "На берегу пустынных волн",
+                "⠊⠀⠉⠁⠝⠀⠑⠁⠞⠀⠛⠇⠁⠎⠎⠀⠁⠝⠙⠀⠊⠞⠀⠙⠕⠑⠎⠝⠞⠀⠓⠥⠗⠞⠀⠍⠑",
+                "أنا قادر على أكل الزجاج و هذا لا يؤلمني.",
+                " 我能吞下玻璃而不傷身體。",
+                "ᐊᓕᒍᖅ ᓂᕆᔭᕌᖓᒃᑯ ᓱᕋᙱᑦᑐᓐᓇᖅᑐᖓ",
+                "🤦🏼‍♂️",
+                "🏴󠁧󠁢󠁷󠁬󠁳󠁿", // the flag of wales
+                "���",
+                "������",
+            ];
+            a.map((s) => assert.strictEqual(utf8ByteLength(s), stringToBuffer(s, "utf8").byteLength, s));
         });
     });
 });

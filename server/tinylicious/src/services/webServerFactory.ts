@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -64,7 +64,7 @@ class SocketIoServer extends EventEmitter implements IWebSocketServer {
     }
 
     public async close(): Promise<void> {
-        await new Promise((resolve) => this.io.close(resolve));
+        await new Promise<void>((resolve) => this.io.close(resolve));
     }
 }
 

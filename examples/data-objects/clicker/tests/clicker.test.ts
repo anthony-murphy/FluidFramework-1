@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -42,6 +42,11 @@ describe("clicker", () => {
 
         // Click the button
         await expect(page).toClick("button", { text: "+" });
+        await page.waitForFunction( () => 
+            (document.querySelector(".clicker-value-class") as HTMLDivElement).innerText.includes("1"),
+            { timeout: 1000 }
+        );
+
 
         // Validate both users have 1 as their value
         const postValue = await getValue(0);
@@ -62,6 +67,10 @@ describe("clicker", () => {
 
         // Click the button
         await expect(page).toClick("button", { text: "+" });
+        await page.waitForFunction( () => 
+            (document.querySelector(".clicker-value-class") as HTMLDivElement).innerText.includes("1"),
+            { timeout: 1000 }
+        );
 
         // Validate both users have 1 as their value
         const postValue = await getValue(0);

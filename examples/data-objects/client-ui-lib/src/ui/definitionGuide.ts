@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -19,6 +19,7 @@ export class DefinitionGuide extends EventEmitter {
     }
 
     public getValue(): any {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return this.value;
     }
 

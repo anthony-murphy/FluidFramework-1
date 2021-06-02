@@ -1,14 +1,18 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
+# Copyright (c) Microsoft Corporation and contributors. All rights reserved.
 # Licensed under the MIT License.
 
-FROM node:12.18-stretch
+FROM node:12.22.1-stretch AS base
 
 # Add Tini
 ENV TINI_VERSION v0.18.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 RUN chmod +x /tini
 
-RUN apt-get update && apt-get install -y build-essential libssl-dev python libcurl4-openssl-dev
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libssl-dev \
+    python3 \
+    libcurl4-openssl-dev
 
 # Copy over and build the server
 WORKDIR /home/node/server
@@ -17,6 +21,9 @@ COPY package-lock.json .
 RUN BUILD_ONLY=true npm install
 COPY . .
 RUN npm run build
+
+# Build that actually runs
+FROM base AS runner
 
 # Expose the port the app runs under
 EXPOSE 3000

@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -8,9 +8,12 @@ import * as http from "http";
 import * as util from "util";
 import * as core from "@fluidframework/server-services-core";
 import * as _ from "lodash";
-import * as redis from "redis";
+import Redis from "ioredis";
 import socketIo from "socket.io";
 import socketIoRedis from "socket.io-redis";
+import * as winston from "winston";
+import * as redisSocketIoAdapter from "./redisSocketIoAdapter";
+import { SocketIORedisConnection, SocketIoRedisSubscriptionConnection } from "./socketIoRedisConnection";
 
 const socketJoin = util.promisify(
     (socket: SocketIO.Socket, roomId: string, callback: (err: NodeJS.ErrnoException) => void) => {
@@ -41,10 +44,6 @@ class SocketIoSocket implements core.IWebSocket {
         this.socket.nsp.to(roomId).emit(event, ...args);
     }
 
-    public async broadcastToRoom(roomId: string, event: string, ...args: any) {
-        this.socket.to(roomId).broadcast.emit(event, ...args);
-    }
-
     public disconnect(close?: boolean) {
         this.socket.disconnect(close);
     }
@@ -55,8 +54,8 @@ class SocketIoServer implements core.IWebSocketServer {
 
     constructor(
         private readonly io: SocketIO.Server,
-        private readonly pub: redis.RedisClient,
-        private readonly sub: redis.RedisClient) {
+        private readonly pub: Redis.Redis,
+        private readonly sub: Redis.Redis) {
         this.io.on("connection", (socket: SocketIO.Socket) => {
             const webSocket = new SocketIoSocket(socket);
             this.events.emit("connection", webSocket);
@@ -75,22 +74,60 @@ class SocketIoServer implements core.IWebSocketServer {
     }
 }
 
-export function create(redisConfig: any, server: http.Server): core.IWebSocketServer {
-    const options: any = { auth_pass: redisConfig.pass };
+export function create(
+    redisConfig: any,
+    server: http.Server,
+    socketIoAdapterConfig?: any): core.IWebSocketServer {
+    const options: Redis.RedisOptions = {
+        host: redisConfig.host,
+        port: redisConfig.port,
+        password: redisConfig.pass,
+    };
     if (redisConfig.tls) {
         options.tls = {
             servername: redisConfig.host,
         };
     }
 
-    const pubOptions = _.clone(options);
-    const subOptions = _.clone(options);
-    const pub = redis.createClient(redisConfig.port, redisConfig.host, pubOptions);
-    const sub = redis.createClient(redisConfig.port, redisConfig.host, subOptions);
+    const pub = new Redis(_.clone(options));
+    const sub = new Redis(_.clone(options));
+
+    pub.on("error", (err) => {
+        winston.error("Error with Redis pub connection: ", err);
+    });
+    sub.on("error", (err) => {
+        winston.error("Error with Redis sub connection: ", err);
+    });
 
     // Create and register a socket.io connection on the server
     const io = socketIo();
-    io.adapter(socketIoRedis({ pubClient: pub, subClient: sub }));
+    // Explicitly allow all origins. As a service that has potential to host countless different client apps,
+    // it would impossible to hardcode or configure restricted CORS policies.
+    io.origins((_origin, callback) => {
+        callback(null, true);
+    });
+
+    let adapter: SocketIO.Adapter | undefined;
+
+    if (socketIoAdapterConfig?.enableCustomSocketIoAdapter) {
+        const socketIoRedisOptions: redisSocketIoAdapter.ISocketIoRedisOptions =
+        {
+            pubConnection: new SocketIORedisConnection(pub),
+            subConnection: new SocketIoRedisSubscriptionConnection(sub),
+        };
+
+        redisSocketIoAdapter.RedisSocketIoAdapter.setup(
+            socketIoRedisOptions,
+            socketIoAdapterConfig?.shouldDisableDefaultNamespace);
+
+        adapter = redisSocketIoAdapter.RedisSocketIoAdapter as any;
+    }
+    else {
+        adapter = socketIoRedis({ pubClient: pub, subClient: sub });
+    }
+
     io.attach(server);
+    io.adapter(adapter);
+
     return new SocketIoServer(io, pub, sub);
 }

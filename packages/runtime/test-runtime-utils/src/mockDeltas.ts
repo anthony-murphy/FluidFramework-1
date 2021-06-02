@@ -1,22 +1,25 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
 import { EventEmitter } from "events";
 import {
+    IClientConfiguration,
     IClientDetails,
     IDocumentMessage,
     ISequencedDocumentMessage,
-    IServiceConfiguration,
     ISignalMessage,
     MessageType,
 } from "@fluidframework/protocol-definitions";
 
 import {
     IDeltaManager,
+    IDeltaManagerEvents,
     IDeltaQueue,
+    ReadOnlyInfo,
 } from "@fluidframework/container-definitions";
+import { TypedEventEmitter } from "@fluidframework/common-utils";
 
 /**
  * Mock implementation of IDeltaQueue for testing that does nothing
@@ -50,15 +53,9 @@ class MockDeltaQueue<T> extends EventEmitter implements IDeltaQueue<T> {
         return [];
     }
 
-    public async systemPause(): Promise<void> {
-        return;
-    }
-
-    public systemResume(): void {
-        return undefined;
-    }
-
     public dispose() { }
+
+    public async waitTillProcessingDone() { }
 
     constructor() {
         super();
@@ -68,11 +65,12 @@ class MockDeltaQueue<T> extends EventEmitter implements IDeltaQueue<T> {
 /**
  * Mock implementation of IDeltaManager for testing that creates mock DeltaQueues for testing
  */
-export class MockDeltaManager extends EventEmitter
+export class MockDeltaManager extends TypedEventEmitter<IDeltaManagerEvents>
     implements IDeltaManager<ISequencedDocumentMessage, IDocumentMessage> {
     public get disposed() { return undefined; }
 
     public readonly readonly = false;
+    public readOnlyInfo: ReadOnlyInfo = { readonly: false };
     public readonly clientType: string;
     public readonly clientDetails: IClientDetails;
     public get IDeltaSender() { return this; }
@@ -92,14 +90,15 @@ export class MockDeltaManager extends EventEmitter
     public get inboundSignal(): IDeltaQueue<ISignalMessage> {
         return this._inboundSignal;
     }
-
     public minimumSequenceNumber = 0;
 
     public lastSequenceNumber = 0;
+    public lastMessage: ISequencedDocumentMessage | undefined;
 
     readonly lastKnownSeqNumber = 0;
 
     public initialSequenceNumber = 0;
+    public hasCheckpointSequenceNumber = false;
 
     public get version(): string {
         return undefined;
@@ -109,7 +108,7 @@ export class MockDeltaManager extends EventEmitter
         return 0;
     }
 
-    public get serviceConfiguration(): IServiceConfiguration {
+    public get serviceConfiguration(): IClientConfiguration {
         return undefined;
     }
 

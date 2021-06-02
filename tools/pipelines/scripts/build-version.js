@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -18,6 +18,7 @@
  */
 
 const fs = require("fs");
+const child_process = require("child_process");
 function getFileVersion() {
     if (fs.existsSync("./lerna.json")) {
         return JSON.parse(fs.readFileSync("./lerna.json", { encoding: "utf8" })).version;
@@ -42,7 +43,7 @@ function parseFileVersion(file_version, build_id) {
         const r = release_version.split('.');
         if (r.length !== 3) {
             console.error(`ERROR: Invalid format for release version ${release_version}`);
-            process.exit(6);
+            process.exit(9);
         }
         r[2] = (parseInt(r[2]) + build_id).toString();
         release_version = r.join('.');
@@ -86,12 +87,18 @@ function getSimpleVersion(file_version, arg_build_num, arg_release, patch) {
 
 function main() {
     let arg_build_num;
+    let arg_test_build = false;
     let arg_patch = false;
     let arg_release = false;
     let file_version;
+    let arg_tag;
     for (let i = 2; i < process.argv.length; i++) {
         if (process.argv[i] === "--build") {
             arg_build_num = process.argv[++i];
+            continue;
+        }
+        if (process.argv[i] === "--testBuild") {
+            arg_test_build = true;
             continue;
         }
         if (process.argv[i] === "--release") {
@@ -106,7 +113,10 @@ function main() {
             file_version = process.argv[++i];
             continue;
         }
-
+        if (process.argv[i] === "--tag") {
+            arg_tag = process.argv[++i];
+            continue;
+        }
         console.log(`ERROR: Invalid argument ${process.argv[i]}`);
         process.exit(1);
     }
@@ -118,12 +128,21 @@ function main() {
             process.exit(3);
         }
     }
+
+    if (!arg_test_build) {
+        arg_test_build = process.env["TEST_BUILD"] && (process.env["TEST_BUILD"].toLowerCase() === "true");
+    }
+
     if (!arg_patch) {
-        arg_patch = (process.env["VERSION_PATCH"] === "true");
+        arg_patch = process.env["VERSION_PATCH"] && (process.env["VERSION_PATCH"].toLowerCase() === "true");
     }
 
     if (!arg_release) {
-        arg_release = (process.env["VERSION_RELEASE"] === "release");
+        arg_release = process.env["VERSION_RELEASE"] && (process.env["VERSION_RELEASE"].toLowerCase() === "release");
+    }
+
+    if (!arg_tag) {
+        arg_tag = process.env["VERSION_TAGNAME"];
     }
 
     if (!file_version) {
@@ -134,8 +153,42 @@ function main() {
         }
     }
 
+    if (!arg_patch && arg_tag) {
+        const tagName = `${arg_tag}_v${file_version}`;
+        const out = child_process.execSync(`git tag -l ${tagName}`, { encoding: "utf8" });
+        if (out.trim() === tagName) {
+            if (arg_release) {
+                console.error(`ERROR: Tag ${tagName} already exist`);
+                process.exit(7);
+            }
+            console.warn(`WARNING: Tag ${tagName} already exist`);
+        }
+    }
+
     // Generate and print the version to console
-    console.log(getSimpleVersion(file_version, arg_build_num, arg_release, arg_patch));
+    let version = getSimpleVersion(file_version, arg_build_num, arg_release, arg_patch);
+    if (arg_test_build) {
+        version += "-test";
+    }
+    console.log(`version=${version}`);
+    console.log(`##vso[task.setvariable variable=version;isOutput=true]${version}`);
+    if (arg_release) {
+        let isLatest = true;
+        if (arg_tag) {
+            const split = version.split(".");
+            if (split.length !== 3) {
+                console.error(`ERROR: Invalid format for release version ${version}`);
+                process.exit(8);
+            }
+            const tagName = `${arg_tag}_v${split[0]}.${parseInt(split[1]) + 1}.*`;
+            const out = child_process.execSync(`git tag -l ${tagName}`, { encoding: "utf8" });
+            if (out.trim()) {
+                isLatest = false;
+            }
+        }
+        console.log(`isLatest=${isLatest}`);
+        console.log(`##vso[task.setvariable variable=isLatest;isOutput=true]${isLatest}`);
+    }
 }
 
 main();

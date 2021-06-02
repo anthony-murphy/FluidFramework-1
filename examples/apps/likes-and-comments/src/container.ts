@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -20,6 +20,6 @@ import { LikesAndComments } from "./fluidObject";
  * FluidObjects.
  */
 export const LikesAndCommentsContainer = new ContainerRuntimeFactoryWithDefaultDataStore(
-    LikesAndComments.Name,
+    LikesAndComments.factory,
     new Map([LikesAndComments.factory.registryEntry]),
 );

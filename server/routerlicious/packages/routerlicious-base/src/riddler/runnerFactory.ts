@@ -1,18 +1,25 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
 import * as services from "@fluidframework/server-services";
 import { getOrCreateRepository } from "@fluidframework/server-services-client";
-import { MongoManager } from "@fluidframework/server-services-core";
+import {
+    MongoManager,
+    ISecretManager,
+    IResources,
+    IResourcesFactory,
+    IRunner,
+    IRunnerFactory,
+} from "@fluidframework/server-services-core";
 import * as utils from "@fluidframework/server-services-utils";
 import { Provider } from "nconf";
 import * as winston from "winston";
 import { RiddlerRunner } from "./runner";
 import { ITenantDocument } from "./tenantManager";
 
-export class RiddlerResources implements utils.IResources {
+export class RiddlerResources implements IResources {
     constructor(
         public readonly tenantsCollectionName: string,
         public readonly mongoManager: MongoManager,
@@ -21,6 +28,7 @@ export class RiddlerResources implements utils.IResources {
         public readonly baseOrdererUrl: string,
         public readonly defaultHistorianUrl: string,
         public readonly defaultInternalHistorianUrl: string,
+        public readonly secretManager: ISecretManager,
     ) {
     }
 
@@ -29,19 +37,21 @@ export class RiddlerResources implements utils.IResources {
     }
 }
 
-export class RiddlerResourcesFactory implements utils.IResourcesFactory<RiddlerResources> {
+export class RiddlerResourcesFactory implements IResourcesFactory<RiddlerResources> {
     public async create(config: Provider): Promise<RiddlerResources> {
         // Database connection
         const mongoUrl = config.get("mongo:endpoint") as string;
         const mongoFactory = new services.MongoDbFactory(mongoUrl);
         const mongoManager = new MongoManager(mongoFactory);
         const tenantsCollectionName = config.get("mongo:collectionNames:tenants");
+        const secretManager = new services.SecretManager();
 
         // Load configs for default tenants
         const db = await mongoManager.getDatabase();
         const collection = db.collection<ITenantDocument>(tenantsCollectionName);
         const tenants = config.get("tenantConfig") as any[];
         const upsertP = tenants.map(async (tenant) => {
+            tenant.key = secretManager.encryptSecret(tenant.key);
             await collection.upsert({ _id: tenant._id }, tenant, null);
 
             // Skip creating anything with credentials - we assume this is external to us and something we can't
@@ -70,12 +80,13 @@ export class RiddlerResourcesFactory implements utils.IResourcesFactory<RiddlerR
             loggerFormat,
             serverUrl,
             defaultHistorianUrl,
-            defaultInternalHistorianUrl);
+            defaultInternalHistorianUrl,
+            secretManager);
     }
 }
 
-export class RiddlerRunnerFactory implements utils.IRunnerFactory<RiddlerResources> {
-    public async create(resources: RiddlerResources): Promise<utils.IRunner> {
+export class RiddlerRunnerFactory implements IRunnerFactory<RiddlerResources> {
+    public async create(resources: RiddlerResources): Promise<IRunner> {
         return new RiddlerRunner(
             resources.tenantsCollectionName,
             resources.port,
@@ -83,6 +94,7 @@ export class RiddlerRunnerFactory implements utils.IRunnerFactory<RiddlerResourc
             resources.loggerFormat,
             resources.baseOrdererUrl,
             resources.defaultHistorianUrl,
-            resources.defaultInternalHistorianUrl);
+            resources.defaultInternalHistorianUrl,
+            resources.secretManager);
     }
 }

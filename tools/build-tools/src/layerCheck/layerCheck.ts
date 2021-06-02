@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -7,8 +7,8 @@ import { LayerGraph } from "./layerGraph";
 import { commonOptions, commonOptionString, parseOption } from "../common/commonOptions";
 import { Timer } from "../common/timer";
 import { getResolvedFluidRoot } from "../common/fluidUtils";
-import { writeFileAsync, appendFileAsync } from "../common/utils";
-import { FluidRepoBase } from "../common/fluidRepoBase";
+import { writeFileAsync } from "../common/utils";
+import { FluidRepo } from "../common/fluidRepo";
 import path from "path";
 
 function printUsage() {
@@ -93,7 +93,7 @@ async function main() {
     const resolvedRoot = await getResolvedFluidRoot();
 
     // Load the package
-    const packages = new FluidRepoBase(resolvedRoot, false).packages;
+    const packages = new FluidRepo(resolvedRoot, false).packages;
     timer.time("Package scan completed");
 
     try {

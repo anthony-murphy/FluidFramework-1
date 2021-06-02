@@ -1,11 +1,19 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
-import { generateToken, GitManager, Historian, ICredentials } from "@fluidframework/server-services-client";
+import {
+    GitManager,
+    Historian,
+    ICredentials,
+    BasicRestWrapper,
+    getAuthorizationTokenFromCredentials,
+} from "@fluidframework/server-services-client";
+import { generateToken, getCorrelationId } from "@fluidframework/server-services-utils";
 import * as core from "@fluidframework/server-services-core";
 import Axios from "axios";
+import { fromUtf8ToBase64 } from "@fluidframework/common-utils";
 
 export class Tenant implements core.ITenant {
     public get id(): string {
@@ -46,15 +54,35 @@ export class TenantManager implements core.ITenantManager {
             Axios.get<core.ITenantConfig>(`${this.endpoint}/api/tenants/${tenantId}`),
             this.getKey(tenantId)]);
 
-        const credentials: ICredentials = {
-            password: generateToken(tenantId, null, key, null),
-            user: tenantId,
+        const defaultQueryString = {
+            token: fromUtf8ToBase64(`${tenantId}`),
         };
+        const getDefaultHeaders = () => {
+            const credentials: ICredentials = {
+                password: generateToken(tenantId, null, key, null),
+                user: tenantId,
+            };
+            return ({
+                Authorization: getAuthorizationTokenFromCredentials(credentials),
+            });
+        };
+        const defaultHeaders = getDefaultHeaders();
+        const baseUrl = `${details.data.storage.internalHistorianUrl}/repos/${encodeURIComponent(tenantId)}`;
+        const restWrapper = new BasicRestWrapper(
+            baseUrl,
+            defaultQueryString,
+            undefined,
+            undefined,
+            defaultHeaders,
+            undefined,
+            undefined,
+            getDefaultHeaders,
+            getCorrelationId);
         const historian = new Historian(
             `${details.data.storage.internalHistorianUrl}/repos/${encodeURIComponent(tenantId)}`,
             true,
             false,
-            credentials);
+            restWrapper);
         const gitManager = new GitManager(historian);
         const tenant = new Tenant(details.data, gitManager);
 
@@ -69,6 +97,7 @@ export class TenantManager implements core.ITenantManager {
 
     public async getKey(tenantId: string): Promise<string> {
         const result = await Axios.get(`${this.endpoint}/api/tenants/${encodeURIComponent(tenantId)}/key`);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return result.data;
     }
 }

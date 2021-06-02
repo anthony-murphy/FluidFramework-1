@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -20,7 +20,6 @@ describe("Gateway", () => {
 
             const alf = new Alfred(
                 [{ id: "git", key: "git" }],
-                defaultConfig.get("worker:alfredUrl"),
                 defaultConfig.get("worker:blobStorageUrl"),
                 defaultConfig.get("gateway:auth:endpoint"));
             const gateway = app.create(

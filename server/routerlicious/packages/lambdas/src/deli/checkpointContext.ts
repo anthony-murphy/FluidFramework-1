@@ -1,48 +1,21 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
-/* eslint-disable no-null/no-null */
-
-import { IRangeTrackerSnapshot } from "@fluidframework/common-utils";
-import { ICollection, IContext, IDocument, IQueuedMessage } from "@fluidframework/server-services-core";
-
-export interface IClientSequenceNumber {
-    // Whether or not the object can expire
-    canEvict: boolean;
-    clientId: string;
-    lastUpdate: number;
-    nack: boolean;
-    referenceSequenceNumber: number;
-    clientSequenceNumber: number;
-    scopes: string[];
-}
-
-export interface ICheckpointParams extends IDeliCheckpoint {
-    queuedMessage: IQueuedMessage;
-    clear?: boolean;
-}
-
-export interface IDeliCheckpoint {
-    branchMap: IRangeTrackerSnapshot;
-    clients: IClientSequenceNumber[];
-    durableSequenceNumber: number;
-    logOffset: number;
-    sequenceNumber: number;
-    epoch: number;
-    term: number;
-}
+import { IContext, IDeliState } from "@fluidframework/server-services-core";
+import { ICheckpointParams, IDeliCheckpointManager } from "./checkpointManager";
 
 export class CheckpointContext {
-    private pendingUpdateP: Promise<void>;
-    private pendingCheckpoint: ICheckpointParams;
+    private pendingUpdateP: Promise<void> | undefined;
+    private pendingCheckpoint: ICheckpointParams | undefined;
     private closed = false;
+    private lastKafkaCheckpointOffset: number | undefined;
 
     constructor(
         private readonly tenantId: string,
         private readonly id: string,
-        private readonly collection: ICollection<IDocument>,
+        private readonly checkpointManager: IDeliCheckpointManager,
         private readonly context: IContext) {
     }
 
@@ -61,26 +34,38 @@ export class CheckpointContext {
 
         // Write the checkpoint data to MongoDB
         this.pendingUpdateP = this.checkpointCore(checkpoint);
-        this.pendingUpdateP.then(
+        this.pendingUpdateP?.then(
             () => {
-                this.context.checkpoint(checkpoint.queuedMessage);
-                this.pendingUpdateP = null;
+                // kafka checkpoint
+                // depending on the sequence of events, it might try to checkpoint the same offset a second time
+                // detect and prevent that case here
+                const kafkaCheckpointMessage = checkpoint.kafkaCheckpointMessage;
+                if (kafkaCheckpointMessage &&
+                    (this.lastKafkaCheckpointOffset === undefined ||
+                        kafkaCheckpointMessage.offset > this.lastKafkaCheckpointOffset)) {
+                    this.lastKafkaCheckpointOffset = kafkaCheckpointMessage.offset;
+                    this.context.checkpoint(kafkaCheckpointMessage);
+                }
+
+                this.pendingUpdateP = undefined;
 
                 // Trigger another round if there is a pending update
                 if (this.pendingCheckpoint) {
                     const pendingCheckpoint = this.pendingCheckpoint;
-                    this.pendingCheckpoint = null;
+                    this.pendingCheckpoint = undefined;
                     this.checkpoint(pendingCheckpoint);
                 }
             },
             (error) => {
                 // TODO flag context as error
-                const messageMetaData = {
-                    documentId: this.id,
-                    tenantId: this.tenantId,
-                };
-                this.context.log.error(
-                    `Error writing checkpoint to MongoDB: ${JSON.stringify(error)}`, { messageMetaData });
+                this.context.log?.error(
+                    `Error writing checkpoint to MongoDB: ${JSON.stringify(error)}`,
+                    {
+                        messageMetaData: {
+                            documentId: this.id,
+                            tenantId: this.tenantId,
+                        },
+                    });
             });
     }
 
@@ -90,38 +75,33 @@ export class CheckpointContext {
 
     // eslint-disable-next-line @typescript-eslint/promise-function-async
     private checkpointCore(checkpoint: ICheckpointParams) {
-        let deli = "";
-        if (!checkpoint.clear) {
-            const deliCheckpoint: IDeliCheckpoint = {
-                branchMap: checkpoint.branchMap,
-                clients: checkpoint.clients,
-                durableSequenceNumber: checkpoint.durableSequenceNumber,
-                logOffset: checkpoint.logOffset,
-                sequenceNumber: checkpoint.sequenceNumber,
-                epoch: checkpoint.epoch,
-                term: checkpoint.term,
-            };
-            deli = JSON.stringify(deliCheckpoint);
+        // Exit early if already closed
+        if (this.closed) {
+            return;
         }
-        const updateP = this.collection.update(
-            {
-                documentId: this.id,
-                tenantId: this.tenantId,
-            },
-            {
-                deli,
-            },
-            null);
+
+        let updateP: Promise<void>;
+
+        if (checkpoint.clear) {
+            updateP = this.checkpointManager.deleteCheckpoint(checkpoint);
+        } else {
+            // clone the checkpoint
+            const deliCheckpoint: IDeliState = { ...checkpoint.deliState };
+
+            updateP = this.checkpointManager.writeCheckpoint(deliCheckpoint);
+        }
 
         // Retry the checkpoint on error
         // eslint-disable-next-line @typescript-eslint/promise-function-async
         return updateP.catch((error) => {
-            const messageMetaData = {
-                documentId: this.id,
-                tenantId: this.tenantId,
-            };
-            this.context.log.error(
-                `Error writing checkpoint to MongoDB: ${JSON.stringify(error)}`, { messageMetaData });
+            this.context.log?.error(
+                `Error writing checkpoint to MongoDB: ${JSON.stringify(error)}`,
+                {
+                    messageMetaData: {
+                        documentId: this.id,
+                        tenantId: this.tenantId,
+                    },
+                });
             return new Promise<void>((resolve, reject) => {
                 resolve(this.checkpointCore(checkpoint));
             });

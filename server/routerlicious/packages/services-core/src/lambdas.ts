@@ -1,18 +1,37 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
 import { EventEmitter } from "events";
 import { safelyParseJSON } from "@fluidframework/common-utils";
-import nconf from "nconf";
 import { BoxcarType, IBoxcarMessage, IMessage } from "./messages";
 import { IQueuedMessage } from "./queue";
+
+/**
+ * Reasons why a lambda is closing
+ */
+export enum LambdaCloseType {
+    Stop,
+    ActivityTimeout,
+    Rebalance,
+    Error,
+}
 
 export interface ILogger {
     info(message: string, metaData?: any): void;
     warn(message: string, metaData?: any): void;
     error(message: string, metaData?: any): void;
+}
+
+export interface IContextErrorData {
+    /**
+     * Indicates whether the error is recoverable and the lambda should be restarted.
+     */
+    restart: boolean;
+
+    tenantId?: string;
+    documentId?: string;
 }
 
 export interface IContext {
@@ -22,38 +41,39 @@ export interface IContext {
     checkpoint(queuedMessage: IQueuedMessage): void;
 
     /**
-     * Closes the context with an error. The restart flag indicates whether the error is recoverable and the lambda
-     * should be restarted.
+     * Closes the context with an error.
+     * @param error The error object or string
+     * @param errorData Additional information about the error
      */
-    error(error: any, restart: boolean): void;
+    error(error: any, errorData: IContextErrorData): void;
 
     /**
      * Used to log events / errors.
      */
-    readonly log: ILogger;
+    readonly log: ILogger | undefined;
 }
 
 export interface IPartitionLambda {
     /**
      * Processes an incoming message
      */
-    handler(message: IQueuedMessage): void;
+    handler(message: IQueuedMessage): Promise<void> | undefined;
 
     /**
      * Closes the lambda. After being called handler will no longer be invoked and the lambda is expected to cancel
      * any deferred work.
      */
-    close(): void;
+    close(closeType: LambdaCloseType): void;
 }
 
 /**
  * Factory for creating lambda related objects
  */
-export interface IPartitionLambdaFactory extends EventEmitter {
+export interface IPartitionLambdaFactory<T extends IPartitionConfig = IPartitionLambdaConfig> extends EventEmitter {
     /**
      * Constructs a new lambda
      */
-    create(config: nconf.Provider, context: IContext): Promise<IPartitionLambda>;
+    create(config: T, context: IContext, updateActivityTime?: () => void): Promise<IPartitionLambda>;
 
     /**
      * Disposes of the lambda factory
@@ -62,18 +82,23 @@ export interface IPartitionLambdaFactory extends EventEmitter {
 }
 
 /**
- * Lambda plugin definition
+ * Partition config
  */
-export interface IPlugin {
-    /**
-     * Creates and returns a new lambda factory. Config is provided should the factory need to load any resources
-     * prior to being fully constructed.
-     */
-    create(config: nconf.Provider): Promise<IPartitionLambdaFactory>;
+export interface IPartitionConfig {
+    leaderEpoch: number;
+}
+
+/**
+ * Lambda config
+ */
+export interface IPartitionLambdaConfig extends IPartitionConfig {
+    tenantId: string;
+    documentId: string;
 }
 
 export function extractBoxcar(message: IQueuedMessage): IBoxcarMessage {
     if (typeof message.value !== "string" && !Buffer.isBuffer(message.value)) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return message.value;
     }
 
@@ -82,7 +107,6 @@ export function extractBoxcar(message: IQueuedMessage): IBoxcarMessage {
     const rawMessage = safelyParseJSON(messageContent);
     const parsedMessage = rawMessage as IMessage;
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!parsedMessage) {
         return {
             contents: [],
@@ -99,6 +123,7 @@ export function extractBoxcar(message: IQueuedMessage): IBoxcarMessage {
 
         // Contents used to be a string - handle accordingly
         const contents = boxcarMessage.contents.length > 0 && typeof boxcarMessage.contents[0] === "string"
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-return
             ? boxcarMessage.contents.map((content: any) => JSON.parse(content))
             : boxcarMessage.contents;
 

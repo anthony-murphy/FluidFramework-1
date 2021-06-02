@@ -1,10 +1,10 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
 import { EventEmitter } from "events";
-import { IContext, IQueuedMessage, IPartitionLambda } from "@fluidframework/server-services-core";
+import { IContext, IQueuedMessage, IPartitionLambda, LambdaCloseType } from "@fluidframework/server-services-core";
 import { IKafkaSubscriber, ILocalOrdererSetup } from "./interfaces";
 import { LocalKafka } from "./localKafka";
 
@@ -42,7 +42,7 @@ export class LocalLambdaController extends EventEmitter implements IKafkaSubscri
                 this._state = "started";
             }
             this.emit("started", this.lambda);
-            // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-ignore
             if (this._state === "closed") {
                 // Close was probably called while starting
@@ -50,7 +50,7 @@ export class LocalLambdaController extends EventEmitter implements IKafkaSubscri
             }
         } catch (ex) {
             // In the event a lambda fails to start, retry it
-            this.context.error(ex, true);
+            this.context.error(ex, { restart: true });
 
             this.startTimer = setTimeout(() => {
                 // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -63,7 +63,7 @@ export class LocalLambdaController extends EventEmitter implements IKafkaSubscri
         this._state = "closed";
 
         if (this.lambda) {
-            this.lambda.close();
+            this.lambda.close(LambdaCloseType.Stop);
             this.lambda = undefined;
         }
 
@@ -75,11 +75,12 @@ export class LocalLambdaController extends EventEmitter implements IKafkaSubscri
         this.removeAllListeners();
     }
 
-    public process(message: IQueuedMessage): void {
+    // eslint-disable-next-line @typescript-eslint/promise-function-async
+    public process(message: IQueuedMessage): Promise<void> | undefined {
         if (!this.lambda) {
             throw new Error("The lambda has not started yet");
         }
 
-        this.lambda.handler(message);
+        return this.lambda.handler(message);
     }
 }

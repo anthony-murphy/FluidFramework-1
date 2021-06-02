@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -77,4 +77,5 @@ const defaultShapes = [
 
 const detector = new ShapeDetector(defaultShapes);
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-return
 export const recognizeShape = (stroke: IPoint[]) => detector.spot(stroke);

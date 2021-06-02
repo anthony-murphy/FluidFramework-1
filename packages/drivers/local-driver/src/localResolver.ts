@@ -1,19 +1,29 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
-import { strict as assert } from "assert";
 import { parse } from "url";
+import { assert } from "@fluidframework/common-utils";
 import { IRequest } from "@fluidframework/core-interfaces";
 import {
     IFluidResolvedUrl,
     IResolvedUrl,
     IUrlResolver,
-    CreateNewHeader,
+    DriverHeader,
 } from "@fluidframework/driver-definitions";
 import { ScopeType } from "@fluidframework/protocol-definitions";
-import { generateToken } from "@fluidframework/server-services-client";
+import { generateToken } from "./auth";
+
+export function createLocalResolverCreateNewRequest(documentId: string): IRequest {
+    const createNewRequest: IRequest = {
+        url: `http://localhost:3000/${documentId}`,
+        headers: {
+            [DriverHeader.createNew]: true,
+        },
+    };
+    return createNewRequest;
+}
 
 /**
  * Resolves URLs by providing fake URLs which succeed with the other
@@ -33,7 +43,7 @@ export class LocalResolver implements IUrlResolver {
      */
     public async resolve(request: IRequest): Promise<IResolvedUrl> {
         const parsedUrl = new URL(request.url);
-        const fullPath = parsedUrl.pathname.substr(1);
+        const fullPath = `${parsedUrl.pathname.substr(1)}${parsedUrl.search}`;
         const documentId = fullPath.split("/")[0];
         const scopes = [ScopeType.DocRead, ScopeType.DocWrite, ScopeType.SummaryWrite];
         const resolved: IFluidResolvedUrl = {
@@ -42,6 +52,7 @@ export class LocalResolver implements IUrlResolver {
                 ordererUrl: "http://localhost:3000",
                 storageUrl: `http://localhost:3000/repos/${this.tenantId}`,
             },
+            id: documentId,
             tokens: { jwt: generateToken(this.tenantId, documentId, this.tokenKey, scopes) },
             type: "fluid",
             url: `fluid-test://localhost:3000/${this.tenantId}/${fullPath}`,
@@ -58,22 +69,17 @@ export class LocalResolver implements IUrlResolver {
         const fluidResolvedUrl = resolvedUrl as IFluidResolvedUrl;
 
         const parsedUrl = parse(fluidResolvedUrl.url);
-        if (parsedUrl.pathname === undefined) {
+        // eslint-disable-next-line no-null/no-null
+        if (parsedUrl.pathname === null) {
             throw new Error("Url should contain tenant and docId!!");
         }
         const [, , documentId] = parsedUrl.pathname.split("/");
-        assert(documentId, "The resolvedUrl must have a documentId");
+        assert(!!documentId, 0x09a /* "'documentId' must be a defined, non-zero length string." */);
 
         return `http://localhost:3000/${documentId}/${url}`;
     }
 
     public createCreateNewRequest(documentId: string): IRequest {
-        const createNewRequest: IRequest = {
-            url: `http://localhost:3000/${documentId}`,
-            headers: {
-                [CreateNewHeader.createNew]: true,
-            },
-        };
-        return createNewRequest;
+        return createLocalResolverCreateNewRequest(documentId);
     }
 }

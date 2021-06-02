@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -125,14 +125,14 @@ export function selectionListBoxCreate(
     const getItemTextSuffix = () => itemTextSuffix;
 
     function selectItemByKey(key: string) {
-        key = key.trim();
+        const _key = key.trim();
         if (selectionIndex >= 0) {
-            if (items[selectionIndex].key === key) {
+            if (items[selectionIndex].key === _key) {
                 return;
             }
         }
         for (let i = 0, len = items.length; i < len; i++) {
-            if (items[i].key === key) {
+            if (items[i].key === _key) {
                 selectItem(i);
                 break;
             }

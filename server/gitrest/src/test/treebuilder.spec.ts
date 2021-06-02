@@ -1,11 +1,11 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
 import * as async from "async";
 import * as moniker from "moniker";
-import * as git from "nodegit";
+import git from "nodegit";
 import * as testUtils from "./utils";
 
 async function mockTree(repository: git.Repository, entries: number) {
@@ -49,12 +49,12 @@ describe("Treebuilder", () => {
                 });
             }, concurrency);
 
-            q.drain = () => {
+            q.drain(() => {
                 resolve();
-            };
+            });
 
             for (let i = 0; i < treeCount; i++) {
-                q.push(1);
+                void q.push(1);
             }
         });
     });

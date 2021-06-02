@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -37,24 +37,25 @@ const lineHeightCache = new Map<string, number>();
 let cachedCanvas: HTMLCanvasElement;
 
 export function getLineHeight(fontstr: string, lineHeight?: string) {
+    let _fontstr = fontstr;
     if (lineHeight) {
-        fontstr += (`/${lineHeight}`);
+        _fontstr += (`/${lineHeight}`);
     }
-    let height = lineHeightCache.get(fontstr);
+    let height = lineHeightCache.get(_fontstr);
     if (height === undefined) {
         const elm = document.createElement("div");
         elm.style.position = "absolute";
         elm.style.zIndex = "-10";
         elm.style.left = "0px";
         elm.style.top = "0px";
-        elm.style.font = fontstr;
+        elm.style.font = _fontstr;
         document.body.appendChild(elm);
         height = getTextHeight(elm);
         document.body.removeChild(elm);
-        lineHeightCache.set(fontstr, height);
+        lineHeightCache.set(_fontstr, height);
     }
     if (isNaN(height)) {
-        console.log(`nan height with fontstr ${fontstr}`);
+        console.log(`nan height with fontstr ${_fontstr}`);
     }
     return height;
 }

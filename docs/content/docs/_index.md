@@ -1,6 +1,6 @@
 ---
-title: Fluid Framework
-meta: "What is Fluid Framework"
+title: Fluid Framework Documentation
+meta: "meta"
 ---
 
 ## What is Fluid Framework?
@@ -24,7 +24,7 @@ server-side logic to manage the collaborative experience. The Fluid Framework is
 in reducing the complexity of creating collaborative applications.
 
 What if you didn't have to invest in server code at all? Imagine if you could use a general purpose server
-which was designed to be light-weight and low cost. Imagine if all your development was focused on the client
+which was designed to be lightweight and low cost. Imagine if all your development was focused on the client
 experience and data sync was handled for you. That is the promise of Fluid.
 
 ## Focused on the client developer
@@ -70,10 +70,12 @@ participation.
 ## Next steps
 
 If you want to learn a lot more about how Fluid works, start with our
-**[architecture](concepts/architecture.md)** overview.
+**[architecture]({{< relref "concepts/architecture.md" >}})** overview.
 
-If you prefer to get your hands dirty right away, head for our coding **[tutorial](get-started/tutorial.md)** and
-**[examples](get-started/examples.md)**. But first, get your **[dev environment](get-started/quick-start.md)** set up.
+If you prefer to get your hands dirty right away, head for our coding
+**[tutorial]({{< relref "start/tutorial.md" >}})** and
+**[examples]({{< relref "/start/examples.md" >}})**. But first, get your
+**[dev environment]({{< relref "/start/quick-start.md" >}})** set up.
 
-Still have questions? Maybe we've answered them in our **[FAQ](faq.md)**. If not, check out our
-**[Community page](/community/)**.
+Still have questions? Maybe we've answered them in our **[FAQ]({{< relref "/start/faq.md" >}})**. If not, check out our
+**[Community page]({{< relref "/community/" >}})**.

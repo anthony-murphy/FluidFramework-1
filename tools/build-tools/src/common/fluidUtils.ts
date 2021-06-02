@@ -1,12 +1,14 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
+import * as fs from "fs";
 import { commonOptions } from "./commonOptions";
-import { existsSync, realpathAsync, readJsonAsync, lookUpDir } from "./utils";
+import { existsSync, realpathAsync, readJsonAsync, lookUpDirAsync } from "./utils";
 import * as path from "path";
 import { logVerbose } from "./logging";
+import { IPackageManifest } from "./fluidRepo";
 
 async function isFluidRootLerna(dir: string) {
     const filename = path.join(dir, "lerna.json");
@@ -14,9 +16,10 @@ async function isFluidRootLerna(dir: string) {
         logVerbose(`InferRoot: lerna.json not found`);
         return false;
     }
-
-    if (!existsSync(path.join(dir, "server", "routerlicious", "lerna.json"))) {
-        logVerbose(`InferRoot: server/routerlicious/lerna.json not found`);
+    const rootPackageManifest = await getPackageManifest(dir);
+    if (rootPackageManifest.repoPackages.server !== undefined
+        && !existsSync(path.join(dir, rootPackageManifest.repoPackages.server as string, "lerna.json"))) {
+        logVerbose(`InferRoot: ${dir}/${rootPackageManifest.repoPackages.server as string}/lerna.json not found`);
         return false;
     }
 
@@ -43,7 +46,7 @@ async function isFluidRoot(dir: string) {
 }
 
 async function inferRoot() {
-    return lookUpDir(process.cwd(), async (curr) => {
+    return lookUpDirAsync(process.cwd(), async (curr) => {
         logVerbose(`InferRoot: probing ${curr}`);
         try {
             if (await isFluidRoot(curr)) {
@@ -87,4 +90,9 @@ export async function getResolvedFluidRoot() {
 
     // Use realpath.native to get the case-sensitive path on windows
     return await realpathAsync(resolvedRoot);
+}
+
+export function getPackageManifest(rootDir: string): IPackageManifest {
+    const pkgString = fs.readFileSync(`${rootDir}/package.json`);
+    return JSON.parse(pkgString as any).fluidBuild;
 }

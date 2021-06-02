@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -18,11 +18,13 @@ import { ISharedObject, ISharedObjectEvents } from "@fluidframework/shared-objec
  * Use for the runtime to create and load distributed data structure by type name of each channel
  */
 export interface IConsensusRegisterCollectionFactory extends IChannelFactory {
+    /**
+     * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.load}
+     */
     load(
         document: IFluidDataStoreRuntime,
         id: string,
         services: IChannelServices,
-        branchId: string,
         attributes: IChannelAttributes): Promise<IConsensusRegisterCollection>;
 
     create(document: IFluidDataStoreRuntime, id: string): IConsensusRegisterCollection;

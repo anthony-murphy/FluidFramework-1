@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 import { SharedString } from "@fluidframework/sequence";
@@ -144,7 +144,9 @@ export class CollaborativeTextArea
                 onKeyDown={this.updateSelection}
                 onClick={this.updateSelection}
                 onContextMenu={this.updateSelection}
-                onInput={this.handleChange}
+                // onChange is recommended over onInput for React controls
+                // https://medium.com/capital-one-tech/how-to-work-with-forms-inputs-and-events-in-react-c337171b923b
+                onChange={this.handleChange}
                 value={this.state.text} />
         );
     }

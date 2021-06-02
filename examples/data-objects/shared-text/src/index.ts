@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -7,19 +7,16 @@
 // eslint-disable-next-line import/no-unassigned-import
 import "./publicpath";
 
-import assert from "assert";
+import { AgentSchedulerFactory } from "@fluidframework/agent-scheduler";
 import { IContainerContext, IRuntime, IRuntimeFactory } from "@fluidframework/container-definitions";
 import { ContainerRuntime } from "@fluidframework/container-runtime";
 import {
     IFluidDataStoreContext,
     IFluidDataStoreFactory,
-    IFluidDataStoreRegistry,
-    IProvideFluidDataStoreFactory,
-    IProvideFluidDataStoreRegistry,
     NamedFluidDataStoreRegistryEntries,
 } from "@fluidframework/runtime-definitions";
 import {
-    deprecated_innerRequestHandler,
+    innerRequestHandler,
     buildRuntimeRequestHandler,
 } from "@fluidframework/request-handler";
 import { defaultRouteRequestHandler } from "@fluidframework/aqueduct";
@@ -30,8 +27,6 @@ const math = import(/* webpackChunkName: "math", webpackPrefetch: true */ "@flui
 // const monaco = import(/* webpackChunkName: "monaco", webpackPrefetch: true */ "@fluid-example/monaco");
 const progressBars = import(
     /* webpackChunkName: "collections", webpackPrefetch: true */ "@fluid-example/progress-bars");
-const videoPlayers = import(
-    /* webpackChunkName: "collections", webpackPrefetch: true */ "@fluid-example/video-players");
 const images = import(
     /* webpackChunkName: "image-collection", webpackPrefetch: true */ "@fluid-example/image-collection");
 
@@ -53,36 +48,11 @@ const DefaultComponentName = "text";
 /* eslint-enable max-len */
 
 const defaultRegistryEntries: NamedFluidDataStoreRegistryEntries = [
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     ["@fluid-example/math", math.then((m) => m.fluidExport)],
     ["@fluid-example/progress-bars", progressBars.then((m) => m.fluidExport)],
-    ["@fluid-example/video-players", videoPlayers.then((m) => m.fluidExport)],
     ["@fluid-example/image-collection", images.then((m) => m.fluidExport)],
 ];
-
-class MyRegistry implements IFluidDataStoreRegistry {
-    constructor(
-        private readonly context: IContainerContext,
-        private readonly defaultRegistry: string) {
-    }
-
-    public get IFluidDataStoreRegistry() { return this; }
-
-    public async get(name: string): Promise<IProvideFluidDataStoreFactory | IProvideFluidDataStoreRegistry> {
-        const scope = `${name.split("/")[0]}:cdn`;
-        const config = {};
-        config[scope] = this.defaultRegistry;
-
-        const codeDetails = {
-            package: name,
-            config,
-        };
-        const fluidModule = await this.context.codeLoader.load(codeDetails);
-        const moduleExport = fluidModule.fluidExport;
-        assert(moduleExport.IFluidDataStoreFactory !== undefined ||
-            moduleExport.IFluidDataStoreRegistry  !== undefined);
-        return moduleExport as IProvideFluidDataStoreFactory | IProvideFluidDataStoreRegistry;
-    }
-}
 
 class SharedTextFactoryComponent implements IFluidDataStoreFactory, IRuntimeFactory {
     public static readonly type = "@fluid-example/shared-text";
@@ -104,19 +74,17 @@ class SharedTextFactoryComponent implements IFluidDataStoreFactory, IRuntimeFact
             [
                 ...defaultRegistryEntries,
                 [SharedTextFactoryComponent.type, Promise.resolve(this)],
-                [
-                    "verdaccio",
-                    Promise.resolve(new MyRegistry(context, "https://pragueauspkn.azureedge.net")),
-                ],
+                AgentSchedulerFactory.registryEntry,
             ],
             buildRuntimeRequestHandler(
                 defaultRouteRequestHandler(DefaultComponentName),
-                deprecated_innerRequestHandler,
+                innerRequestHandler,
             ),
         );
 
         // On first boot create the base component
         if (!runtime.existing) {
+            await runtime.createRootDataStore(AgentSchedulerFactory.type, "_scheduler");
             await runtime.createRootDataStore(SharedTextFactoryComponent.type, DefaultComponentName);
         }
 

@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -7,10 +7,7 @@ import { IResolvedUrl, IUrlResolver } from "@fluidframework/driver-definitions";
 import { IRequest } from "@fluidframework/core-interfaces";
 import { LocalResolver } from "@fluidframework/local-driver";
 import { InsecureUrlResolver } from "@fluidframework/test-runtime-utils";
-// eslint-disable-next-line import/no-internal-modules
-import uuid from "uuid/v4";
-import { getRandomName } from "@fluidframework/server-services-client";
-import { RouteOptions, IDevServerUser } from "./loader";
+import { ITinyliciousRouteOptions, RouteOptions } from "./loader";
 import { OdspUrlResolver } from "./odspUrlResolver";
 
 export const dockerUrls = {
@@ -19,10 +16,16 @@ export const dockerUrls = {
     storageUrl: "http://localhost:3001",
 };
 
-export const tinyliciousUrls = {
-    hostUrl: "http://localhost:3000",
-    ordererUrl: "http://localhost:3000",
-    storageUrl: "http://localhost:3000",
+const defaultTinyliciousPort = 7070;
+
+export const tinyliciousUrls = (options: ITinyliciousRouteOptions) => {
+    const port = options.tinyliciousPort ?? defaultTinyliciousPort;
+
+    return {
+        hostUrl: `http://localhost:${port}`,
+        ordererUrl: `http://localhost:${port}`,
+        storageUrl: `http://localhost:${port}`,
+    };
 };
 
 function getUrlResolver(options: RouteOptions): IUrlResolver {
@@ -33,8 +36,6 @@ function getUrlResolver(options: RouteOptions): IUrlResolver {
                 dockerUrls.ordererUrl,
                 dockerUrls.storageUrl,
                 options.tenantId,
-                options.tenantSecret,
-                getUser(),
                 options.bearerSecret);
 
         case "r11s":
@@ -43,19 +44,16 @@ function getUrlResolver(options: RouteOptions): IUrlResolver {
                 options.fluidHost.replace("www", "alfred"),
                 options.fluidHost.replace("www", "historian"),
                 options.tenantId,
-                options.tenantSecret,
-                getUser(),
                 options.bearerSecret);
-        case "tinylicious":
+        case "tinylicious": {
+            const urls = tinyliciousUrls(options);
             return new InsecureUrlResolver(
-                tinyliciousUrls.hostUrl,
-                tinyliciousUrls.ordererUrl,
-                tinyliciousUrls.storageUrl,
+                urls.hostUrl,
+                urls.ordererUrl,
+                urls.storageUrl,
                 "tinylicious",
-                "12345",
-                getUser(),
                 options.bearerSecret);
-
+        }
         case "spo":
         case "spo-df":
             return new OdspUrlResolver(
@@ -67,18 +65,19 @@ function getUrlResolver(options: RouteOptions): IUrlResolver {
     }
 }
 
-const getUser = (): IDevServerUser => ({
-    id: uuid(),
-    name: getRandomName(),
-});
-
 export class MultiUrlResolver implements IUrlResolver {
     private readonly urlResolver: IUrlResolver;
     constructor(
         private readonly documentId: string,
         private readonly rawUrl: string,
-        private readonly options: RouteOptions) {
-        this.urlResolver = getUrlResolver(options);
+        private readonly options: RouteOptions,
+        private readonly useLocalResolver: boolean = false,
+    ) {
+        if (this.useLocalResolver) {
+            this.urlResolver = new LocalResolver();
+        } else {
+            this.urlResolver = getUrlResolver(options);
+        }
     }
 
     async getAbsoluteUrl(resolvedUrl: IResolvedUrl, relativeUrl: string): Promise<string> {
@@ -96,6 +95,9 @@ export class MultiUrlResolver implements IUrlResolver {
     public async createRequestForCreateNew(
         fileName: string,
     ): Promise<IRequest> {
+        if (this.useLocalResolver) {
+            return (this.urlResolver as LocalResolver).createCreateNewRequest(fileName);
+        }
         switch (this.options.mode) {
             case "r11s":
             case "docker":

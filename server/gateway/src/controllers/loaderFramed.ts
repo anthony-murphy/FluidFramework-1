@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -48,7 +48,7 @@ export async function initialize(
     const hostConf: IBaseHostConfig = {
         documentServiceFactory: await InnerDocumentServiceFactory.create(),
         urlResolver: new InnerUrlResolver(resolved),
-        config,
+        options: config,
         codeResolver: new SemVerCdnCodeResolver(),
         scope,
         proxyLoaderFactories: new Map<string, IProxyLoaderFactory>([["webworker", new WebWorkerLoaderFactory()]]),

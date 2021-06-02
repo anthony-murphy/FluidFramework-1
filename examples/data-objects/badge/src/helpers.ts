@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 import {
@@ -83,7 +83,8 @@ export const getTextColor = (c: IColor) => {
 };
 
 export const getButtonStyles = (baseColor: string): IButtonStyles => {
-    const color = getColorFromString(baseColor);
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const color = getColorFromString(baseColor)!;
     const colorHover = getColorFromHSV({
         h: color.h,
         s: color.s,
@@ -123,10 +124,12 @@ export const getButtonStyles = (baseColor: string): IButtonStyles => {
     };
 };
 
-export const getRelativeDate = (timestamp: Date): string => {
+export const getRelativeDate = (timestamp: string): string => {
+    const date = new Date(timestamp);
+
     // https://stackoverflow.com/questions/7641791/javascript-library-for-human-friendly-relative-date-formatting
     const delta = Math.round(
-        (new Date().getTime() - new Date(timestamp).getTime()) / 1000,
+        (new Date().getTime() - date.getTime()) / 1000,
     );
 
     const minute = 60;
@@ -146,6 +149,6 @@ export const getRelativeDate = (timestamp: Date): string => {
     } else if (delta < day * 2) {
         return "yesterday";
     } else {
-        return timestamp.toUTCString();
+        return date.toUTCString();
     }
 };

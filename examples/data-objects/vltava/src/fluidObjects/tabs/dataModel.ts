@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -13,12 +13,9 @@ import {
 import {
     ISharedDirectory,
     IDirectory,
-    IDirectoryValueChanged,
+    IValueChanged,
 } from "@fluidframework/map";
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
 import { IFluidDataStoreFactory } from "@fluidframework/runtime-definitions";
-
-import { IFluidDataObjectFactory } from "@fluidframework/aqueduct";
 
 import { v4 as uuid } from "uuid";
 
@@ -43,12 +40,12 @@ export interface ITabsDataModel extends EventEmitter {
 }
 
 export class TabsDataModel extends EventEmitter implements ITabsDataModel {
-    private tabs: IDirectory;
+    private readonly tabs: IDirectory;
 
     constructor(
         public root: ISharedDirectory,
         private readonly internalRegistry: IFluidObjectInternalRegistry,
-        private readonly createSubObject: IFluidDataObjectFactory,
+        private readonly createSubObject: (factory: IFluidDataStoreFactory) => Promise<IFluidLoadable>,
         private readonly getFluidObjectFromDirectory: <T extends IFluidObject & IFluidLoadable>(
             id: string,
             directory: IDirectory,
@@ -57,19 +54,20 @@ export class TabsDataModel extends EventEmitter implements ITabsDataModel {
     ) {
         super();
 
-        this.tabs = root.getSubDirectory("tab-ids");
+        const tabs = "tab-ids";
+        if (!root.hasSubDirectory(tabs)) {
+            root.createSubDirectory(tabs);
+        }
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        this.tabs = root.getSubDirectory(tabs)!;
 
-        root.on(
-            "valueChanged",
+        this.tabs.on(
+            "containedValueChanged",
             (
-                changed: IDirectoryValueChanged,
+                changed: IValueChanged,
                 local: boolean,
-                op: ISequencedDocumentMessage,
-                target: ISharedDirectory,
             ) => {
-                if (changed.path === this.tabs.absolutePath && !local) {
-                    this.emit("newTab", local);
-                }
+                this.emit("newTab", local);
             });
     }
 
@@ -79,13 +77,12 @@ export class TabsDataModel extends EventEmitter implements ITabsDataModel {
 
     public async createTab(factory: IFluidDataStoreFactory): Promise<string> {
         const newKey = uuid();
-        const fluidObject = await this.createSubObject.createAnonymousChildInstance<IFluidLoadable>(factory);
+        const fluidObject = await this.createSubObject(factory);
         this.tabs.set(newKey, {
             type: factory.type,
             handleOrId: fluidObject.handle,
         });
 
-        this.emit("newTab", true);
         return newKey;
     }
 
@@ -95,7 +92,6 @@ export class TabsDataModel extends EventEmitter implements ITabsDataModel {
     }
 
     public async getFluidObjectTab(id: string): Promise<IFluidObject | undefined> {
-        this.tabs = this.root.getSubDirectory("tab-ids");
         return this.getFluidObjectFromDirectory(id, this.tabs, this.getObjectFromDirectory);
     }
 

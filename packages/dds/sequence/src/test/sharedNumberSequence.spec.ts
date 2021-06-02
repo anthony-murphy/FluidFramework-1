@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 import { strict as assert } from "assert";
@@ -14,7 +14,6 @@ describe("SharedNumberSequence", () => {
         const dataStoreRuntime = new MockFluidDataStoreRuntime();
         sharedNumberSequence =
             new SharedNumberSequence(dataStoreRuntime, documentId, SharedNumberSequenceFactory.Attributes);
-        dataStoreRuntime.bindToContext();
     });
 
     describe("getItems", () => {

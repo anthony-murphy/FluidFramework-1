@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -33,7 +33,6 @@ export interface IConsensusOrderedCollectionFactory extends IChannelFactory {
         document: IFluidDataStoreRuntime,
         id: string,
         services: IChannelServices,
-        branchId: string,
         attributes: IChannelAttributes): Promise<IConsensusOrderedCollection>;
 
     create(document: IFluidDataStoreRuntime, id: string): IConsensusOrderedCollection;

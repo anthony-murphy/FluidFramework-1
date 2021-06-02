@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -126,6 +126,7 @@ export class SequenceDeltaEvent extends SequenceEvent<MergeTreeDeltaOperationTyp
  */
 export class SequenceMaintenanceEvent extends SequenceEvent<MergeTreeMaintenanceType> {
     constructor(
+        public readonly opArgs: IMergeTreeDeltaOpArgs | undefined,
         deltaArgs: IMergeTreeMaintenanceCallbackArgs,
         mergeTreeClient: Client,
     ) {

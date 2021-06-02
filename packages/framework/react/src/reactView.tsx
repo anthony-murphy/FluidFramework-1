@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -67,8 +67,10 @@ export abstract class FluidReactView<SV extends IViewState,
         fromRootUpdate?: boolean,
         isLocal?: boolean,
     ) {
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (isLocal) {
             super.setState(newState);
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         } else if (fromRootUpdate) {
             syncState(
                 true,

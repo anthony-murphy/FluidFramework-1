@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -12,24 +12,22 @@ import {
     ScopeType,
 } from "@fluidframework/protocol-definitions";
 import * as core from "@fluidframework/server-services-core";
-import { generateToken } from "@fluidframework/server-services-client";
-import { SequencedLambda } from "../sequencedLambda";
 
 // TODO: Move this to config.
 const RequestWindowMS = 15000;
 
-export class ForemanLambda extends SequencedLambda {
+export class ForemanLambda implements core.IPartitionLambda {
     private readonly taskQueueMap = new Map<string, string>();
     private readonly rateLimiter = new RateLimiter(RequestWindowMS);
 
     constructor(
         private readonly messageSender: core.ITaskMessageSender,
         private readonly tenantManager: core.ITenantManager,
+        private readonly tokenGenerator: core.TokenGenerator,
         private readonly permissions: any,
         protected context: core.IContext,
         protected tenantId: string,
         protected documentId: string) {
-        super(context);
         // Make a map of every task and their intended queue.
         // eslint-disable-next-line guard-for-in, no-restricted-syntax
         for (const queueName in this.permissions) {
@@ -39,7 +37,10 @@ export class ForemanLambda extends SequencedLambda {
         }
     }
 
-    protected async handlerCore(message: core.IQueuedMessage): Promise<void> {
+    public close() {
+    }
+
+    public async handler(message: core.IQueuedMessage) {
         const boxcar = core.extractBoxcar(message);
 
         for (const baseMessage of boxcar.contents) {
@@ -88,7 +89,8 @@ export class ForemanLambda extends SequencedLambda {
                         tasks,
                     },
                     tenantId,
-                    token: generateToken(tenantId, docId, key, scopes),
+
+                    token: this.tokenGenerator(tenantId, docId, key, scopes),
                 };
                 this.messageSender.sendTask(
                     queueName,
@@ -97,12 +99,14 @@ export class ForemanLambda extends SequencedLambda {
                         type: "tasks:start",
                     },
                 );
-                const messageMetaData = {
-                    documentId: docId,
-                    tenantId,
-                };
-                this.context.log.info(
-                    `Request to ${queueName}: ${clientId}:${JSON.stringify(tasks)}`, { messageMetaData });
+                this.context.log?.info(
+                    `Request to ${queueName}: ${clientId}:${JSON.stringify(tasks)}`,
+                    {
+                        messageMetaData: {
+                            documentId: docId,
+                            tenantId,
+                        },
+                    });
             }
         }
     }
@@ -112,12 +116,14 @@ export class ForemanLambda extends SequencedLambda {
         // Figure out the queue for each task and populate the map.
         const queueTaskMap = new Map<string, string[]>();
         for (const task of tasks) {
-            if (this.taskQueueMap.has(task)) {
-                const queue = this.taskQueueMap.get(task);
-                if (!queueTaskMap.has(queue)) {
-                    queueTaskMap.set(queue, []);
+            const queue = this.taskQueueMap.get(task);
+            if (queue) {
+                let queueTasks = queueTaskMap.get(queue);
+                if (!queueTasks) {
+                    queueTasks = [];
+                    queueTaskMap.set(queue, queueTasks);
                 }
-                queueTaskMap.get(queue).push(task);
+                queueTasks.push(task);
             }
         }
         return queueTaskMap;

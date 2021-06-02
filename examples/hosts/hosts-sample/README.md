@@ -20,9 +20,7 @@ npm start
 
 Then navigate to <http://localhost:8080.> This will redirect you to <http://localhost:8080/example> but you can change
 'example' to any string you'd like and a new document will be created under that name. By default a new Flow View
-will be created but by specifying the chaincode query parameter any of the packages on
-<https://packages.wu2.prague.office-int.com> can be loaded - i.e.
-<http://localhost:8080/new-document?chaincode=@fluid-example/smde@0.18.1>
+will be created.
 
 ## The Code
 
@@ -42,11 +40,11 @@ Creating a loader is a simple process
 ```typescript
 import { Loader } from "@fluidframework/container-loader";
 
-const loader = new Loader(
-    insecureResolver,
+const loader = new Loader({
+    urlResolver,
     documentServicesFactory,
     codeLoader,
-    { blockUpdateMarkers: true });
+});
 ```
 
 The loader takes in four parameters. The first is a set of host interfaces. These allow the loader to interact with
@@ -276,7 +274,6 @@ And that's all that's needed to create or load Fluid documents. It's intended to
 setup as a host. And once done you gain full access to the power of the Fluid platform.
 
 Instructions for that are at https://github.com/Microsoft/FluidFramework/blob/main/tools/generator-fluid/README.md.
-You can then publish this package to Verdaccio and load it inside of your new loader!
 
 When creating your new Fluid object also note that the API provides it access to the underlying loader. You can use this
 to follow similar attach steps as above to load objects within your objects. In this way your Fluid object can

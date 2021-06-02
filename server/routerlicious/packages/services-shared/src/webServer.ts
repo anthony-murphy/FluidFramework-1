@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -47,7 +47,7 @@ export class WebServer implements core.IWebServer {
 }
 
 export class SocketIoWebServerFactory implements core.IWebServerFactory {
-    constructor(private readonly redisConfig: any) {
+    constructor(private readonly redisConfig: any, private readonly socketIoAdapterConfig?: any) {
     }
 
     public create(requestListener: RequestListener): core.IWebServer {
@@ -55,7 +55,7 @@ export class SocketIoWebServerFactory implements core.IWebServerFactory {
         const server = http.createServer(requestListener);
         const httpServer = new HttpServer(server);
 
-        const socketIoServer = socketIo.create(this.redisConfig, server);
+        const socketIoServer = socketIo.create(this.redisConfig, server, this.socketIoAdapterConfig);
 
         return new WebServer(httpServer, socketIoServer);
     }

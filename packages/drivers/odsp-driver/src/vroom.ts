@@ -1,22 +1,20 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
 import { ITelemetryLogger } from "@fluidframework/common-definitions";
 import { PerformanceEvent } from "@fluidframework/telemetry-utils";
+import { IOdspUrlParts, TokenFetchOptions } from "@fluidframework/odsp-driver-definitions";
 import { ISocketStorageDiscovery } from "./contracts";
-import {
-    fetchHelper,
-    getWithRetryForTokenRefresh,
-    getOrigin,
-} from "./odspUtils";
+import { getWithRetryForTokenRefresh, getOrigin } from "./odspUtils";
 import { getApiRoot } from "./odspUrlHelper";
-import {
-    fetchIncorrectResponse,
-    throwOdspNetworkError,
-} from "./odspError";
-import { TokenFetchOptions } from "./tokenFetch";
+import { EpochTracker } from "./epochTracker";
+
+interface IJoinSessionBody {
+    requestSocketToken?: boolean;
+    guestDisplayName?: string;
+}
 
 /**
  * Makes join session call on SPO to get information about the web socket for a document
@@ -26,50 +24,75 @@ import { TokenFetchOptions } from "./tokenFetch";
  * @param path - The API path that is relevant to this request
  * @param method - The type of request, such as GET or POST
  * @param logger - A logger to use for this request
- * @param getVroomToken - A function that is able to provide the vroom token for this request
+ * @param getStorageToken - A function that is able to provide the access token for this request
+ * @param epochTracker - fetch wrapper which incorporates epoch logic around joinSession call
+ * @param requestSocketToken - flag indicating whether joinSession is expected to return access token
+ * which is used when establishing websocket connection with collab session backend service.
+ * @param guestDisplayName - display name used to identify guest user joining a session.
+ * This is optional and used only when collab session is being joined via invite.
  */
 export async function fetchJoinSession(
-    driveId: string,
-    itemId: string,
-    siteUrl: string,
+    urlParts: IOdspUrlParts,
     path: string,
     method: string,
     logger: ITelemetryLogger,
-    getVroomToken: (options: TokenFetchOptions, name?: string) => Promise<string | null>,
+    getStorageToken: (options: TokenFetchOptions, name: string) => Promise<string | null>,
+    epochTracker: EpochTracker,
+    requestSocketToken: boolean,
+    guestDisplayName?: string,
 ): Promise<ISocketStorageDiscovery> {
     return getWithRetryForTokenRefresh(async (options) => {
-        const token = await getVroomToken(options, "JoinSession");
-        if (!token) {
-            throwOdspNetworkError("Failed to acquire Vroom token", fetchIncorrectResponse);
-        }
+        const token = await getStorageToken(options, "JoinSession");
 
-        const extraProps = options.refresh ? { secondAttempt: 1, hasClaims: !!options.claims } : {};
-        return PerformanceEvent.timedExecAsync(logger, { eventName: "JoinSession", ...extraProps }, async (event) => {
-            // TODO Extract the auth header-vs-query logic out
-            const siteOrigin = getOrigin(siteUrl);
-            let queryParams = `access_token=${token}`;
-            let headers = {};
-            if (queryParams.length > 2048) {
-                queryParams = "";
-                headers = { Authorization: `Bearer ${token}` };
-            }
+        const extraProps = options.refresh
+            ? { hasClaims: !!options.claims, hasTenantId: !!options.tenantId }
+            : {};
+        return PerformanceEvent.timedExecAsync(
+            logger, {
+                eventName: "JoinSession",
+                attempts: options.refresh ? 2 : 1,
+                ...extraProps,
+            },
+            async (event) => {
+                // TODO Extract the auth header-vs-query logic out
+                const siteOrigin = getOrigin(urlParts.siteUrl);
+                let queryParams = `access_token=${token}`;
+                let headers = {};
+                if (queryParams.length > 2048) {
+                    queryParams = "";
+                    headers = { Authorization: `Bearer ${token}` };
+                }
+                let body: IJoinSessionBody | undefined;
+                if (requestSocketToken || guestDisplayName) {
+                    body = {};
+                    if (requestSocketToken) {
+                        body.requestSocketToken = true;
+                    }
+                    if (guestDisplayName) {
+                        body.guestDisplayName = guestDisplayName;
+                    }
+                }
 
-            const response = await fetchHelper<ISocketStorageDiscovery>(
-                `${getApiRoot(siteOrigin)}/drives/${driveId}/items/${itemId}/${path}?${queryParams}`,
-                { method, headers },
-            );
+                const response = await epochTracker.fetchAndParseAsJSON<ISocketStorageDiscovery>(
+                    `${getApiRoot(siteOrigin)}/drives/${
+                        urlParts.driveId
+                    }/items/${urlParts.itemId}/${path}?${queryParams}`,
+                    { method, headers, body: body ? JSON.stringify(body) : undefined },
+                    "joinSession",
+                );
 
-            // TODO SPO-specific telemetry
-            event.end({
-                sprequestguid: response.headers.get("sprequestguid"),
-                sprequestduration: response.headers.get("sprequestduration"),
+                // TODO SPO-specific telemetry
+                event.end({
+                    ...response.commonSpoHeaders,
+                    // pushV2 websocket urls will contain pushf
+                    pushv2: response.content.deltaStreamSocketUrl.includes("pushf"),
+                });
+
+                if (response.content.runtimeTenantId && !response.content.tenantId) {
+                    response.content.tenantId = response.content.runtimeTenantId;
+                }
+
+                return response.content;
             });
-
-            if (response.content.runtimeTenantId && !response.content.tenantId) {
-                response.content.tenantId = response.content.runtimeTenantId;
-            }
-
-            return response.content;
-        });
     });
 }

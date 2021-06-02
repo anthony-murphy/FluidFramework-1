@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -61,7 +61,7 @@ export class TodoItemView extends React.Component<TodoItemViewProps, TodoItemVie
                 <h2>
                     <input
                         type="checkbox"
-                        name={this.props.todoItemModel.url}
+                        name={this.props.todoItemModel.handle.absolutePath}
                         checked={this.state.checked}
                         onChange={this.setCheckedState} />
                     <CollaborativeInput

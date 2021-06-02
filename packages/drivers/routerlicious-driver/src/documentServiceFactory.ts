@@ -1,28 +1,31 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
-import { strict as assert } from "assert";
 import { parse } from "url";
+import { assert } from "@fluidframework/common-utils";
 import {
     IDocumentService,
     IDocumentServiceFactory,
     IResolvedUrl,
 } from "@fluidframework/driver-definitions";
 import { ITelemetryBaseLogger } from "@fluidframework/common-definitions";
-import { IErrorTrackingService, ISummaryTree } from "@fluidframework/protocol-definitions";
-import { ICredentials, IGitCache } from "@fluidframework/server-services-client";
+import { ISummaryTree } from "@fluidframework/protocol-definitions";
 import {
     ensureFluidResolvedUrl,
     getDocAttributesFromProtocolSummary,
     getQuorumValuesFromProtocolSummary,
 } from "@fluidframework/driver-utils";
-import Axios from "axios";
+import { ChildLogger } from "@fluidframework/telemetry-utils";
 import { DocumentService } from "./documentService";
-import { DocumentService2 } from "./documentService2";
-import { DefaultErrorTracking } from "./errorTracking";
-import { TokenProvider } from "./tokens";
+import { IRouterliciousDriverPolicies } from "./policies";
+import { ITokenProvider } from "./tokens";
+import { RouterliciousOrdererRestWrapper } from "./restWrapper";
+
+const defaultRouterliciousDriverPolicies: IRouterliciousDriverPolicies = {
+    enablePrefetch: true,
+};
 
 /**
  * Factory for creating the routerlicious document service. Use this if you want to
@@ -30,14 +33,16 @@ import { TokenProvider } from "./tokens";
  */
 export class RouterliciousDocumentServiceFactory implements IDocumentServiceFactory {
     public readonly protocolName = "fluid:";
+    private readonly driverPolicies: IRouterliciousDriverPolicies;
+
     constructor(
-        private readonly useDocumentService2: boolean = false,
-        private readonly errorTracking: IErrorTrackingService = new DefaultErrorTracking(),
-        private readonly disableCache: boolean = false,
-        private readonly historianApi: boolean = true,
-        private readonly gitCache: IGitCache | undefined = undefined,
-        private readonly credentials?: ICredentials,
+        private readonly tokenProvider: ITokenProvider,
+        driverPolicies: Partial<IRouterliciousDriverPolicies> = {},
     ) {
+        this.driverPolicies = {
+            ...defaultRouterliciousDriverPolicies,
+            ...driverPolicies,
+        };
     }
 
     public async createContainer(
@@ -46,7 +51,7 @@ export class RouterliciousDocumentServiceFactory implements IDocumentServiceFact
         logger?: ITelemetryBaseLogger,
     ): Promise<IDocumentService> {
         ensureFluidResolvedUrl(resolvedUrl);
-        assert(resolvedUrl.endpoints.ordererUrl);
+        assert(!!resolvedUrl.endpoints.ordererUrl, 0x0b2 /* "Missing orderer URL!" */);
         const parsedUrl = parse(resolvedUrl.url);
         if (!parsedUrl.pathname) {
             throw new Error("Parsed url should contain tenant and doc Id!!");
@@ -59,14 +64,25 @@ export class RouterliciousDocumentServiceFactory implements IDocumentServiceFact
         }
         const documentAttributes = getDocAttributesFromProtocolSummary(protocolSummary);
         const quorumValues = getQuorumValuesFromProtocolSummary(protocolSummary);
-        await Axios.post(
-            `${resolvedUrl.endpoints.ordererUrl}/documents/${tenantId}`,
+
+        const logger2 = ChildLogger.create(logger, "RouterliciousDriver");
+        const ordererRestWrapper = await RouterliciousOrdererRestWrapper.load(
+            tenantId,
+            id,
+            this.tokenProvider,
+            logger2,
+            resolvedUrl.endpoints.ordererUrl,
+        );
+        await ordererRestWrapper.post(
+            `/documents/${tenantId}`,
             {
                 id,
                 summary: appSummary,
                 sequenceNumber: documentAttributes.sequenceNumber,
                 values: quorumValues,
-            });
+            },
+        );
+
         return this.createDocumentService(resolvedUrl, logger);
     }
 
@@ -98,40 +114,17 @@ export class RouterliciousDocumentServiceFactory implements IDocumentServiceFact
                 `Couldn't parse documentId and/or tenantId. [documentId:${documentId}][tenantId:${tenantId}]`);
         }
 
-        const jwtToken = fluidResolvedUrl.tokens.jwt;
-        if (!jwtToken) {
-            throw new Error(`Token was not provided.`);
-        }
+        const logger2 = ChildLogger.create(logger, "RouterliciousDriver");
 
-        const tokenProvider = new TokenProvider(jwtToken);
-
-        if (this.useDocumentService2) {
-            return new DocumentService2(
-                fluidResolvedUrl,
-                ordererUrl,
-                deltaStorageUrl,
-                storageUrl,
-                this.errorTracking,
-                this.disableCache,
-                this.historianApi,
-                this.credentials,
-                tokenProvider,
-                tenantId,
-                documentId);
-        } else {
-            return new DocumentService(
-                fluidResolvedUrl,
-                ordererUrl,
-                deltaStorageUrl,
-                storageUrl,
-                this.errorTracking,
-                this.disableCache,
-                this.historianApi,
-                this.credentials,
-                this.gitCache,
-                tokenProvider,
-                tenantId,
-                documentId);
-        }
+        return new DocumentService(
+            fluidResolvedUrl,
+            ordererUrl,
+            deltaStorageUrl,
+            storageUrl,
+            logger2,
+            this.tokenProvider,
+            tenantId,
+            documentId,
+            this.driverPolicies);
     }
 }

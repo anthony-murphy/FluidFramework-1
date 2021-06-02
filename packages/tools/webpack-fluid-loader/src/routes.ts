@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -8,14 +8,14 @@ import path from "path";
 import express from "express";
 import nconf from "nconf";
 import WebpackDevServer from "webpack-dev-server";
-import { IOdspTokens, getServer } from "@fluidframework/odsp-utils";
 import {
     getMicrosoftConfiguration,
     OdspTokenManager,
     odspTokensCache,
     OdspTokenConfig,
 } from "@fluidframework/tool-utils";
-import { IFluidPackage } from "@fluidframework/container-definitions";
+import { IFluidPackage } from "@fluidframework/core-interfaces";
+import { IOdspTokens, getServer } from "@fluidframework/odsp-doclib-utils";
 import Axios from "axios";
 import { RouteOptions } from "./loader";
 import { createManifestResponse } from "./bohemiaIntercept";
@@ -28,6 +28,7 @@ let odspAuthLock: Promise<void> | undefined;
 const getThisOrigin = (options: RouteOptions): string => `http://localhost:${options.port}`;
 
 export const before = async (app: express.Application) => {
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     app.get("/getclientsidewebparts", async (req, res) => res.send(await createManifestResponse()));
     app.get("/", (req, res) => res.redirect(`/new`));
 };
@@ -37,6 +38,7 @@ export const after = (app: express.Application, server: WebpackDevServer, baseDi
     const config: nconf.Provider = nconf.env("__").file(path.join(baseDir, "config.json"));
     const buildTokenConfig = (response, redirectUriCallback?): OdspTokenConfig => ({
         type: "browserLogin",
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         navigator: (url: string) => response.redirect(url),
         redirectUriCallback,
     });
@@ -48,11 +50,14 @@ export const after = (app: express.Application, server: WebpackDevServer, baseDi
             break;
         }
         case "tinylicious": {
-            Axios.get(tinyliciousUrls.hostUrl).then().catch((err) => {
-                throw new Error(`
+            const hostUrl = tinyliciousUrls(options).hostUrl;
+            Axios.get(hostUrl).then().catch((err) => {
+                throw new Error(`${err.message}
 
-                You're running the Webpack-Fluid-Loader with Tinylicious.
-                Tinylicious isn't running. Start the Fluid Framework Tinylicious server.
+                ERROR: Cannot connect to Tinylicious service at URL: ${hostUrl}
+
+                Please ensure the Fluid Framework Tinylicious service is running.
+                (See https://www.npmjs.com/package/tinylicious for details.)
                 `);
             });
             break;
@@ -151,6 +156,7 @@ export const after = (app: express.Application, server: WebpackDevServer, baseDi
         };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     app.get("/odspLogin", async (req, res) => {
         if (options.mode !== "spo-df" && options.mode !== "spo") {
             res.write("Mode must be spo or spo-df to login to ODSP.");
@@ -169,6 +175,7 @@ export const after = (app: express.Application, server: WebpackDevServer, baseDi
         );
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     app.get("/pushLogin", async (req, res) => {
         if (options.mode !== "spo-df" && options.mode !== "spo") {
             res.write("Mode must be spo or spo-df to login to Push.");
@@ -216,6 +223,7 @@ export const after = (app: express.Application, server: WebpackDevServer, baseDi
      * For urls of format - http://localhost:8080/doc/<id>.
      * This is when user is trying to load an existing document. We try to load a Container with `id` as documentId.
      */
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     app.get("/doc/:id*", async (req, res) => {
         const ready = await isReady(req, res);
         if (ready) {
@@ -229,6 +237,7 @@ export const after = (app: express.Application, server: WebpackDevServer, baseDi
      * For other `ids`, we treat this as the user trying to load an existing document. We redirect to
      * http://localhost:8080/doc/<id>.
      */
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     app.get("/:id*", async (req, res) => {
         // Ignore favicon.ico urls.
         if (req.url === "/favicon.ico") {
@@ -237,7 +246,10 @@ export const after = (app: express.Application, server: WebpackDevServer, baseDi
         }
 
         const documentId = req.params.id;
-        if (documentId !== "new" && documentId !== "manualAttach") {
+        // For testing orderer, we use the path: http://localhost:8080/testorderer. This will use the local storage
+        // instead of using actual storage service to which the connection is made. This will enable testing
+        // orderer even if the blob storage services are down.
+        if (documentId !== "new" && documentId !== "manualAttach" && documentId !== "testorderer") {
             // The `id` is not for a new document. We assume the user is trying to load an existing document and
             // redirect them to - http://localhost:8080/doc/<id>.
             const reqUrl = req.url.replace(documentId, `doc/${documentId}`);
@@ -255,7 +267,7 @@ export const after = (app: express.Application, server: WebpackDevServer, baseDi
 
 const fluid = (req: express.Request, res: express.Response, baseDir: string, options: RouteOptions) => {
     const documentId = req.params.id;
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // eslint-disable-next-line @typescript-eslint/no-require-imports,@typescript-eslint/no-var-requires
     const packageJson = require(path.join(baseDir, "./package.json")) as IFluidPackage;
 
     const html =
@@ -283,7 +295,6 @@ const fluid = (req: express.Request, res: express.Response, baseDir: string, opt
             options,
             document.getElementById("content"))
         .then(() => fluidStarted = true)
-        .catch((error) => console.error(error));
     </script>
 </body>
 </html>`;

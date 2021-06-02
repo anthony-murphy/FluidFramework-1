@@ -1,11 +1,11 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
 import { Router } from "express";
-import * as nconf from "nconf";
-import * as git from "nodegit";
+import nconf from "nconf";
+import git from "nodegit";
 import * as utils from "../../utils";
 
 async function getContent(
@@ -32,7 +32,7 @@ export function create(store: nconf.Provider, repoManager: utils.RepositoryManag
             request.params.owner,
             request.params.repo,
             request.params[0],
-            request.query.ref);
+            request.query.ref as string);
         return resultP.then(
             (blob) => {
                 response.status(200).json(blob);

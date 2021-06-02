@@ -1,10 +1,10 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
 import { EventEmitter } from "events";
-import { IClient, IDocumentMessage, IServiceConfiguration } from "@fluidframework/protocol-definitions";
+import { IClient, IDocumentMessage } from "@fluidframework/protocol-definitions";
 import {
     ICollection,
     IContext,
@@ -13,6 +13,7 @@ import {
     IOrderer,
     ISequencedOperationMessage,
     IQueuedMessage,
+    IServiceConfiguration,
 } from "@fluidframework/server-services-core";
 
 export interface IConcreteNode extends EventEmitter {
@@ -49,7 +50,6 @@ export interface IConnectMessage {
 export interface IConnectedMessage {
     clientId: string;
     existing: boolean;
-    parentBranch: string;
     maxMessageSize: number;
     serviceConfiguration: IServiceConfiguration;
 }
@@ -76,5 +76,5 @@ export interface ILocalOrdererSetup {
 export interface IKafkaSubscriber {
     readonly context: IContext;
 
-    process(message: IQueuedMessage): void;
+    process(message: IQueuedMessage): Promise<void> | undefined;
 }

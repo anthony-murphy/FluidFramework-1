@@ -1,21 +1,18 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
 import {
     IClientJoin,
     ICommittedProposal,
-    IDocumentAttributes,
     IProcessMessageResult,
     IProposal,
     ISequencedClient,
     ISequencedDocumentMessage,
     ISequencedDocumentSystemMessage,
     ISequencedProposal,
-    ISummaryTree,
     MessageType,
-    SummaryType,
 } from "@fluidframework/protocol-definitions";
 import { Quorum } from "./quorum";
 
@@ -50,8 +47,8 @@ export function isSystemMessage(message: ISequencedDocumentMessage) {
 export class ProtocolOpHandler {
     public readonly quorum: Quorum;
     public readonly term: number;
+
     constructor(
-        private readonly branchId: string,
         public minimumSequenceNumber: number,
         public sequenceNumber: number,
         term: number | undefined,
@@ -62,7 +59,6 @@ export class ProtocolOpHandler {
         sendReject: (sequenceNumber: number) => void) {
         this.term = term ?? 1;
         this.quorum = new Quorum(
-            minimumSequenceNumber,
             members,
             proposals,
             values,
@@ -75,6 +71,17 @@ export class ProtocolOpHandler {
     }
 
     public processMessage(message: ISequencedDocumentMessage, local: boolean): IProcessMessageResult {
+        // verify it's moving sequentially
+        if (message.sequenceNumber !== this.sequenceNumber + 1) {
+            throw new Error(
+                `Protocol state is not moving sequentially. ` +
+                `Current is ${this.sequenceNumber}. Next is ${message.sequenceNumber}`);
+        }
+
+        // Update tracked sequence numbers
+        this.sequenceNumber = message.sequenceNumber;
+        this.minimumSequenceNumber = message.minimumSequenceNumber;
+
         let immediateNoOp = false;
 
         switch (message.type) {
@@ -86,7 +93,6 @@ export class ProtocolOpHandler {
                     sequenceNumber: systemJoinMessage.sequenceNumber,
                 };
                 this.quorum.addMember(join.clientId, member);
-
                 break;
 
             case MessageType.ClientLeave:
@@ -116,10 +122,6 @@ export class ProtocolOpHandler {
             default:
         }
 
-        // Update tracked sequence numbers
-        this.minimumSequenceNumber = message.minimumSequenceNumber;
-        this.sequenceNumber = message.sequenceNumber;
-
         // Notify the quorum of the MSN from the message. We rely on it to handle duplicate values but may
         // want to move that logic to this class.
         immediateNoOp = this.quorum.updateMinimumSequenceNumber(message) || immediateNoOp;
@@ -127,52 +129,16 @@ export class ProtocolOpHandler {
         return { immediateNoOp };
     }
 
+    /**
+     * Gets the scribe protocol state
+     */
     public getProtocolState(): IScribeProtocolState {
-        const quorumSnapshot = this.quorum.snapshot();
-
+        // return a new object every time
+        // this ensures future state changes will not affect outside callers
         return {
-            members: quorumSnapshot.members,
-            minimumSequenceNumber: this.minimumSequenceNumber,
-            proposals: quorumSnapshot.proposals,
             sequenceNumber: this.sequenceNumber,
-            values: quorumSnapshot.values,
-        };
-    }
-
-    public captureSummary(): ISummaryTree {
-        // These fields can easily be tracked on the server
-        const quorumSnapshot = this.quorum.snapshot();
-
-        // Save attributes for the document
-        const documentAttributes: IDocumentAttributes = {
-            branch: this.branchId,
             minimumSequenceNumber: this.minimumSequenceNumber,
-            sequenceNumber: this.sequenceNumber,
-            term: this.term,
+            ...this.quorum.snapshot(),
         };
-
-        const summary: ISummaryTree = {
-            tree: {
-                attributes: {
-                    content: JSON.stringify(documentAttributes),
-                    type: SummaryType.Blob,
-                },
-                quorumMembers: {
-                    content: JSON.stringify(quorumSnapshot.members),
-                    type: SummaryType.Blob,
-                },
-                quorumProposals: {
-                    content: JSON.stringify(quorumSnapshot.proposals),
-                    type: SummaryType.Blob,
-                },
-                quorumValues: {
-                    content: JSON.stringify(quorumSnapshot.values),
-                    type: SummaryType.Blob,
-                },
-            },
-            type: SummaryType.Tree,
-        };
-
-        return summary;
     }
 }

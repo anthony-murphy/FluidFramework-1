@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
@@ -18,6 +18,6 @@ import { Spaces } from "./fluid-object/";
  */
 
 export const SpacesContainer = new ContainerRuntimeFactoryWithDefaultDataStore(
-    Spaces.ComponentName,
+    Spaces.getFactory(),
     [[Spaces.ComponentName, Promise.resolve(Spaces.getFactory())]],
 );

@@ -1,24 +1,24 @@
 /*!
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
-import { IFluidHandle } from "@fluidframework/core-interfaces";
+import { IFluidHandle, IFluidLoadable, IFluidObject } from "@fluidframework/core-interfaces";
 import {
     BaseSegment,
     createGroupOp,
     IJSONSegment,
     ISegment,
-    PropertySet,
     LocalReferenceCollection,
+    PropertySet,
 } from "@fluidframework/merge-tree";
 import {
     IChannelAttributes,
     IFluidDataStoreRuntime,
     IChannelServices,
-    Jsonable,
-    JsonablePrimitive,
     IChannelFactory,
+    Serializable,
+    Jsonable,
 } from "@fluidframework/datastore-definitions";
 import { ISharedObject } from "@fluidframework/shared-object-base";
 import { pkgVersion } from "./packageVersion";
@@ -93,7 +93,7 @@ export class PaddingSegment extends BaseSegment {
     }
 }
 
-export type SparseMatrixItem = Jsonable<JsonablePrimitive | IFluidHandle>;
+export type SparseMatrixItem = Serializable;
 export class RunSegment extends SubSequence<SparseMatrixItem> {
     public static readonly typeString = "RunSegment";
     public static is(segment: ISegment): segment is RunSegment {
@@ -148,6 +148,7 @@ export class RunSegment extends SubSequence<SparseMatrixItem> {
     }
 
     public getTag(pos: number) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return this.tags[pos];
     }
 
@@ -188,6 +189,9 @@ export function positionToRowCol(position: number) {
     return { row, col };
 }
 
+/**
+ * @deprecated - SparseMatrix is an abandoned prototype.  Please use SharedMatrix instead.
+ */
 export class SparseMatrix extends SharedSegmentSequence<MatrixSegment> {
     /**
      * Create a new sparse matrix
@@ -233,11 +237,15 @@ export class SparseMatrix extends SharedSegmentSequence<MatrixSegment> {
         this.replaceRange(start, end, segment);
     }
 
-    public getItem(row: number, col: number) {
+    public getItem(row: number, col: number):
+        // The return type is defined explicitly here to prevent TypeScript from generating dynamic imports
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-arguments
+        Jsonable<string | number | boolean | IFluidHandle<IFluidObject & IFluidLoadable>> {
         const pos = rowColToPosition(row, col);
         const { segment, offset } =
             this.getContainingSegment(pos);
         if (RunSegment.is(segment)) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-return
             return segment.items[offset];
         } else if (PaddingSegment.is(segment)) {
             return undefined;
@@ -249,6 +257,7 @@ export class SparseMatrix extends SharedSegmentSequence<MatrixSegment> {
     public getTag(row: number, col: number) {
         const { segment, offset } = this.getSegment(row, col);
         if (RunSegment.is(segment)) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-return
             return segment.getTag(offset);
         }
         return undefined;
@@ -321,6 +330,10 @@ export class SparseMatrix extends SharedSegmentSequence<MatrixSegment> {
     }
 }
 
+/**
+ * @deprecated - SparseMatrixFactory/SparseMatrix is an abandoned prototype.  Please use
+ *               SharedMatrix/SharedMatrixFactory instead.
+ */
 export class SparseMatrixFactory implements IChannelFactory {
     public static Type = "https://graph.microsoft.com/types/mergeTree/sparse-matrix";
 
@@ -352,15 +365,17 @@ export class SparseMatrixFactory implements IChannelFactory {
         return SparseMatrixFactory.Attributes;
     }
 
+    /**
+     * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.load}
+     */
     public async load(
         runtime: IFluidDataStoreRuntime,
         id: string,
         services: IChannelServices,
-        branchId: string,
         attributes: IChannelAttributes,
     ): Promise<ISharedObject> {
         const sharedObject = new SparseMatrix(runtime, id, attributes);
-        await sharedObject.load(branchId, services);
+        await sharedObject.load(services);
         return sharedObject;
     }
 
