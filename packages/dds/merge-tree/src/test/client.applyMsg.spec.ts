@@ -375,4 +375,44 @@ describe("client.applyMsg", () => {
 
         logger.validate();
     });
+
+    it.only("broken", () => {
+        const clientA = new TestClient();
+        clientA.startOrUpdateCollaboration("A");
+        const clientB = new TestClient();
+        clientB.startOrUpdateCollaboration("B");
+        const clientC = new TestClient();
+        clientC.startOrUpdateCollaboration("C");
+
+        let seq = 0;
+        const clients = [clientA, clientB, clientC];
+        {
+            const initialMsgs = [
+                clientB.makeOpMessage(clientB.insertTextLocal(0, "BBBB"), ++seq),
+                clientB.makeOpMessage(clientB.removeRangeLocal(1, 4), ++seq),
+            ];
+            initialMsgs.forEach((m)=>clients.forEach((c)=>c.applyMsg(m)));
+        }
+
+        const messageFuncs = [
+            ()=>clientB.makeOpMessage(clientB.insertTextLocal(0, "BB"), ++seq),
+            ()=>clientC.makeOpMessage(clientC.insertTextLocal(1, "CCC"), ++seq),
+        ];
+
+        const logger = new TestClientLogger(clients);
+        const messages = messageFuncs.map((mf)=>{
+            const m = mf();
+            logger.log();
+            return m;
+        });
+        while (messages.length > 0) {
+            const msg = messages.shift();
+            clients.forEach((c) => {
+                c.applyMsg(msg);
+                logger.log();
+            });
+        }
+        console.log(logger.toString());
+        logger.validate();
+    });
 });

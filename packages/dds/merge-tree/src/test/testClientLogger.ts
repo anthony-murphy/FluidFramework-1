@@ -21,10 +21,11 @@ export class TestClientLogger {
         for (const client of clients) {
             this.roundLogLines[0].push("refSeq", `client ${client.longClientId}`,"|");
         }
+        this.roundLogLines[0].push("data");
         this.roundLogLines[0].forEach((v) => this.paddings.push(v.length));
     }
 
-    public log() {
+    public log(data?: any) {
         const ackedLine: string[] = [];
         this.roundLogLines.push(ackedLine);
         const localLine: string[] = [];
@@ -38,12 +39,15 @@ export class TestClientLogger {
                 localChanges = true;
             }
         });
+        ackedLine.push(data === undefined ? "" : JSON.stringify(data));
+        localLine.push("");
         for (let i = 0; i < this.paddings.length; i++) {
             this.paddings[i] = Math.max(ackedLine[i].length, localLine[i].length, this.paddings[i]);
         }
         if (localChanges) {
             this.roundLogLines.push(localLine);
         }
+
         if (this.incrementalLog) {
             console.log(ackedLine.map((v, i) => v.padEnd(this.paddings[i])).join("  "));
         }

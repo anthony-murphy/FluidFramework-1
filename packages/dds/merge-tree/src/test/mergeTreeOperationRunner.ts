@@ -192,7 +192,7 @@ export function applyMessages(
                 try {
                     client.applyMsg(message);
                     if(clientIndex === 0) {
-                        logger.log();
+                        logger.log(message);
                     }
                 } catch (error) {
                     const msgStr = JSON.stringify(message, undefined, 1);
