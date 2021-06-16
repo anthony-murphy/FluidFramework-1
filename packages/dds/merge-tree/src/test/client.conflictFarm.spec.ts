@@ -45,7 +45,7 @@ export const defaultOptions: IConflictFarmConfig = {
     rounds: 8,
     operations: allOperations,
     growthFunc: (input: number) => input * 2,
-    // resultsFilePostfix: "default-conflict-farm-0.40.json",
+     // resultsFilePostfix: "default-conflict-farm-0.42.json",
 };
 
 export const longOptions: IConflictFarmConfig = {
