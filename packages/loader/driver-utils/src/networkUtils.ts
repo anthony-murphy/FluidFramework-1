@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ITelemetryErrorEvent, ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryErrorEvent, ITelemetryLogger } from "@fluidframework/driver-definitions";
 import { isOnline, OnlineStatus } from "./network";
 
 export function logNetworkFailure(logger: ITelemetryLogger, event: ITelemetryErrorEvent, error?: any) {

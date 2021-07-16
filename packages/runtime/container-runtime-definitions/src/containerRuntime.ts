@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { IEventProvider } from "@fluidframework/common-definitions";
+import { IEventProvider } from "@fluidframework/container-definitions";
 import {
     AttachState,
     ContainerWarning,
@@ -25,7 +25,7 @@ import {
     IHelpMessage,
     IPendingProposal,
     ISequencedDocumentMessage,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import {
     FlushMode,
     IContainerRuntimeBase,

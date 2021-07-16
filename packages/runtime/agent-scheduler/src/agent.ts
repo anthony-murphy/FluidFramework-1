@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { IEvent, IEventProvider } from "@fluidframework/common-definitions";
+import { IEvent, IEventProvider } from "@fluidframework/container-definitions";
 
 export const IAgentScheduler: keyof IProvideAgentScheduler = "IAgentScheduler";
 

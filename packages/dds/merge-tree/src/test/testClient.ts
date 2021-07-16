@@ -5,7 +5,7 @@
 
 import { strict as assert } from "assert";
 import { DebugLogger } from "@fluidframework/telemetry-utils";
-import { ISequencedDocumentMessage, ITree, MessageType } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage, ITree, MessageType } from "@fluidframework/container-definitions";
 import { IFluidDataStoreRuntime } from "@fluidframework/datastore-definitions";
 import { MockStorage } from "@fluidframework/test-runtime-utils";
 import random from "random-js";

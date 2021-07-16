@@ -16,7 +16,7 @@ import {
     ITestObjectProvider,
 } from "@fluidframework/test-utils";
 import { SharedMap, SharedDirectory } from "@fluidframework/map";
-import { IDocumentAttributes, ISnapshotTree } from "@fluidframework/protocol-definitions";
+import { IDocumentAttributes, ISnapshotTree } from "@fluidframework/container-definitions";
 import { IContainerRuntimeBase } from "@fluidframework/runtime-definitions";
 import { ConsensusRegisterCollection } from "@fluidframework/register-collection";
 import { IntervalType } from "@fluidframework/merge-tree";

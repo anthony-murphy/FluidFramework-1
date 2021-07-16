@@ -3,10 +3,10 @@
  * Licensed under the MIT License.
  */
 
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/container-definitions";
 import { assert, LazyPromise } from "@fluidframework/common-utils";
 import { cloneGCData } from "@fluidframework/garbage-collector";
-import { ISnapshotTree } from "@fluidframework/protocol-definitions";
+import { ISnapshotTree } from "@fluidframework/container-definitions";
 import {
     CreateChildSummarizerNodeParam,
     gcBlobKey,

@@ -16,7 +16,7 @@ import { IContainerRuntime } from "@fluidframework/container-runtime-definitions
 import { IFluidCodeDetails, IFluidHandle, IFluidLoadable } from "@fluidframework/core-interfaces";
 import { LocalDocumentServiceFactory, LocalResolver } from "@fluidframework/local-driver";
 import { SharedMap, SharedDirectory } from "@fluidframework/map";
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage } from "@fluidframework/container-definitions";
 import { IEnvelope, FlushMode } from "@fluidframework/runtime-definitions";
 import { requestFluidObject, createDataStoreFactory } from "@fluidframework/runtime-utils";
 import { ILocalDeltaConnectionServer, LocalDeltaConnectionServer } from "@fluidframework/server-local-server";

@@ -19,7 +19,7 @@ import {
     IDocumentMessage,
     ISequencedClient,
     ISequencedDocumentMessage,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { IFluidDataStoreContext } from "@fluidframework/runtime-definitions";
 import * as sequence from "@fluidframework/sequence";
 import { ISharedObject } from "@fluidframework/shared-object-base";

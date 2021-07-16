@@ -3,9 +3,9 @@
  * Licensed under the MIT License.
  */
 import { assert, Deferred } from "@fluidframework/common-utils";
-import { ITelemetryLogger, ITelemetryProperties } from "@fluidframework/common-definitions";
+import { ITelemetryLogger, ITelemetryProperties } from "@fluidframework/driver-definitions";
 import { PerformanceEvent} from "@fluidframework/telemetry-utils";
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage } from "@fluidframework/driver-definitions";
 import { IDeltasFetchResult, IStream, IStreamResult } from "@fluidframework/driver-definitions";
 import { getRetryDelayFromError, canRetryOnError, createGenericNetworkError } from "./network";
 import { waitForConnectedState } from "./networkUtils";

@@ -687,6 +687,8 @@ export enum TreeEntry {
 }
 
 
+export * from "@fluidframework/common-definitions";
+
 // (No @packageDocumentation comment for this package)
 
 ```

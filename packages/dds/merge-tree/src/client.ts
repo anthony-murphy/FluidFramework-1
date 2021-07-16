@@ -6,9 +6,9 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import { IFluidHandle, IFluidSerializer } from "@fluidframework/core-interfaces";
-import { ISequencedDocumentMessage, MessageType } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage, MessageType } from "@fluidframework/container-definitions";
 import { IFluidDataStoreRuntime, IChannelStorageService } from "@fluidframework/datastore-definitions";
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/container-definitions";
 import { assert, Trace } from "@fluidframework/common-utils";
 import { LoggingError } from "@fluidframework/telemetry-utils";
 import { IIntegerRange } from "./base";

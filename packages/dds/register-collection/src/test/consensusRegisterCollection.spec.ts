@@ -8,7 +8,7 @@ import { IFluidHandle } from "@fluidframework/core-interfaces";
 import {
     ISummaryBlob,
     ITree,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import {
     BlobTreeEntry,
 } from "@fluidframework/protocol-base";

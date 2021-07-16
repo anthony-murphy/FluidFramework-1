@@ -13,7 +13,7 @@ import {
 import {
     ISnapshotTree,
     IVersion,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { BlobAggregationStorage } from "@fluidframework/driver-utils";
 import { formatNumber } from "./fluidAnalyzeMessages";
 import {

@@ -23,7 +23,7 @@ import {
     ITestObjectProvider,
     DataObjectFactoryType,
 } from "@fluidframework/test-utils";
-import { IDocumentMessage, ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { IDocumentMessage, ISequencedDocumentMessage } from "@fluidframework/container-definitions";
 import { describeFullCompat } from "@fluidframework/test-version-utils";
 
 interface ISharedObjectConstructor<T> {

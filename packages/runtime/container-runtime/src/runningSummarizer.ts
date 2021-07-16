@@ -3,14 +3,14 @@
  * Licensed under the MIT License.
  */
 
-import { IDisposable, ITelemetryLogger, ITelemetryProperties } from "@fluidframework/common-definitions";
+import { IDisposable, ITelemetryLogger, ITelemetryProperties } from "@fluidframework/container-definitions";
 import { Deferred, IPromiseTimerResult, PromiseTimer, Timer } from "@fluidframework/common-utils";
 import {
     ISequencedDocumentMessage,
     ISequencedDocumentSystemMessage,
     ISummaryConfiguration,
     MessageType,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { ChildLogger, PerformanceEvent } from "@fluidframework/telemetry-utils";
 import { GenerateSummaryData } from "./containerRuntime";
 // Only types are circular file dependencies

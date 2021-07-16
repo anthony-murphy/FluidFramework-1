@@ -64,11 +64,3 @@ export interface IGenericError extends IErrorBase {
     readonly errorType: ContainerErrorType.genericError;
     error?: any;
 }
-
-/**
- * Warning emitted when requests to storage are being throttled
- */
-export interface IThrottlingWarning extends IErrorBase {
-    readonly errorType: ContainerErrorType.throttlingError;
-    readonly retryAfterSeconds: number;
-}

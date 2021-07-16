@@ -6,7 +6,7 @@
 import { strict as assert } from "assert";
 import { TelemetryNullLogger } from "@fluidframework/common-utils";
 import { ProtocolOpHandler } from "@fluidframework/protocol-base";
-import { IClient, IClientConfiguration, ITokenClaims } from "@fluidframework/protocol-definitions";
+import { IClient, IClientConfiguration, ITokenClaims } from "@fluidframework/container-definitions";
 import { IConnectionDetails } from "@fluidframework/container-definitions";
 import { SinonFakeTimers, useFakeTimers } from "sinon";
 import { ConnectionState } from "../container";

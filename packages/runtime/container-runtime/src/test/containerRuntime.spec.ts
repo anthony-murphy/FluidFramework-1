@@ -10,7 +10,7 @@ import {
     IDocumentMessage,
     ISequencedDocumentMessage,
     MessageType,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { IDeltaManager } from "@fluidframework/container-definitions";
 import { MockDeltaManager } from "@fluidframework/test-runtime-utils";
 import { ScheduleManager } from "../containerRuntime";

@@ -4,7 +4,7 @@
  */
 
 import { assert } from "@fluidframework/common-utils";
-import { ISequencedDocumentMessage, IVersion } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage, IVersion } from "@fluidframework/driver-definitions";
 
 export interface IDebuggerUI {
     /**

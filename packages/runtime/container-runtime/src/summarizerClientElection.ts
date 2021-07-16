@@ -3,9 +3,9 @@
  * Licensed under the MIT License.
  */
 
-import { IEvent, IEventProvider, ITelemetryLogger } from "@fluidframework/common-definitions";
+import { IEvent, IEventProvider, ITelemetryLogger } from "@fluidframework/container-definitions";
 import { TypedEventEmitter } from "@fluidframework/common-utils";
-import { MessageType } from "@fluidframework/protocol-definitions";
+import { MessageType } from "@fluidframework/container-definitions";
 import { IOrderedClientElection, ISerializedElection, ITrackedClient } from "./orderedClientElection";
 import { ISummaryCollectionOpEvents } from "./summaryCollection";
 

@@ -4,7 +4,7 @@
  */
 
 import { IFluidLoadable } from "@fluidframework/core-interfaces";
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage } from "@fluidframework/container-definitions";
 import { IChannelSummarizeResult, IGarbageCollectionData } from "@fluidframework/runtime-definitions";
 import { IChannelAttributes } from "./storage";
 import { IFluidDataStoreRuntime } from "./dataStoreRuntime";

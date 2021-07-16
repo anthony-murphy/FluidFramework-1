@@ -4,7 +4,7 @@
  */
 import { strict as assert } from "assert";
 import * as fs from "fs";
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage } from "@fluidframework/container-definitions";
 import random from "random-js";
 import { LocalReference } from "../localReference";
 import { IMergeTreeOp, MergeTreeDeltaType } from "../ops";

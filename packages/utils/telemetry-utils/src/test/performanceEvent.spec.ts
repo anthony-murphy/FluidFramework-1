@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ITelemetryLogger, ITelemetryBaseEvent } from "@fluidframework/common-definitions";
+import { ITelemetryLogger, ITelemetryBaseEvent } from "@fluidframework/container-definitions";
 import { assert } from "@fluidframework/common-utils";
 import { TelemetryLogger, PerformanceEvent } from "../logger";
 

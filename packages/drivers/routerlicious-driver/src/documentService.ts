@@ -5,10 +5,10 @@
 
 import { assert } from "@fluidframework/common-utils";
 import * as api from "@fluidframework/driver-definitions";
-import { IClient} from "@fluidframework/protocol-definitions";
+import { IClient} from "@fluidframework/driver-definitions";
 import { GitManager, Historian } from "@fluidframework/server-services-client";
 import io from "socket.io-client";
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/driver-definitions";
 import { DeltaStorageService, DocumentDeltaStorageService } from "./deltaStorageService";
 import { DocumentStorageService } from "./documentStorageService";
 import { R11sDocumentDeltaConnection } from "./documentDeltaConnection";

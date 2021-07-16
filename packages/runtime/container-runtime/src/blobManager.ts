@@ -6,9 +6,9 @@
 import { IFluidHandle, IFluidHandleContext } from "@fluidframework/core-interfaces";
 import { IDocumentStorageService } from "@fluidframework/driver-definitions";
 import { AttachmentTreeEntry } from "@fluidframework/protocol-base";
-import { ISnapshotTree, ITree } from "@fluidframework/protocol-definitions";
+import { ISnapshotTree, ITree } from "@fluidframework/container-definitions";
 import { generateHandleContextPath } from "@fluidframework/runtime-utils";
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/container-definitions";
 import { assert, Deferred } from "@fluidframework/common-utils";
 import { IContainerRuntime } from "@fluidframework/container-runtime-definitions";
 import { AttachState } from "@fluidframework/container-definitions";

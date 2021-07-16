@@ -17,8 +17,8 @@ import {
     SummaryType,
     ISnapshotTree,
     SummaryObject,
-} from "@fluidframework/protocol-definitions";
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+} from "@fluidframework/container-definitions";
+import { ITelemetryLogger } from "@fluidframework/container-definitions";
 import { assert, unreachableCase } from "@fluidframework/common-utils";
 import { mergeStats, convertToSummaryTree, calculateStats } from "../summaryUtils";
 import { ReadAndParseBlob, seqFromTree } from "../utils";

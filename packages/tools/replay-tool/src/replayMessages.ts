@@ -7,7 +7,7 @@ import { strict } from "assert";
 import child_process from "child_process";
 import fs from "fs";
 import { assert, Lazy } from "@fluidframework/common-utils";
-import { ITelemetryBaseEvent, ITelemetryBaseLogger } from "@fluidframework/common-definitions";
+import { ITelemetryBaseEvent, ITelemetryBaseLogger } from "@fluidframework/container-definitions";
 import { Container } from "@fluidframework/container-loader";
 import { ChildLogger, TelemetryLogger } from "@fluidframework/telemetry-utils";
 import {
@@ -25,7 +25,7 @@ import {
     ITree,
     TreeEntry,
     MessageType,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import {
     FileSnapshotReader,
     IFileSnapshot,

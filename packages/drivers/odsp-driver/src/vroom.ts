@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/driver-definitions";
 import { PerformanceEvent } from "@fluidframework/telemetry-utils";
 import { IOdspUrlParts, TokenFetchOptions } from "@fluidframework/odsp-driver-definitions";
 import { ISocketStorageDiscovery } from "./contracts";

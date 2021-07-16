@@ -17,7 +17,7 @@ import {
     SummaryType,
     ISnapshotTree,
     ITree,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { BlobTreeEntry, TreeTreeEntry } from "@fluidframework/protocol-base";
 import {
     convertSnapshotTreeToSummaryTree,

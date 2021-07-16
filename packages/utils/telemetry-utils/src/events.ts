@@ -6,7 +6,7 @@
 import { EventEmitter } from "events";
 import {
     ITelemetryLogger,
-} from "@fluidframework/common-definitions";
+} from "@fluidframework/container-definitions";
 
 export const connectedEventName = "connected";
 export const disconnectedEventName = "disconnected";

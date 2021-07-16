@@ -4,10 +4,10 @@
  */
 
 import type * as git from "@fluidframework/gitresources";
-import type * as protocol from "@fluidframework/protocol-definitions";
+import type * as protocol from "@fluidframework/driver-definitions";
 import { IGitManager, IWholeSummaryPayload, IWriteSummaryResponse } from "@fluidframework/server-services-client";
 import { runWithRetry } from "@fluidframework/driver-utils";
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/driver-definitions";
 
 export class RetriableGitManager implements IGitManager {
     constructor(

@@ -20,7 +20,7 @@ import {
     ITokenClaims,
     IVersion,
     ScopeType,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/driver-definitions";
 import { delay, TypedEventEmitter } from "@fluidframework/common-utils";
 import { debug } from "./debug";
 import { ReplayController } from "./replayController";

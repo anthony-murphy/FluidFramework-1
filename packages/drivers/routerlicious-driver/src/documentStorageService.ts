@@ -3,18 +3,11 @@
  * Licensed under the MIT License.
  */
 
-import type { ITelemetryLogger } from "@fluidframework/common-definitions";
+import type { ITelemetryLogger } from "@fluidframework/driver-definitions";
 import {
     stringToBuffer,
     Uint8ArrayToString,
 } from "@fluidframework/common-utils";
-import {
-    IDocumentStorageService,
-    ISummaryContext,
-    IDocumentStorageServicePolicies,
-    LoaderCachingPolicy,
- } from "@fluidframework/driver-definitions";
-import { buildHierarchy } from "@fluidframework/protocol-base";
 import {
     ICreateBlobResponse,
     ISnapshotTreeEx,
@@ -22,7 +15,12 @@ import {
     ISummaryTree,
     ITree,
     IVersion,
-} from "@fluidframework/protocol-definitions";
+    IDocumentStorageService,
+    ISummaryContext,
+    IDocumentStorageServicePolicies,
+    LoaderCachingPolicy,
+ } from "@fluidframework/driver-definitions";
+import { buildHierarchy } from "@fluidframework/protocol-base";
 import { GitManager, ISummaryUploadManager, SummaryTreeUploadManager } from "@fluidframework/server-services-client";
 import { PerformanceEvent } from "@fluidframework/telemetry-utils";
 import { DocumentStorageServiceProxy, PrefetchDocumentStorageService } from "@fluidframework/driver-utils";

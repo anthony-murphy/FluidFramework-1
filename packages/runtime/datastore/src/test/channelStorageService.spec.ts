@@ -5,7 +5,7 @@
 
 import { strict as assert } from "assert";
 import { stringToBuffer } from "@fluidframework/common-utils";
-import { ISnapshotTree } from "@fluidframework/protocol-definitions";
+import { ISnapshotTree } from "@fluidframework/container-definitions";
 import { IDocumentStorageService } from "@fluidframework/driver-definitions";
 import { ChannelStorageService } from "../channelStorageService";
 

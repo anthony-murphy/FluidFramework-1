@@ -12,7 +12,7 @@ import {
     ISnapshotTree,
     ISummaryBlob,
     SummaryType,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import {
     gcBlobKey,
     IFluidDataStoreChannel,

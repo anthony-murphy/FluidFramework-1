@@ -4,7 +4,7 @@
  */
 
 import { IContainer, IHostLoader, ILoaderOptions } from "@fluidframework/container-definitions";
-import { ITelemetryBaseLogger } from "@fluidframework/common-definitions";
+import { ITelemetryBaseLogger } from "@fluidframework/container-definitions";
 import { Container, IDetachedBlobStorage, Loader, waitContainerToCatchUp } from "@fluidframework/container-loader";
 import { IContainerRuntimeOptions } from "@fluidframework/container-runtime";
 import { IFluidCodeDetails, IRequestHeader } from "@fluidframework/core-interfaces";

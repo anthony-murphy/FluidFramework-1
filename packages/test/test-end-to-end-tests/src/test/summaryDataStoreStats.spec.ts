@@ -10,9 +10,9 @@ import {
     DataObjectFactory,
 } from "@fluidframework/aqueduct";
 import { TelemetryNullLogger } from "@fluidframework/common-utils";
-import { ITelemetryBaseEvent } from "@fluidframework/common-definitions";
+import { ITelemetryBaseEvent } from "@fluidframework/container-definitions";
 import { IContainer } from "@fluidframework/container-definitions";
-import { ISummaryConfiguration } from "@fluidframework/protocol-definitions";
+import { ISummaryConfiguration } from "@fluidframework/container-definitions";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { ITestObjectProvider } from "@fluidframework/test-utils";
 import { MockLogger } from "@fluidframework/test-runtime-utils";

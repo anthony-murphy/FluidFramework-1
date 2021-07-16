@@ -5,7 +5,7 @@
 
 import { strict as assert } from "assert";
 import { IFluidHandle } from "@fluidframework/core-interfaces";
-import { ISummaryBlob } from "@fluidframework/protocol-definitions";
+import { ISummaryBlob } from "@fluidframework/container-definitions";
 import { IGCTestProvider, runGCTests } from "@fluid-internal/test-dds-utils";
 import {
     MockFluidDataStoreRuntime,

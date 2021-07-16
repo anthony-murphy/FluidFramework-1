@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ScopeType, ITokenClaims } from "@fluidframework/protocol-definitions";
+import { ScopeType, ITokenClaims } from "@fluidframework/driver-definitions";
 import { ITokenProvider, ITokenResponse } from "@fluidframework/routerlicious-driver";
 import { getRandomName } from "@fluidframework/server-services-client";
 import { KJUR as jsrsasign } from "jsrsasign";

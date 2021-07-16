@@ -9,7 +9,7 @@ import {
     IFluidSerializer,
     IFluidHandle,
 } from "@fluidframework/core-interfaces";
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/container-definitions";
 import { PropertySet } from "./properties";
 import { SnapshotLegacy } from "./snapshotlegacy";
 import { IJSONSegment } from "./ops";

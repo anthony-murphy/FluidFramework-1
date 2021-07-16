@@ -15,7 +15,7 @@ import {
     ISignalClient,
     ISignalMessage,
     ITokenClaims,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/driver-definitions";
 import * as Comlink from "comlink";
 
 export interface IOuterDocumentDeltaConnectionProxy {

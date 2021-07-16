@@ -10,7 +10,7 @@ import {
     ISnapshotTree,
     ITreeEntry,
     TreeEntry,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/driver-definitions";
 import { buildHierarchy } from "@fluidframework/protocol-base";
 import { v4 as uuid } from "uuid";
 

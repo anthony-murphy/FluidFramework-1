@@ -9,7 +9,7 @@ import {
     ISharedObjectRegistry,
     mixinRequestHandler,
  } from "@fluidframework/datastore";
-import { IEvent } from "@fluidframework/common-definitions";
+import { IEvent } from "@fluidframework/container-definitions";
 import { FluidDataStoreRegistry } from "@fluidframework/container-runtime";
 import {
     IFluidDataStoreContext,

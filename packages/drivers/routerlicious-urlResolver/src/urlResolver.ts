@@ -13,7 +13,7 @@ import {
     IResolvedUrl,
     IUrlResolver,
 } from "@fluidframework/driver-definitions";
-import { IUser } from "@fluidframework/protocol-definitions";
+import { IUser } from "@fluidframework/driver-definitions";
 import { Provider } from "nconf";
 
 const r11sServers = [

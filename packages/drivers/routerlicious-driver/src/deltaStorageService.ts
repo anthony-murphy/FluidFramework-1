@@ -9,10 +9,10 @@ import {
     IDeltasFetchResult,
     IStream,
 } from "@fluidframework/driver-definitions";
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage } from "@fluidframework/driver-definitions";
 import { readAndParse, requestOps, emptyMessageStream } from "@fluidframework/driver-utils";
 import { TelemetryNullLogger } from "@fluidframework/common-utils";
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/driver-definitions";
 import { PerformanceEvent } from "@fluidframework/telemetry-utils";
 import { RestWrapper } from "@fluidframework/server-services-client";
 import { DocumentStorageService } from "./documentStorageService";

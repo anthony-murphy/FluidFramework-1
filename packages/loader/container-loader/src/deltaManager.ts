@@ -5,7 +5,7 @@
 
 import { default as AbortController } from "abort-controller";
 import { v4 as uuid } from "uuid";
-import { ITelemetryLogger, IEventProvider } from "@fluidframework/common-definitions";
+import { ITelemetryLogger, IEventProvider } from "@fluidframework/container-definitions";
 import {
     IConnectionDetails,
     IDeltaHandlerStrategy,
@@ -42,7 +42,7 @@ import {
     ITrace,
     MessageType,
     ScopeType,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import {
     canRetryOnError,
     createWriteError,

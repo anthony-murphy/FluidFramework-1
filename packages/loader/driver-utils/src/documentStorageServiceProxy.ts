@@ -15,7 +15,7 @@ import {
     ISummaryTree,
     ITree,
     IVersion,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/driver-definitions";
 
 export class DocumentStorageServiceProxy implements IDocumentStorageService {
     private _policies: IDocumentStorageServicePolicies | undefined;

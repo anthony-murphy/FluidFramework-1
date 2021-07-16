@@ -5,8 +5,8 @@
 
 import { DocumentDeltaConnection } from "@fluidframework/driver-base";
 import { IDocumentDeltaConnection, DriverError } from "@fluidframework/driver-definitions";
-import { IClient, IConnect } from "@fluidframework/protocol-definitions";
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { IClient, IConnect } from "@fluidframework/driver-definitions";
+import { ITelemetryLogger } from "@fluidframework/driver-definitions";
 import { errorObjectFromSocketError } from "./errorUtils";
 
 const protocolVersions = ["^0.4.0", "^0.3.0", "^0.2.0", "^0.1.0"];

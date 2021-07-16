@@ -10,7 +10,7 @@ import {
     ISequencedDocumentMessage,
     ISequencedDocumentSystemMessage,
     MessageType,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { debug } from "./debug";
 
 // An IDeltaManager alias to be used within this class.

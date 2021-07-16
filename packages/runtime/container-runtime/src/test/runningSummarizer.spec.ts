@@ -12,7 +12,7 @@ import {
     ISummaryConfiguration,
     ISummaryProposal,
     MessageType,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { MockDeltaManager, MockLogger } from "@fluidframework/test-runtime-utils";
 import { RunningSummarizer } from "../runningSummarizer";
 import { SummarizerStopReason } from "../summarizer";

@@ -58,7 +58,7 @@
     "@fluidframework/container-loader": "^0.44.0",
     "@fluidframework/core-interfaces": "^0.39.5",
     "@fluidframework/counter": "^0.44.0",
-    "@fluidframework/driver-definitions": "^0.39.0",
+
     "@fluidframework/driver-utils": "^0.44.0",
     "@fluidframework/file-driver": "^0.44.0",
     "@fluidframework/ink": "^0.44.0",
@@ -66,11 +66,11 @@
     "@fluidframework/map": "^0.44.0",
     "@fluidframework/matrix": "^0.44.0",
     "@fluidframework/ordered-collection": "^0.44.0",
-    "@fluidframework/protocol-definitions": "^0.1024.0",
+
     "@fluidframework/register-collection": "^0.44.0",
     "@fluidframework/replay-driver": "^0.44.0",
     "@fluidframework/sequence": "^0.44.0",
-    "@fluidframework/server-local-server": "^0.1027.0",
+    "@fluidframework/server-local-server": "^0.1028.0-0",
     "@fluidframework/test-utils": "^0.44.0"
   },
   "devDependencies": {

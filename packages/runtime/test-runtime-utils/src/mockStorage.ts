@@ -4,7 +4,7 @@
  */
 
 import { assert, stringToBuffer } from "@fluidframework/common-utils";
-import { IBlob, ISummaryTree, ITree } from "@fluidframework/protocol-definitions";
+import { IBlob, ISummaryTree, ITree } from "@fluidframework/container-definitions";
 import { IChannelStorageService } from "@fluidframework/datastore-definitions";
 import { convertSummaryTreeToITree, listBlobsAtTreePath } from "@fluidframework/runtime-utils";
 

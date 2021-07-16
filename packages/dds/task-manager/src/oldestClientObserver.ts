@@ -5,7 +5,7 @@
 
 import { assert, TypedEventEmitter } from "@fluidframework/common-utils";
 import { AttachState } from "@fluidframework/container-definitions";
-import { IQuorum } from "@fluidframework/protocol-definitions";
+import { IQuorum } from "@fluidframework/container-definitions";
 import { IOldestClientObservable, IOldestClientObserverEvents, IOldestClientObserver } from "./interfaces";
 
 /**

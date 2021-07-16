@@ -17,7 +17,7 @@ import {
 import {
     IDocumentAttributes,
     IQuorum,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import {
     DebugLogger,
     EventEmitterWithErrorHandling,

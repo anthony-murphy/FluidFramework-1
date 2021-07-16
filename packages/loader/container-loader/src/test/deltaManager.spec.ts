@@ -5,9 +5,9 @@
 
 import { strict as assert } from "assert";
 import { EventEmitter } from "events";
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/container-definitions";
 import { DebugLogger } from "@fluidframework/telemetry-utils";
-import { IClient, IDocumentMessage, MessageType } from "@fluidframework/protocol-definitions";
+import { IClient, IDocumentMessage, MessageType } from "@fluidframework/container-definitions";
 import { MockDocumentDeltaConnection, MockDocumentService } from "@fluidframework/test-loader-utils";
 import { SinonFakeTimers, useFakeTimers } from "sinon";
 import { DeltaManager } from "../deltaManager";

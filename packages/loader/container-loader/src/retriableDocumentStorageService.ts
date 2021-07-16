@@ -16,8 +16,8 @@ import {
     ISummaryTree,
     ITree,
     IVersion,
-} from "@fluidframework/protocol-definitions";
-import { IDisposable, ITelemetryLogger } from "@fluidframework/common-definitions";
+} from "@fluidframework/container-definitions";
+import { IDisposable, ITelemetryLogger } from "@fluidframework/container-definitions";
 import { runWithRetry } from "@fluidframework/driver-utils";
 import { DeltaManager } from "./deltaManager";
 

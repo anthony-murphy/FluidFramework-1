@@ -12,7 +12,7 @@ import {
     IUrlResolver,
     DriverHeader,
 } from "@fluidframework/driver-definitions";
-import { ScopeType } from "@fluidframework/protocol-definitions";
+import { ScopeType } from "@fluidframework/driver-definitions";
 import { generateToken } from "./auth";
 
 export function createLocalResolverCreateNewRequest(documentId: string): IRequest {

@@ -4,12 +4,12 @@
  */
 
 import { EventEmitter } from "events";
-import { IDisposable, ITelemetryLogger } from "@fluidframework/common-definitions";
+import { IDisposable, ITelemetryLogger } from "@fluidframework/container-definitions";
 import { delay, IPromiseTimerResult, PromiseTimer } from "@fluidframework/common-utils";
 import { ChildLogger, PerformanceEvent } from "@fluidframework/telemetry-utils";
 import { IFluidObject, IRequest } from "@fluidframework/core-interfaces";
 import { IContainerContext, LoaderHeader } from "@fluidframework/container-definitions";
-import { ISequencedClient } from "@fluidframework/protocol-definitions";
+import { ISequencedClient } from "@fluidframework/container-definitions";
 import { DriverHeader } from "@fluidframework/driver-definitions";
 import { ISummarizer, createSummarizingWarning, ISummarizingWarning, SummarizerStopReason } from "./summarizer";
 import { SummarizerClientElection, summarizerClientType } from "./summarizerClientElection";

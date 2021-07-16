@@ -22,7 +22,7 @@ import fs from "fs";
 import process from "process";
 import {
     ISequencedDocumentMessage,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/driver-definitions";
 import { Sanitizer } from "./sanitizer";
 
 function printUsage() {

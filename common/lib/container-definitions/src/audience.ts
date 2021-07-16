@@ -4,7 +4,7 @@
  */
 
 import { EventEmitter } from "events";
-import { IClient } from "@fluidframework/protocol-definitions";
+import { IClient } from "./rexport";
 
 /**
  * Audience represents all clients connected to the op stream, both read-only and read/write.

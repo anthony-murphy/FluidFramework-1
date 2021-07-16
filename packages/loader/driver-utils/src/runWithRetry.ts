@@ -4,7 +4,7 @@
  */
 
 import { v4 as uuid } from "uuid";
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/driver-definitions";
 import { delay, performance } from "@fluidframework/common-utils";
 import { canRetryOnError, getRetryDelayFromError } from "./network";
 

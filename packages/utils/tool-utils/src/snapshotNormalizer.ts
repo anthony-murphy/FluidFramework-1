@@ -8,7 +8,7 @@ import {
     ITree,
     TreeEntry,
     ITreeEntry,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 
 export const gcBlobKey = "gc";
 // A list of runtime blob paths whose contents should be normalized.

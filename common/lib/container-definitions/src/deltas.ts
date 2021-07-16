@@ -3,8 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { IDisposable, IEventProvider, IEvent, IErrorEvent } from "@fluidframework/common-definitions";
-import {
+import { IDisposable, IEventProvider, IEvent, IErrorEvent,
     ConnectionMode,
     IClientConfiguration,
     IClientDetails,
@@ -13,7 +12,7 @@ import {
     ISignalClient,
     ISignalMessage,
     ITokenClaims,
-} from "@fluidframework/protocol-definitions";
+} from "./rexport";
 
 /**
  * Contract representing the result of a newly established connection to the server for syncing deltas

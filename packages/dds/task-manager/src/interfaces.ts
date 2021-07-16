@@ -3,9 +3,9 @@
  * Licensed under the MIT License.
  */
 
-import { IEvent, IEventProvider } from "@fluidframework/common-definitions";
+import { IEvent, IEventProvider } from "@fluidframework/container-definitions";
 import { AttachState } from "@fluidframework/container-definitions";
-import { IQuorum } from "@fluidframework/protocol-definitions";
+import { IQuorum } from "@fluidframework/container-definitions";
 import { ISharedObject, ISharedObjectEvents } from "@fluidframework/shared-object-base";
 
 export interface ITaskManagerEvents extends ISharedObjectEvents {

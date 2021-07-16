@@ -11,7 +11,7 @@ import {
     IConnect,
     IDocumentMessage,
     NackErrorType,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/driver-definitions";
 import { LocalWebSocketServer } from "@fluidframework/server-local-server";
 import * as core from "@fluidframework/server-services-core";
 

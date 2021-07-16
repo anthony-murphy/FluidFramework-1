@@ -4,9 +4,9 @@
  */
 
 import { v4 as uuid } from "uuid";
-import { ITelemetryLogger, ITelemetryProperties } from "@fluidframework/common-definitions";
+import { ITelemetryLogger, ITelemetryProperties } from "@fluidframework/driver-definitions";
 import { assert } from "@fluidframework/common-utils";
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage } from "@fluidframework/driver-definitions";
 import { TokenFetchOptions } from "@fluidframework/odsp-driver-definitions";
 import { IDeltasFetchResult, IDocumentDeltaStorageService } from "@fluidframework/driver-definitions";
 import {

@@ -13,7 +13,7 @@ import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { SharedString } from "@fluidframework/sequence";
 import { v4 as uuid } from "uuid";
 import { ReferenceType } from "@fluidframework/merge-tree";
-import { ICreateBlobResponse } from "@fluidframework/protocol-definitions";
+import { ICreateBlobResponse } from "@fluidframework/container-definitions";
 import { ITestObjectProvider, ITestContainerConfig } from "@fluidframework/test-utils";
 import { describeFullCompat, describeNoCompat, ITestDataObject } from "@fluidframework/test-version-utils";
 import { flattenRuntimeOptions } from "./flattenRuntimeOptions";

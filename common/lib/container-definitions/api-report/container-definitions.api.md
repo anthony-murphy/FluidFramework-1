@@ -4,17 +4,17 @@
 
 ```ts
 
-import { ConnectionMode } from '@fluidframework/protocol-definitions';
+import { ConnectionMode } from '@fluidframework/driver-definitions';
 import { EventEmitter } from 'events';
-import { IClient } from '@fluidframework/protocol-definitions';
-import { IClientConfiguration } from '@fluidframework/protocol-definitions';
-import { IClientDetails } from '@fluidframework/protocol-definitions';
-import { IDisposable } from '@fluidframework/common-definitions';
-import { IDocumentMessage } from '@fluidframework/protocol-definitions';
+import { IClient } from '@fluidframework/driver-definitions';
+import { IClientConfiguration } from '@fluidframework/driver-definitions';
+import { IClientDetails } from '@fluidframework/driver-definitions';
+import { IDisposable } from '@fluidframework/driver-definitions';
+import { IDocumentMessage } from '@fluidframework/driver-definitions';
 import { IDocumentStorageService } from '@fluidframework/driver-definitions';
-import { IErrorEvent } from '@fluidframework/common-definitions';
-import { IEvent } from '@fluidframework/common-definitions';
-import { IEventProvider } from '@fluidframework/common-definitions';
+import { IErrorEvent } from '@fluidframework/driver-definitions';
+import { IEvent } from '@fluidframework/driver-definitions';
+import { IEventProvider } from '@fluidframework/driver-definitions';
 import { IFluidCodeDetails } from '@fluidframework/core-interfaces';
 import { IFluidConfiguration } from '@fluidframework/core-interfaces';
 import { IFluidObject } from '@fluidframework/core-interfaces';
@@ -22,22 +22,22 @@ import { IFluidPackage } from '@fluidframework/core-interfaces';
 import { IFluidPackageEnvironment } from '@fluidframework/core-interfaces';
 import { IFluidResolvedUrl } from '@fluidframework/driver-definitions';
 import { IFluidRouter } from '@fluidframework/core-interfaces';
-import { IPendingProposal } from '@fluidframework/protocol-definitions';
+import { IPendingProposal } from '@fluidframework/driver-definitions';
 import { IProvideFluidCodeDetailsComparer } from '@fluidframework/core-interfaces';
-import { IQuorum } from '@fluidframework/protocol-definitions';
+import { IQuorum } from '@fluidframework/driver-definitions';
 import { IRequest } from '@fluidframework/core-interfaces';
 import { IResolvedUrl } from '@fluidframework/driver-definitions';
 import { IResponse } from '@fluidframework/core-interfaces';
-import { ISequencedDocumentMessage } from '@fluidframework/protocol-definitions';
-import { ISignalClient } from '@fluidframework/protocol-definitions';
-import { ISignalMessage } from '@fluidframework/protocol-definitions';
-import { ISnapshotTree } from '@fluidframework/protocol-definitions';
-import { ISummaryTree } from '@fluidframework/protocol-definitions';
-import { ITelemetryBaseLogger } from '@fluidframework/common-definitions';
-import { ITokenClaims } from '@fluidframework/protocol-definitions';
-import { ITree } from '@fluidframework/protocol-definitions';
-import { IVersion } from '@fluidframework/protocol-definitions';
-import { MessageType } from '@fluidframework/protocol-definitions';
+import { ISequencedDocumentMessage } from '@fluidframework/driver-definitions';
+import { ISignalClient } from '@fluidframework/driver-definitions';
+import { ISignalMessage } from '@fluidframework/driver-definitions';
+import { ISnapshotTree } from '@fluidframework/driver-definitions';
+import { ISummaryTree } from '@fluidframework/driver-definitions';
+import { ITelemetryBaseLogger } from '@fluidframework/driver-definitions';
+import { ITokenClaims } from '@fluidframework/driver-definitions';
+import { ITree } from '@fluidframework/driver-definitions';
+import { IVersion } from '@fluidframework/driver-definitions';
+import { MessageType } from '@fluidframework/driver-definitions';
 
 // @public (undocumented)
 export enum AttachState {
@@ -454,14 +454,6 @@ export interface IRuntimeFactory extends IProvideRuntimeFactory {
 export const isFluidBrowserPackage: (maybePkg: any) => maybePkg is Readonly<IFluidBrowserPackage>;
 
 // @public
-export interface IThrottlingWarning extends IErrorBase {
-    // (undocumented)
-    readonly errorType: ContainerErrorType.throttlingError;
-    // (undocumented)
-    readonly retryAfterSeconds: number;
-}
-
-// @public
 export enum LoaderHeader {
     cache = "fluid-cache",
     // (undocumented)
@@ -484,6 +476,8 @@ export type ReadOnlyInfo = {
     readonly storageOnly: boolean;
 };
 
+
+export * from "@fluidframework/driver-definitions";
 
 // (No @packageDocumentation comment for this package)
 

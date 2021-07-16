@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/container-definitions";
 import {
     IDocumentStorageService,
     IDocumentStorageServicePolicies,
@@ -16,7 +16,7 @@ import {
     ISummaryTree,
     ITree,
     IVersion,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { IDetachedBlobStorage } from "./loader";
 
 /**

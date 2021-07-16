@@ -15,7 +15,7 @@ import { IAckedSummary, IContainerRuntimeOptions, SummaryCollection } from "@flu
 import { IFluidHandle, IRequest } from "@fluidframework/core-interfaces";
 import { SharedMatrix } from "@fluidframework/matrix";
 import { Marker, ReferenceType, reservedMarkerIdKey } from "@fluidframework/merge-tree";
-import { ISummaryConfiguration } from "@fluidframework/protocol-definitions";
+import { ISummaryConfiguration } from "@fluidframework/container-definitions";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { SharedString } from "@fluidframework/sequence";
 import { ITestObjectProvider } from "@fluidframework/test-utils";

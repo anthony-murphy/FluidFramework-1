@@ -3,15 +3,15 @@
  * Licensed under the MIT License.
  */
 
-import { ITelemetryBaseLogger, IDisposable } from "@fluidframework/common-definitions";
 import {
     IFluidObject,
     IFluidConfiguration,
     IRequest,
     IResponse,
 } from "@fluidframework/core-interfaces";
-import { IDocumentStorageService } from "@fluidframework/driver-definitions";
 import {
+    ITelemetryBaseLogger, IDisposable,
+    IDocumentStorageService ,
     IClientConfiguration,
     IClientDetails,
     IQuorum,
@@ -22,7 +22,7 @@ import {
     ISummaryTree,
     IVersion,
     IDocumentMessage,
-} from "@fluidframework/protocol-definitions";
+} from "./rexport";
 import { IAudience } from "./audience";
 import { IDeltaManager } from "./deltas";
 import { ICriticalContainerError, ContainerWarning } from "./error";

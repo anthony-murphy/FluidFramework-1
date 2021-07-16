@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/container-definitions";
 import {
     IFluidHandle,
     IFluidHandleContext,
@@ -40,7 +40,7 @@ import {
     SummaryType,
     ISummaryBlob,
     ISummaryTree,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import {
     CreateSummarizerNodeSource,
     IAttachMessage,

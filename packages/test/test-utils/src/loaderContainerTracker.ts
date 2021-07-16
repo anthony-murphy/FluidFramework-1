@@ -5,7 +5,7 @@
 
 import { IContainer, IDeltaQueue, IHostLoader } from "@fluidframework/container-definitions";
 import { Container } from "@fluidframework/container-loader";
-import { IDocumentMessage, ISequencedDocumentMessage, MessageType } from "@fluidframework/protocol-definitions";
+import { IDocumentMessage, ISequencedDocumentMessage, MessageType } from "@fluidframework/container-definitions";
 import { debug } from "./debug";
 import { IOpProcessingController } from "./testObjectProvider";
 

@@ -4,14 +4,14 @@
  */
 
 import * as Comlink from "comlink";
-import { ITelemetryBaseLogger } from "@fluidframework/common-definitions";
+import { ITelemetryBaseLogger } from "@fluidframework/driver-definitions";
 import { assert } from "@fluidframework/common-utils";
 import {
     IDocumentService,
     IDocumentServiceFactory,
     IResolvedUrl,
 } from "@fluidframework/driver-definitions";
-import { ISummaryTree } from "@fluidframework/protocol-definitions";
+import { ISummaryTree } from "@fluidframework/driver-definitions";
 import { InnerDocumentService } from "./innerDocumentService";
 import { IDocumentServiceFactoryProxy, IDocumentServiceFactoryProxyKey } from "./outerDocumentServiceFactory";
 import { MakeThinProxy } from "./proxyUtils";

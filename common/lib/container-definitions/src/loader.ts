@@ -16,10 +16,7 @@ import {
     IDocumentMessage,
     IPendingProposal,
     IQuorum,
-    ISequencedDocumentMessage,
-} from "@fluidframework/protocol-definitions";
-import { IResolvedUrl } from "@fluidframework/driver-definitions";
-import { IEvent, IEventProvider } from "@fluidframework/common-definitions";
+    ISequencedDocumentMessage, IResolvedUrl, IEvent, IEventProvider  } from "./rexport";
 import { IDeltaManager } from "./deltas";
 import { ICriticalContainerError, ContainerWarning } from "./error";
 import { IFluidModule } from "./fluidModule";

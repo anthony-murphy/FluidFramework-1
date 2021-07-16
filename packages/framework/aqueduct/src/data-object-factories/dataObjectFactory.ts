@@ -9,7 +9,7 @@ import {
     SharedDirectory,
     SharedMap,
 } from "@fluidframework/map";
-import { IEvent } from "@fluidframework/common-definitions";
+import { IEvent } from "@fluidframework/container-definitions";
 import {
     NamedFluidDataStoreRegistryEntries,
 } from "@fluidframework/runtime-definitions";

@@ -5,14 +5,14 @@
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/container-definitions";
 import { assert, IsoBuffer } from "@fluidframework/common-utils";
 import {
     IFluidHandle,
     IFluidSerializer,
 } from "@fluidframework/core-interfaces";
 import { ChildLogger } from "@fluidframework/telemetry-utils";
-import { FileMode, ISequencedDocumentMessage, ITree, TreeEntry } from "@fluidframework/protocol-definitions";
+import { FileMode, ISequencedDocumentMessage, ITree, TreeEntry } from "@fluidframework/container-definitions";
 import { NonCollabClient, UnassignedSequenceNumber } from "./constants";
 import * as MergeTree from "./mergeTree";
 import * as ops from "./ops";

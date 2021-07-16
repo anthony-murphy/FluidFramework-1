@@ -10,8 +10,8 @@ import {
     IDocumentServiceFactory,
     IResolvedUrl,
 } from "@fluidframework/driver-definitions";
-import { ITelemetryBaseLogger } from "@fluidframework/common-definitions";
-import { ISummaryTree } from "@fluidframework/protocol-definitions";
+import { ITelemetryBaseLogger } from "@fluidframework/driver-definitions";
+import { ISummaryTree } from "@fluidframework/driver-definitions";
 import {
     ensureFluidResolvedUrl,
     getDocAttributesFromProtocolSummary,

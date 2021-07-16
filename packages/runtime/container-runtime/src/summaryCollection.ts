@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { IDisposable, IEvent, ITelemetryLogger } from "@fluidframework/common-definitions";
+import { IDisposable, IEvent, ITelemetryLogger } from "@fluidframework/container-definitions";
 import { Deferred, assert, TypedEventEmitter } from "@fluidframework/common-utils";
 import { IDeltaManager } from "@fluidframework/container-definitions";
 import {
@@ -13,7 +13,7 @@ import {
     ISummaryContent,
     ISummaryNack,
     MessageType,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 
 /**
  * Interface for summary op messages with typed contents.

@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import * as api from "@fluidframework/protocol-definitions";
+import * as api from "@fluidframework/driver-definitions";
 import { HostStoragePolicy } from "@fluidframework/odsp-driver-definitions";
 
 /**

@@ -16,7 +16,7 @@ import { readAndParse } from "@fluidframework/driver-utils";
 import {
     ISequencedDocumentMessage,
     ISnapshotTree,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import {
     CreateChildSummarizerNodeFn,
     IContextSummarizeResult,

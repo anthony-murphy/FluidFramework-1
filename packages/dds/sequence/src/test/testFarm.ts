@@ -31,7 +31,7 @@ import {
 } from "@fluidframework/merge-tree/dist/constants";
 // eslint-disable-next-line import/no-internal-modules
 import { loadTextFromFile, TestClient, TestServer } from "@fluidframework/merge-tree/dist/test/";
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage } from "@fluidframework/container-definitions";
 import JsDiff from "diff";
 import random from "random-js";
 import * as SharedString from "../intervalCollection";

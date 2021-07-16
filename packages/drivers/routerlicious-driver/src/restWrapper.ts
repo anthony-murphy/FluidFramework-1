@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/driver-definitions";
 import { fromUtf8ToBase64 } from "@fluidframework/common-utils";
 import {
     getAuthorizationTokenFromCredentials,

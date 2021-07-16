@@ -18,7 +18,7 @@ import {
     IDocumentMessage,
     ISequencedDocumentMessage,
     ISignalMessage,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 
 /**
  * Proxy to the real IDeltaQueue - used to restrict access

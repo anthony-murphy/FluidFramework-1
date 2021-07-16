@@ -8,7 +8,7 @@ import {
     IEvent,
     IEventProvider,
     ITelemetryLogger,
-} from "@fluidframework/common-definitions";
+} from "@fluidframework/container-definitions";
 import { Deferred } from "@fluidframework/common-utils";
 import { ChildLogger, LoggingError } from "@fluidframework/telemetry-utils";
 import {
@@ -26,7 +26,7 @@ import {
     IDocumentMessage,
     ISequencedDocumentMessage,
     ISummaryConfiguration,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { create404Response } from "@fluidframework/runtime-utils";
 import { GenerateSummaryData } from "./containerRuntime";
 import { IConnectableRuntime, RunWhileConnectedCoordinator } from "./runWhileConnectedCoordinator";

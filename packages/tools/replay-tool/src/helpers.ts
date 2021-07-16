@@ -22,7 +22,7 @@ import {
     IResolvedUrl,
     IUrlResolver,
 } from "@fluidframework/driver-definitions";
-import { ISequencedDocumentMessage, SummaryType } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage, SummaryType } from "@fluidframework/container-definitions";
 import { IFileSnapshot } from "@fluidframework/replay-driver";
 import {
     IFluidDataStoreContext,

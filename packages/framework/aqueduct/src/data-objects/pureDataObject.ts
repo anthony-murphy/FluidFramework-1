@@ -18,7 +18,7 @@ import { IFluidDataStoreRuntime } from "@fluidframework/datastore-definitions";
 import { FluidObjectHandle } from "@fluidframework/datastore";
 import { IDirectory } from "@fluidframework/map";
 import { assert, EventForwarder } from "@fluidframework/common-utils";
-import { IEvent } from "@fluidframework/common-definitions";
+import { IEvent } from "@fluidframework/container-definitions";
 import { handleFromLegacyUri } from "@fluidframework/request-handler";
 import { serviceRoutePathRoot } from "../container-services";
 import { defaultFluidObjectRequestHandler } from "../request-handlers";

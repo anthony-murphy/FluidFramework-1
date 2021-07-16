@@ -4,7 +4,7 @@
  */
 
 import random from "random-js";
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage } from "@fluidframework/container-definitions";
 import { IMergeTreeOp } from "../ops";
 import { SegmentGroup } from "../mergeTree";
 import {

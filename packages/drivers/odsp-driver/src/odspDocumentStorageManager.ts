@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/driver-definitions";
 import {
     assert,
     fromBase64ToUtf8,
@@ -13,7 +13,7 @@ import {
 import {
     PerformanceEvent,
 } from "@fluidframework/telemetry-utils";
-import * as api from "@fluidframework/protocol-definitions";
+import * as api from "@fluidframework/driver-definitions";
 import {
     ISummaryContext,
     IDocumentStorageService,

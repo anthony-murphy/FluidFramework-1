@@ -9,7 +9,7 @@ import { IContainer } from "@fluidframework/container-definitions";
 import { ContainerRuntime, ISummaryRuntimeOptions } from "@fluidframework/container-runtime";
 import { SharedDirectory, SharedMap } from "@fluidframework/map";
 import { SharedMatrix } from "@fluidframework/matrix";
-import { ISummaryBlob, SummaryType } from "@fluidframework/protocol-definitions";
+import { ISummaryBlob, SummaryType } from "@fluidframework/container-definitions";
 import { channelsTreeName } from "@fluidframework/runtime-definitions";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { SharedObjectSequence } from "@fluidframework/sequence";

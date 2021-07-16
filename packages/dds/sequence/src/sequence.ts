@@ -12,7 +12,7 @@ import {
     ITree,
     MessageType,
     TreeEntry,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import {
     IChannelAttributes,
     IFluidDataStoreRuntime,
@@ -26,7 +26,7 @@ import {
     ISharedObjectEvents,
     SummarySerializer,
 } from "@fluidframework/shared-object-base";
-import { IEventThisPlaceHolder } from "@fluidframework/common-definitions";
+import { IEventThisPlaceHolder } from "@fluidframework/container-definitions";
 import { IGarbageCollectionData } from "@fluidframework/runtime-definitions";
 
 import { debug } from "./debug";

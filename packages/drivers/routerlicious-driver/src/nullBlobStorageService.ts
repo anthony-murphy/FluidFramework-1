@@ -4,7 +4,7 @@
  */
 
 import { IDocumentStorageService, ISummaryContext } from "@fluidframework/driver-definitions";
-import * as api from "@fluidframework/protocol-definitions";
+import * as api from "@fluidframework/driver-definitions";
 
 /**
  * Document access to underlying storage. It is default implementation of a storage service.

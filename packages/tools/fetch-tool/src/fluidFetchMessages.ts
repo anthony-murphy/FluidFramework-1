@@ -13,7 +13,7 @@ import {
     ISequencedDocumentMessage,
     MessageType,
     ScopeType,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { printMessageStats } from "./fluidAnalyzeMessages";
 import {
     connectToWebSocket,

@@ -10,7 +10,7 @@ import {
 } from "@fluidframework/core-interfaces";
 import { ISharedDirectory, MapFactory, SharedDirectory } from "@fluidframework/map";
 import { RequestParser, create404Response } from "@fluidframework/runtime-utils";
-import { IEvent } from "@fluidframework/common-definitions";
+import { IEvent } from "@fluidframework/container-definitions";
 import { PureDataObject } from "./pureDataObject";
 
 /**

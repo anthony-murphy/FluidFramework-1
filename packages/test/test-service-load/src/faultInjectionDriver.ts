@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ITelemetryBaseLogger } from "@fluidframework/common-definitions";
+import { ITelemetryBaseLogger } from "@fluidframework/container-definitions";
 import { assert, EventForwarder } from "@fluidframework/common-utils";
 import {
     IDocumentDeltaConnection,
@@ -20,7 +20,7 @@ import {
     IDocumentMessage,
     INack,
     NackErrorType,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 
 export class FaultInjectionDocumentServiceFactory implements IDocumentServiceFactory {
     private  readonly _documentServices = new Map<IResolvedUrl, FaultInjectionDocumentService>();

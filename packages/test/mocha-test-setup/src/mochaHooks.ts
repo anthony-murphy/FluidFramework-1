@@ -4,7 +4,7 @@
  */
 
 import { ITelemetryBufferedLogger } from "@fluidframework/test-driver-definitions";
-import { ITelemetryBaseEvent } from "@fluidframework/common-definitions";
+import { ITelemetryBaseEvent } from "@fluidframework/container-definitions";
 import { Context } from "mocha";
 import { pkgName } from "./packageVersion";
 

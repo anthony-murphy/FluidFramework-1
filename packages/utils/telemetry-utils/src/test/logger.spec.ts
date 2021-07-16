@@ -4,7 +4,7 @@
  */
 
 import { strict as assert } from "assert";
-import { ITelemetryBaseEvent, ITelemetryProperties } from "@fluidframework/common-definitions";
+import { ITelemetryBaseEvent, ITelemetryProperties } from "@fluidframework/container-definitions";
 import { LoggingError, TelemetryDataTag, TelemetryLogger, isTaggedTelemetryPropertyValue } from "../logger";
 
 describe("Logger", () => {

@@ -5,7 +5,7 @@
 
 import { strict as assert } from "assert";
 import { fromBase64ToUtf8 } from "@fluidframework/common-utils";
-import { ISummaryTree, SummaryType } from "@fluidframework/protocol-definitions";
+import { ISummaryTree, SummaryType } from "@fluidframework/container-definitions";
 import { convertProtocolAndAppSummaryToSnapshotTree } from "../utils";
 
 describe("Dehydrate Container", () => {

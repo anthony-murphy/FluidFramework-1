@@ -13,6 +13,8 @@ declare module "@fluidframework/core-interfaces" {
         IProvideFluidTokenProvider>> { }
 }
 
+// eslint-disable-next-line import/export
+export * from "./rexport";
 export * from "./audience";
 export * from "./browserPackage";
 // eslint-disable-next-line import/no-internal-modules

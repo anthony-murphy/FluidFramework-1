@@ -4,7 +4,7 @@
  */
 
 import assert from "assert";
-import { ITelemetryBaseEvent } from "@fluidframework/common-definitions";
+import { ITelemetryBaseEvent } from "@fluidframework/container-definitions";
 import { ITelemetryLoggerPropertyBags, ITelemetryLoggerPropertyBag, TelemetryLogger } from "../logger";
 
 class TestTelemetryLogger  extends TelemetryLogger {

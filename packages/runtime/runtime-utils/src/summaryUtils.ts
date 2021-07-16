@@ -20,7 +20,7 @@ import {
     TreeEntry,
     ITreeEntry,
     ISnapshotTree,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { ISummaryStats, ISummarizeResult, ISummaryTreeWithStats } from "@fluidframework/runtime-definitions";
 
 /**

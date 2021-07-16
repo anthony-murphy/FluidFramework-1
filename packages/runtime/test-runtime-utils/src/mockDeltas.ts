@@ -11,7 +11,7 @@ import {
     ISequencedDocumentMessage,
     ISignalMessage,
     MessageType,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 
 import {
     IDeltaManager,

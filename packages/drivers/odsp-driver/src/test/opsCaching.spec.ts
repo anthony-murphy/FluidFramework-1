@@ -4,7 +4,7 @@
  */
 import { strict as assert } from "assert";
 import { TelemetryUTLogger } from "@fluidframework/telemetry-utils";
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage } from "@fluidframework/driver-definitions";
 import { IStream } from "@fluidframework/driver-definitions";
 import { delay } from "@fluidframework/common-utils";
 import { OdspDeltaStorageWithCache } from "../odspDeltaStorageService";

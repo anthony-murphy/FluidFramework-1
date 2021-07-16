@@ -9,7 +9,7 @@ import {
     ISequencedDocumentMessage,
     ISnapshotTree,
     ITree,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { IGarbageCollectionData, IGarbageCollectionSummaryDetails } from "./garbageCollection";
 
 export interface ISummaryStats {

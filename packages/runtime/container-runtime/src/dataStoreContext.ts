@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { IDisposable, ITelemetryLogger } from "@fluidframework/common-definitions";
+import { IDisposable, ITelemetryLogger } from "@fluidframework/container-definitions";
 import {
     IFluidObject,
     IRequest,
@@ -35,7 +35,7 @@ import {
     ISequencedDocumentMessage,
     ISnapshotTree,
     ITreeEntry,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import {
     IContainerRuntime,
 } from "@fluidframework/container-runtime-definitions";

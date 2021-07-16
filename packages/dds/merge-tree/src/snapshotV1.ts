@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/container-definitions";
 import {
     IFluidHandle,
     IFluidSerializer,
@@ -15,7 +15,7 @@ import {
     ITree,
     TreeEntry,
     ITreeEntry,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { IChannelStorageService } from "@fluidframework/datastore-definitions";
 import { UnassignedSequenceNumber } from "./constants";
 import * as MergeTree from "./mergeTree";

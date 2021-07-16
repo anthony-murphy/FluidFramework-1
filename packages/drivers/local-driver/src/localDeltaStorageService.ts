@@ -4,7 +4,7 @@
  */
 
 import * as api from "@fluidframework/driver-definitions";
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage } from "@fluidframework/driver-definitions";
 import { IDatabaseManager } from "@fluidframework/server-services-core";
 import { streamFromMessages } from "@fluidframework/driver-utils";
 

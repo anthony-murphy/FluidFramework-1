@@ -4,7 +4,7 @@
  */
 
 import { v4 as uuid } from "uuid";
-import { ISummaryTree, SummaryType } from "@fluidframework/protocol-definitions";
+import { ISummaryTree, SummaryType } from "@fluidframework/driver-definitions";
 import { Uint8ArrayToString, unreachableCase } from "@fluidframework/common-utils";
 import { IOdspSnapshotBlob, IOdspSnapshot, IOdspSnapshotTreeEntry } from "./contracts";
 

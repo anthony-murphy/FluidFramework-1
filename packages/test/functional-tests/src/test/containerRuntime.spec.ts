@@ -10,7 +10,7 @@ import {
     IClient,
     ISequencedDocumentMessage,
     MessageType,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { DeltaManager } from "@fluidframework/container-loader";
 import { MockDocumentDeltaConnection, MockDocumentService } from "@fluidframework/test-loader-utils";
 import { ScheduleManager, DeltaScheduler } from "@fluidframework/container-runtime";

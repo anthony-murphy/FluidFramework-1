@@ -4,7 +4,7 @@
  */
 
 import { v4 as uuid } from "uuid";
-import { ITelemetryErrorEvent, ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryErrorEvent, ITelemetryLogger } from "@fluidframework/container-definitions";
 import { assert } from "@fluidframework/common-utils";
 import { AttachState } from "@fluidframework/container-definitions";
 import { IFluidHandle, IFluidSerializer } from "@fluidframework/core-interfaces";
@@ -14,7 +14,7 @@ import {
     IChannelStorageService,
     IChannelServices,
 } from "@fluidframework/datastore-definitions";
-import { ISequencedDocumentMessage, ITree } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage, ITree } from "@fluidframework/container-definitions";
 import {
     IChannelSummarizeResult,
     IGarbageCollectionData,

@@ -13,7 +13,7 @@ import {
     ISummaryConfiguration,
     ISummaryTree,
     SummaryType,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { channelsTreeName } from "@fluidframework/runtime-definitions";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { ITestObjectProvider } from "@fluidframework/test-utils";

@@ -4,11 +4,7 @@
  */
 
 import {
-     IDocumentStorageService,
-    IDocumentStorageServicePolicies,
-     ISummaryContext,
-} from "@fluidframework/driver-definitions";
-import {
+    ITelemetryLogger,
     ICreateBlobResponse,
     ISnapshotTree,
     ISummaryHandle,
@@ -16,7 +12,10 @@ import {
     IVersion,
     SummaryType,
     ITree,
-} from "@fluidframework/protocol-definitions";
+    IDocumentStorageService,
+    IDocumentStorageServicePolicies,
+    ISummaryContext,
+} from "@fluidframework/driver-definitions";
 import {
     assert,
     bufferToString,
@@ -25,7 +24,6 @@ import {
     fromUtf8ToBase64,
     Uint8ArrayToString,
  } from "@fluidframework/common-utils";
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
 
 // Gate that when flipped, instructs to compress small blobs.
 // We have to first ship with this gate off, such that we can get to saturation bits

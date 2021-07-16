@@ -9,7 +9,7 @@ import {
     IResolvedUrl,
     IUrlResolver,
 } from "@fluidframework/driver-definitions";
-import { ITokenClaims } from "@fluidframework/protocol-definitions";
+import { ITokenClaims } from "@fluidframework/driver-definitions";
 import { KJUR as jsrsasign } from "jsrsasign";
 import { v4 as uuid } from "uuid";
 

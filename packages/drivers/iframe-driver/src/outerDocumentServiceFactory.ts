@@ -9,7 +9,7 @@ import {
     IEvent,
     ITelemetryBaseLogger,
     ITelemetryLogger,
-} from "@fluidframework/common-definitions";
+} from "@fluidframework/driver-definitions";
 import { Deferred } from "@fluidframework/common-utils";
 import {
     IDocumentDeltaConnection,
@@ -24,7 +24,7 @@ import {
     IDocumentMessage,
     IVersion,
     ISummaryTree,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/driver-definitions";
 import { ChildLogger } from "@fluidframework/telemetry-utils";
 import { debug } from "./debug";
 import { IOuterDocumentDeltaConnectionProxy } from "./innerDocumentDeltaConnection";

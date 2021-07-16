@@ -6,7 +6,7 @@
 import { strict as assert } from "assert";
 import { TelemetryNullLogger } from "@fluidframework/common-utils";
 import { cloneGCData } from "@fluidframework/garbage-collector";
-import { SummaryType } from "@fluidframework/protocol-definitions";
+import { SummaryType } from "@fluidframework/container-definitions";
 import {
     CreateSummarizerNodeSource,
     IGarbageCollectionData,

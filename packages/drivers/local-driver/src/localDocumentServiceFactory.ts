@@ -10,7 +10,7 @@ import {
     IDocumentServicePolicies,
     IResolvedUrl,
 } from "@fluidframework/driver-definitions";
-import { ITelemetryBaseLogger } from "@fluidframework/common-definitions";
+import { ITelemetryBaseLogger } from "@fluidframework/driver-definitions";
 import { DefaultTokenProvider } from "@fluidframework/routerlicious-driver";
 import { ILocalDeltaConnectionServer, LocalDeltaConnectionServer } from "@fluidframework/server-local-server";
 import {
@@ -18,7 +18,7 @@ import {
     getDocAttributesFromProtocolSummary,
     getQuorumValuesFromProtocolSummary,
 } from "@fluidframework/driver-utils";
-import { ISummaryTree, NackErrorType } from "@fluidframework/protocol-definitions";
+import { ISummaryTree, NackErrorType } from "@fluidframework/driver-definitions";
 import { LocalDocumentDeltaConnection } from "./localDocumentDeltaConnection";
 import { createLocalDocumentService } from "./localDocumentService";
 

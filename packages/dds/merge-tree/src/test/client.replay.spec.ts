@@ -5,7 +5,7 @@
 
 import * as fs from "fs";
 import assert from "assert";
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage } from "@fluidframework/container-definitions";
 import { IMergeTreeOp, MergeTreeDeltaType } from "../ops";
 import { createGroupOp } from "../opBuilder";
 import { TestClient } from "./testClient";

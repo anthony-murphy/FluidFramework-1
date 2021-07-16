@@ -7,7 +7,7 @@
 
 import { EventEmitter } from "events";
 import * as MergeTree from "@fluidframework/merge-tree";
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage } from "@fluidframework/container-definitions";
 import { v4 as uuid } from "uuid";
 import { IValueFactory, IValueOpEmitter, IValueOperation, IValueType } from "./mapKernelInterfaces";
 

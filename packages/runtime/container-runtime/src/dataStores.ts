@@ -3,14 +3,14 @@
  * Licensed under the MIT License.
  */
 
-import { ITelemetryLogger, ITelemetryBaseLogger, IDisposable } from "@fluidframework/common-definitions";
+import { ITelemetryLogger, ITelemetryBaseLogger, IDisposable } from "@fluidframework/container-definitions";
 import { DataCorruptionError, extractSafePropertiesFromMessage } from "@fluidframework/container-utils";
 import {
     ISequencedDocumentMessage,
     ISnapshotTree,
     ITreeEntry,
     SummaryType,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import {
     channelsTreeName,
     CreateChildSummarizerNodeFn,

@@ -10,7 +10,7 @@ import fs from "fs";
 import path from "path";
 import { Trace } from "@fluidframework/common-utils";
 import { DebugLogger } from "@fluidframework/telemetry-utils";
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage } from "@fluidframework/container-definitions";
 import JsDiff from "diff";
 import random from "random-js";
 import * as MergeTree from "../";

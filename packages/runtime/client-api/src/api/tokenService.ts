@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ITokenClaims, ITokenService } from "@fluidframework/protocol-definitions";
+import { ITokenClaims, ITokenService } from "@fluidframework/container-definitions";
 import jwtDecode from "jwt-decode";
 
 export class TokenService implements ITokenService {

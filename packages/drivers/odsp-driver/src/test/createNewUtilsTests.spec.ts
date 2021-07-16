@@ -4,7 +4,7 @@
  */
 
 import { strict as assert } from "assert";
-import * as api from "@fluidframework/protocol-definitions";
+import * as api from "@fluidframework/driver-definitions";
 import { convertSummaryTreeToIOdspSnapshot } from "../createNewUtils";
 import { IOdspSnapshotTreeEntryTree } from "../contracts";
 

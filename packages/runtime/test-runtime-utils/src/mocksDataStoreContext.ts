@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/container-definitions";
 import {
     IFluidHandle,
     IFluidHandleContext,
@@ -25,7 +25,7 @@ import {
     IQuorum,
     ISequencedDocumentMessage,
     ISnapshotTree,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import {
     CreateChildSummarizerNodeFn,
     CreateChildSummarizerNodeParam,

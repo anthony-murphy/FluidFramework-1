@@ -14,7 +14,7 @@ import {
     ISignalMessage,
     ITokenClaims,
     ScopeType,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/driver-definitions";
 import { TypedEventEmitter } from "@fluidframework/common-utils";
 import { FileDeltaStorageService } from "./fileDeltaStorageService";
 

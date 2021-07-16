@@ -22,7 +22,7 @@ import * as Validator from "jsonschema";
 import { assert } from "@fluidframework/common-utils";
 import {
     ISequencedDocumentMessage,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/driver-definitions";
 import {
     attachContentsSchema,
     chunkedOpContentsSchema,

@@ -9,7 +9,7 @@ import {
     ISummaryBlob,
     ICommittedProposal,
     IDocumentAttributes,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/driver-definitions";
 
 /**
  * Combine the app summary and protocol summary in 1 tree.

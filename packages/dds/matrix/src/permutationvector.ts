@@ -6,7 +6,7 @@
 import { assert } from "@fluidframework/common-utils";
 import { ChildLogger } from "@fluidframework/telemetry-utils";
 import { IFluidDataStoreRuntime, IChannelStorageService } from "@fluidframework/datastore-definitions";
-import { ITelemetryBaseLogger } from "@fluidframework/common-definitions";
+import { ITelemetryBaseLogger } from "@fluidframework/container-definitions";
 import {
     BaseSegment,
     ISegment,
@@ -21,7 +21,7 @@ import {
     ReferenceType,
 } from "@fluidframework/merge-tree";
 import { IFluidHandle, IFluidSerializer } from "@fluidframework/core-interfaces";
-import { FileMode, TreeEntry, ITree } from "@fluidframework/protocol-definitions";
+import { FileMode, TreeEntry, ITree } from "@fluidframework/container-definitions";
 import { ObjectStoragePartition } from "@fluidframework/runtime-utils";
 import { HandleTable, Handle, isHandleValid } from "./handletable";
 import { serializeBlob, deserializeBlob } from "./serialization";

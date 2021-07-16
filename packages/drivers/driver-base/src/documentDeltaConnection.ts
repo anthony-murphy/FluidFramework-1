@@ -20,8 +20,8 @@ import {
     ISignalClient,
     ISignalMessage,
     ITokenClaims,
-} from "@fluidframework/protocol-definitions";
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+} from "@fluidframework/driver-definitions";
+import { ITelemetryLogger } from "@fluidframework/driver-definitions";
 import { debug } from "./debug";
 
 interface IEventListener {

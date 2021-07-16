@@ -9,7 +9,7 @@ import { v4 as uuid } from "uuid";
 import {
     IDisposable,
     ITelemetryLogger,
-} from "@fluidframework/common-definitions";
+} from "@fluidframework/container-definitions";
 import { assert, performance, unreachableCase } from "@fluidframework/common-utils";
 import {
     IRequest,
@@ -83,7 +83,7 @@ import {
     IPendingProposal,
     SummaryType,
     ISummaryContent,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import {
     ChildLogger,
     EventEmitterWithErrorHandling,

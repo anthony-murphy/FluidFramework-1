@@ -11,7 +11,7 @@ import {
     ISequencedDocumentMessage,
     ITree,
     MessageType,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import {
     IChannelAttributes,
     IFluidDataStoreRuntime,

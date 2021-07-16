@@ -3,8 +3,10 @@
  * Licensed under the MIT License.
  */
 
-import { IEventProvider, IErrorEvent, ITelemetryBaseLogger } from "@fluidframework/common-definitions";
 import {
+    IEventProvider,
+    IErrorEvent,
+    ITelemetryBaseLogger,
     ConnectionMode,
     IClient,
     IClientConfiguration,
@@ -20,7 +22,7 @@ import {
     ITokenClaims,
     ITree,
     IVersion,
-} from "@fluidframework/protocol-definitions";
+} from "./reexport";
 import { IResolvedUrl } from "./urlResolver";
 
 export interface IDeltasFetchResult {

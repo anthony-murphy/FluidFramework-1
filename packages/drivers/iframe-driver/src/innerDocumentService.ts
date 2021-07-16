@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ITelemetryBaseLogger } from "@fluidframework/common-definitions";
+import { ITelemetryBaseLogger } from "@fluidframework/driver-definitions";
 import {
     IDocumentDeltaConnection,
     IDocumentDeltaStorageService,
@@ -12,7 +12,7 @@ import {
     IResolvedUrl,
 } from "@fluidframework/driver-definitions";
 import { DocumentStorageServiceProxy } from "@fluidframework/driver-utils";
-import { IClient } from "@fluidframework/protocol-definitions";
+import { IClient } from "@fluidframework/driver-definitions";
 import { MultiSinkLogger } from "@fluidframework/telemetry-utils";
 import { InnerDocumentDeltaConnection } from "./innerDocumentDeltaConnection";
 import { ICombinedDriver } from "./outerDocumentServiceFactory";

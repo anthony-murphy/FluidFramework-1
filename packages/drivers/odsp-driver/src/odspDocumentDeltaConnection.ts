@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/driver-definitions";
 import { assert } from "@fluidframework/common-utils";
 import { DocumentDeltaConnection } from "@fluidframework/driver-base";
 import { IDocumentDeltaConnection, DriverError } from "@fluidframework/driver-definitions";
@@ -13,7 +13,7 @@ import {
     INack,
     ISequencedDocumentMessage,
     ISignalMessage,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/driver-definitions";
 import { v4 as uuid } from "uuid";
 import { IOdspSocketError } from "./contracts";
 import { EpochTracker } from "./epochTracker";

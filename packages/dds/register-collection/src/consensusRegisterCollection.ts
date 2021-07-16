@@ -11,7 +11,7 @@ import {
     ITree,
     MessageType,
     TreeEntry,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import {
     IChannelAttributes,
     IFluidDataStoreRuntime,

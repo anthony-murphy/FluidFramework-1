@@ -4,7 +4,7 @@
  */
 
 import { strict as assert } from "assert";
-import { SummaryType } from "@fluidframework/protocol-definitions";
+import { SummaryType } from "@fluidframework/container-definitions";
 import { IContainerRuntimeBase, IGarbageCollectionData } from "@fluidframework/runtime-definitions";
 import { MockFluidDataStoreContext } from "@fluidframework/test-runtime-utils";
 import { FluidDataStoreRuntime, ISharedObjectRegistry } from "../dataStoreRuntime";

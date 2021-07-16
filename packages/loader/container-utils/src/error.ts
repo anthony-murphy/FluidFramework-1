@@ -4,15 +4,16 @@
  */
 
 import {
+    ISequencedDocumentMessage,
+    ITelemetryProperties,
     ContainerErrorType,
     IGenericError,
     ICriticalContainerError,
     IErrorBase,
     IThrottlingWarning,
+    DriverErrorType,
 } from "@fluidframework/container-definitions";
 import { isILoggingError, LoggingError } from "@fluidframework/telemetry-utils";
-import { ITelemetryProperties } from "@fluidframework/common-definitions";
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
 
 /** type guard to ensure it's a LoggingError and also implements IErrorBase */
 const isValidLoggingError = (error: any): error is LoggingError & IErrorBase => {
@@ -82,7 +83,8 @@ export class GenericError extends LoggingError implements IGenericError {
  * Warning emitted when requests to storage are being throttled.
  */
 export class ThrottlingWarning extends LoggingError implements IThrottlingWarning {
-    readonly errorType = ContainerErrorType.throttlingError;
+    readonly errorType = DriverErrorType.throttlingError;
+    readonly canRetry = true;
 
     constructor(
         message: string,

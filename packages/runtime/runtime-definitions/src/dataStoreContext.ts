@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ITelemetryBaseLogger, IDisposable, IEvent, IEventProvider } from "@fluidframework/common-definitions";
+import { ITelemetryBaseLogger, IDisposable, IEvent, IEventProvider } from "@fluidframework/container-definitions";
 import {
     IFluidObject,
     IFluidRouter,
@@ -27,7 +27,7 @@ import {
     IQuorum,
     ISequencedDocumentMessage,
     ISnapshotTree,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { IProvideFluidDataStoreFactory } from "./dataStoreFactory";
 import { IProvideFluidDataStoreRegistry } from "./dataStoreRegistry";
 import { IGarbageCollectionData, IGarbageCollectionSummaryDetails } from "./garbageCollection";

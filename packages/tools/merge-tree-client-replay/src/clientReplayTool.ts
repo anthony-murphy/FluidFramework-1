@@ -22,7 +22,7 @@ import {
     ITreeEntry,
     MessageType,
     TreeEntry,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { IAttachMessage } from "@fluidframework/runtime-definitions";
 import {
     SharedNumberSequenceFactory,

@@ -11,7 +11,7 @@ import {
 } from "@fluidframework/test-runtime-utils";
 import { ReferenceType } from "@fluidframework/merge-tree";
 import { IChannelServices } from "@fluidframework/datastore-definitions";
-import { ISummaryTree } from "@fluidframework/protocol-definitions";
+import { ISummaryTree } from "@fluidframework/container-definitions";
 import { SharedStringFactory, SharedString } from "..";
 
 function applyOperations(sharedString: SharedString, content = sharedString.getLength().toString()) {

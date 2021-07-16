@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ITokenClaims } from "@fluidframework/protocol-definitions";
+import { ITokenClaims } from "@fluidframework/driver-definitions";
 
 /**
  * The ITokenService abstracts the discovery of claims contained within a token

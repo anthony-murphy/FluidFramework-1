@@ -13,7 +13,7 @@ import {
     ISignalClient,
     ISignalMessage,
     ITokenClaims,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { TypedEventEmitter } from "@fluidframework/common-utils";
 
 // This is coppied from alfred.  Probably should clean this up.

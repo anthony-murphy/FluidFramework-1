@@ -12,7 +12,7 @@ import {
 import { Loader } from "@fluidframework/container-loader";
 import { IFluidCodeDetails, IRequest } from "@fluidframework/core-interfaces";
 import { IDocumentServiceFactory, IUrlResolver } from "@fluidframework/driver-definitions";
-import { ITelemetryBaseLogger } from "@fluidframework/common-definitions";
+import { ITelemetryBaseLogger } from "@fluidframework/container-definitions";
 import { fluidEntryPoint, LocalCodeLoader } from "./localCodeLoader";
 
 /**

@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { IDisposable, IEvent, IEventProvider, ITelemetryLogger } from "@fluidframework/common-definitions";
+import { IDisposable, IEvent, IEventProvider, ITelemetryLogger } from "@fluidframework/container-definitions";
 import {
     IFluidHandleContext,
     IFluidSerializer,
@@ -22,7 +22,7 @@ import {
     IDocumentMessage,
     IQuorum,
     ISequencedDocumentMessage,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { IInboundSignalMessage, IProvideFluidDataStoreRegistry } from "@fluidframework/runtime-definitions";
 import { IChannel } from ".";
 

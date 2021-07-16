@@ -4,10 +4,10 @@
  */
 
 import { assert, Deferred } from "@fluidframework/common-utils";
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/driver-definitions";
 import { fluidEpochMismatchError, throwOdspNetworkError } from "@fluidframework/odsp-doclib-utils";
 import { ThrottlingError } from "@fluidframework/driver-utils";
-import { IConnected } from "@fluidframework/protocol-definitions";
+import { IConnected } from "@fluidframework/driver-definitions";
 import {
     snapshotKey,
     ICacheEntry,

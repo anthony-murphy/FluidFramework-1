@@ -4,7 +4,7 @@
  */
 
 import * as api from "@fluidframework/driver-definitions";
-import { IClient } from "@fluidframework/protocol-definitions";
+import { IClient } from "@fluidframework/driver-definitions";
 import { EmptyDeltaStorageService } from "./emptyDeltaStorageService";
 import { ReplayController } from "./replayController";
 import { ReplayDocumentDeltaConnection } from "./replayDocumentDeltaConnection";

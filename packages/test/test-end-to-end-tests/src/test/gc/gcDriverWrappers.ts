@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ITelemetryBaseLogger } from "@fluidframework/common-definitions";
+import { ITelemetryBaseLogger } from "@fluidframework/container-definitions";
 import {
     IDocumentService,
     IDocumentServiceFactory,
@@ -11,7 +11,7 @@ import {
     IResolvedUrl,
     ISummaryContext,
 } from "@fluidframework/driver-definitions";
-import { ISummaryTree } from "@fluidframework/protocol-definitions";
+import { ISummaryTree } from "@fluidframework/container-definitions";
 
 /**
  * Wraps the given IDocumentStorageService to override the `uploadSummaryWithContext` method. It calls the

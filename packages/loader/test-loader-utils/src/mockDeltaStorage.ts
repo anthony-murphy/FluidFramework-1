@@ -8,7 +8,7 @@ import {
     IStream,
 } from "@fluidframework/driver-definitions";
 import { streamFromMessages } from "@fluidframework/driver-utils";
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage } from "@fluidframework/container-definitions";
 
 /**
  * Mock Document Delta Storage Service for testing

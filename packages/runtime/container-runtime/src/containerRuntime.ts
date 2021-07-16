@@ -4,7 +4,7 @@
  */
 
 import { EventEmitter } from "events";
-import { ITelemetryGenericEvent, ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryGenericEvent, ITelemetryLogger } from "@fluidframework/container-definitions";
 import {
     IFluidObject,
     IFluidRouter,
@@ -68,7 +68,7 @@ import {
     ITree,
     MessageType,
     SummaryType,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import {
     FlushMode,
     InboundAttachMessage,

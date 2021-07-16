@@ -11,7 +11,7 @@ import {
     ISummaryContext,                    // these are needed for api-extractor
 } from "@fluidframework/driver-definitions";
 import { buildSnapshotTree } from "@fluidframework/driver-utils";
-import * as api from "@fluidframework/protocol-definitions";
+import * as api from "@fluidframework/driver-definitions";
 import { IFileSnapshot, ReadDocumentStorageServiceBase } from "@fluidframework/replay-driver";
 
 // This ID is used by replay tool as Document Id.

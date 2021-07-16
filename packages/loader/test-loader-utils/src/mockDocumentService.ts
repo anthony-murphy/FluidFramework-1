@@ -13,7 +13,7 @@ import {
 import {
     IClient,
     ISequencedDocumentMessage,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import {
     MockDocumentDeltaStorageService,
 } from "./mockDeltaStorage";

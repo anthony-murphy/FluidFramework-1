@@ -4,11 +4,11 @@
  */
 
 import { EventEmitter } from "events";
-import { ITelemetryBaseLogger, ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryBaseLogger, ITelemetryLogger } from "@fluidframework/container-definitions";
 import { Deferred, PromiseTimer, Timer } from "@fluidframework/common-utils";
 import { IFluidCodeDetails } from "@fluidframework/core-interfaces";
 import { DebugLogger } from "@fluidframework/telemetry-utils";
-import { IPendingProposal, IQuorum, ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { IPendingProposal, IQuorum, ISequencedDocumentMessage } from "@fluidframework/container-definitions";
 
 // subset of IContainerRuntime used by UpgradeManager
 export interface IUpgradeRuntime {

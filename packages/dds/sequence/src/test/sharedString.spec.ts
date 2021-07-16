@@ -4,7 +4,7 @@
  */
 
 import { strict as assert } from "assert";
-import { ISummaryTree } from "@fluidframework/protocol-definitions";
+import { ISummaryTree } from "@fluidframework/container-definitions";
 import { IChannelServices } from "@fluidframework/datastore-definitions";
 import {
     Marker,

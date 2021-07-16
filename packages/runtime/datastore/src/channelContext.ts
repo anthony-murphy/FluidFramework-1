@@ -5,7 +5,7 @@
 
 import { IChannel } from "@fluidframework/datastore-definitions";
 import { IDocumentStorageService } from "@fluidframework/driver-definitions";
-import { ISequencedDocumentMessage, ISnapshotTree } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage, ISnapshotTree } from "@fluidframework/container-definitions";
 import {
     IChannelSummarizeResult,
     IContextSummarizeResult,

@@ -4,7 +4,7 @@
  */
 
 import { TypedEventEmitter } from "@fluidframework/common-utils";
-import { ICommittedProposal, IQuorum, IQuorumEvents, ISequencedClient } from "@fluidframework/protocol-definitions";
+import { ICommittedProposal, IQuorum, IQuorumEvents, ISequencedClient } from "@fluidframework/container-definitions";
 
 export class TestQuorum extends TypedEventEmitter<IQuorumEvents> implements IQuorum {
     public disposed = false;

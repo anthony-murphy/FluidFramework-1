@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/container-definitions";
 import { assert } from "@fluidframework/common-utils";
 import {
     ISnapshotTree,
@@ -11,7 +11,7 @@ import {
     SummaryType,
     ISummaryTree,
     SummaryObject,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { channelsTreeName, ISummaryTreeWithStats } from "@fluidframework/runtime-definitions";
 import { SummaryTreeBuilder } from "../summaryUtils";
 import { ReadAndParseBlob } from "../utils";

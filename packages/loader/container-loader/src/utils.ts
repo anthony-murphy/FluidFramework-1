@@ -6,7 +6,7 @@
 import { parse } from "url";
 import { v4 as uuid } from "uuid";
 import { assert, bufferToString, stringToBuffer } from "@fluidframework/common-utils";
-import { ISummaryTree, ISnapshotTree, SummaryType } from "@fluidframework/protocol-definitions";
+import { ISummaryTree, ISnapshotTree, SummaryType } from "@fluidframework/container-definitions";
 
 export interface IParsedUrl {
     id: string;

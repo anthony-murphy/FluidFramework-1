@@ -17,7 +17,7 @@ import {
 import { Container, Loader } from "@fluidframework/container-loader";
 import { prefetchLatestSnapshot } from "@fluidframework/odsp-driver";
 import { IPersistedCache } from "@fluidframework/odsp-driver-definitions";
-import { IUser } from "@fluidframework/protocol-definitions";
+import { IUser } from "@fluidframework/container-definitions";
 import { HTMLViewAdapter } from "@fluidframework/view-adapters";
 import { IFluidMountableView } from "@fluidframework/view-interfaces";
 import {

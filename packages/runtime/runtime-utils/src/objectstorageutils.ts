@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ITree } from "@fluidframework/protocol-definitions";
+import { ITree } from "@fluidframework/container-definitions";
 
 export function getNormalizedObjectStoragePathParts(path: string) {
     let normalizePath = path;

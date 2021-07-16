@@ -13,7 +13,7 @@ import {
     ITree,
     IVersion,
     TreeEntry,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import {
     FileSnapshotReader,
     IFileSnapshot,

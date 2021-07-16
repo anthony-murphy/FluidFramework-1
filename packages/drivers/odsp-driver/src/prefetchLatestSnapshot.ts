@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ITelemetryBaseLogger } from "@fluidframework/common-definitions";
+import { ITelemetryBaseLogger } from "@fluidframework/driver-definitions";
 import { assert } from "@fluidframework/common-utils";
 import { IResolvedUrl } from "@fluidframework/driver-definitions";
 import {

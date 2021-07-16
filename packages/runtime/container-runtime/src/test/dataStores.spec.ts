@@ -4,7 +4,7 @@
  */
 
 import { strict as assert } from "assert";
-import { ISnapshotTree } from "@fluidframework/protocol-definitions";
+import { ISnapshotTree } from "@fluidframework/container-definitions";
 import { channelsTreeName } from "@fluidframework/runtime-definitions";
 import { getSummaryForDatastores } from "../dataStores";
 import { IContainerRuntimeMetadata, nonDataStorePaths } from "../summaryFormat";

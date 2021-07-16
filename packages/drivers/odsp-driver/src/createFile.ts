@@ -11,8 +11,7 @@ import {
     throwOdspNetworkError,
 } from "@fluidframework/odsp-doclib-utils";
 import { getGitType } from "@fluidframework/protocol-base";
-import { SummaryType, ISummaryTree, ISummaryBlob } from "@fluidframework/protocol-definitions";
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { SummaryType, ISummaryTree, ISummaryBlob, ITelemetryLogger } from "@fluidframework/driver-definitions";
 import { PerformanceEvent } from "@fluidframework/telemetry-utils";
 import { IOdspResolvedUrl, TokenFetchOptions } from "@fluidframework/odsp-driver-definitions";
 import {

@@ -3,10 +3,10 @@
  * Licensed under the MIT License.
  */
 
-import { IEvent, IEventProvider, ITelemetryLogger } from "@fluidframework/common-definitions";
+import { IEvent, IEventProvider, ITelemetryLogger } from "@fluidframework/container-definitions";
 import { assert, TypedEventEmitter } from "@fluidframework/common-utils";
 import { IDeltaManager } from "@fluidframework/container-definitions";
-import { IClient, IQuorum, ISequencedClient } from "@fluidframework/protocol-definitions";
+import { IClient, IQuorum, ISequencedClient } from "@fluidframework/container-definitions";
 import { ChildLogger } from "@fluidframework/telemetry-utils";
 
 // helper types for recursive readonly.

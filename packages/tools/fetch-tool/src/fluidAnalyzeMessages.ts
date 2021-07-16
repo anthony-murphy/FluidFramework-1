@@ -9,7 +9,7 @@ import {
     ISummaryProposal,
     MessageType,
     TreeEntry,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import { IAttachMessage, IEnvelope } from "@fluidframework/runtime-definitions";
 import {
     ContainerMessageType,

@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ITelemetryProperties } from "@fluidframework/common-definitions";
+import { ITelemetryProperties } from "@fluidframework/container-definitions";
 import { DriverErrorType } from "@fluidframework/driver-definitions";
 import { LoggingError, TelemetryLogger } from "@fluidframework/telemetry-utils";
 import {

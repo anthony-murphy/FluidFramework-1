@@ -3,9 +3,9 @@
  * Licensed under the MIT License.
  */
 
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage } from "@fluidframework/container-definitions";
 import { ISharedObject, ISharedObjectEvents } from "@fluidframework/shared-object-base";
-import { IEventThisPlaceHolder } from "@fluidframework/common-definitions";
+import { IEventThisPlaceHolder } from "@fluidframework/container-definitions";
 
 /**
  * Type of "valueChanged" event parameter.

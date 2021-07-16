@@ -8,7 +8,7 @@ import {
     assert,
     stringToBuffer,
 } from "@fluidframework/common-utils";
-import { ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryLogger } from "@fluidframework/container-definitions";
 import {
     IFluidHandle,
     IFluidHandleContext,
@@ -33,7 +33,7 @@ import {
     ITreeEntry,
     MessageType,
     SummaryType,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import {
     IChannel,
     IFluidDataStoreRuntime,

@@ -5,7 +5,7 @@
 
 import { IChannelStorageService } from "@fluidframework/datastore-definitions";
 import { stringToBuffer } from "@fluidframework/common-utils";
-import { IBlob, ITree, TreeEntry } from "@fluidframework/protocol-definitions";
+import { IBlob, ITree, TreeEntry } from "@fluidframework/container-definitions";
 import { listBlobsAtTreePath } from "@fluidframework/runtime-utils";
 
 export class LocalChannelStorageService implements IChannelStorageService {

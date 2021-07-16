@@ -3,10 +3,10 @@
  * Licensed under the MIT License.
  */
 
-import { IEvent, ITelemetryLogger } from "@fluidframework/common-definitions";
+import { IEvent, ITelemetryLogger } from "@fluidframework/container-definitions";
 import { IConnectionDetails } from "@fluidframework/container-definitions";
 import { ProtocolOpHandler } from "@fluidframework/protocol-base";
-import { ConnectionMode, ISequencedClient } from "@fluidframework/protocol-definitions";
+import { ConnectionMode, ISequencedClient } from "@fluidframework/container-definitions";
 import { EventEmitterWithErrorHandling, PerformanceEvent } from "@fluidframework/telemetry-utils";
 import { assert, Timer } from "@fluidframework/common-utils";
 import { ConnectionState } from "./container";

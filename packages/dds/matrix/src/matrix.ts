@@ -10,7 +10,7 @@ import {
     ISequencedDocumentMessage,
     ITree,
     TreeEntry,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/container-definitions";
 import {
     IFluidDataStoreRuntime,
     IChannelStorageService,

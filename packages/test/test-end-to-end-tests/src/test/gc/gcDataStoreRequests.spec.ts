@@ -12,7 +12,7 @@ import {
 import { TelemetryNullLogger } from "@fluidframework/common-utils";
 import { IContainer, IRuntimeFactory, LoaderHeader } from "@fluidframework/container-definitions";
 import { IRequest } from "@fluidframework/core-interfaces";
-import { ISummaryConfiguration } from "@fluidframework/protocol-definitions";
+import { ISummaryConfiguration } from "@fluidframework/container-definitions";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { ITestObjectProvider } from "@fluidframework/test-utils";
 import { describeNoCompat } from "@fluidframework/test-version-utils";

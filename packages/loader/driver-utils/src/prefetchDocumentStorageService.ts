@@ -7,7 +7,7 @@ import { LoaderCachingPolicy } from "@fluidframework/driver-definitions";
 import {
     ISnapshotTree,
     IVersion,
-} from "@fluidframework/protocol-definitions";
+} from "@fluidframework/driver-definitions";
 import { DocumentStorageServiceProxy } from "./documentStorageServiceProxy";
 import { canRetryOnError } from "./network";
 

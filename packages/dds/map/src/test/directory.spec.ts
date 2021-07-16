@@ -4,7 +4,7 @@
  */
 
 import { strict as assert } from "assert";
-import { ISummaryBlob, SummaryType } from "@fluidframework/protocol-definitions";
+import { ISummaryBlob, SummaryType } from "@fluidframework/container-definitions";
 import { IGCTestProvider, runGCTests } from "@fluid-internal/test-dds-utils";
 import {
     MockFluidDataStoreRuntime,

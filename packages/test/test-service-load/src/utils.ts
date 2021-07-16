@@ -11,7 +11,7 @@ import { ITestDriver, TestDriverTypes, ITelemetryBufferedLogger } from "@fluidfr
 import { createFluidTestDriver, generateOdspHostStoragePolicy } from "@fluidframework/test-drivers";
 import { assert, LazyPromise } from "@fluidframework/common-utils";
 import { ChildLogger, TelemetryLogger } from "@fluidframework/telemetry-utils";
-import { ITelemetryBaseEvent } from "@fluidframework/common-definitions";
+import { ITelemetryBaseEvent } from "@fluidframework/container-definitions";
 import random from "random-js";
 import { IContainerRuntimeOptions } from "@fluidframework/container-runtime";
 import { pkgName, pkgVersion } from "./packageVersion";

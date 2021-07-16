@@ -4,7 +4,7 @@
  */
 
 import { strict as assert } from "assert";
-import { ITelemetryGenericEvent, ITelemetryLogger } from "@fluidframework/common-definitions";
+import { ITelemetryGenericEvent, ITelemetryLogger } from "@fluidframework/container-definitions";
 import { runGarbageCollection } from "../garbageCollector";
 import { IGCResult } from "../interfaces";
 

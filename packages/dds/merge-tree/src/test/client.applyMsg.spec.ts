@@ -4,7 +4,7 @@
  */
 
 import { strict as assert } from "assert";
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage } from "@fluidframework/container-definitions";
 import { SegmentGroup } from "../";
 import { UnassignedSequenceNumber } from "../constants";
 import { TestClient } from "./testClient";

@@ -3,9 +3,9 @@
  * Licensed under the MIT License.
  */
 
-import { IErrorEvent, IEventProvider, IEventThisPlaceHolder } from "@fluidframework/common-definitions";
+import { IErrorEvent, IEventProvider, IEventThisPlaceHolder } from "@fluidframework/container-definitions";
 import { IChannel, IChannelServices } from "@fluidframework/datastore-definitions";
-import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage } from "@fluidframework/container-definitions";
 import { IChannelSummarizeResult, IGarbageCollectionData } from "@fluidframework/runtime-definitions";
 
 export interface ISharedObjectEvents extends IErrorEvent {
