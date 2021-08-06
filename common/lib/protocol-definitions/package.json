@@ -31,12 +31,11 @@
     "tsfmt": "tsfmt --verify",
     "tsfmt:fix": "tsfmt --replace"
   },
-  "dependencies": {
-    "@fluidframework/common-definitions": "^0.20.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@fluidframework/build-common": "^0.22.0",
     "@fluidframework/eslint-config-fluid": "^0.23.0",
+    "protocol-definitions-0-1024-0": "npm:@fluidframework/protocol-definitions@^0.1024.0",
     "@microsoft/api-extractor": "^7.16.1",
     "@typescript-eslint/eslint-plugin": "~4.14.0",
     "@typescript-eslint/parser": "~4.14.0",

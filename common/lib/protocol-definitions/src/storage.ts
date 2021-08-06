@@ -25,6 +25,9 @@ export interface IDocumentAttributes {
     term: number | undefined;
 }
 
+/**
+ * @deprecated - Use FileModes instead
+ */
 export enum FileMode {
     File = "100644",
     Executable = "100755",
@@ -32,6 +35,17 @@ export enum FileMode {
     Commit = "160000",
     Symlink = "120000",
 }
+
+export namespace FileModes {
+    export type File = "100644";
+    export type Executable = "100755";
+    export type Directory = "040000";
+    export type Commit = "160000";
+    export type Symlink = "120000";
+}
+
+export type FileModes =
+    `${FileMode}` | FileModes.Commit | FileModes.Directory | FileModes.Executable | FileModes.File | FileModes.Symlink;
 
 /**
  * Raw blob stored within the tree
@@ -60,24 +74,25 @@ export type ITreeEntry = {
     path: string;
     // The file mode; one of 100644 for file (blob), 100755 for executable (blob), 040000 for subdirectory (tree),
     // 160000 for submodule (commit), or 120000 for a blob that specifies the path of a symlink
-    mode: FileMode;
+    mode: FileMode | FileModes;
 } & (
 {
-    type: TreeEntry.Blob;
+    type: TreeEntry.Blob | TreeEntryTypes.Blob;
     value: IBlob;
 } | {
-    type: TreeEntry.Commit;
+    type: TreeEntry.Commit | TreeEntryTypes.Commit;
     value: string;
 } | {
-    type: TreeEntry.Tree;
+    type: TreeEntry.Tree | TreeEntryTypes.Tree;
     value: ITree;
 } | {
-    type: TreeEntry.Attachment;
+    type: TreeEntry.Attachment | TreeEntryTypes.Attachment;
     value: IAttachment;
 });
 
 /**
  * Type of entries that can be stored in a tree
+ * @deprecated - use TreeEntryTypes instead
  */
 export enum TreeEntry {
     Blob = "Blob",
@@ -85,6 +100,16 @@ export enum TreeEntry {
     Tree = "Tree",
     Attachment = "Attachment",
 }
+
+export namespace TreeEntryTypes{
+    export type Blob = "Blob";
+    export type Commit = "Commit";
+    export type Tree = "Tree";
+    export type Attachment = "Attachment";
+}
+
+export type TreeEntryTypes =
+    `${TreeEntry}` | TreeEntryTypes.Blob | TreeEntryTypes.Commit | TreeEntryTypes.Tree | TreeEntryTypes.Attachment;
 
 export interface ITree {
     entries: ITreeEntry[];

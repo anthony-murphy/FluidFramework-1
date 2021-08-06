@@ -4,14 +4,10 @@
 
 ```ts
 
-import { IDisposable } from '@fluidframework/common-definitions';
-import { IErrorEvent } from '@fluidframework/common-definitions';
-import { IEventProvider } from '@fluidframework/common-definitions';
-
 // @public (undocumented)
 export type ConnectionMode = "write" | "read";
 
-// @public (undocumented)
+// @public @deprecated (undocumented)
 export enum FileMode {
     // (undocumented)
     Commit = "160000",
@@ -24,6 +20,23 @@ export enum FileMode {
     // (undocumented)
     Symlink = "120000"
 }
+
+// @public (undocumented)
+export namespace FileModes {
+    // (undocumented)
+    export type Commit = "160000";
+    // (undocumented)
+    export type Directory = "040000";
+    // (undocumented)
+    export type Executable = "100755";
+    // (undocumented)
+    export type File = "100644";
+    // (undocumented)
+    export type Symlink = "120000";
+}
+
+// @public (undocumented)
+export type FileModes = `${FileMode}` | FileModes.Commit | FileModes.Directory | FileModes.Executable | FileModes.File | FileModes.Symlink;
 
 // @public (undocumented)
 export interface IActorClient {
@@ -206,7 +219,7 @@ export interface INackContent {
     code: number;
     message: string;
     retryAfter?: number;
-    type: NackErrorType;
+    type: NackErrorType | NackErrorTypes;
 }
 
 // @public
@@ -257,30 +270,52 @@ export interface IQueueMessage {
 }
 
 // @public
-export interface IQuorum extends Omit<IQuorumClients, "on" | "once" | "off">, Omit<IQuorumProposals, "on" | "once" | "off">, IEventProvider<IQuorumEvents> {
+export interface IQuorum extends IQuorumClients, IQuorumProposals {
+    // (undocumented)
+    readonly off: IQuorumEvents<this>;
+    // (undocumented)
+    readonly on: IQuorumEvents<this>;
+    // (undocumented)
+    readonly once: IQuorumEvents<this>;
 }
 
 // @public
-export interface IQuorumClients extends IEventProvider<IQuorumClientsEvents>, IDisposable {
+export interface IQuorumClients {
+    // (undocumented)
+    dispose(error?: Error): void;
+    // (undocumented)
+    readonly disposed: boolean;
     // (undocumented)
     getMember(clientId: string): ISequencedClient | undefined;
     // (undocumented)
     getMembers(): Map<string, ISequencedClient>;
+    // (undocumented)
+    readonly off: IQuorumClientsEvents<this>;
+    // (undocumented)
+    readonly on: IQuorumClientsEvents<this>;
+    // (undocumented)
+    readonly once: IQuorumClientsEvents<this>;
 }
 
 // @public
-export interface IQuorumClientsEvents extends IErrorEvent {
+export interface IQuorumClientsEvents<TThis extends IQuorumClients> {
     // (undocumented)
-    (event: "addMember", listener: (clientId: string, details: ISequencedClient) => void): any;
+    (event: "addMember", listener: (clientId: string, details: ISequencedClient) => void): TThis;
     // (undocumented)
-    (event: "removeMember", listener: (clientId: string) => void): any;
+    (event: "removeMember", listener: (clientId: string) => void): TThis;
+    // (undocumented)
+    (event: "error", listener: (message: any) => void): TThis;
 }
 
 // @public
-export type IQuorumEvents = IQuorumClientsEvents & IQuorumProposalsEvents;
+export type IQuorumEvents<TThis extends IQuorum> = IQuorumClientsEvents<TThis> & IQuorumProposalsEvents<TThis>;
 
 // @public
-export interface IQuorumProposals extends IEventProvider<IQuorumProposalsEvents>, IDisposable {
+export interface IQuorumProposals {
+    // (undocumented)
+    dispose(error?: Error): void;
+    // (undocumented)
+    readonly disposed: boolean;
     // (undocumented)
     get(key: string): any;
     // (undocumented)
@@ -288,19 +323,27 @@ export interface IQuorumProposals extends IEventProvider<IQuorumProposalsEvents>
     // (undocumented)
     has(key: string): boolean;
     // (undocumented)
+    readonly off: IQuorumProposalsEvents<this>;
+    // (undocumented)
+    readonly on: IQuorumProposalsEvents<this>;
+    // (undocumented)
+    readonly once: IQuorumProposalsEvents<this>;
+    // (undocumented)
     propose(key: string, value: any): Promise<void>;
 }
 
 // @public
-export interface IQuorumProposalsEvents extends IErrorEvent {
+export interface IQuorumProposalsEvents<TThis extends IQuorumProposals> {
     // (undocumented)
-    (event: "addProposal", listener: (proposal: IPendingProposal) => void): any;
+    (event: "addProposal", listener: (proposal: IPendingProposal) => void): TThis;
     // (undocumented)
-    (event: "approveProposal", listener: (sequenceNumber: number, key: string, value: any, approvalSequenceNumber: number) => void): any;
+    (event: "approveProposal", listener: (sequenceNumber: number, key: string, value: any, approvalSequenceNumber: number) => void): TThis;
     // (undocumented)
-    (event: "commitProposal", listener: (sequenceNumber: number, key: string, value: any, approvalSequenceNumber: number, commitSequenceNumber: number) => void): any;
+    (event: "commitProposal", listener: (sequenceNumber: number, key: string, value: any, approvalSequenceNumber: number, commitSequenceNumber: number) => void): TThis;
     // (undocumented)
-    (event: "rejectProposal", listener: (sequenceNumber: number, key: string, value: any, rejections: string[]) => void): any;
+    (event: "rejectProposal", listener: (sequenceNumber: number, key: string, value: any, rejections: string[]) => void): TThis;
+    // (undocumented)
+    (event: "error", listener: (message: any) => void): TThis;
 }
 
 // @public (undocumented)
@@ -420,7 +463,7 @@ export interface ISummaryAttachment {
     // (undocumented)
     id: string;
     // (undocumented)
-    type: SummaryType.Attachment;
+    type: SummaryType.Attachment | SummaryTypes.Attachment;
 }
 
 // @public (undocumented)
@@ -438,7 +481,7 @@ export interface ISummaryBlob {
     // (undocumented)
     content: string | Uint8Array;
     // (undocumented)
-    type: SummaryType.Blob;
+    type: SummaryType.Blob | SummaryTypes.Blob;
 }
 
 // @public (undocumented)
@@ -519,7 +562,7 @@ export interface ISummaryTree {
         [path: string]: SummaryObject;
     };
     // (undocumented)
-    type: SummaryType.Tree;
+    type: SummaryType.Tree | SummaryTypes.Tree;
     // (undocumented)
     unreferenced?: true;
 }
@@ -577,18 +620,18 @@ export interface ITree {
 // @public
 export type ITreeEntry = {
     path: string;
-    mode: FileMode;
+    mode: FileMode | FileModes;
 } & ({
-    type: TreeEntry.Blob;
+    type: TreeEntry.Blob | TreeEntryTypes.Blob;
     value: IBlob;
 } | {
-    type: TreeEntry.Commit;
+    type: TreeEntry.Commit | TreeEntryTypes.Commit;
     value: string;
 } | {
-    type: TreeEntry.Tree;
+    type: TreeEntry.Tree | TreeEntryTypes.Tree;
     value: ITree;
 } | {
-    type: TreeEntry.Attachment;
+    type: TreeEntry.Attachment | TreeEntryTypes.Attachment;
     value: IAttachment;
 });
 
@@ -614,7 +657,7 @@ export interface IVersion {
     treeId: string;
 }
 
-// @public (undocumented)
+// @public @deprecated (undocumented)
 export enum MessageType {
     // (undocumented)
     ClientJoin = "join",
@@ -646,7 +689,42 @@ export enum MessageType {
     SummaryNack = "summaryNack"
 }
 
-// @public
+// @public (undocumented)
+export namespace MessageTypes {
+    // (undocumented)
+    export type ClientJoin = "join";
+    // (undocumented)
+    export type ClientLeave = "leave";
+    // (undocumented)
+    export type Control = "control";
+    // (undocumented)
+    export type NoClient = "noClient";
+    // (undocumented)
+    export type NoOp = "noop";
+    // (undocumented)
+    export type Operation = "op";
+    // (undocumented)
+    export type Propose = "propose";
+    // (undocumented)
+    export type Reject = "reject";
+    // (undocumented)
+    export type RemoteHelp = "remoteHelp";
+    // (undocumented)
+    export type RoundTrip = "tripComplete";
+    // (undocumented)
+    export type Save = "saveOp";
+    // (undocumented)
+    export type Summarize = "summarize";
+    // (undocumented)
+    export type SummaryAck = "summaryAck";
+    // (undocumented)
+    export type SummaryNack = "summaryNack";
+}
+
+// @public (undocumented)
+export type MessageTypes = `${MessageType}` | MessageTypes.ClientJoin | MessageTypes.ClientLeave | MessageTypes.Control | MessageTypes.NoClient | MessageTypes.NoOp | MessageTypes.Operation | MessageTypes.Propose | MessageTypes.Reject | MessageTypes.RemoteHelp | MessageTypes.RoundTrip | MessageTypes.Save | MessageTypes.Summarize | MessageTypes.SummaryAck | MessageTypes.SummaryNack;
+
+// @public @deprecated (undocumented)
 export enum NackErrorType {
     // (undocumented)
     BadRequestError = "BadRequestError",
@@ -659,6 +737,21 @@ export enum NackErrorType {
 }
 
 // @public (undocumented)
+export namespace NackErrorTypes {
+    // (undocumented)
+    export type BadRequestError = "BadRequestError";
+    // (undocumented)
+    export type InvalidScopeError = "InvalidScopeError";
+    // (undocumented)
+    export type LimitExceededError = "LimitExceededError";
+    // (undocumented)
+    export type ThrottlingError = "ThrottlingError";
+}
+
+// @public (undocumented)
+export type NackErrorTypes = `${NackErrorType}` | NackErrorTypes.ThrottlingError | NackErrorTypes.InvalidScopeError | NackErrorTypes.BadRequestError | NackErrorTypes.LimitExceededError;
+
+// @public @deprecated (undocumented)
 export enum ScopeType {
     // (undocumented)
     DocRead = "doc:read",
@@ -669,12 +762,25 @@ export enum ScopeType {
 }
 
 // @public (undocumented)
+export namespace ScopeTypes {
+    // (undocumented)
+    export type DocRead = "doc:read";
+    // (undocumented)
+    export type DocWrite = "doc:write";
+    // (undocumented)
+    export type SummaryWrite = "summary:write";
+}
+
+// @public (undocumented)
+export type ScopeTypes = `${ScopeType}` | ScopeTypes.DocRead | ScopeTypes.DocWrite | ScopeTypes.SummaryWrite;
+
+// @public (undocumented)
 export type SummaryObject = ISummaryTree | ISummaryBlob | ISummaryHandle | ISummaryAttachment;
 
 // @public (undocumented)
 export type SummaryTree = ISummaryTree | ISummaryHandle;
 
-// @public (undocumented)
+// @public @deprecated (undocumented)
 export const enum SummaryType {
     // (undocumented)
     Attachment = 4,
@@ -687,9 +793,24 @@ export const enum SummaryType {
 }
 
 // @public (undocumented)
-export type SummaryTypeNoHandle = SummaryType.Tree | SummaryType.Blob | SummaryType.Attachment;
+export type SummaryTypeNoHandle = SummaryType.Tree | SummaryType.Blob | SummaryType.Attachment | SummaryTypes;
 
-// @public
+// @public (undocumented)
+export namespace SummaryTypes {
+    // (undocumented)
+    export type Attachment = 4;
+    // (undocumented)
+    export type Blob = 2;
+    // (undocumented)
+    export type Handle = 3;
+    // (undocumented)
+    export type Tree = 1;
+}
+
+// @public (undocumented)
+export type SummaryTypes = SummaryTypes.Tree | SummaryTypes.Blob | SummaryTypes.Handle | SummaryTypes.Attachment;
+
+// @public @deprecated
 export enum TreeEntry {
     // (undocumented)
     Attachment = "Attachment",
@@ -700,6 +821,21 @@ export enum TreeEntry {
     // (undocumented)
     Tree = "Tree"
 }
+
+// @public (undocumented)
+export namespace TreeEntryTypes {
+    // (undocumented)
+    export type Attachment = "Attachment";
+    // (undocumented)
+    export type Blob = "Blob";
+    // (undocumented)
+    export type Commit = "Commit";
+    // (undocumented)
+    export type Tree = "Tree";
+}
+
+// @public (undocumented)
+export type TreeEntryTypes = `${TreeEntry}` | TreeEntryTypes.Blob | TreeEntryTypes.Commit | TreeEntryTypes.Tree | TreeEntryTypes.Attachment;
 
 
 // (No @packageDocumentation comment for this package)

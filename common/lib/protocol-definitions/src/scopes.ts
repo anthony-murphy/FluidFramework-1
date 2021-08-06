@@ -3,8 +3,20 @@
  * Licensed under the MIT License.
  */
 
+/**
+ * @deprecated - use ScopeTypes instead
+ */
 export enum ScopeType {
     DocRead = "doc:read",
     DocWrite = "doc:write",
     SummaryWrite = "summary:write",
 }
+
+export namespace ScopeTypes {
+    export type DocRead = "doc:read";
+    export type DocWrite = "doc:write";
+    export type SummaryWrite = "summary:write";
+}
+
+export type ScopeTypes =
+    `${ScopeType}` | ScopeTypes.DocRead | ScopeTypes.DocWrite | ScopeTypes.SummaryWrite;

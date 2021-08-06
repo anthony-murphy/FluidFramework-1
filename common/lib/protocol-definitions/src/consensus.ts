@@ -3,7 +3,6 @@
  * Licensed under the MIT License.
  */
 
-import { IDisposable, IErrorEvent, IEventProvider } from "@fluidframework/common-definitions";
 import { ISequencedClient } from "./clients";
 
 /**
@@ -59,19 +58,21 @@ export interface IPendingProposal extends ISequencedProposal {
 /**
  * Events fired by a Quorum in response to client tracking.
  */
-export interface IQuorumClientsEvents extends IErrorEvent {
-    (event: "addMember", listener: (clientId: string, details: ISequencedClient) => void);
-    (event: "removeMember", listener: (clientId: string) => void);
+export interface IQuorumClientsEvents<TThis extends IQuorumClients> {
+    (event: "addMember", listener: (clientId: string, details: ISequencedClient) => void): TThis;
+    (event: "removeMember", listener: (clientId: string) => void): TThis;
+    (event: "error", listener: (message: any) => void): TThis;
+
 }
 
 /**
  * Events fired by a Quorum in response to proposal tracking.
  */
-export interface IQuorumProposalsEvents extends IErrorEvent {
-    (event: "addProposal", listener: (proposal: IPendingProposal) => void);
+export interface IQuorumProposalsEvents<TThis extends IQuorumProposals> {
+    (event: "addProposal", listener: (proposal: IPendingProposal) => void): TThis;
     (
         event: "approveProposal",
-        listener: (sequenceNumber: number, key: string, value: any, approvalSequenceNumber: number) => void);
+        listener: (sequenceNumber: number, key: string, value: any, approvalSequenceNumber: number) => void): TThis;
     (
         event: "commitProposal",
         listener: (
@@ -79,30 +80,40 @@ export interface IQuorumProposalsEvents extends IErrorEvent {
             key: string,
             value: any,
             approvalSequenceNumber: number,
-            commitSequenceNumber: number) => void);
+            commitSequenceNumber: number) => void): TThis;
     (
         event: "rejectProposal",
-        listener: (sequenceNumber: number, key: string, value: any, rejections: string[]) => void);
+        listener: (sequenceNumber: number, key: string, value: any, rejections: string[]) => void): TThis;
+    (event: "error", listener: (message: any) => void): TThis;
+
 }
 
 /**
  * All events fired by an IQuorum, both client tracking and proposal tracking.
  */
-export type IQuorumEvents = IQuorumClientsEvents & IQuorumProposalsEvents;
+export type IQuorumEvents<TThis extends IQuorum> =
+    IQuorumClientsEvents<TThis> & IQuorumProposalsEvents<TThis>;
 
 /**
  * Interface for tracking clients in the Quorum.
  */
-export interface IQuorumClients extends IEventProvider<IQuorumClientsEvents>, IDisposable {
+export interface IQuorumClients {
     getMembers(): Map<string, ISequencedClient>;
 
     getMember(clientId: string): ISequencedClient | undefined;
+
+    readonly on: IQuorumClientsEvents<this>;
+    readonly once: IQuorumClientsEvents<this>;
+    readonly off: IQuorumClientsEvents<this>;
+
+    readonly disposed: boolean;
+    dispose(error?: Error): void;
 }
 
 /**
  * Interface for tracking proposals in the Quorum.
  */
-export interface IQuorumProposals extends IEventProvider<IQuorumProposalsEvents>, IDisposable {
+export interface IQuorumProposals {
     propose(key: string, value: any): Promise<void>;
 
     has(key: string): boolean;
@@ -110,15 +121,22 @@ export interface IQuorumProposals extends IEventProvider<IQuorumProposalsEvents>
     get(key: string): any;
 
     getApprovalData(key: string): ICommittedProposal | undefined;
+
+    readonly on: IQuorumProposalsEvents<this>;
+    readonly once: IQuorumProposalsEvents<this>;
+    readonly off: IQuorumProposalsEvents<this>;
+
+    readonly disposed: boolean;
+    dispose(error?: Error): void;
 }
 
 /**
  * Interface combining tracking of clients as well as proposals in the Quorum.
  */
-export interface IQuorum extends
-    Omit<IQuorumClients, "on" | "once" | "off">,
-    Omit<IQuorumProposals, "on" | "once" | "off">,
-    IEventProvider<IQuorumEvents> { }
+export interface IQuorum extends IQuorumClients, IQuorumProposals {
+    readonly on: IQuorumEvents<this>;
+    readonly once: IQuorumEvents<this>;
+    readonly off: IQuorumEvents<this>; }
 
 export interface IProtocolState {
     sequenceNumber: number;
