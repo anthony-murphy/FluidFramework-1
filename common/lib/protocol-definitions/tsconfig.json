@@ -10,6 +10,7 @@
         "rootDir": "./src",
         "outDir": "./dist",
         "isolatedModules": true,
+        "composite": true
     },
     "include": [
         "src/**/*"
