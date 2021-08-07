@@ -43,7 +43,7 @@ export type SummaryTypes =  SummaryTypes.Tree | SummaryTypes.Blob | SummaryTypes
 export type SummaryTypeNoHandle = SummaryType.Tree | SummaryType.Blob | SummaryType.Attachment | SummaryTypes;
 
 export interface ISummaryHandle {
-    type: SummaryType.Handle;
+    type: SummaryType.Handle | SummaryTypes.Handle;
 
     // No handles, all other SummaryType are Ok
     handleType: SummaryTypeNoHandle;

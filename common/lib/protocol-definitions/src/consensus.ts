@@ -58,7 +58,7 @@ export interface IPendingProposal extends ISequencedProposal {
 /**
  * Events fired by a Quorum in response to client tracking.
  */
-export interface IQuorumClientsEvents<TThis extends IQuorumClients> {
+export interface IQuorumClientsEvents<TThis extends IQuorumClients=IQuorumClients> {
     (event: "addMember", listener: (clientId: string, details: ISequencedClient) => void): TThis;
     (event: "removeMember", listener: (clientId: string) => void): TThis;
     (event: "error", listener: (message: any) => void): TThis;
@@ -68,7 +68,7 @@ export interface IQuorumClientsEvents<TThis extends IQuorumClients> {
 /**
  * Events fired by a Quorum in response to proposal tracking.
  */
-export interface IQuorumProposalsEvents<TThis extends IQuorumProposals> {
+export interface IQuorumProposalsEvents<TThis extends IQuorumProposals=IQuorumProposals> {
     (event: "addProposal", listener: (proposal: IPendingProposal) => void): TThis;
     (
         event: "approveProposal",
@@ -91,7 +91,7 @@ export interface IQuorumProposalsEvents<TThis extends IQuorumProposals> {
 /**
  * All events fired by an IQuorum, both client tracking and proposal tracking.
  */
-export type IQuorumEvents<TThis extends IQuorum> =
+export type IQuorumEvents<TThis extends IQuorum = IQuorum> =
     IQuorumClientsEvents<TThis> & IQuorumProposalsEvents<TThis>;
 
 /**
