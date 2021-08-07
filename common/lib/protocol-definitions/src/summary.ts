@@ -36,6 +36,13 @@ export namespace SummaryTypes {
     export type Blob = 2;
     export type Handle = 3;
     export type Attachment = 4;
+
+    export interface Const{
+        Tree: Tree;
+        Blob: Blob;
+        Handle: Handle;
+        Attachment: Attachment;
+    }
 }
 
 export type SummaryTypes =  SummaryTypes.Tree | SummaryTypes.Blob | SummaryTypes.Handle | SummaryTypes.Attachment;
