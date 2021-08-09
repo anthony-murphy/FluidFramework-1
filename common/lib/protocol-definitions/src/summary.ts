@@ -47,10 +47,10 @@ export namespace SummaryTypes {
 
 export type SummaryTypes =  SummaryTypes.Tree | SummaryTypes.Blob | SummaryTypes.Handle | SummaryTypes.Attachment;
 
-export type SummaryTypeNoHandle = SummaryType.Tree | SummaryType.Blob | SummaryType.Attachment | SummaryTypes;
+export type SummaryTypeNoHandle = SummaryTypes.Tree | SummaryTypes.Blob | SummaryTypes.Attachment;
 
 export interface ISummaryHandle {
-    type: SummaryType.Handle | SummaryTypes.Handle;
+    type: SummaryTypes.Handle;
 
     // No handles, all other SummaryType are Ok
     handleType: SummaryTypeNoHandle;
@@ -60,17 +60,17 @@ export interface ISummaryHandle {
 }
 
 export interface ISummaryBlob {
-    type: SummaryType.Blob | SummaryTypes.Blob;
+    type: SummaryTypes.Blob;
     content: string | Uint8Array;
 }
 
 export interface ISummaryAttachment {
-    type: SummaryType.Attachment | SummaryTypes.Attachment;
+    type: SummaryTypes.Attachment;
     id: string;
 }
 
 export interface ISummaryTree {
-    type: SummaryType.Tree | SummaryTypes.Tree;
+    type: SummaryTypes.Tree;
 
     // TODO type I can infer from SummaryObject. File mode I may want to directly specify so have symlink+exec access
     tree: { [path: string]: SummaryObject };
