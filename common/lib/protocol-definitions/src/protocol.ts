@@ -92,10 +92,53 @@ export namespace MessageTypes {
 
     // Service specific control messages that are never sequenced.
     export type Control = "control";
+
+    export interface Const{
+        // Empty operation message. Used to send an updated reference sequence number.
+         NoOp: NoOp;
+
+        // System message sent to indicate a new client has joined the collaboration
+         ClientJoin: ClientJoin;
+
+        // System message sent to indicate a client has left the collaboration
+         ClientLeave: ClientLeave;
+
+        // Proposes a new consensus value
+         Propose: Propose;
+
+        // Message used to reject a pending proposal
+         Reject: Reject;
+
+        // Summary op
+         Summarize: Summarize;
+
+        // Summary op written
+         SummaryAck: SummaryAck;
+
+        // Summary op write failure
+         SummaryNack: SummaryNack;
+
+        // Channel operation.
+         Operation: Operation;
+
+        // Forced snapshot
+         Save: Save;
+
+        // Message to indicate the need of a remote agent for a document.
+         RemoteHelp: RemoteHelp;
+
+        // Message to indicate that no active clients are present.
+         NoClient: NoClient;
+        // Message to indicate successful round trip.
+         RoundTrip: RoundTrip;
+
+        // Service specific control messages that are never sequenced.
+         Control: Control;
+    }
 }
 
 export type MessageTypes =
-    `${MessageType}` | MessageTypes.ClientJoin | MessageTypes.ClientLeave | MessageTypes.Control
+    MessageTypes.ClientJoin | MessageTypes.ClientLeave | MessageTypes.Control
     | MessageTypes.NoClient | MessageTypes.NoOp |MessageTypes.Operation | MessageTypes.Propose
     | MessageTypes.Reject | MessageTypes.RemoteHelp | MessageTypes.RoundTrip | MessageTypes.Save
     | MessageTypes.Summarize | MessageTypes.SummaryAck | MessageTypes.SummaryNack;
@@ -404,9 +447,16 @@ export namespace NackErrorTypes{
     export type InvalidScopeError ="InvalidScopeError";
     export type BadRequestError = "BadRequestError";
     export type LimitExceededError = "LimitExceededError";
+
+    export interface Const{
+        ThrottlingError: ThrottlingError;
+        InvalidScopeError: InvalidScopeError;
+        BadRequestError: BadRequestError;
+        LimitExceededError: LimitExceededError;
+    }
 }
 
 export type NackErrorTypes =
-    `${NackErrorType}` | NackErrorTypes.ThrottlingError
+    NackErrorTypes.ThrottlingError
     | NackErrorTypes.InvalidScopeError | NackErrorTypes.BadRequestError
     | NackErrorTypes.LimitExceededError;

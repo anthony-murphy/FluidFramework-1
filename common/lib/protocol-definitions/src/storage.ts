@@ -42,10 +42,18 @@ export namespace FileModes {
     export type Directory = "040000";
     export type Commit = "160000";
     export type Symlink = "120000";
+
+    export interface Const{
+        File: File;
+        Executable: Executable;
+        Directory: Directory;
+        Commit: Commit;
+        Symlink: Symlink;
+    }
 }
 
 export type FileModes =
-    `${FileMode}` | FileModes.Commit | FileModes.Directory | FileModes.Executable | FileModes.File | FileModes.Symlink;
+    FileModes.Commit | FileModes.Directory | FileModes.Executable | FileModes.File | FileModes.Symlink;
 
 /**
  * Raw blob stored within the tree
@@ -107,10 +115,17 @@ export namespace TreeEntryTypes{
     export type Commit = "Commit";
     export type Tree = "Tree";
     export type Attachment = "Attachment";
+
+    export interface Const{
+        Blob: Blob;
+        Commit: Commit;
+        Tree: Tree;
+        Attachment: Attachment;
+    }
 }
 
 export type TreeEntryTypes =
-    `${TreeEntry}` | TreeEntryTypes.Blob | TreeEntryTypes.Commit | TreeEntryTypes.Tree | TreeEntryTypes.Attachment;
+    TreeEntryTypes.Blob | TreeEntryTypes.Commit | TreeEntryTypes.Tree | TreeEntryTypes.Attachment;
 
 export interface ITree {
     entries: ITreeEntry[];

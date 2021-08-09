@@ -16,7 +16,13 @@ export namespace ScopeTypes {
     export type DocRead = "doc:read";
     export type DocWrite = "doc:write";
     export type SummaryWrite = "summary:write";
+
+    export interface Const{
+        DocRead: DocRead;
+        DocWrite: DocWrite;
+        SummaryWrite: SummaryWrite;
+    }
 }
 
 export type ScopeTypes =
-    `${ScopeType}` | ScopeTypes.DocRead | ScopeTypes.DocWrite | ScopeTypes.SummaryWrite;
+    ScopeTypes.DocRead | ScopeTypes.DocWrite | ScopeTypes.SummaryWrite;
