@@ -443,10 +443,10 @@ export enum NackErrorType {
 }
 
 export namespace NackErrorTypes{
-    export type ThrottlingError = "ThrottlingError";
-    export type InvalidScopeError ="InvalidScopeError";
-    export type BadRequestError = "BadRequestError";
-    export type LimitExceededError = "LimitExceededError";
+    export type ThrottlingError = NackErrorType.ThrottlingError;
+    export type InvalidScopeError = NackErrorType.InvalidScopeError;
+    export type BadRequestError = NackErrorType.BadRequestError;
+    export type LimitExceededError = NackErrorType.LimitExceededError;
 
     export interface Const{
         ThrottlingError: ThrottlingError;
