@@ -135,6 +135,7 @@ export interface IConnect {
     id: string;
     mode: ConnectionMode;
     nonce?: string;
+    supportedFeatures?: Record<string, any>;
     tenantId: string;
     token: string | null;
     versions: string[];
@@ -154,6 +155,7 @@ export interface IConnected {
     mode: ConnectionMode;
     nonce?: string;
     serviceConfiguration: IClientConfiguration;
+    supportedFeatures?: Record<string, any>;
     supportedVersions: string[];
     version: string;
 }
