@@ -76,11 +76,6 @@ declare function set_old_IQuorum(oldVal: old.IQuorum);
 const currentIQuorum: current.IQuorum = get_old_IQuorum();
 set_old_IQuorum(currentIQuorum);
 
-declare function get_old_IQuorumEvents(): old.IQuorumEvents;
-declare function set_old_IQuorumEvents(oldVal: old.IQuorumEvents);
-const currentIQuorumEvents: current.IQuorumEvents = get_old_IQuorumEvents();
-set_old_IQuorumEvents(currentIQuorumEvents);
-
 declare function get_old_ISequencedProposal(): old.ISequencedProposal;
 declare function set_old_ISequencedProposal(oldVal: old.ISequencedProposal);
 const currentISequencedProposal: current.ISequencedProposal = get_old_ISequencedProposal();
@@ -221,7 +216,9 @@ set_old_IBlob(currentIBlob);
 declare function get_old_ICreateBlobResponse(): old.ICreateBlobResponse;
 declare function set_old_ICreateBlobResponse(oldVal: old.ICreateBlobResponse);
 const currentICreateBlobResponse: current.ICreateBlobResponse = get_old_ICreateBlobResponse();
-set_old_ICreateBlobResponse(currentICreateBlobResponse);
+if(currentICreateBlobResponse.url !== undefined) {
+    set_old_ICreateBlobResponse(currentICreateBlobResponse);
+}
 
 declare function get_old_IDocumentAttributes(): old.IDocumentAttributes;
 declare function set_old_IDocumentAttributes(oldVal: old.IDocumentAttributes);

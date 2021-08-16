@@ -1,0 +1,412 @@
+{
+  "0.1024": [
+    {
+      "name": "ConnectionMode",
+      "kind": "TypeAliasDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ICapabilities",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IClientDetails",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IClient",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISequencedClient",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISignalClient",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IClientJoin",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IProposal",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISequencedProposal",
+      "kind": "TypeAliasDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IApprovedProposal",
+      "kind": "TypeAliasDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ICommittedProposal",
+      "kind": "TypeAliasDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IPendingProposal",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IQuorumEvents",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IQuorum",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IProtocolState",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IProcessMessageResult",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISummaryConfiguration",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IClientConfiguration",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "MessageType",
+      "kind": "EnumDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ITrace",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "INack",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IDocumentMessage",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IDocumentSystemMessage",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IBranchOrigin",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISequencedDocumentMessage",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISequencedDocumentSystemMessage",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISequencedDocumentAugmentedMessage",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISignalMessage",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IUploadedSummaryDetails",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISummaryContent",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IServerError",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISummaryProposal",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISummaryAck",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISummaryNack",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IHelpMessage",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IQueueMessage",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "INackContent",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "NackErrorType",
+      "kind": "EnumDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IDocumentAttributes",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "FileMode",
+      "kind": "EnumDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IBlob",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IAttachment",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ICreateBlobResponse",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ITreeEntry",
+      "kind": "TypeAliasDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "TreeEntry",
+      "kind": "EnumDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ITree",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISnapshotTree",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISnapshotTreeEx",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IVersion",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "SummaryObject",
+      "kind": "TypeAliasDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "SummaryTree",
+      "kind": "TypeAliasDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISummaryAuthor",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISummaryCommitter",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "SummaryType",
+      "kind": "EnumDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "SummaryTypeNoHandle",
+      "kind": "TypeAliasDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISummaryHandle",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISummaryBlob",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISummaryAttachment",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISummaryTree",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IUser",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ITokenClaims",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ISummaryTokenClaims",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IActorClient",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ITokenService",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ITokenProvider",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "ScopeType",
+      "kind": "EnumDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IConnect",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    },
+    {
+      "name": "IConnected",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "incompatible": false
+    }
+  ]
+}
