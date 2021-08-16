@@ -3,9 +3,6 @@
  * Licensed under the MIT License.
  */
 
-/**
- * @deprecated - Use MessageTypes instead
- */
 export enum MessageType {
     // Empty operation message. Used to send an updated reference sequence number.
     NoOp = "noop",
@@ -49,99 +46,6 @@ export enum MessageType {
     // Service specific control messages that are never sequenced.
     Control = "control",
 }
-
-export namespace MessageTypes {
-    // Empty operation message. Used to send an updated reference sequence number.
-    export type NoOp = "noop";
-
-    // System message sent to indicate a new client has joined the collaboration
-    export type ClientJoin = "join";
-
-    // System message sent to indicate a client has left the collaboration
-    export type ClientLeave = "leave";
-
-    // Proposes a new consensus value
-    export type Propose = "propose";
-
-    // Message used to reject a pending proposal
-    export type Reject = "reject";
-
-    // Summary op
-    export type Summarize = "summarize";
-
-    // Summary op written
-    export type SummaryAck = "summaryAck";
-
-    // Summary op write failure
-    export type SummaryNack = "summaryNack";
-
-    // Channel operation.
-    export type Operation = "op";
-
-    // Forced snapshot
-    export type Save = "saveOp";
-
-    // Message to indicate the need of a remote agent for a document.
-    export type RemoteHelp = "remoteHelp";
-
-    // Message to indicate that no active clients are present.
-    export type NoClient = "noClient";
-
-    // Message to indicate successful round trip.
-    export type RoundTrip = "tripComplete";
-
-    // Service specific control messages that are never sequenced.
-    export type Control = "control";
-
-    export interface Const{
-        // Empty operation message. Used to send an updated reference sequence number.
-         NoOp: NoOp;
-
-        // System message sent to indicate a new client has joined the collaboration
-         ClientJoin: ClientJoin;
-
-        // System message sent to indicate a client has left the collaboration
-         ClientLeave: ClientLeave;
-
-        // Proposes a new consensus value
-         Propose: Propose;
-
-        // Message used to reject a pending proposal
-         Reject: Reject;
-
-        // Summary op
-         Summarize: Summarize;
-
-        // Summary op written
-         SummaryAck: SummaryAck;
-
-        // Summary op write failure
-         SummaryNack: SummaryNack;
-
-        // Channel operation.
-         Operation: Operation;
-
-        // Forced snapshot
-         Save: Save;
-
-        // Message to indicate the need of a remote agent for a document.
-         RemoteHelp: RemoteHelp;
-
-        // Message to indicate that no active clients are present.
-         NoClient: NoClient;
-        // Message to indicate successful round trip.
-         RoundTrip: RoundTrip;
-
-        // Service specific control messages that are never sequenced.
-         Control: Control;
-    }
-}
-
-export type MessageTypes =
-    MessageTypes.ClientJoin | MessageTypes.ClientLeave | MessageTypes.Control
-    | MessageTypes.NoClient | MessageTypes.NoOp |MessageTypes.Operation | MessageTypes.Propose
-    | MessageTypes.Reject | MessageTypes.RemoteHelp | MessageTypes.RoundTrip | MessageTypes.Save
-    | MessageTypes.Summarize | MessageTypes.SummaryAck | MessageTypes.SummaryNack;
 
 /**
  * Messages to track latency trace
@@ -413,7 +317,7 @@ export interface INackContent {
     /**
      * Type of the Nack.
      */
-    type: NackErrorType | NackErrorTypes;
+    type: NackErrorType;
 
     /**
      * A message about the nack for debugging/logging/telemetry purposes
@@ -428,7 +332,6 @@ export interface INackContent {
 }
 
 /**
- * @deprecated - use NackErrorTypes instead
  * Type of the Nack.
  * InvalidScopeError: Client's token is not valid for the intended op.
  * ThrottlingError: Retryable after retryAfter number.
@@ -441,22 +344,3 @@ export enum NackErrorType {
     BadRequestError = "BadRequestError",
     LimitExceededError = "LimitExceededError",
 }
-
-export namespace NackErrorTypes{
-    export type ThrottlingError = NackErrorType.ThrottlingError;
-    export type InvalidScopeError = NackErrorType.InvalidScopeError;
-    export type BadRequestError = NackErrorType.BadRequestError;
-    export type LimitExceededError = NackErrorType.LimitExceededError;
-
-    export interface Const{
-        ThrottlingError: ThrottlingError;
-        InvalidScopeError: InvalidScopeError;
-        BadRequestError: BadRequestError;
-        LimitExceededError: LimitExceededError;
-    }
-}
-
-export type NackErrorTypes =
-    NackErrorTypes.ThrottlingError
-    | NackErrorTypes.InvalidScopeError | NackErrorTypes.BadRequestError
-    | NackErrorTypes.LimitExceededError;
