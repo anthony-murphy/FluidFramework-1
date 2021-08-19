@@ -21,6 +21,9 @@ export interface ISummaryCommitter {
     date: string;
 }
 
+/**
+ * @deprecated - Use SummaryTypes instead
+ */
 export const enum SummaryType {
     Tree = 1,
     Blob = 2,
@@ -28,10 +31,18 @@ export const enum SummaryType {
     Attachment = 4,
 }
 
-export type SummaryTypeNoHandle = SummaryType.Tree | SummaryType.Blob | SummaryType.Attachment;
+export namespace SummaryTypes{
+    export type Tree = 1;
+    export type Blob = 2;
+    export type Handle = 3;
+    export type Attachment = 4;
+}
+export type SummaryTypes = SummaryTypes.Attachment | SummaryTypes.Blob | SummaryTypes.Handle | SummaryTypes.Tree;
+
+export type SummaryTypeNoHandle = SummaryTypes.Tree | SummaryTypes.Blob | SummaryTypes.Attachment;
 
 export interface ISummaryHandle {
-    type: SummaryType.Handle;
+    type: SummaryTypes.Handle;
 
     // No handles, all other SummaryType are Ok
     handleType: SummaryTypeNoHandle;
@@ -41,17 +52,17 @@ export interface ISummaryHandle {
 }
 
 export interface ISummaryBlob {
-    type: SummaryType.Blob;
+    type: SummaryTypes.Blob;
     content: string | Uint8Array;
 }
 
 export interface ISummaryAttachment {
-    type: SummaryType.Attachment;
+    type: SummaryTypes.Attachment;
     id: string;
 }
 
 export interface ISummaryTree {
-    type: SummaryType.Tree;
+    type: SummaryTypes.Tree;
 
     // TODO type I can infer from SummaryObject. File mode I may want to directly specify so have symlink+exec access
     tree: { [path: string]: SummaryObject };

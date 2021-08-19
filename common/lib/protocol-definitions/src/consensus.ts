@@ -57,6 +57,7 @@ export interface IPendingProposal extends ISequencedProposal {
 
 /**
  * Events fired by a Quorum in response to client tracking.
+ * @private - Helper type for shared events signatures
  */
 export interface IQuorumClientsEvents<TThis extends IQuorumClients=IQuorumClients> {
     (event: "addMember", listener: (clientId: string, details: ISequencedClient) => void): TThis;
@@ -67,6 +68,7 @@ export interface IQuorumClientsEvents<TThis extends IQuorumClients=IQuorumClient
 
 /**
  * Events fired by a Quorum in response to proposal tracking.
+ * @private - Helper type for shared events signatures
  */
 export interface IQuorumProposalsEvents<TThis extends IQuorumProposals=IQuorumProposals> {
     (event: "addProposal", listener: (proposal: IPendingProposal) => void): TThis;
@@ -90,6 +92,7 @@ export interface IQuorumProposalsEvents<TThis extends IQuorumProposals=IQuorumPr
 
 /**
  * All events fired by an IQuorum, both client tracking and proposal tracking.
+ * @private - Helper type for shared events signatures
  */
 export type IQuorumEvents<TThis extends IQuorum = IQuorum> =
     IQuorumClientsEvents<TThis> & IQuorumProposalsEvents<TThis>;
