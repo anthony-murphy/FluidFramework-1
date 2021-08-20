@@ -753,37 +753,61 @@
       "private": false
     },
     {
+      "name": "SummaryType.Tree",
+      "kind": "TypeAliasDeclaration",
+      "deprecated": false,
+      "private": false
+    },
+    {
+      "name": "SummaryType.Tree",
+      "kind": "VariableDeclaration",
+      "deprecated": false,
+      "private": false
+    },
+    {
+      "name": "SummaryType.Blob",
+      "kind": "TypeAliasDeclaration",
+      "deprecated": false,
+      "private": false
+    },
+    {
+      "name": "SummaryType.Blob",
+      "kind": "VariableDeclaration",
+      "deprecated": false,
+      "private": false
+    },
+    {
+      "name": "SummaryType.Handle",
+      "kind": "TypeAliasDeclaration",
+      "deprecated": false,
+      "private": false
+    },
+    {
+      "name": "SummaryType.Handle",
+      "kind": "VariableDeclaration",
+      "deprecated": false,
+      "private": false
+    },
+    {
+      "name": "SummaryType.Attachment",
+      "kind": "TypeAliasDeclaration",
+      "deprecated": false,
+      "private": false
+    },
+    {
+      "name": "SummaryType.Attachment",
+      "kind": "VariableDeclaration",
+      "deprecated": false,
+      "private": false
+    },
+    {
+      "name": "SummaryType.Const",
+      "kind": "InterfaceDeclaration",
+      "deprecated": false,
+      "private": false
+    },
+    {
       "name": "SummaryType",
-      "kind": "EnumDeclaration",
-      "deprecated": true,
-      "private": false
-    },
-    {
-      "name": "SummaryTypes.Tree",
-      "kind": "TypeAliasDeclaration",
-      "deprecated": false,
-      "private": false
-    },
-    {
-      "name": "SummaryTypes.Blob",
-      "kind": "TypeAliasDeclaration",
-      "deprecated": false,
-      "private": false
-    },
-    {
-      "name": "SummaryTypes.Handle",
-      "kind": "TypeAliasDeclaration",
-      "deprecated": false,
-      "private": false
-    },
-    {
-      "name": "SummaryTypes.Attachment",
-      "kind": "TypeAliasDeclaration",
-      "deprecated": false,
-      "private": false
-    },
-    {
-      "name": "SummaryTypes",
       "kind": "TypeAliasDeclaration",
       "deprecated": false,
       "private": false

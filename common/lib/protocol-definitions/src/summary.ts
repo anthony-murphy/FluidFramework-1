@@ -21,28 +21,36 @@ export interface ISummaryCommitter {
     date: string;
 }
 
-/**
- * @deprecated - Use SummaryTypes instead
- */
-export const enum SummaryType {
-    Tree = 1,
-    Blob = 2,
-    Handle = 3,
-    Attachment = 4,
-}
-
-export namespace SummaryTypes{
+export namespace SummaryType{
     export type Tree = 1;
-    export type Blob = 2;
-    export type Handle = 3;
-    export type Attachment = 4;
-}
-export type SummaryTypes = SummaryTypes.Attachment | SummaryTypes.Blob | SummaryTypes.Handle | SummaryTypes.Tree;
+    /** @deprecated - use SummaryType.Const */
+    export const Tree: Tree = 1 as const;
 
-export type SummaryTypeNoHandle = SummaryTypes.Tree | SummaryTypes.Blob | SummaryTypes.Attachment;
+    export type Blob = 2;
+    /** @deprecated - use SummaryType.Const */
+    export const Blob: Blob = 2 as const;
+
+    export type Handle = 3;
+    /** @deprecated - use SummaryType.Const */
+    export const Handle: Handle = 3 as const;
+
+    export type Attachment = 4;
+    /** @deprecated - use SummaryType.Const */
+    export const Attachment: Attachment = 4 as const;
+
+    export interface Const{
+        readonly Tree: Tree;
+        readonly Blob: Blob;
+        readonly Handle: Handle;
+        readonly Attachment: Attachment;
+    }
+}
+export type SummaryType = SummaryType.Tree | SummaryType.Blob | SummaryType.Handle | SummaryType.Attachment;
+
+export type SummaryTypeNoHandle = SummaryType.Tree | SummaryType.Blob | SummaryType.Attachment;
 
 export interface ISummaryHandle {
-    type: SummaryTypes.Handle;
+    type: SummaryType.Handle;
 
     // No handles, all other SummaryType are Ok
     handleType: SummaryTypeNoHandle;
@@ -52,17 +60,17 @@ export interface ISummaryHandle {
 }
 
 export interface ISummaryBlob {
-    type: SummaryTypes.Blob;
+    type: SummaryType.Blob;
     content: string | Uint8Array;
 }
 
 export interface ISummaryAttachment {
-    type: SummaryTypes.Attachment;
+    type: SummaryType.Attachment;
     id: string;
 }
 
 export interface ISummaryTree {
-    type: SummaryTypes.Tree;
+    type: SummaryType.Tree;
 
     // TODO type I can infer from SummaryObject. File mode I may want to directly specify so have symlink+exec access
     tree: { [path: string]: SummaryObject };
