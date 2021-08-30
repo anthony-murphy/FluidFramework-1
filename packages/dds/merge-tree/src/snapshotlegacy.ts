@@ -6,22 +6,22 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import { ITelemetryLogger } from "@fluidframework/common-definitions";
-import { assert, IsoBuffer } from "@fluidframework/common-utils";
+import { IsoBuffer } from "@fluidframework/common-utils";
 import {
     IFluidHandle,
     IFluidSerializer,
 } from "@fluidframework/core-interfaces";
 import { ChildLogger } from "@fluidframework/telemetry-utils";
 import { FileMode, ISequencedDocumentMessage, ITree, TreeEntry } from "@fluidframework/protocol-definitions";
+import * as parse5 from "parse5";
+import * as htmlparser2Adapter from "parse5-htmlparser2-tree-adapter";
 import { NonCollabClient, UnassignedSequenceNumber } from "./constants";
 import * as MergeTree from "./mergeTree";
 import * as ops from "./ops";
 import * as Properties from "./properties";
 import {
     MergeTreeChunkLegacy,
-    serializeAsMinSupportedVersion,
 } from "./snapshotChunks";
-
 // first three are index entry
 export interface SnapChunk {
     /**
@@ -64,12 +64,10 @@ export class SnapshotLegacy {
     segments: ops.IJSONSegment[] | undefined;
     segmentLengths: number[] | undefined;
     logger: ITelemetryLogger;
-    private readonly chunkSize: number;
 
     constructor(public mergeTree: MergeTree.MergeTree, logger: ITelemetryLogger, public filename?: string,
         public onCompletion?: () => void) {
         this.logger = ChildLogger.create(logger, "Snapshot");
-        this.chunkSize = mergeTree?.options?.mergeTreeSnapshotChunkSize ?? SnapshotLegacy.sizeOfFirstChunk;
     }
 
     getSeqLengthSegs(
@@ -107,9 +105,32 @@ export class SnapshotLegacy {
         serializer: IFluidSerializer,
         bind: IFluidHandle,
     ): ITree {
-        const chunk1 = this.getSeqLengthSegs(this.segments!, this.segmentLengths!, this.chunkSize);
-        let length: number = chunk1.chunkLengthChars;
-        let segments: number = chunk1.chunkSegmentCount;
+        const fragment = htmlparser2Adapter.createDocumentFragment();
+        const chuckSpan = htmlparser2Adapter.createElement("span", "", []);
+        fragment.childNodes.push(chuckSpan);
+        chuckSpan.attribs[`data-minseq`] = this.header?.minSeq?.toString() ?? "0";
+        chuckSpan.attribs[`data-seq`] = this.header?.seq?.toString() ?? "0";
+        for(const seg of this.segments!) {
+            const segSpan = htmlparser2Adapter.createElement("span", "", []);
+            if(typeof seg === "string") {
+                htmlparser2Adapter.insertText(segSpan, seg);
+            }else{
+                for(const key of Object.keys(seg)) {
+                    const isString = typeof seg[key] === "string";
+                    switch(key) {
+                        case "text":
+                            if(isString) {
+                                htmlparser2Adapter.insertText(segSpan, seg[key]);
+                                break;
+                            }
+                        default:
+                            segSpan.attribs[`data-${key}`] = serializer.stringify(seg[key],bind);
+                    }
+                }
+            }
+            chuckSpan.childNodes.push(segSpan);
+        }
+
         const tree: ITree = {
             entries: [
                 {
@@ -117,48 +138,12 @@ export class SnapshotLegacy {
                     path: SnapshotLegacy.header,
                     type: TreeEntry.Blob,
                     value: {
-                        contents: serializeAsMinSupportedVersion(
-                            SnapshotLegacy.header,
-                            chunk1,
-                            this.logger,
-                            this.mergeTree.options,
-                            serializer,
-                            bind),
+                        contents: parse5.serialize(fragment, {treeAdapter: htmlparser2Adapter}),
                         encoding: "utf-8",
                     },
                 },
             ],
         };
-
-        if (chunk1.chunkSegmentCount < chunk1.totalSegmentCount!) {
-            const chunk2 = this.getSeqLengthSegs(this.segments!, this.segmentLengths!,
-                this.header!.segmentsTotalLength, chunk1.chunkSegmentCount);
-            length += chunk2.chunkLengthChars;
-            segments += chunk2.chunkSegmentCount;
-            tree.entries.push({
-                mode: FileMode.File,
-                path: SnapshotLegacy.body,
-                type: TreeEntry.Blob,
-                value: {
-                    contents: serializeAsMinSupportedVersion(
-                        SnapshotLegacy.body,
-                        chunk2,
-                        this.logger,
-                        this.mergeTree.options,
-                        serializer,
-                        bind),
-                    encoding: "utf-8",
-                },
-            });
-        }
-
-        assert(
-            length === this.header!.segmentsTotalLength,
-            0x05d /* "emit: mismatch in segmentsTotalLength" */);
-
-        assert(
-            segments === chunk1.totalSegmentCount,
-            0x05e /* "emit: mismatch in totalSegmentCount" */);
 
         if(catchUpMsgs !== undefined && catchUpMsgs.length > 0) {
             tree.entries.push({
@@ -187,8 +172,7 @@ export class SnapshotLegacy {
         const segs: MergeTree.ISegment[] = [];
         let prev: MergeTree.ISegment | undefined;
         const extractSegment =
-            // eslint-disable-next-line max-len
-            (segment: MergeTree.ISegment, pos: number, refSeq: number, clientId: number, start: number | undefined, end: number | undefined) => {
+            (segment: MergeTree.ISegment) => {
                 // eslint-disable-next-line eqeqeq
                 if ((segment.seq != UnassignedSequenceNumber) && (segment.seq! <= this.seq!) &&
                     // eslint-disable-next-line eqeqeq

@@ -101,7 +101,7 @@ export interface IMergeTreeGroupMsg extends IMergeTreeDelta {
     ops: IMergeTreeDeltaOp[];
 }
 
-export interface IJSONSegment {
+export interface IJSONSegment extends Record<string, any> {
     props?: Record<string, any>;
 }
 
