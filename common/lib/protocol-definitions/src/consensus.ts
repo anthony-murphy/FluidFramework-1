@@ -3,7 +3,6 @@
  * Licensed under the MIT License.
  */
 
-import { IDisposable, IErrorEvent, IEventProvider } from "@fluidframework/common-definitions";
 import { ISequencedClient } from "./clients";
 
 /**
@@ -59,15 +58,16 @@ export interface IPendingProposal extends ISequencedProposal {
 /**
  * Events fired by a Quorum in response to client tracking.
  */
-export interface IQuorumClientsEvents extends IErrorEvent {
+export interface IQuorumClientsEvents {
     (event: "addMember", listener: (clientId: string, details: ISequencedClient) => void);
     (event: "removeMember", listener: (clientId: string) => void);
+    (event: "error", listener: (message: any) => void);
 }
 
 /**
  * Events fired by a Quorum in response to proposal tracking.
  */
-export interface IQuorumProposalsEvents extends IErrorEvent {
+export interface IQuorumProposalsEvents {
     (event: "addProposal", listener: (proposal: IPendingProposal) => void);
     (
         event: "approveProposal",
@@ -83,6 +83,7 @@ export interface IQuorumProposalsEvents extends IErrorEvent {
     (
         event: "rejectProposal",
         listener: (sequenceNumber: number, key: string, value: any, rejections: string[]) => void);
+        (event: "error", listener: (message: any) => void);
 }
 
 /**
@@ -93,16 +94,23 @@ export type IQuorumEvents = IQuorumClientsEvents & IQuorumProposalsEvents;
 /**
  * Interface for tracking clients in the Quorum.
  */
-export interface IQuorumClients extends IEventProvider<IQuorumClientsEvents>, IDisposable {
+export interface IQuorumClients {
     getMembers(): Map<string, ISequencedClient>;
 
     getMember(clientId: string): ISequencedClient | undefined;
+
+    readonly on: IQuorumClientsEvents;
+    readonly once: IQuorumClientsEvents;
+    readonly off: IQuorumClientsEvents;
+
+    readonly disposed: boolean;
+    dispose(error?: Error): void;
 }
 
 /**
  * Interface for tracking proposals in the Quorum.
  */
-export interface IQuorumProposals extends IEventProvider<IQuorumProposalsEvents>, IDisposable {
+export interface IQuorumProposals  {
     propose(key: string, value: any): Promise<void>;
 
     has(key: string): boolean;
@@ -110,15 +118,23 @@ export interface IQuorumProposals extends IEventProvider<IQuorumProposalsEvents>
     get(key: string): any;
 
     getApprovalData(key: string): ICommittedProposal | undefined;
+
+    readonly on: IQuorumProposalsEvents;
+    readonly once: IQuorumProposalsEvents;
+    readonly off: IQuorumProposalsEvents;
+
+    readonly disposed: boolean;
+    dispose(error?: Error): void;
 }
 
 /**
  * Interface combining tracking of clients as well as proposals in the Quorum.
  */
-export interface IQuorum extends
-    Omit<IQuorumClients, "on" | "once" | "off">,
-    Omit<IQuorumProposals, "on" | "once" | "off">,
-    IEventProvider<IQuorumEvents> { }
+export interface IQuorum extends IQuorumClients, IQuorumProposals{
+    readonly on: IQuorumEvents;
+    readonly once: IQuorumEvents;
+    readonly off: IQuorumEvents;
+}
 
 export interface IProtocolState {
     sequenceNumber: number;

@@ -31,9 +31,6 @@
     "tsfmt": "tsfmt --verify",
     "tsfmt:fix": "tsfmt --replace"
   },
-  "dependencies": {
-    "@fluidframework/common-definitions": "^0.20.0"
-  },
   "devDependencies": {
     "@fluidframework/build-common": "^0.22.0",
     "@fluidframework/eslint-config-fluid": "^0.23.0",

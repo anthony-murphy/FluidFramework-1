@@ -67,16 +67,16 @@ declare function set_old_IPendingProposal(oldVal: old.IPendingProposal);
 set_old_IPendingProposal(currentIPendingProposal);
 
 declare function get_old_IQuorumEvents(): old.IQuorumEvents;
-const currentIQuorumEvents: current.IQuorumEvents = get_old_IQuorumEvents();
+export const currentIQuorumEvents: current.IQuorumEvents = get_old_IQuorumEvents();
+/*
 declare function set_old_IQuorumEvents(oldVal: old.IQuorumEvents);
 set_old_IQuorumEvents(currentIQuorumEvents);
+*/
 
-/*
 declare function get_old_IQuorum(): old.IQuorum;
 const currentIQuorum: current.IQuorum = get_old_IQuorum();
 declare function set_old_IQuorum(oldVal: old.IQuorum);
 set_old_IQuorum(currentIQuorum);
-*/
 
 declare function get_old_IProtocolState(): old.IProtocolState;
 const currentIProtocolState: current.IProtocolState = get_old_IProtocolState();
@@ -257,7 +257,6 @@ const currentIVersion: current.IVersion = get_old_IVersion();
 declare function set_old_IVersion(oldVal: old.IVersion);
 set_old_IVersion(currentIVersion);
 
-/*
 declare function get_old_SummaryObject(): old.SummaryObject;
 const currentSummaryObject: current.SummaryObject = get_old_SummaryObject();
 declare function set_old_SummaryObject(oldVal: old.SummaryObject);
@@ -272,14 +271,12 @@ declare function get_old_ISummaryAuthor(): old.ISummaryAuthor;
 const currentISummaryAuthor: current.ISummaryAuthor = get_old_ISummaryAuthor();
 declare function set_old_ISummaryAuthor(oldVal: old.ISummaryAuthor);
 set_old_ISummaryAuthor(currentISummaryAuthor);
-*/
 
 declare function get_old_ISummaryCommitter(): old.ISummaryCommitter;
 const currentISummaryCommitter: current.ISummaryCommitter = get_old_ISummaryCommitter();
 declare function set_old_ISummaryCommitter(oldVal: old.ISummaryCommitter);
 set_old_ISummaryCommitter(currentISummaryCommitter);
 
-/*
 declare function get_old_SummaryType(): old.SummaryType;
 const currentSummaryType: current.SummaryType = get_old_SummaryType();
 declare function set_old_SummaryType(oldVal: old.SummaryType);
@@ -309,7 +306,6 @@ declare function get_old_ISummaryTree(): old.ISummaryTree;
 const currentISummaryTree: current.ISummaryTree = get_old_ISummaryTree();
 declare function set_old_ISummaryTree(oldVal: old.ISummaryTree);
 set_old_ISummaryTree(currentISummaryTree);
-*/
 
 declare function get_old_IUser(): old.IUser;
 const currentIUser: current.IUser = get_old_IUser();

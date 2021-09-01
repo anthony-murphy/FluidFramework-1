@@ -21,12 +21,50 @@ export interface ISummaryCommitter {
     date: string;
 }
 
-export const enum SummaryType {
-    Tree = 1,
-    Blob = 2,
-    Handle = 3,
-    Attachment = 4,
+export namespace SummaryType{
+    export type Tree = 1;
+    export type Blob = 2;
+    export type Handle = 3;
+    export type Attachment = 4;
+
+    /**
+     * Use to create a const object
+     * to access values at runtime:
+     * https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-4.html#const-assertions
+     * ```
+     * const summaryTypes: SummaryType.Const={
+     *  Tree: 1,
+     *  Blob: 2,
+     *  Handle: 3,
+     *  Attachment: 4,
+     * } as const;
+     * ```
+     */
+    export interface Const{
+        Tree: Tree,
+        Blob: Blob,
+        Handle: Handle,
+        Attachment: Attachment,
+    }
+
+    /**
+     * @deprecated - constants will be removed from this package. Use @see Const instead.
+     */
+    export const Tree: Tree = 1;
+    /**
+     * @deprecated - constants will be removed from this package. Use @see Const instead.
+     */
+    export const Blob: Blob = 2;
+    /**
+     * @deprecated - constants will be removed from this package. Use @see Const instead.
+     */
+    export const Handle: Handle = 3;
+    /**
+     * @deprecated - constants will be removed from this package. Use @see Const instead.
+     */
+    export const Attachment: Attachment = 4;
 }
+export type SummaryType = SummaryType.Tree | SummaryType.Blob | SummaryType.Handle | SummaryType.Attachment;
 
 export type SummaryTypeNoHandle = SummaryType.Tree | SummaryType.Blob | SummaryType.Attachment;
 

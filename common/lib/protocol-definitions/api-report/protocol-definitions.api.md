@@ -4,10 +4,6 @@
 
 ```ts
 
-import { IDisposable } from '@fluidframework/common-definitions';
-import { IErrorEvent } from '@fluidframework/common-definitions';
-import { IEventProvider } from '@fluidframework/common-definitions';
-
 // @public (undocumented)
 export type ConnectionMode = "write" | "read";
 
@@ -261,30 +257,52 @@ export interface IQueueMessage {
 }
 
 // @public
-export interface IQuorum extends Omit<IQuorumClients, "on" | "once" | "off">, Omit<IQuorumProposals, "on" | "once" | "off">, IEventProvider<IQuorumEvents> {
+export interface IQuorum extends IQuorumClients, IQuorumProposals {
+    // (undocumented)
+    readonly off: IQuorumEvents;
+    // (undocumented)
+    readonly on: IQuorumEvents;
+    // (undocumented)
+    readonly once: IQuorumEvents;
 }
 
 // @public
-export interface IQuorumClients extends IEventProvider<IQuorumClientsEvents>, IDisposable {
+export interface IQuorumClients {
+    // (undocumented)
+    dispose(error?: Error): void;
+    // (undocumented)
+    readonly disposed: boolean;
     // (undocumented)
     getMember(clientId: string): ISequencedClient | undefined;
     // (undocumented)
     getMembers(): Map<string, ISequencedClient>;
+    // (undocumented)
+    readonly off: IQuorumClientsEvents;
+    // (undocumented)
+    readonly on: IQuorumClientsEvents;
+    // (undocumented)
+    readonly once: IQuorumClientsEvents;
 }
 
 // @public
-export interface IQuorumClientsEvents extends IErrorEvent {
+export interface IQuorumClientsEvents {
     // (undocumented)
     (event: "addMember", listener: (clientId: string, details: ISequencedClient) => void): any;
     // (undocumented)
     (event: "removeMember", listener: (clientId: string) => void): any;
+    // (undocumented)
+    (event: "error", listener: (message: any) => void): any;
 }
 
 // @public
 export type IQuorumEvents = IQuorumClientsEvents & IQuorumProposalsEvents;
 
 // @public
-export interface IQuorumProposals extends IEventProvider<IQuorumProposalsEvents>, IDisposable {
+export interface IQuorumProposals {
+    // (undocumented)
+    dispose(error?: Error): void;
+    // (undocumented)
+    readonly disposed: boolean;
     // (undocumented)
     get(key: string): any;
     // (undocumented)
@@ -292,11 +310,17 @@ export interface IQuorumProposals extends IEventProvider<IQuorumProposalsEvents>
     // (undocumented)
     has(key: string): boolean;
     // (undocumented)
+    readonly off: IQuorumProposalsEvents;
+    // (undocumented)
+    readonly on: IQuorumProposalsEvents;
+    // (undocumented)
+    readonly once: IQuorumProposalsEvents;
+    // (undocumented)
     propose(key: string, value: any): Promise<void>;
 }
 
 // @public
-export interface IQuorumProposalsEvents extends IErrorEvent {
+export interface IQuorumProposalsEvents {
     // (undocumented)
     (event: "addProposal", listener: (proposal: IPendingProposal) => void): any;
     // (undocumented)
@@ -305,6 +329,8 @@ export interface IQuorumProposalsEvents extends IErrorEvent {
     (event: "commitProposal", listener: (sequenceNumber: number, key: string, value: any, approvalSequenceNumber: number, commitSequenceNumber: number) => void): any;
     // (undocumented)
     (event: "rejectProposal", listener: (sequenceNumber: number, key: string, value: any, rejections: string[]) => void): any;
+    // (undocumented)
+    (event: "error", listener: (message: any) => void): any;
 }
 
 // @public (undocumented)
@@ -681,16 +707,37 @@ export type SummaryObject = ISummaryTree | ISummaryBlob | ISummaryHandle | ISumm
 export type SummaryTree = ISummaryTree | ISummaryHandle;
 
 // @public (undocumented)
-export const enum SummaryType {
+export namespace SummaryType {
     // (undocumented)
-    Attachment = 4,
+    export type Attachment = 4;
     // (undocumented)
-    Blob = 2,
+    export type Blob = 2;
+    export interface Const {
+        // (undocumented)
+        Attachment: Attachment;
+        // (undocumented)
+        Blob: Blob;
+        // (undocumented)
+        Handle: Handle;
+        // (undocumented)
+        Tree: Tree;
+    }
     // (undocumented)
-    Handle = 3,
+    export type Handle = 3;
     // (undocumented)
-    Tree = 1
+    export type Tree = 1;
+    const // @deprecated (undocumented)
+    Tree: Tree;
+    const // @deprecated (undocumented)
+    Blob: Blob;
+    const // @deprecated (undocumented)
+    Handle: Handle;
+    const // @deprecated (undocumented)
+    Attachment: Attachment;
 }
+
+// @public (undocumented)
+export type SummaryType = SummaryType.Tree | SummaryType.Blob | SummaryType.Handle | SummaryType.Attachment;
 
 // @public (undocumented)
 export type SummaryTypeNoHandle = SummaryType.Tree | SummaryType.Blob | SummaryType.Attachment;
