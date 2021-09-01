@@ -50,19 +50,19 @@ export namespace SummaryType{
     /**
      * @deprecated - constants will be removed from this package. Use @see Const instead.
      */
-    export const Tree: Tree = 1;
+    export const Tree: Tree = 1 as const;
     /**
      * @deprecated - constants will be removed from this package. Use @see Const instead.
      */
-    export const Blob: Blob = 2;
+    export const Blob: Blob = 2 as const;
     /**
      * @deprecated - constants will be removed from this package. Use @see Const instead.
      */
-    export const Handle: Handle = 3;
+    export const Handle: Handle = 3 as const;
     /**
      * @deprecated - constants will be removed from this package. Use @see Const instead.
      */
-    export const Attachment: Attachment = 4;
+    export const Attachment: Attachment = 4 as const;
 }
 export type SummaryType = SummaryType.Tree | SummaryType.Blob | SummaryType.Handle | SummaryType.Attachment;
 
