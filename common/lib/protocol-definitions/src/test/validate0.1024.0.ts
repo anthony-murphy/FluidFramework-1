@@ -111,10 +111,10 @@ const currentINack: current.INack = get_old_INack();
 declare function set_old_INack(oldVal: old.INack);
 set_old_INack(currentINack);
 
-declare function get_old_IQuorum(): old.IQuorum;
-const currentIQuorum: current.IQuorum = get_old_IQuorum();
-declare function set_old_IQuorum(oldVal: old.IQuorum);
-set_old_IQuorum(currentIQuorum);
+declare function get_old_INackContent(): old.INackContent;
+const currentINackContent: current.INackContent = get_old_INackContent();
+declare function set_old_INackContent(oldVal: old.INackContent);
+set_old_INackContent(currentINackContent);
 
 declare function get_old_IPendingProposal(): old.IPendingProposal;
 const currentIPendingProposal: current.IPendingProposal = get_old_IPendingProposal();
@@ -141,17 +141,15 @@ const currentIQueueMessage: current.IQueueMessage = get_old_IQueueMessage();
 declare function set_old_IQueueMessage(oldVal: old.IQueueMessage);
 set_old_IQueueMessage(currentIQueueMessage);
 
-/*
 declare function get_old_IQuorum(): old.IQuorum;
 const currentIQuorum: current.IQuorum = get_old_IQuorum();
 declare function set_old_IQuorum(oldVal: old.IQuorum);
 set_old_IQuorum(currentIQuorum);
-*/
 
 declare function get_old_IQuorumEvents(): old.IQuorumEvents;
-const currentIQuorumEvents: current.IQuorumEvents = get_old_IQuorumEvents();
-declare function set_old_IQuorumEvents(oldVal: old.IQuorumEvents);
-set_old_IQuorumEvents(currentIQuorumEvents);
+export const currentIQuorumEvents: current.IQuorumEvents = get_old_IQuorumEvents();
+// declare function set_old_IQuorumEvents(oldVal: old.IQuorumEvents);
+// set_old_IQuorumEvents(currentIQuorumEvents);
 
 declare function get_old_ISequencedClient(): old.ISequencedClient;
 const currentISequencedClient: current.ISequencedClient = get_old_ISequencedClient();
@@ -210,24 +208,20 @@ const currentISummaryAck: current.ISummaryAck = get_old_ISummaryAck();
 declare function set_old_ISummaryAck(oldVal: old.ISummaryAck);
 set_old_ISummaryAck(currentISummaryAck);
 
-/*
 declare function get_old_ISummaryAttachment(): old.ISummaryAttachment;
 const currentISummaryAttachment: current.ISummaryAttachment = get_old_ISummaryAttachment();
 declare function set_old_ISummaryAttachment(oldVal: old.ISummaryAttachment);
 set_old_ISummaryAttachment(currentISummaryAttachment);
-*/
 
 declare function get_old_ISummaryAuthor(): old.ISummaryAuthor;
 const currentISummaryAuthor: current.ISummaryAuthor = get_old_ISummaryAuthor();
 declare function set_old_ISummaryAuthor(oldVal: old.ISummaryAuthor);
 set_old_ISummaryAuthor(currentISummaryAuthor);
 
-/*
 declare function get_old_ISummaryBlob(): old.ISummaryBlob;
 const currentISummaryBlob: current.ISummaryBlob = get_old_ISummaryBlob();
 declare function set_old_ISummaryBlob(oldVal: old.ISummaryBlob);
 set_old_ISummaryBlob(currentISummaryBlob);
-*/
 
 declare function get_old_ISummaryCommitter(): old.ISummaryCommitter;
 const currentISummaryCommitter: current.ISummaryCommitter = get_old_ISummaryCommitter();
@@ -244,12 +238,10 @@ const currentISummaryContent: current.ISummaryContent = get_old_ISummaryContent(
 declare function set_old_ISummaryContent(oldVal: old.ISummaryContent);
 set_old_ISummaryContent(currentISummaryContent);
 
-/*
 declare function get_old_ISummaryHandle(): old.ISummaryHandle;
 const currentISummaryHandle: current.ISummaryHandle = get_old_ISummaryHandle();
 declare function set_old_ISummaryHandle(oldVal: old.ISummaryHandle);
 set_old_ISummaryHandle(currentISummaryHandle);
-*/
 
 declare function get_old_ISummaryNack(): old.ISummaryNack;
 const currentISummaryNack: current.ISummaryNack = get_old_ISummaryNack();
@@ -266,12 +258,10 @@ const currentISummaryTokenClaims: current.ISummaryTokenClaims = get_old_ISummary
 declare function set_old_ISummaryTokenClaims(oldVal: old.ISummaryTokenClaims);
 set_old_ISummaryTokenClaims(currentISummaryTokenClaims);
 
-/*
 declare function get_old_ISummaryTree(): old.ISummaryTree;
 const currentISummaryTree: current.ISummaryTree = get_old_ISummaryTree();
 declare function set_old_ISummaryTree(oldVal: old.ISummaryTree);
 set_old_ISummaryTree(currentISummaryTree);
-*/
 
 declare function get_old_ITokenClaims(): old.ITokenClaims;
 const currentITokenClaims: current.ITokenClaims = get_old_ITokenClaims();
@@ -333,7 +323,6 @@ const currentScopeType: current.ScopeType = get_old_ScopeType();
 declare function set_old_ScopeType(oldVal: old.ScopeType);
 set_old_ScopeType(currentScopeType);
 
-/*
 declare function get_old_SummaryObject(): old.SummaryObject;
 const currentSummaryObject: current.SummaryObject = get_old_SummaryObject();
 declare function set_old_SummaryObject(oldVal: old.SummaryObject);
@@ -353,7 +342,6 @@ declare function get_old_SummaryTypeNoHandle(): old.SummaryTypeNoHandle;
 const currentSummaryTypeNoHandle: current.SummaryTypeNoHandle = get_old_SummaryTypeNoHandle();
 declare function set_old_SummaryTypeNoHandle(oldVal: old.SummaryTypeNoHandle);
 set_old_SummaryTypeNoHandle(currentSummaryTypeNoHandle);
-*/
 
 declare function get_old_TreeEntry(): old.TreeEntry;
 const currentTreeEntry: current.TreeEntry = get_old_TreeEntry();
