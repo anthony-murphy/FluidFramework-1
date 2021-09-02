@@ -496,10 +496,10 @@ use_old_IQueueMessage(get_current_IQueueMessage());
 * validate forward compat by using old type in place of current type
 * to disable, add in package.json under typeValidation.broken:
 * "IQuorum": {"forwardCompat": false}
+*/
 declare function get_old_IQuorum(): old.IQuorum;
 declare function use_current_IQuorum(use: current.IQuorum);
 use_current_IQuorum(get_old_IQuorum());
-*/
 
 /*
 * validate back compat by using current type in place of old type
@@ -523,10 +523,10 @@ use_current_IQuorumEvents(get_old_IQuorumEvents());
 * validate back compat by using current type in place of old type
 * to disable, add in package.json under typeValidation.broken:
 * "IQuorumEvents": {"backCompat": false}
-*/
 declare function get_current_IQuorumEvents(): current.IQuorumEvents;
 declare function use_old_IQuorumEvents(use: old.IQuorumEvents);
 use_old_IQuorumEvents(get_current_IQuorumEvents());
+*/
 
 /*
 * validate forward compat by using old type in place of current type
@@ -730,19 +730,19 @@ use_old_ISummaryAck(get_current_ISummaryAck());
 * validate forward compat by using old type in place of current type
 * to disable, add in package.json under typeValidation.broken:
 * "ISummaryAttachment": {"forwardCompat": false}
+*/
 declare function get_old_ISummaryAttachment(): old.ISummaryAttachment;
 declare function use_current_ISummaryAttachment(use: current.ISummaryAttachment);
 use_current_ISummaryAttachment(get_old_ISummaryAttachment());
-*/
 
 /*
 * validate back compat by using current type in place of old type
 * to disable, add in package.json under typeValidation.broken:
 * "ISummaryAttachment": {"backCompat": false}
+*/
 declare function get_current_ISummaryAttachment(): current.ISummaryAttachment;
 declare function use_old_ISummaryAttachment(use: old.ISummaryAttachment);
 use_old_ISummaryAttachment(get_current_ISummaryAttachment());
-*/
 
 /*
 * validate forward compat by using old type in place of current type
@@ -766,19 +766,19 @@ use_old_ISummaryAuthor(get_current_ISummaryAuthor());
 * validate forward compat by using old type in place of current type
 * to disable, add in package.json under typeValidation.broken:
 * "ISummaryBlob": {"forwardCompat": false}
+*/
 declare function get_old_ISummaryBlob(): old.ISummaryBlob;
 declare function use_current_ISummaryBlob(use: current.ISummaryBlob);
 use_current_ISummaryBlob(get_old_ISummaryBlob());
-*/
 
 /*
 * validate back compat by using current type in place of old type
 * to disable, add in package.json under typeValidation.broken:
 * "ISummaryBlob": {"backCompat": false}
+*/
 declare function get_current_ISummaryBlob(): current.ISummaryBlob;
 declare function use_old_ISummaryBlob(use: old.ISummaryBlob);
 use_old_ISummaryBlob(get_current_ISummaryBlob());
-*/
 
 /*
 * validate forward compat by using old type in place of current type
@@ -838,19 +838,19 @@ use_old_ISummaryContent(get_current_ISummaryContent());
 * validate forward compat by using old type in place of current type
 * to disable, add in package.json under typeValidation.broken:
 * "ISummaryHandle": {"forwardCompat": false}
+*/
 declare function get_old_ISummaryHandle(): old.ISummaryHandle;
 declare function use_current_ISummaryHandle(use: current.ISummaryHandle);
 use_current_ISummaryHandle(get_old_ISummaryHandle());
-*/
 
 /*
 * validate back compat by using current type in place of old type
 * to disable, add in package.json under typeValidation.broken:
 * "ISummaryHandle": {"backCompat": false}
+*/
 declare function get_current_ISummaryHandle(): current.ISummaryHandle;
 declare function use_old_ISummaryHandle(use: old.ISummaryHandle);
 use_old_ISummaryHandle(get_current_ISummaryHandle());
-*/
 
 /*
 * validate forward compat by using old type in place of current type
@@ -910,19 +910,19 @@ use_old_ISummaryTokenClaims(get_current_ISummaryTokenClaims());
 * validate forward compat by using old type in place of current type
 * to disable, add in package.json under typeValidation.broken:
 * "ISummaryTree": {"forwardCompat": false}
+*/
 declare function get_old_ISummaryTree(): old.ISummaryTree;
 declare function use_current_ISummaryTree(use: current.ISummaryTree);
 use_current_ISummaryTree(get_old_ISummaryTree());
-*/
 
 /*
 * validate back compat by using current type in place of old type
 * to disable, add in package.json under typeValidation.broken:
 * "ISummaryTree": {"backCompat": false}
+*/
 declare function get_current_ISummaryTree(): current.ISummaryTree;
 declare function use_old_ISummaryTree(use: old.ISummaryTree);
 use_old_ISummaryTree(get_current_ISummaryTree());
-*/
 
 /*
 * validate forward compat by using old type in place of current type
@@ -1144,73 +1144,73 @@ use_old_ScopeType(get_current_ScopeType());
 * validate forward compat by using old type in place of current type
 * to disable, add in package.json under typeValidation.broken:
 * "SummaryObject": {"forwardCompat": false}
+*/
 declare function get_old_SummaryObject(): old.SummaryObject;
 declare function use_current_SummaryObject(use: current.SummaryObject);
 use_current_SummaryObject(get_old_SummaryObject());
-*/
 
 /*
 * validate back compat by using current type in place of old type
 * to disable, add in package.json under typeValidation.broken:
 * "SummaryObject": {"backCompat": false}
+*/
 declare function get_current_SummaryObject(): current.SummaryObject;
 declare function use_old_SummaryObject(use: old.SummaryObject);
 use_old_SummaryObject(get_current_SummaryObject());
-*/
 
 /*
 * validate forward compat by using old type in place of current type
 * to disable, add in package.json under typeValidation.broken:
 * "SummaryTree": {"forwardCompat": false}
+*/
 declare function get_old_SummaryTree(): old.SummaryTree;
 declare function use_current_SummaryTree(use: current.SummaryTree);
 use_current_SummaryTree(get_old_SummaryTree());
-*/
 
 /*
 * validate back compat by using current type in place of old type
 * to disable, add in package.json under typeValidation.broken:
 * "SummaryTree": {"backCompat": false}
+*/
 declare function get_current_SummaryTree(): current.SummaryTree;
 declare function use_old_SummaryTree(use: old.SummaryTree);
 use_old_SummaryTree(get_current_SummaryTree());
-*/
 
 /*
 * validate forward compat by using old type in place of current type
 * to disable, add in package.json under typeValidation.broken:
 * "SummaryType": {"forwardCompat": false}
+*/
 declare function get_old_SummaryType(): old.SummaryType;
 declare function use_current_SummaryType(use: current.SummaryType);
 use_current_SummaryType(get_old_SummaryType());
-*/
 
 /*
 * validate back compat by using current type in place of old type
 * to disable, add in package.json under typeValidation.broken:
 * "SummaryType": {"backCompat": false}
+*/
 declare function get_current_SummaryType(): current.SummaryType;
 declare function use_old_SummaryType(use: old.SummaryType);
 use_old_SummaryType(get_current_SummaryType());
-*/
 
 /*
 * validate forward compat by using old type in place of current type
 * to disable, add in package.json under typeValidation.broken:
 * "SummaryTypeNoHandle": {"forwardCompat": false}
+*/
 declare function get_old_SummaryTypeNoHandle(): old.SummaryTypeNoHandle;
 declare function use_current_SummaryTypeNoHandle(use: current.SummaryTypeNoHandle);
 use_current_SummaryTypeNoHandle(get_old_SummaryTypeNoHandle());
-*/
 
 /*
 * validate back compat by using current type in place of old type
 * to disable, add in package.json under typeValidation.broken:
 * "SummaryTypeNoHandle": {"backCompat": false}
+*/
 declare function get_current_SummaryTypeNoHandle(): current.SummaryTypeNoHandle;
 declare function use_old_SummaryTypeNoHandle(use: old.SummaryTypeNoHandle);
 use_old_SummaryTypeNoHandle(get_current_SummaryTypeNoHandle());
-*/
 
 /*
 * validate forward compat by using old type in place of current type
