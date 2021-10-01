@@ -15,6 +15,7 @@ import {
     numberCases,
 } from "@fluidframework/test-pairwise-generator";
 import { ILoaderOptions } from "@fluidframework/container-loader";
+import { TestDriverTypes } from "@fluidframework/test-driver-definitions";
 
 const loaderOptionsMatrix: OptionsMatrix<ILoaderOptions> = {
     cache: booleanCases,
@@ -25,10 +26,19 @@ const loaderOptionsMatrix: OptionsMatrix<ILoaderOptions> = {
     summarizeProtocolTree: [undefined],
 };
 
-export const generateLoaderOptions = (seed: number): ILoaderOptions[]=>
-    generatePairwiseOptions<ILoaderOptions>(
-        loaderOptionsMatrix,
-        seed);
+export function generateLoaderOptions(seed: number, driver?: TestDriverTypes): (ILoaderOptions | undefined)[] {
+    const matrix = {
+        ...loaderOptionsMatrix,
+    };
+    switch(driver) {
+        case "odsp":
+            matrix.summarizeProtocolTree = [undefined, true];
+            break;
+        default:
+    }
+
+    return [undefined, generatePairwiseOptions<ILoaderOptions>(matrix, seed)];
+}
 
 const gcOptionsMatrix: OptionsMatrix<IGCRuntimeOptions> = {
     disableGC: booleanCases,

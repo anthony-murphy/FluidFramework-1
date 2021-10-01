@@ -126,7 +126,7 @@ async function runnerProcess(
     seed: number,
 ): Promise<number> {
     try {
-        const loaderOptions = generateLoaderOptions(seed);
+        const loaderOptions = generateLoaderOptions(seed, driver);
         const containerOptions = generateRuntimeOptions(seed);
 
         const testDriver: ITestDriver = await createTestDriver(driver, seed, runConfig.runId);
@@ -162,7 +162,7 @@ async function runnerProcess(
                 documentServiceFactory,
                 codeLoader: createCodeLoader(containerOptions[runConfig.runId % containerOptions.length]),
                 logger,
-                options: loaderOptions[runConfig.runId % containerOptions.length],
+                options: loaderOptions[runConfig.runId % loaderOptions.length],
             });
 
             const container = await loader.resolve({ url, headers });
