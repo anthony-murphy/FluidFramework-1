@@ -9,14 +9,14 @@ import { strict as assert } from "assert";
 import { DriverErrorType } from "@fluidframework/driver-definitions";
 import {
     createOdspNetworkError,
-    fetchIncorrectResponse,
-    invalidFileNameStatusCode,
     throwOdspNetworkError,
 } from "@fluidframework/odsp-doclib-utils";
+import { NonRetryableError } from "@fluidframework/driver-utils";
 import { OdspError } from "@fluidframework/odsp-driver-definitions";
 import { IOdspSocketError } from "../contracts";
 import { getWithRetryForTokenRefresh } from "../odspUtils";
 import { errorObjectFromSocketError } from "../odspError";
+import { pkgVersion } from "../packageVersion";
 
 describe("Odsp Error", () => {
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
@@ -32,12 +32,12 @@ describe("Odsp Error", () => {
     } as Response;
 
     function createOdspNetworkErrorWithResponse(
-        errorMessage: string,
+        fluidErrorCode: string,
         statusCode: number,
     ) {
         try {
             throwOdspNetworkError(
-                errorMessage,
+                fluidErrorCode,
                 statusCode,
                 testResponse,
             );
@@ -49,13 +49,13 @@ describe("Odsp Error", () => {
 
     it("throwOdspNetworkError first-class properties", async () => {
         const networkError = createOdspNetworkErrorWithResponse(
-            "TestMessage",
+            "someErrorCode",
             400,
         );
         if (networkError.errorType !== DriverErrorType.genericNetworkError) {
             assert.fail("networkError should be a genericNetworkError");
         } else {
-            assert.notEqual(-1, networkError.message.indexOf("TestMessage"),
+            assert.notEqual(-1, networkError.message.indexOf("someErrorCode"),
                 "message should contain original message");
             assert.notEqual(-1, networkError.message.indexOf("testStatusText"),
                 "message should contain Response.statusText");
@@ -65,13 +65,13 @@ describe("Odsp Error", () => {
     });
 
     it("throwOdspNetworkError sprequestguid exists", async () => {
-        const error1: any = createOdspNetworkErrorWithResponse("Error", 400);
+        const error1: any = createOdspNetworkErrorWithResponse("someErrorCode", 400);
         const errorBag = { ...error1.getTelemetryProperties() };
         assert.equal("xxx-xxx", errorBag.sprequestguid, "sprequestguid should be 'xxx-xxx'");
     });
 
     it("throwOdspNetworkError sprequestguid undefined", async () => {
-        const error1: any = createOdspNetworkError("Error", 400);
+        const error1: any = createOdspNetworkError("someErrorCode", "Error", 400);
         const errorBag = { ...error1.getTelemetryProperties() };
         assert.equal(undefined, errorBag.sprequestguid, "sprequestguid should not be defined");
     });
@@ -85,7 +85,7 @@ describe("Odsp Error", () => {
         if (networkError.errorType !== DriverErrorType.genericNetworkError) {
             assert.fail("networkError should be a genericNetworkError");
         } else {
-            assert.equal(networkError.message, "socket.io: disconnect: testMessage");
+            assert.equal(networkError.message, "OdspSocketError (disconnect): testMessage");
             assert.equal(networkError.canRetry, false);
             assert.equal(networkError.statusCode, 400);
         }
@@ -100,7 +100,7 @@ describe("Odsp Error", () => {
         if (networkError.errorType !== DriverErrorType.genericNetworkError) {
             assert.fail("networkError should be a genericNetworkError");
         } else {
-            assert.equal(networkError.message, "socket.io: error: testMessage");
+            assert.equal(networkError.message, "OdspSocketError (error): testMessage");
             assert.equal(networkError.canRetry, false);
             assert.equal(networkError.statusCode, 400);
         }
@@ -112,11 +112,11 @@ describe("Odsp Error", () => {
             code: 429,
             retryAfter: 10,
         };
-        const networkError = errorObjectFromSocketError(socketError, "429");
+        const networkError = errorObjectFromSocketError(socketError, "handler");
         if (networkError.errorType !== DriverErrorType.throttlingError) {
             assert.fail("networkError should be a throttlingError");
         } else {
-            assert.equal(networkError.message, "socket.io: 429: testMessage");
+            assert.equal(networkError.message, "OdspSocketError (handler): testMessage");
             assert.equal(networkError.retryAfterSeconds, 10);
         }
     });
@@ -126,21 +126,10 @@ describe("Odsp Error", () => {
             if (options.refresh) {
                 return 1;
             } else {
-                throwOdspNetworkError("some error", 401);
+                throwOdspNetworkError("some error", 401, testResponse);
             }
         });
         assert.equal(res, 1, "did not successfully retried with new token");
-    });
-
-    it("invalid file name - no retry", async () => {
-        const res = getWithRetryForTokenRefresh(async (options) => {
-            if (options.refresh) {
-                return 1;
-            } else {
-                throwOdspNetworkError("some error", invalidFileNameStatusCode);
-            }
-        });
-        await assert.rejects(res, "Invalid file name should not result in retry!");
     });
 
     it("fetch incorrect response retries", async () => {
@@ -148,18 +137,22 @@ describe("Odsp Error", () => {
             if (options.refresh) {
                 return 1;
             } else {
-                throwOdspNetworkError("some error", fetchIncorrectResponse);
+                throw new NonRetryableError(
+                    "code",
+                    "some message",
+                    DriverErrorType.incorrectServerResponse,
+                    { driverVersion: pkgVersion });
             }
         });
         assert.equal(res, 1, "did not successfully retried with new token");
     });
 
-    it("Other errors - no retries", async () => {
+    it("404 errors - no retries", async () => {
         const res = getWithRetryForTokenRefresh(async (options) => {
             if (options.refresh) {
                 return 1;
             } else {
-                throwOdspNetworkError("some error", invalidFileNameStatusCode);
+                throwOdspNetworkError("some error", 404, testResponse);
             }
         });
         await assert.rejects(res, "Other errors should not result in retries!");
@@ -267,8 +260,8 @@ describe("Odsp Error", () => {
     });
 
     it("Check Epoch Mismatch error props", async () => {
-        const error: any = createOdspNetworkErrorWithResponse("Epoch Mismatch", 409);
-        assert.strictEqual(error.errorType, DriverErrorType.fileOverwrittenInStorage, "Error type should be epoch mismatch");
+        const error: any = createOdspNetworkErrorWithResponse("epochMismatch", 409);
+        assert.strictEqual(error.errorType, DriverErrorType.fileOverwrittenInStorage, "Error type should be fileOverwrittenInStorage");
         const errorBag = { ...error.getTelemetryProperties() };
         assert.strictEqual(errorBag.errorType, DriverErrorType.fileOverwrittenInStorage, "Error type should exist in prop bag");
     });

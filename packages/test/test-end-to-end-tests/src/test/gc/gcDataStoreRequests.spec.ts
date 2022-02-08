@@ -6,7 +6,6 @@
 import { strict as assert } from "assert";
 import {
     ContainerRuntimeFactoryWithDefaultDataStore,
-    DataObject,
     DataObjectFactory,
 } from "@fluidframework/aqueduct";
 import { TelemetryNullLogger } from "@fluidframework/common-utils";
@@ -15,26 +14,18 @@ import { IRequest } from "@fluidframework/core-interfaces";
 import { ISummaryConfiguration } from "@fluidframework/protocol-definitions";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { ITestObjectProvider } from "@fluidframework/test-utils";
-import { describeNoCompat } from "@fluidframework/test-version-utils";
+import { describeFullCompat } from "@fluidframework/test-version-utils";
 import { IAckedSummary, IContainerRuntimeOptions, SummaryCollection } from "@fluidframework/container-runtime";
-import { flattenRuntimeOptions } from "../flattenRuntimeOptions";
+import { IContainerRuntimeBase } from "@fluidframework/runtime-definitions";
+import { TestDataObject } from "./mockSummarizerClient";
 
-class TestDataObject extends DataObject {
-    public get _root() {
-        return this.root;
-    }
-
-    public get _runtime() {
-        return this.runtime;
-    }
-
-    public get _context() {
-        return this.context;
-    }
-}
-
-// REVIEW: enable compat testing?
-describeNoCompat("GC Data Store Requests", (getTestObjectProvider) => {
+/**
+ * Validates this scenario: When a data store is shared with an external app, if the data store becomes unreferenced
+ * by the time it is requested via this external app, we return a failure (404).
+ * Basically, for data stores that are unreferenced in the base snapshot that a container loads from, we return a
+ * failure (404) when they are requested with "externalRequest" flag in the request header.
+ */
+describeFullCompat("GC Data Store Requests", (getTestObjectProvider) => {
     let provider: ITestObjectProvider;
     const dataObjectFactory = new DataObjectFactory(
         "TestDataObject",
@@ -49,7 +40,6 @@ describeNoCompat("GC Data Store Requests", (getTestObjectProvider) => {
     };
     const runtimeOptions: IContainerRuntimeOptions = {
         summaryOptions: {
-            generateSummaries: true,
             initialSummarizerDelayMs: 10,
             summaryConfigOverrides,
         },
@@ -57,14 +47,16 @@ describeNoCompat("GC Data Store Requests", (getTestObjectProvider) => {
             gcAllowed: true,
         },
     };
+    const innerRequestHandler = async (request: IRequest, runtime: IContainerRuntimeBase) =>
+        runtime.IFluidHandleContext.resolveHandle(request);
     const runtimeFactory = new ContainerRuntimeFactoryWithDefaultDataStore(
         dataObjectFactory,
         [
             [dataObjectFactory.type, Promise.resolve(dataObjectFactory)],
         ],
         undefined,
-        undefined,
-        flattenRuntimeOptions(runtimeOptions),
+        [innerRequestHandler],
+        runtimeOptions,
     );
 
     let mainContainer: IContainer;
@@ -116,7 +108,7 @@ describeNoCompat("GC Data Store Requests", (getTestObjectProvider) => {
         const directoryKey = "dataStore2";
 
         // Create a second data store (dataStore2) and add its handle to mark it as referenced.
-        const dataStore2 = await dataObjectFactory.createInstance(mainDataStore._context.containerRuntime);
+        const dataStore2 = await dataObjectFactory.createInstance(mainDataStore.containerRuntime);
         mainDataStore._root.set(directoryKey, dataStore2.handle);
 
         // Wait for summary that contains the above set.
@@ -151,7 +143,7 @@ describeNoCompat("GC Data Store Requests", (getTestObjectProvider) => {
         const directoryKey = "dataStore2";
 
         // Create a second data store (dataStore2) and add its handle to mark it as referenced.
-        const dataStore2 = await dataObjectFactory.createInstance(mainDataStore._context.containerRuntime);
+        const dataStore2 = await dataObjectFactory.createInstance(mainDataStore.containerRuntime);
         mainDataStore._root.set(directoryKey, dataStore2.handle);
 
         // Wait for summary that contains the above set.
@@ -195,7 +187,7 @@ describeNoCompat("GC Data Store Requests", (getTestObjectProvider) => {
         const directoryKey = "dataStore2";
 
         // Create a second data store (dataStore2) and add its handle to mark it as referenced.
-        const dataStore2 = await dataObjectFactory.createInstance(mainDataStore._context.containerRuntime);
+        const dataStore2 = await dataObjectFactory.createInstance(mainDataStore.containerRuntime);
         mainDataStore._root.set(directoryKey, dataStore2.handle);
 
         // Wait for summary that contains the above set.
@@ -212,7 +204,6 @@ describeNoCompat("GC Data Store Requests", (getTestObjectProvider) => {
         // dataStore2 will have it marked as unreferenced.
         const gcDisabledRuntimeOptions: IContainerRuntimeOptions = {
             summaryOptions: {
-                generateSummaries: true,
                 initialSummarizerDelayMs: 10,
                 summaryConfigOverrides,
             },
@@ -226,8 +217,8 @@ describeNoCompat("GC Data Store Requests", (getTestObjectProvider) => {
                 [dataObjectFactory.type, Promise.resolve(dataObjectFactory)],
             ],
             undefined,
-            undefined,
-            flattenRuntimeOptions(gcDisabledRuntimeOptions),
+            [innerRequestHandler],
+            gcDisabledRuntimeOptions,
         );
         const container2 = await loadContainer(summaryVersion, gcDisabledRuntimeFactory);
 

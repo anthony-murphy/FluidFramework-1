@@ -10,6 +10,7 @@ import { DriverError } from '@fluidframework/driver-definitions';
 import { IClientConfiguration } from '@fluidframework/protocol-definitions';
 import { IConnect } from '@fluidframework/protocol-definitions';
 import { IConnected } from '@fluidframework/protocol-definitions';
+import { IDisposable } from '@fluidframework/common-definitions';
 import { IDocumentDeltaConnection } from '@fluidframework/driver-definitions';
 import { IDocumentDeltaConnectionEvents } from '@fluidframework/driver-definitions';
 import { IDocumentMessage } from '@fluidframework/protocol-definitions';
@@ -21,27 +22,33 @@ import { ITokenClaims } from '@fluidframework/protocol-definitions';
 import { TypedEventEmitter } from '@fluidframework/common-utils';
 
 // @public
-export class DocumentDeltaConnection extends TypedEventEmitter<IDocumentDeltaConnectionEvents> implements IDocumentDeltaConnection {
-    protected constructor(socket: SocketIOClient.Socket, documentId: string, logger: ITelemetryLogger);
+export class DocumentDeltaConnection extends TypedEventEmitter<IDocumentDeltaConnectionEvents> implements IDocumentDeltaConnection, IDisposable {
+    protected constructor(socket: SocketIOClient.Socket, documentId: string, logger: ITelemetryLogger, enableLongPollingDowngrades?: boolean);
     // (undocumented)
     protected addTrackedListener(event: string, listener: (...args: any[]) => void): void;
     checkpointSequenceNumber: number | undefined;
     get claims(): ITokenClaims;
     get clientId(): string;
-    close(): void;
-    // (undocumented)
-    protected closeCore(socketProtocolError: boolean, err: DriverError): void;
-    protected closed: boolean;
     protected createErrorObject(handler: string, error?: any, canRetry?: boolean): DriverError;
     // (undocumented)
     get details(): IConnected;
-    protected disconnect(socketProtocolError: boolean, reason: DriverError): void;
+    protected disconnect(socketProtocolError: boolean, reason: any): void;
+    dispose(): void;
+    // (undocumented)
+    protected disposeCore(socketProtocolError: boolean, err: any): void;
+    // (undocumented)
+    get disposed(): boolean;
+    protected _disposed: boolean;
     // (undocumented)
     documentId: string;
     // (undocumented)
     protected earlyOpHandler: (documentId: string, msgs: ISequencedDocumentMessage[]) => void;
     // (undocumented)
     protected earlySignalHandler: (msg: ISignalMessage) => void;
+    // (undocumented)
+    protected emitMessages(type: string, messages: IDocumentMessage[][]): void;
+    // (undocumented)
+    static readonly eventsAlwaysForwarded: string[];
     // (undocumented)
     static readonly eventsToForward: string[];
     get existing(): boolean;
@@ -53,7 +60,9 @@ export class DocumentDeltaConnection extends TypedEventEmitter<IDocumentDeltaCon
     get initialMessages(): ISequencedDocumentMessage[];
     get initialSignals(): ISignalMessage[];
     // (undocumented)
-    protected readonly logger: ITelemetryLogger;
+    protected readonly isBatchManagerDisabled: boolean;
+    // @deprecated (undocumented)
+    protected get logger(): ITelemetryLogger;
     get maxMessageSize(): number;
     get mode(): ConnectionMode;
     // (undocumented)
@@ -64,6 +73,8 @@ export class DocumentDeltaConnection extends TypedEventEmitter<IDocumentDeltaCon
     // (undocumented)
     protected readonly socket: SocketIOClient.Socket;
     submit(messages: IDocumentMessage[]): void;
+    // (undocumented)
+    protected submitCore(type: string, messages: IDocumentMessage[]): void;
     // (undocumented)
     protected readonly submitManager: BatchManager<IDocumentMessage[]>;
     submitSignal(message: IDocumentMessage): void;

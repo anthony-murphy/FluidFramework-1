@@ -3,14 +3,15 @@
  * Licensed under the MIT License.
  */
 
-import { assert } from "@fluidframework/common-utils";
-import { DataCorruptionError } from "@fluidframework/container-utils";
+import { IDisposable } from "@fluidframework/common-definitions";
+import { assert, Lazy } from "@fluidframework/common-utils";
+import { DataProcessingError } from "@fluidframework/container-utils";
 import {
     ISequencedDocumentMessage,
 } from "@fluidframework/protocol-definitions";
 import { FlushMode } from "@fluidframework/runtime-definitions";
 import Deque from "double-ended-queue";
-import { ContainerRuntime, ContainerMessageType } from "./containerRuntime";
+import { ContainerRuntime, ContainerMessageType, isRuntimeMessage } from "./containerRuntime";
 
 /**
  * This represents a message that has been submitted and is added to the pending queue when `submit` is called on the
@@ -65,11 +66,15 @@ export interface IPendingLocalState {
  *
  * It verifies that all the ops are acked, are received in the right order and batch information is correct.
  */
-export class PendingStateManager {
+export class PendingStateManager implements IDisposable {
     private readonly pendingStates = new Deque<IPendingState>();
     private readonly initialStates: Deque<IPendingState>;
-    private readonly initialClientId: string | undefined;
-    private readonly initialClientSeqNum: number;
+    private readonly previousClientIds = new Set<string>();
+    private readonly firstStashedCSN: number = -1;
+    private readonly disposeOnce = new Lazy<void>(() => {
+        this.initialStates.clear();
+        this.pendingStates.clear();
+    });
 
     // Maintains the count of messages that are currently unacked.
     private pendingMessagesCount: number = 0;
@@ -113,19 +118,20 @@ export class PendingStateManager {
         initialState: IPendingLocalState | undefined,
     ) {
         this.initialStates = new Deque<IPendingState>(initialState?.pendingStates ?? []);
-        this.initialClientId = initialState?.clientId;
 
-        // get client sequence number of first actual message
-        this.initialClientSeqNum = -1;
-        for (let i = 0; i < this.initialStates.length; ++i) {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            const state = this.initialStates.get(i)!;
-            if (state.type === "message") {
-                this.initialClientSeqNum = state.clientSequenceNumber;
-                break;
+        if (initialState) {
+            if (initialState?.clientId) {
+                this.previousClientIds.add(initialState.clientId);
             }
+            // get stashed op count and client sequence number of first op
+            const messages = initialState.pendingStates
+                .filter((state) => state.type === "message") as IPendingMessage[];
+            this.firstStashedCSN = messages[0].clientSequenceNumber;
         }
     }
+
+    public get disposed() { return this.disposeOnce.evaluated; }
+    public readonly dispose = () => this.disposeOnce.value;
 
     /**
      * Called when a message is submitted locally. Adds the message and the associated details to the pending state
@@ -163,18 +169,19 @@ export class PendingStateManager {
      * @param flushMode - The flushMode that was updated.
      */
     public onFlushModeUpdated(flushMode: FlushMode) {
-        if (flushMode === FlushMode.Automatic) {
+        if (flushMode === FlushMode.Immediate) {
             const previousState = this.pendingStates.peekBack();
 
-            // We don't have to track a previous "flush" state because FlushMode.Automatic flushes the messages. So,
-            // just tracking this FlushMode.Automatic is enough.
+            // We don't have to track a previous "flush" state because FlushMode.Immediate flushes the messages. So,
+            // just tracking this FlushMode.Immediate is enough.
             if (previousState?.type === "flush") {
                 this.pendingStates.removeBack();
             }
 
-            // If no messages were sent between FlushMode.Manual and FlushMode.Automatic, then we do not have to track
-            // both these states. Remove FlushMode.Manual from the pending queue and return.
-            if (previousState?.type === "flushMode" && previousState.flushMode === FlushMode.Manual) {
+            // If no messages were sent between FlushMode.TurnBased and FlushMode.Immediate,
+            // then we do not have to track both these states.
+            // Remove FlushMode.TurnBased from the pending queue and return.
+            if (previousState?.type === "flushMode" && previousState.flushMode === FlushMode.TurnBased) {
                 this.pendingStates.removeBack();
                 return;
             }
@@ -191,9 +198,9 @@ export class PendingStateManager {
      * Called when flush() is called on the ContainerRuntime to manually flush messages.
      */
     public onFlush() {
-        // If the FlushMode is Automatic, we should not track this flush call as it is only applicable when FlushMode
-        // is Manual.
-        if (this.containerRuntime.flushMode === FlushMode.Automatic) {
+        // If the FlushMode is Immediate, we should not track this flush call as it is only applicable when FlushMode
+        // is TurnBased.
+        if (this.containerRuntime.flushMode === FlushMode.Immediate) {
             return;
         }
 
@@ -261,20 +268,57 @@ export class PendingStateManager {
      * Listens for ACKs of stashed ops
      */
     private processRemoteMessage(message: ISequencedDocumentMessage) {
+        if (!isRuntimeMessage(message)) {
+            return { localAck: false, localOpMetadata: undefined };
+        }
+
+        // this message was a pending op that was actually sent successfully
+        const isOriginalClientId = message.clientId === Array.from(this.previousClientIds)[0] &&
+            message.clientSequenceNumber >= this.firstStashedCSN;
+        // this message is a pending or stashed op that was resubmitted
+        const isNewClientId = Array.from(this.previousClientIds).indexOf(message.clientId) > 0;
+
         // if this is an ack for a stashed op, dequeue one message.
         // we should have seen its ref seq num by now and the DDS should be ready for it to be ACKed
-        if (message.clientId === this.initialClientId && message.clientSequenceNumber >= this.initialClientSeqNum) {
+        if (isOriginalClientId || isNewClientId) {
+            assert(this.clientId === undefined, 0x28b /* "multiple clients connected with stashed ops" */);
             while (!this.pendingStates.isEmpty()) {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 const nextState = this.pendingStates.shift()!;
                 // if it's not a message just drop it and keep looking
                 if (nextState.type === "message") {
+                    this.assertOpMatch(nextState, message, isOriginalClientId);
                     return { localAck: true, localOpMetadata: nextState.localOpMetadata };
                 }
             }
         }
 
+        if (message.type === ContainerMessageType.Rejoin && this.previousClientIds.has(message.contents?.clientId)) {
+            this.previousClientIds.add(message.clientId);
+        }
+
         return { localAck: false, localOpMetadata: undefined };
+    }
+
+    private assertOpMatch(state: IPendingMessage, message: ISequencedDocumentMessage, isOriginalClientId: boolean) {
+        assert(message.type === state.messageType, 0x28c /* "different message type" */);
+        assert(message.clientSequenceNumber === state.clientSequenceNumber || !isOriginalClientId,
+            0x28d /* "client sequence number doesn't match" */);
+        switch(message.type) {
+            case ContainerMessageType.Attach:
+                assert(message.contents.id === state.content.id, 0x28e /* "datastore ID doesn't match" */);
+                break;
+            case ContainerMessageType.FluidDataStoreOp:
+                assert(message.contents.address === state.content.address, 0x28f /* "address doesn't match" */);
+                break;
+            case ContainerMessageType.BlobAttach:
+                // todo: assert we have blob storage, assert blob IDs match, remove blob from blob storage since it made
+                // it through successfully
+                break;
+            case ContainerMessageType.Rejoin:
+            default:
+                throw new Error(`${message.type} not expected`);
+        }
     }
 
     /**
@@ -294,9 +338,10 @@ export class PendingStateManager {
         // Processing part - Verify that there has been no data corruption.
         // The clientSequenceNumber of the incoming message must match that of the pending message.
         if (pendingState.clientSequenceNumber !== message.clientSequenceNumber) {
-            // Close the container because this indicates data corruption.
-            const error = new DataCorruptionError(
-                "Unexpected ack received",
+            // Close the container because this could indicate data corruption.
+            const error = new DataProcessingError(
+                "unexpectedAckReceived",
+                "unexpectedAckReceived",
                 {
                     clientId: message.clientId,
                     sequenceNumber: message.sequenceNumber,
@@ -332,7 +377,7 @@ export class PendingStateManager {
         // If the pending state is of type "flushMode", it must be Manual since Automatic flush mode is processed
         // after a message is processed and not before.
         if (pendingState.type === "flushMode") {
-            assert(pendingState.flushMode === FlushMode.Manual,
+            assert(pendingState.flushMode === FlushMode.TurnBased,
                 0x16a /* "Flush mode should be manual when processing batch begin" */);
         }
 
@@ -354,13 +399,13 @@ export class PendingStateManager {
             return;
         }
 
-        // If the next pending state is of type "flushMode", it must be Automatic and if so, we need to remove it from
+        // If the next pending state is of type "flushMode", it must be Immediate and if so, we need to remove it from
         // the queue.
         // Note that we do not remove the type "flush" from the queue because it indicates the end of one batch and the
         // beginning of a new one. So, it will removed when the next batch begin is processed.
         if (nextPendingState.type === "flushMode") {
-            assert(nextPendingState.flushMode === FlushMode.Automatic,
-                0x16c /* "Flush mode is set to Manual in the middle of processing a batch" */);
+            assert(nextPendingState.flushMode === FlushMode.Immediate,
+                0x16c /* "Flush mode is set to TurnBased in the middle of processing a batch" */);
             this.pendingStates.shift();
         }
 

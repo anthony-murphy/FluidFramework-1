@@ -13,6 +13,7 @@ import {
     IRequest,
     IResponse,
     IFluidHandle,
+    FluidObject,
 } from "@fluidframework/core-interfaces";
 import { FluidObjectHandle, mixinRequestHandler } from "@fluidframework/datastore";
 import { ISharedMap, SharedMap } from "@fluidframework/map";
@@ -28,6 +29,7 @@ import { IFluidDataStoreRuntime } from "@fluidframework/datastore-definitions";
 import { SharedString } from "@fluidframework/sequence";
 import { IFluidHTMLOptions, IFluidHTMLView } from "@fluidframework/view-interfaces";
 import { EditorView } from "prosemirror-view";
+import { ILoader } from "@fluidframework/container-definitions";
 import { nodeTypeKey } from "./fluidBridge";
 import { FluidCollabManager, IProvideRichTextEditor } from "./fluidCollabManager";
 
@@ -102,9 +104,9 @@ class ProseMirrorView implements IFluidHTMLView {
  */
 export class ProseMirror extends EventEmitter
     implements IFluidLoadable, IFluidRouter, IFluidHTMLView, IProvideRichTextEditor {
-    public static async load(runtime: IFluidDataStoreRuntime, context: IFluidDataStoreContext) {
+    public static async load(runtime: IFluidDataStoreRuntime, context: IFluidDataStoreContext, existing: boolean) {
         const collection = new ProseMirror(runtime, context);
-        await collection.initialize();
+        await collection.initialize(existing);
 
         return collection;
     }
@@ -135,8 +137,8 @@ export class ProseMirror extends EventEmitter
         return defaultFluidObjectRequestHandler(this, request);
     }
 
-    private async initialize() {
-        if (!this.runtime.existing) {
+    private async initialize(existing: boolean) {
+        if (!existing) {
             this.root = SharedMap.create(this.runtime, "root");
             const text = SharedString.create(this.runtime);
 
@@ -151,10 +153,11 @@ export class ProseMirror extends EventEmitter
         this.root = await this.runtime.getChannel("root") as ISharedMap;
         this.text = await this.root.get<IFluidHandle<SharedString>>("text")!.get();
 
-        if (this.context.scope.ILoader === undefined) {
+        const scope: FluidObject<ILoader> = this.context.scope;
+        if (scope.ILoader === undefined) {
             throw new Error("scope must include ILoader");
         }
-        this.collabManager = new FluidCollabManager(this.text, this.context.scope.ILoader);
+        this.collabManager = new FluidCollabManager(this.text, scope.ILoader);
 
         // Access for debugging
         // eslint-disable-next-line @typescript-eslint/dot-notation
@@ -175,18 +178,22 @@ class ProseMirrorFactory implements IFluidDataStoreFactory {
 
     public get IFluidDataStoreFactory() { return this; }
 
-    public async instantiateDataStore(context: IFluidDataStoreContext) {
+    public async instantiateDataStore(context: IFluidDataStoreContext, existing: boolean) {
         const runtimeClass = mixinRequestHandler(
             async (request: IRequest) => {
                 const router = await routerP;
                 return router.request(request);
             });
 
-        const runtime = new runtimeClass(context, new Map([
-            SharedMap.getFactory(),
-            SharedString.getFactory(),
-        ].map((factory) => [factory.type, factory])));
-        const routerP = ProseMirror.load(runtime, context);
+        const runtime = new runtimeClass(
+            context,
+            new Map([
+                SharedMap.getFactory(),
+                SharedString.getFactory(),
+            ].map((factory) => [factory.type, factory])),
+            existing,
+        );
+        const routerP = ProseMirror.load(runtime, context, existing);
 
         return runtime;
     }

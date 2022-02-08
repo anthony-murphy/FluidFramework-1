@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import BTree from '@taylorsw04/sorted-btree';
+import BTree from 'sorted-btree';
 import LRU from 'lru-cache';
 import { assert, fail } from './Common';
 import { Revision } from './LogViewer';
@@ -47,6 +47,8 @@ export class RevisionValueCache<TValue> {
 		 * The first revision within the retention window. All entries with revisions >= retentionWindowStart will be retained.
 		 * Must be >= 0.
 		 */
+		// False positive
+		// eslint-disable-next-line @typescript-eslint/prefer-readonly
 		private retentionWindowStart: Revision,
 		/**
 		 * Optional list of entries to permanently retain.

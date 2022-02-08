@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import * as ops from "./ops";
+import { ICombiningOp } from "./ops";
 
 export interface MapLike<T> {
     [index: string]: T;
@@ -21,7 +21,7 @@ export interface IConsensusValue {
     value: any;
 }
 
-export function combine(combiningInfo: ops.ICombiningOp, currentValue: any, newValue: any, seq?: number) {
+export function combine(combiningInfo: ICombiningOp, currentValue: any, newValue: any, seq?: number) {
     let _currentValue = currentValue;
 
     if (_currentValue === undefined) {
@@ -97,7 +97,7 @@ export function matchProperties(a: PropertySet | undefined, b: PropertySet | und
 export function extend<T>(
     base: MapLike<T>,
     extension: MapLike<T> | undefined,
-    combiningOp?: ops.ICombiningOp,
+    combiningOp?: ICombiningOp,
     seq?: number,
 ) {
     if (extension !== undefined) {
@@ -140,7 +140,7 @@ export function clone<T>(extension: MapLike<T> | undefined) {
 export function addProperties(
     oldProps: PropertySet | undefined,
     newProps: PropertySet,
-    op?: ops.ICombiningOp,
+    op?: ICombiningOp,
     seq?: number,
 ) {
     let _oldProps = oldProps;
@@ -168,16 +168,5 @@ export function extendIfUndefined<T>(base: MapLike<T>, extension: MapLike<T> | u
 
 // Create a MapLike with good performance.
 export function createMap<T>(): MapLike<T> {
-    const map = Object.create(null);
-
-    // Using 'delete' on an object causes V8 to put the object in dictionary mode.
-    // This disables creation of hidden classes, which are expensive when an object is
-    // constantly changing shape.
-    // eslint-disable-next-line @typescript-eslint/dot-notation
-    map["__"] = undefined;
-    // eslint-disable-next-line @typescript-eslint/dot-notation, @typescript-eslint/no-dynamic-delete
-    delete map["__"];
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    return map;
+    return Object.create(null) as MapLike<T>;
 }

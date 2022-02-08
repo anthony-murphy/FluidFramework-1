@@ -14,13 +14,10 @@ import {
     IResponse,
     IFluidHandle,
     IFluidCodeDetails,
+    FluidObject,
 } from "@fluidframework/core-interfaces";
 import { FluidObjectHandle, mixinRequestHandler } from "@fluidframework/datastore";
-import {
-    IContainerContext,
-    IRuntime,
-    IRuntimeFactory,
-} from "@fluidframework/container-definitions";
+import { IContainerContext, ILoader } from "@fluidframework/container-definitions";
 import { ContainerRuntime } from "@fluidframework/container-runtime";
 import { IDocumentFactory } from "@fluid-example/host-service-interfaces";
 import { ISharedMap, SharedMap } from "@fluidframework/map";
@@ -32,11 +29,9 @@ import {
     IFluidDataStoreFactory,
 } from "@fluidframework/runtime-definitions";
 import { IFluidHTMLOptions, IFluidHTMLView } from "@fluidframework/view-interfaces";
-import {
-    innerRequestHandler,
-    buildRuntimeRequestHandler,
-} from "@fluidframework/request-handler";
+import { buildRuntimeRequestHandler } from "@fluidframework/request-handler";
 import { defaultFluidObjectRequestHandler, defaultRouteRequestHandler } from "@fluidframework/aqueduct";
+import { RuntimeFactoryHelper } from "@fluidframework/runtime-utils";
 import Axios from "axios";
 
 import * as scribe from "./tools-core";
@@ -213,9 +208,8 @@ function initialize(
             console.log(`Error downloading document ${error}`);
         });
     }
-
-    const documentFactory: IDocumentFactory | undefined = context.scope ?
-        context.scope.IDocumentFactory : undefined;
+    const maybeFactory: FluidObject<IDocumentFactory> | undefined = context.scope;
+    const documentFactory: IDocumentFactory | undefined = maybeFactory?.IDocumentFactory;
     if (documentFactory) {
         createButton.classList.remove("hidden");
     } else {
@@ -278,13 +272,14 @@ function initialize(
             }
             typingDetails.classList.remove("hidden");
 
-            if (context.scope.ILoader === undefined) {
+            const scope: FluidObject<ILoader> = context.scope;
+            if (scope.ILoader === undefined) {
                 throw new Error("scope must contain ILoader");
             }
 
             // Start typing and register to update the UI
             const typeP = scribe.type(
-                context.scope.ILoader,
+                scope.ILoader,
                 url,
                 root,
                 runtime,
@@ -390,9 +385,9 @@ const html =
 export class Scribe
     extends EventEmitter
     implements IFluidLoadable, IFluidRouter, IFluidHTMLView {
-    public static async load(runtime: IFluidDataStoreRuntime, context: IFluidDataStoreContext) {
+    public static async load(runtime: IFluidDataStoreRuntime, context: IFluidDataStoreContext, existing: boolean) {
         const collection = new Scribe(runtime, context);
-        await collection.initialize();
+        await collection.initialize(existing);
 
         return collection;
     }
@@ -440,8 +435,8 @@ export class Scribe
         }
     }
 
-    private async initialize() {
-        if (!this.runtime.existing) {
+    private async initialize(existing: boolean) {
+        if (!existing) {
             this.root = SharedMap.create(this.runtime, "root");
             this.root.bindToContext();
         } else {
@@ -450,47 +445,54 @@ export class Scribe
     }
 }
 
-class ScribeFactory implements IFluidDataStoreFactory, IRuntimeFactory {
+const defaultComponentId = "default";
+
+class ScribeFactory extends RuntimeFactoryHelper implements IFluidDataStoreFactory {
     public static readonly type = "@fluid-example/scribe";
+    private readonly registry = new Map<string, Promise<IFluidDataStoreFactory>>([
+        [ScribeFactory.type, Promise.resolve(this)],
+    ]);
     public readonly type = ScribeFactory.type;
 
     public get IFluidDataStoreFactory() { return this; }
-    public get IRuntimeFactory() { return this; }
 
-    public async instantiateRuntime(context: IContainerContext): Promise<IRuntime> {
-        const registry = new Map<string, Promise<IFluidDataStoreFactory>>([
-            [ScribeFactory.type, Promise.resolve(this)],
-        ]);
+    public async instantiateFirstTime(runtime: ContainerRuntime): Promise<void> {
+        await runtime.createRootDataStore(ScribeFactory.type, defaultComponentId);
+    }
 
-        const defaultComponentId = "default";
-
-        const runtime = await ContainerRuntime.load(
+    public async preInitialize(
+        context: IContainerContext,
+        existing: boolean,
+    ): Promise<ContainerRuntime> {
+        const runtime: ContainerRuntime = await ContainerRuntime.load(
             context,
-            registry,
+            this.registry,
             buildRuntimeRequestHandler(
                 defaultRouteRequestHandler(defaultComponentId),
-                innerRequestHandler,
-            ));
-
-        // On first boot create the base component
-        if (!runtime.existing) {
-            await runtime.createRootDataStore(ScribeFactory.type, defaultComponentId);
-        }
+            ),
+            undefined, // runtimeOptions
+            undefined, // containerScope
+            existing,
+        );
 
         return runtime;
     }
 
-    public async instantiateDataStore(context: IFluidDataStoreContext) {
+    public async instantiateDataStore(context: IFluidDataStoreContext, existing: boolean) {
         const runtimeClass = mixinRequestHandler(
             async (request: IRequest) => {
                 const router = await routerP;
                 return router.request(request);
             });
 
-        const runtime = new runtimeClass(context, new Map([
-            SharedMap.getFactory(),
-        ].map((factory) => [factory.type, factory])));
-        const routerP = Scribe.load(runtime, context);
+        const runtime = new runtimeClass(
+            context,
+            new Map([
+                SharedMap.getFactory(),
+            ].map((factory) => [factory.type, factory])),
+            existing,
+        );
+        const routerP = Scribe.load(runtime, context, existing);
 
         return runtime;
     }

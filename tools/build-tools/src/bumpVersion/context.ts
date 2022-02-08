@@ -8,7 +8,7 @@ import * as path from "path";
 import { VersionBag, ReferenceVersionBag } from "./versionBag";
 import { commonOptions } from "../common/commonOptions";
 import { Timer } from "../common/timer";
-import { GitRepo, fatal } from "./utils";
+import { GitRepo, fatal, prereleaseSatisfies } from "./utils";
 import { getPackageManifest } from "../common/fluidUtils";
 import { FluidRepo, IPackageManifest } from "../common/fluidRepo";
 import { MonoRepo, MonoRepoKind } from "../common/monoRepo";
@@ -17,7 +17,7 @@ import { logVerbose } from "../common/logging";
 
 import * as semver from "semver";
 
-export type VersionBumpType = "minor" | "patch";
+export type VersionBumpType = "major" | "minor" | "patch";
 export type VersionChangeType = VersionBumpType | semver.SemVer;
 
 export class Context {
@@ -136,7 +136,8 @@ export class Context {
                     let depVersion = depBuildPackage.version;
                     const reference = `${pkg.name}@local`;
                     // Check if the version in the repo is compatible with the version described in the dependency.
-                    if (semver.satisfies(`${depVersion}-0`, version)) {
+
+                    if (prereleaseSatisfies(depBuildPackage.version, version)) {
                         if (!depVersions.get(depBuildPackage)) {
                             logVerbose(`${depBuildPackage.nameColored}: Add from ${pkg.nameColored} ${version}`);
                             if (depBuildPackage.monoRepo) {

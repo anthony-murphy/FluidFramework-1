@@ -4,6 +4,7 @@
  */
 
 import {
+    ICache,
     IDocumentStorage,
     IProducer,
     ITenantManager,
@@ -22,13 +23,22 @@ export function create(
     config: Provider,
     tenantManager: ITenantManager,
     throttler: IThrottler,
+    singleUseTokenCache: ICache,
     storage: IDocumentStorage,
-    mongoManager: MongoManager,
+    operationsDbMongoManager: MongoManager,
     producer: IProducer,
-    appTenants: IAlfredTenant[]): Router {
+    appTenants: IAlfredTenant[],
+    globalDbMongoManager?: MongoManager): Router {
     const router: Router = Router();
-    const deltasRoute = deltas.create(config, tenantManager, mongoManager, appTenants, throttler);
-    const documentsRoute = documents.create(storage, appTenants, throttler, config, tenantManager);
+    const deltasRoute = deltas.create(config, tenantManager, operationsDbMongoManager, appTenants, throttler);
+    const documentsRoute = documents.create(
+        storage,
+        appTenants,
+        throttler,
+        singleUseTokenCache,
+        config,
+        tenantManager,
+        globalDbMongoManager);
     const apiRoute = api.create(config, producer, tenantManager, storage, throttler);
 
     router.use(cors());

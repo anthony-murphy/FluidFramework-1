@@ -4,9 +4,10 @@
  */
 
 import { ITelemetryLogger } from "@fluidframework/common-definitions";
-import { delay, PromiseCache } from "@fluidframework/common-utils";
-import { canRetryOnError, getRetryDelayFromError } from "@fluidframework/driver-utils";
+import { assert, delay } from "@fluidframework/common-utils";
+import { canRetryOnError, getRetryDelayFromError, NonRetryableError } from "@fluidframework/driver-utils";
 import { PerformanceEvent } from "@fluidframework/telemetry-utils";
+import { DriverErrorType } from "@fluidframework/driver-definitions";
 import {
     IOdspUrlParts,
     OdspResourceTokenFetchOptions,
@@ -16,9 +17,10 @@ import {
 } from "@fluidframework/odsp-driver-definitions";
 import { getUrlAndHeadersWithAuth } from "./getUrlAndHeadersWithAuth";
 import { fetchHelper, getWithRetryForTokenRefresh } from "./odspUtils";
+import { pkgVersion as driverVersion } from "./packageVersion";
 
 // Store cached responses for the lifetime of web session as file link remains the same for given file item
-const fileLinkCache = new PromiseCache<string, string | undefined>();
+const fileLinkCache = new Map<string, Promise<string>>();
 
 /**
  * Returns file link for a file with given drive and item ids.
@@ -39,10 +41,11 @@ export async function getFileLink(
     odspUrlParts: IOdspUrlParts,
     identityType: IdentityType,
     logger: ITelemetryLogger,
-): Promise<string | undefined> {
+): Promise<string> {
     const cacheKey = `${odspUrlParts.siteUrl}_${odspUrlParts.driveId}_${odspUrlParts.itemId}`;
-    if (fileLinkCache.has(cacheKey)) {
-        return fileLinkCache.get(cacheKey);
+    const maybeFileLinkCacheEntry = fileLinkCache.get(cacheKey);
+    if (maybeFileLinkCacheEntry !== undefined) {
+        return maybeFileLinkCacheEntry;
     }
 
     const valueGenerator = async function() {
@@ -54,10 +57,11 @@ export async function getFileLink(
                 result = await getFileLinkCore(getToken, odspUrlParts, identityType, logger);
                 success = true;
             } catch (err) {
-                // If it is not retriable, then just return undefined
+                // If it is not retriable, then just throw
                 if (!canRetryOnError(err)) {
-                    fileLinkCache.remove(cacheKey);
-                    return undefined;
+                    // Delete from the cache to permit retrying later.
+                    fileLinkCache.delete(cacheKey);
+                    throw err;
                 }
                 // If the error is throttling error, then wait for the specified time before retrying.
                 // If the waitTime is not specified, then we start with retrying immediately to max of 8s.
@@ -65,10 +69,14 @@ export async function getFileLink(
                 await delay(retryAfterMs);
             }
         } while (!success);
+
+        // We are guaranteed to run the getFileLinkCore at least once with successful result (which must be a string)
+        assert(result !== undefined, 0x292 /* "Unexpected undefined result from getFileLinkCore" */);
         return result;
     };
-    fileLinkCache.add(cacheKey, valueGenerator);
-    return fileLinkCache.get(cacheKey);
+    const fileLink = valueGenerator();
+    fileLinkCache.set(cacheKey, fileLink);
+    return fileLink;
 }
 
 async function getFileLinkCore(
@@ -76,11 +84,8 @@ async function getFileLinkCore(
     odspUrlParts: IOdspUrlParts,
     identityType: IdentityType,
     logger: ITelemetryLogger,
-): Promise<string | undefined> {
-    const fileItem = await getFileItemLite(getToken, odspUrlParts, logger);
-    if (!fileItem) {
-        return undefined;
-    }
+): Promise<string> {
+    const fileItem = await getFileItemLite(getToken, odspUrlParts, logger, identityType === "Consumer");
 
     // ODC canonical link does not require any additional processing
     if (identityType === "Consumer") {
@@ -100,7 +105,10 @@ async function getFileLinkCore(
                 const { url, headers } = getUrlAndHeadersWithAuth(
                     `${odspUrlParts.siteUrl}/_api/web/GetFileByUrl(@a1)/ListItemAllFields/GetSharingInformation?@a1=${
                         encodeURIComponent(`'${fileItem.webDavUrl}'`)
-                    }`, tokenFromResponse(token));
+                    }`,
+                    tokenFromResponse(token),
+                    false,
+                );
                 const requestInit = {
                     method: "POST",
                     headers: {
@@ -111,11 +119,18 @@ async function getFileLinkCore(
                 };
                 const response = await fetchHelper(url, requestInit);
                 additionalProps = response.commonSpoHeaders;
-                if (response.content.ok) {
-                    const sharingInfo = await response.content.json();
-                    return sharingInfo?.d?.directUrl as string;
+
+                const sharingInfo = await response.content.json();
+                const directUrl = sharingInfo?.d?.directUrl;
+                if (typeof directUrl !== "string") {
+                    // This will retry once in getWithRetryForTokenRefresh
+                    throw new NonRetryableError(
+                        "getFileLinkCoreMalformedResponse",
+                        "Malformed GetSharingInformation response",
+                        DriverErrorType.incorrectServerResponse,
+                        { driverVersion });
                 }
-                return undefined;
+                return directUrl;
             });
             event.end({ ...additionalProps, attempts });
             return fileLink;
@@ -131,11 +146,19 @@ interface FileItemLite {
     webDavUrl: string;
 }
 
+const isFileItemLite = (maybeFileItemLite: any): maybeFileItemLite is FileItemLite => {
+    if (typeof maybeFileItemLite.webUrl !== "string" || typeof maybeFileItemLite.webDavUrl !== "string") {
+        return false;
+    }
+    return true;
+};
+
 async function getFileItemLite(
     getToken: TokenFetcher<OdspResourceTokenFetchOptions>,
     odspUrlParts: IOdspUrlParts,
     logger: ITelemetryLogger,
-): Promise<FileItemLite | undefined> {
+    forceAccessTokenViaAuthorizationHeader: boolean,
+): Promise<FileItemLite> {
     return PerformanceEvent.timedExecAsync(
         logger,
         { eventName: "odspFileLink", requestName: "getFileItemLite" },
@@ -149,20 +172,25 @@ async function getFileItemLite(
                 const { url, headers } = getUrlAndHeadersWithAuth(
                     `${siteUrl}/_api/v2.0/drives/${driveId}/items/${itemId}?select=webUrl,webDavUrl`,
                     tokenFromResponse(token),
+                    forceAccessTokenViaAuthorizationHeader,
                 );
                 const requestInit = { method: "GET", headers };
                 const response = await fetchHelper(url, requestInit);
                 additionalProps = response.commonSpoHeaders;
-                if (response.content.ok) {
-                    return await response.content.json() as FileItemLite;
+
+                const responseJson = await response.content.json();
+                if (!isFileItemLite(responseJson)) {
+                    // This will retry once in getWithRetryForTokenRefresh
+                    throw new NonRetryableError(
+                        "getFileItemLiteMalformedResponse",
+                        "Malformed getFileItemLite response",
+                        DriverErrorType.incorrectServerResponse,
+                        { driverVersion });
                 }
-                return undefined;
+                return responseJson;
             });
             event.end({ ...additionalProps, attempts });
-            if (fileItem && fileItem.webDavUrl && fileItem.webUrl) {
-                return fileItem;
-            }
-            return undefined;
+            return fileItem;
         },
     );
 }

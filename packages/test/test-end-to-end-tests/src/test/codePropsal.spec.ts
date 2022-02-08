@@ -19,7 +19,7 @@ import {
     SupportedExportInterfaces,
     TestFluidObjectFactory,
 } from "@fluidframework/test-utils";
-import { ISharedMap, SharedMap } from "@fluidframework/map";
+import { ISharedMap, IValueChanged, SharedMap } from "@fluidframework/map";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { describeNoCompat } from "@fluidframework/test-version-utils";
 
@@ -34,6 +34,27 @@ function isCodeProposalTestPackage(pkg: unknown): pkg is ICodeProposalTestPackag
         && typeof maybe?.schema === "number"
         && isFluidPackage(maybe);
 }
+
+const mapWait = async <T = any>(map: ISharedMap, key: string): Promise<T> => {
+    const maybeValue = map.get<T>(key);
+    if (maybeValue !== undefined) {
+        return maybeValue;
+    }
+
+    return new Promise((resolve) => {
+        const handler = (changed: IValueChanged) => {
+            if (changed.key === key) {
+                map.off("valueChanged", handler);
+                const value = map.get<T>(changed.key);
+                if (value === undefined) {
+                    throw new Error("Unexpected valueChanged result");
+                }
+                resolve(value);
+            }
+        };
+        map.on("valueChanged", handler);
+    });
+};
 
 // REVIEW: enable compat testing?
 describeNoCompat("CodeProposal.EndToEnd", (getTestObjectProvider) => {
@@ -53,6 +74,7 @@ describeNoCompat("CodeProposal.EndToEnd", (getTestObjectProvider) => {
         schema: 2,
         fluid: {},
     };
+    const codeDetails: IFluidCodeDetails = { package: packageV1 };
 
     function createLoader() {
         const codeDetailsComparer: IFluidCodeDetailsComparer = {
@@ -82,9 +104,15 @@ describeNoCompat("CodeProposal.EndToEnd", (getTestObjectProvider) => {
         );
     }
 
-    async function createContainer(code: IFluidCodeDetails): Promise<IContainer> {
+    async function createContainer(): Promise<IContainer> {
         const loader = createLoader();
-        return createAndAttachContainer(code, loader, provider.driver.createCreateNewRequest(provider.documentId));
+        const container = await createAndAttachContainer(
+            codeDetails,
+            loader,
+            provider.driver.createCreateNewRequest(provider.documentId),
+        );
+        provider.updateDocumentId(container.resolvedUrl);
+        return container;
     }
 
     async function loadContainer(): Promise<IContainer> {
@@ -97,22 +125,21 @@ describeNoCompat("CodeProposal.EndToEnd", (getTestObjectProvider) => {
     beforeEach(async () => {
         provider = getTestObjectProvider();
         containers = [];
-        const codeDetails: IFluidCodeDetails = { package: packageV1 };
 
         // Create a Container for the first client.
-        containers.push(await createContainer(codeDetails));
+        containers.push(await createContainer());
         await provider.ensureSynchronized();
 
         // Load the Container that was created by the first client.
         containers.push(await loadContainer());
 
         assert.deepStrictEqual(
-            containers[0].codeDetails,
+            containers[0].getLoadedCodeDetails?.(),
             codeDetails,
             "Code proposal in containers[0] doesn't match");
 
         assert.deepStrictEqual(
-            containers[1].codeDetails,
+            containers[1].getLoadedCodeDetails?.(),
             codeDetails,
             "Code proposal in containers[1] doesn't match");
 
@@ -176,7 +203,7 @@ describeNoCompat("CodeProposal.EndToEnd", (getTestObjectProvider) => {
         for (let i = 0; i < containers.length; i++) {
             assert.strictEqual(containers[i].closed, false, `containers[${i}] should not be closed`);
             assert.deepStrictEqual(
-                containers[i].codeDetails,
+                containers[i].getSpecifiedCodeDetails?.(),
                 { package: packageV1 },
                 `containers[${i}] code details should not update`);
         }
@@ -199,7 +226,7 @@ describeNoCompat("CodeProposal.EndToEnd", (getTestObjectProvider) => {
         for (let i = 0; i < containers.length; i++) {
             assert.strictEqual(containers[i].closed, false, `containers[${i}] should not be closed`);
             assert.deepStrictEqual(
-                containers[i].codeDetails,
+                containers[i].getLoadedCodeDetails?.(),
                 { package: packageV1 },
                 `containers[${i}] code details should update`);
         }
@@ -219,7 +246,7 @@ describeNoCompat("CodeProposal.EndToEnd", (getTestObjectProvider) => {
         }
         const waiters: Promise<void>[] = [];
         for (const map of maps) {
-            waiters.push(...keys.map(async (k) => map.wait(k)));
+            waiters.push(...keys.map(async (k) => mapWait(map, k)));
         }
 
         await Promise.all([provider.ensureSynchronized(), ...waiters]);

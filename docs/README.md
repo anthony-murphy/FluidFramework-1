@@ -203,34 +203,30 @@ The site theme/template lives in `themes/thxvscode`.
 | Script | Description |
 |--------|-------------|
 | `build` | Build the site; outputs to `public/` by default. |
+| `build:api` | `npm run build:uber-package && npm run build:api-documenter` |
 | `build:api-documenter` | Convert API JSON into Markdown. |
 | `build:api-documenter:default` | --- |
 | `build:api-documenter:win32` | --- |
+| `build:api-rollup` | Runs `rollup-api-json.js` to produce rolled-up API data. See the script for more details. |
 | `build:diagrams` | Generate the diagram images using ditaa. |
+| `build:fast` | Builds the site in a fast, but incomplete way. Useful for testing and iteration. |
 | `build:md-magic` | Updates generated content in Markdown files. |
+| `ci:build` | `npm run download && npm run build` |
 | `clean` | Remove all generated files. |
-| `copyfiles` | `copyfiles _replacements/ content/` |
 | `ditaa` | Run the local copy of ditaa. |
 | `ditaa:default` | --- |
 | `ditaa:win32` | --- |
 | `download` | Download and extract the API JSON and Playground files locally. |
 | `download:api` | Download and extract the API JSON files locally. |
-| `download:playground` | Download and extract the Playground files locally. |
 | `hugo` | Run the local copy of Hugo. |
-| `hugo:default` | --- |
-| `hugo:win32` | --- |
 | `install:ditaa` | Install ditaa to generate diagrams unless it already exists. |
 | `install:ditaa:default` | --- |
 | `install:ditaa:force` | Install ditaa to generate diagrams. |
 | `install:ditaa:win32` | --- |
-| `install:hugo` | Install Hugo unless it already exists. |
-| `install:hugo:default` | --- |
-| `install:hugo:force` | Install the version of Hugo used by the documentation. |
-| `install:hugo:win32` | --- |
+| `linkcheck` | `npm run linkcheck:site` |
+| `linkcheck:fast` | `linkcheck http://localhost:1313 --skip-file skipped-urls.txt` |
 | `lint` | `markdownlint-cli2` |
 | `lint:fix` | `markdownlint-cli2-fix` |
 | `postinstall` | --- |
 | `start` | Start a local webserver to preview the built site on <http://localhost:1313> |
-| `start:default` | --- |
-| `start:win32` | --- |
 <!-- AUTO-GENERATED-CONTENT:END -->

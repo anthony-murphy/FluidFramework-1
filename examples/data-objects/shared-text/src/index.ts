@@ -7,91 +7,43 @@
 // eslint-disable-next-line import/no-unassigned-import
 import "./publicpath";
 
-import { AgentSchedulerFactory } from "@fluidframework/agent-scheduler";
-import { IContainerContext, IRuntime, IRuntimeFactory } from "@fluidframework/container-definitions";
+import { IContainerContext } from "@fluidframework/container-definitions";
 import { ContainerRuntime } from "@fluidframework/container-runtime";
 import {
-    IFluidDataStoreContext,
-    IFluidDataStoreFactory,
-    NamedFluidDataStoreRegistryEntries,
-} from "@fluidframework/runtime-definitions";
-import {
-    innerRequestHandler,
+    rootDataStoreRequestHandler,
     buildRuntimeRequestHandler,
 } from "@fluidframework/request-handler";
 import { defaultRouteRequestHandler } from "@fluidframework/aqueduct";
-import * as sharedTextComponent from "./component";
-
-/* eslint-disable max-len */
-const math = import(/* webpackChunkName: "math", webpackPrefetch: true */ "@fluid-example/math");
-// const monaco = import(/* webpackChunkName: "monaco", webpackPrefetch: true */ "@fluid-example/monaco");
-const progressBars = import(
-    /* webpackChunkName: "collections", webpackPrefetch: true */ "@fluid-example/progress-bars");
-const images = import(
-    /* webpackChunkName: "image-collection", webpackPrefetch: true */ "@fluid-example/image-collection");
+import { RuntimeFactoryHelper } from "@fluidframework/runtime-utils";
+import { SharedTextDataStoreFactory } from "./component";
 
 const DefaultComponentName = "text";
 
-// (self as any).MonacoEnvironment = {
-// 	getWorkerUrl: function (moduleId, label) {
-// 		switch (label) {
-// 			case 'json': return require('blob-url-loader?type=application/javascript!compile-loader?target=worker&emit=false!monaco-editor/esm/vs/language/json/json.worker');
-// 			case 'css': return require('blob-url-loader?type=application/javascript!compile-loader?target=worker&emit=false!monaco-editor/esm/vs/language/css/css.worker');
-// 			case 'html': return require('blob-url-loader?type=application/javascript!compile-loader?target=worker&emit=false!monaco-editor/esm/vs/language/html/html.worker');
-// 			case 'typescript':
-// 			case 'javascript': return require('blob-url-loader?type=application/javascript!compile-loader?target=worker&emit=false!monaco-editor/esm/vs/language/typescript/ts.worker');
-// 			default:
-// 				return require('blob-url-loader?type=application/javascript!compile-loader?target=worker&emit=false!monaco-editor/esm/vs/editor/editor.worker');
-// 		}
-// 	}
-// };
-/* eslint-enable max-len */
-
-const defaultRegistryEntries: NamedFluidDataStoreRegistryEntries = [
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    ["@fluid-example/math", math.then((m) => m.fluidExport)],
-    ["@fluid-example/progress-bars", progressBars.then((m) => m.fluidExport)],
-    ["@fluid-example/image-collection", images.then((m) => m.fluidExport)],
-];
-
-class SharedTextFactoryComponent implements IFluidDataStoreFactory, IRuntimeFactory {
-    public static readonly type = "@fluid-example/shared-text";
-    public readonly type = SharedTextFactoryComponent.type;
-
-    public get IFluidDataStoreFactory() { return this; }
-    public get IRuntimeFactory() { return this; }
-
-    public async instantiateDataStore(context: IFluidDataStoreContext) {
-        return sharedTextComponent.instantiateDataStore(context);
+class SharedTextContainerRuntimeFactory extends RuntimeFactoryHelper {
+    public async instantiateFirstTime(runtime: ContainerRuntime): Promise<void> {
+        await runtime.createRootDataStore(SharedTextDataStoreFactory.type, DefaultComponentName);
     }
 
-    /**
-     * Instantiates a new chaincode host
-     */
-    public async instantiateRuntime(context: IContainerContext): Promise<IRuntime> {
-        const runtime = await ContainerRuntime.load(
+    public async preInitialize(
+        context: IContainerContext,
+        existing: boolean,
+    ): Promise<ContainerRuntime> {
+        const runtime: ContainerRuntime = await ContainerRuntime.load(
             context,
             [
-                ...defaultRegistryEntries,
-                [SharedTextFactoryComponent.type, Promise.resolve(this)],
-                AgentSchedulerFactory.registryEntry,
+                [SharedTextDataStoreFactory.type, Promise.resolve(new SharedTextDataStoreFactory())],
             ],
             buildRuntimeRequestHandler(
                 defaultRouteRequestHandler(DefaultComponentName),
-                innerRequestHandler,
+                rootDataStoreRequestHandler,
             ),
+            undefined, // runtimeOptions
+            undefined, // containerScope
+            existing,
         );
-
-        // On first boot create the base component
-        if (!runtime.existing) {
-            await runtime.createRootDataStore(AgentSchedulerFactory.type, "_scheduler");
-            await runtime.createRootDataStore(SharedTextFactoryComponent.type, DefaultComponentName);
-        }
 
         return runtime;
     }
 }
 
-export * from "./utils";
-
-export const fluidExport = new SharedTextFactoryComponent();
+export const fluidExport = new SharedTextContainerRuntimeFactory();

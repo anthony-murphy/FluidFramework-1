@@ -5,17 +5,20 @@
 
 import { ITelemetryProperties, ITelemetryBaseLogger, ITelemetryLogger } from "@fluidframework/common-definitions";
 import { IResolvedUrl, DriverErrorType } from "@fluidframework/driver-definitions";
-import { isOnline, OnlineStatus } from "@fluidframework/driver-utils";
+import {
+    isOnline,
+    OnlineStatus,
+    RetryableError,
+    NonRetryableError,
+    NetworkErrorBasic,
+} from "@fluidframework/driver-utils";
 import { assert, performance } from "@fluidframework/common-utils";
-import { ChildLogger, PerformanceEvent } from "@fluidframework/telemetry-utils";
+import { ISequencedDocumentMessage, ISnapshotTree } from "@fluidframework/protocol-definitions";
+import { ChildLogger, PerformanceEvent, wrapError } from "@fluidframework/telemetry-utils";
 import {
     fetchIncorrectResponse,
-    offlineFetchFailureStatusCode,
-    fetchFailureStatusCode,
-    fetchTimeoutStatusCode,
     throwOdspNetworkError,
     getSPOAndGraphRequestIdsFromResponse,
-    fetchTokenErrorCode,
 } from "@fluidframework/odsp-doclib-utils";
 import {
     IOdspResolvedUrl,
@@ -24,12 +27,14 @@ import {
     tokenFromResponse,
     isTokenFromCache,
     OdspResourceTokenFetchOptions,
+    ShareLinkTypes,
     TokenFetcher,
     ICacheEntry,
     snapshotKey,
+    InstrumentedStorageTokenFetcher,
 } from "@fluidframework/odsp-driver-definitions";
 import { fetch } from "./fetch";
-import { pkgVersion } from "./packageVersion";
+import { pkgVersion as driverVersion } from "./packageVersion";
 import { IOdspSnapshot } from "./contracts";
 
 export const getWithRetryForTokenRefreshRepeat = "getWithRetryForTokenRefreshRepeat";
@@ -37,9 +42,11 @@ export const getWithRetryForTokenRefreshRepeat = "getWithRetryForTokenRefreshRep
 /** Parse the given url and return the origin (host name) */
 export const getOrigin = (url: string) => new URL(url).origin;
 
-export interface ISnapshotCacheValue {
-    snapshot: IOdspSnapshot;
-    sequenceNumber: number | undefined;
+export interface ISnapshotContents {
+    snapshotTree: ISnapshotTree,
+    blobs: Map<string, ArrayBuffer>,
+    ops: ISequencedDocumentMessage[],
+    sequenceNumber: number | undefined,
 }
 
 export interface IOdspResponse<T> {
@@ -76,7 +83,7 @@ export async function getWithRetryForTokenRefresh<T>(get: (options: TokenFetchOp
             case DriverErrorType.authorizationError:
                 return get({ ...options, claims: e.claims, tenantId: e.tenantId });
 
-            case DriverErrorType.incorrectServerResponse: // fetchIncorrectResponse - some error on the wire, retry once
+            case DriverErrorType.incorrectServerResponse: // some error on the wire, retry once
             case OdspErrorType.fetchTokenError: // If the token was null, then retry once.
                 return get(options);
 
@@ -101,11 +108,15 @@ export async function fetchHelper(
         const response = fetchResponse as any as Response;
         // Let's assume we can retry.
         if (!response) {
-            throwOdspNetworkError(`No response from the server`, fetchIncorrectResponse);
+            throw new NonRetryableError(
+                "odspFetchErrorNoResponse",
+                "No response from fetch call",
+                DriverErrorType.incorrectServerResponse,
+                { driverVersion });
         }
         if (!response.ok || response.status < 200 || response.status >= 300) {
             throwOdspNetworkError(
-                `Error ${response.status}`, response.status, response, await response.text());
+                `odspFetchError [${response.status}]`, response.status, response, await response.text());
         }
 
         const headers = headersToMap(response.headers);
@@ -124,11 +135,15 @@ export async function fetchHelper(
         if (errorText === "TypeError: Failed to fetch") {
             online = OnlineStatus.Offline;
         }
+        // This error is thrown by fetch() when AbortSignal is provided and it gets cancelled
         if (error.name === "AbortError") {
-            throwOdspNetworkError("Timeout during fetch", fetchTimeoutStatusCode);
+            throw new RetryableError(
+                "fetchAbort", "Fetch Timeout (AbortError)", OdspErrorType.fetchTimeout, { driverVersion });
         }
+        // TCP/IP timeout
         if (errorText.indexOf("ETIMEDOUT") !== -1) {
-            throwOdspNetworkError("Timeout during fetch (ETIMEDOUT)", fetchTimeoutStatusCode);
+            throw new RetryableError(
+                "fetchETimedout", "Fetch Timeout (ETIMEDOUT)", OdspErrorType.fetchTimeout, { driverVersion });
         }
 
         //
@@ -136,11 +151,13 @@ export async function fetchHelper(
         // It could container PII, like URI in message itself, or token in properties.
         // It is also non-serializable object due to circular references.
         //
-        throwOdspNetworkError(
-            `Fetch error`,
-            online === OnlineStatus.Offline ? offlineFetchFailureStatusCode : fetchFailureStatusCode,
-            undefined, // response
-        );
+        if (online === OnlineStatus.Offline) {
+            throw new RetryableError(
+                "OdspFetchOffline", `Offline: ${errorText}`, DriverErrorType.offlineError, { driverVersion });
+        } else {
+            throw new RetryableError(
+                "OdspFetchError", `Fetch error: ${errorText}`, DriverErrorType.fetchFailure, { driverVersion });
+        }
     });
 }
 
@@ -175,24 +192,31 @@ export async function fetchAndParseAsJSONHelper<T>(
     requestInit: RequestInit | undefined,
 ): Promise<IOdspResponse<T>> {
     const { content, headers, commonSpoHeaders, duration } = await fetchHelper(requestInfo, requestInit);
-    // JSON.parse() can fail and message (that goes into telemetry) would container full request URI, including
-    // tokens... It fails for me with "Unexpected end of JSON input" quite often - an attempt to download big file
-    // (many ops) almost always ends up with this error - I'd guess 1% of op request end up here... It always
-    // succeeds on retry.
+    let text: string | undefined;
     try {
-        const text = await content.text();
-
-        commonSpoHeaders.bodySize = text.length;
-        const res = {
-            headers,
-            content: JSON.parse(text),
-            commonSpoHeaders,
-            duration,
-        };
-        return res;
+        text = await content.text();
     } catch (e) {
-        throwOdspNetworkError(`Error while parsing fetch response: ${e}`, fetchIncorrectResponse, content);
+        // JSON.parse() can fail and message would container full request URI, including
+        // tokens... It fails for me with "Unexpected end of JSON input" quite often - an attempt to download big file
+        // (many ops) almost always ends up with this error - I'd guess 1% of op request end up here... It always
+        // succeeds on retry.
+        // So do not log error object itself.
+        throwOdspNetworkError(
+            "errorWhileParsingFetchResponse",
+            fetchIncorrectResponse,
+            content, // response
+            text,
+        );
     }
+
+    commonSpoHeaders.bodySize = text.length;
+    const res = {
+        headers,
+        content: JSON.parse(text),
+        commonSpoHeaders,
+        duration,
+    };
+    return res;
 }
 
 export interface INewFileInfo {
@@ -200,6 +224,12 @@ export interface INewFileInfo {
     driveId: string;
     filename: string;
     filePath: string;
+    /**
+     * application can request creation of a share link along with the creation of a new file
+     * by passing in an optional param to specify the kind of sharing link
+     * (at the time of adding this comment Sept/2021), odsp only supports csl
+     */
+    createLinkType?: ShareLinkTypes;
 }
 
 export function getOdspResolvedUrl(resolvedUrl: IResolvedUrl): IOdspResolvedUrl {
@@ -213,7 +243,7 @@ export const createOdspLogger = (logger?: ITelemetryBaseLogger) =>
         "OdspDriver",
         { all :
             {
-                driverVersion: pkgVersion,
+                driverVersion,
             },
         });
 
@@ -245,8 +275,8 @@ export function toInstrumentedOdspTokenFetcher(
     resolvedUrl: IOdspResolvedUrl,
     tokenFetcher: TokenFetcher<OdspResourceTokenFetchOptions>,
     throwOnNullToken: boolean,
-): (options: TokenFetchOptions, name: string) => Promise<string | null> {
-    return async (options: TokenFetchOptions, name: string) => {
+): InstrumentedStorageTokenFetcher {
+    return async (options: TokenFetchOptions, name: string, alwaysRecordTokenFetchTelemetry: boolean = false) => {
         // Telemetry note: if options.refresh is true, there is a potential perf issue:
         // Host should optimize and provide non-expired tokens on all critical paths.
         // Exceptions: race conditions around expiration, revoked tokens, host that does not care
@@ -269,14 +299,32 @@ export function toInstrumentedOdspTokenFetcher(
                 // This event alone generates so many events that is materially impacts cost of telemetry
                 // Thus do not report end event when it comes back quickly.
                 // Note that most of the hosts do not report if result is comming from cache or not,
-                // so we can't rely on that here
-                if (event.duration >= 32) {
+                // so we can't rely on that here. But always record if specified explicitly for cases such as
+                // calling trees/latest during load.
+                if (alwaysRecordTokenFetchTelemetry || event.duration >= 32) {
                     event.end({ fromCache: isTokenFromCache(tokenResponse), isNull: token === null });
                 }
                 if (token === null && throwOnNullToken) {
-                    throwOdspNetworkError(`${name} Token is null`, fetchTokenErrorCode);
+                    throw new NonRetryableError(
+                        "storageTokenIsNull",
+                        `Token is null for ${name} call`,
+                        OdspErrorType.fetchTokenError,
+                        { method: name, driverVersion });
                 }
                 return token;
+            }, (error) => {
+                // There is an important but unofficial contract here where token providers can set canRetry: true
+                // to hook into the driver's retry logic (e.g. the retry loop when initiating a connection)
+                const rawCanRetry = error?.canRetry;
+                const tokenError = wrapError(
+                    error,
+                    (errorMessage) => new NetworkErrorBasic(
+                        "tokenFetcherFailed",
+                        errorMessage,
+                        OdspErrorType.fetchTokenError,
+                        typeof rawCanRetry === "boolean" ? rawCanRetry : false /* canRetry */,
+                        { method: name, driverVersion }));
+                throw tokenError;
             }),
             { cancel: "generic" });
     };

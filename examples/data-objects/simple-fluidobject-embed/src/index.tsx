@@ -8,9 +8,10 @@ import {
     DataObject,
     DataObjectFactory,
 } from "@fluidframework/aqueduct";
-import { IEvent } from "@fluidframework/common-definitions";
-import { ClickerInstantiationFactory, Clicker } from "@fluid-example/clicker";
+import { ClickerInstantiationFactory, Clicker, ClickerReactView } from "@fluid-example/clicker";
 import { IFluidHTMLView } from "@fluidframework/view-interfaces";
+import React from "react";
+import ReactDOM from "react-dom";
 
 const simpleFluidObjectEmbedName = "@fluid-example/simple-fluidobject-embed";
 
@@ -46,14 +47,13 @@ export class SimpleFluidObjectEmbed extends DataObject implements IFluidHTMLView
 
         // Then render the clicker in our div
         if (this.clicker !== undefined) {
-            this.clicker.render(fluidObjectDiv);
+            ReactDOM.render(<ClickerReactView clicker={this.clicker} />, fluidObjectDiv);
         }
     }
 }
 
 export const SimpleFluidObjectEmbedInstantiationFactory =
-    // eslint-disable-next-line @typescript-eslint/ban-types
-    new DataObjectFactory<SimpleFluidObjectEmbed, undefined, undefined, IEvent>(
+    new DataObjectFactory(
         simpleFluidObjectEmbedName,
         SimpleFluidObjectEmbed,
         [],

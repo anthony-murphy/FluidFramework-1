@@ -25,34 +25,64 @@ const loaderOptionsMatrix: OptionsMatrix<ILoaderOptions> = {
     summarizeProtocolTree: [undefined],
 };
 
-export const generateLoaderOptions = (seed: number): ILoaderOptions[]=>
-    generatePairwiseOptions<ILoaderOptions>(
-        loaderOptionsMatrix,
+export function applyOverrides<T>(options: OptionsMatrix<T>, optionsOverrides: Partial<OptionsMatrix<T>> | undefined) {
+    const realOptions: OptionsMatrix<T> = {...options};
+    if(optionsOverrides !== undefined) {
+        for(const key of Object.keys(optionsOverrides)) {
+            const override = optionsOverrides[key];
+            if(override !== undefined) {
+                if(Array.isArray(override)) {
+                    realOptions[key] = override;
+                }else{
+                    throw new Error(`Override for ${key} is not array: ${JSON.stringify(optionsOverrides)}`);
+                }
+            }
+        }
+    }
+    return realOptions;
+}
+
+export const generateLoaderOptions =
+    (seed: number, overrides: Partial<OptionsMatrix<ILoaderOptions>> | undefined): ILoaderOptions[] => {
+    return generatePairwiseOptions<ILoaderOptions>(
+        applyOverrides(loaderOptionsMatrix, overrides),
         seed);
+};
 
 const gcOptionsMatrix: OptionsMatrix<IGCRuntimeOptions> = {
     disableGC: booleanCases,
     gcAllowed: booleanCases,
     runFullGC: booleanCases,
+    runSweep: [false],
 };
 
-export function generateRuntimeOptions(seed: number) {
-    const summaryOptionsMatrix: OptionsMatrix<ISummaryRuntimeOptions> = {
-        disableIsolatedChannels: booleanCases,
-        generateSummaries: [true],
-        initialSummarizerDelayMs: numberCases,
-        summaryConfigOverrides:[undefined],
-        maxOpsSinceLastSummary: numberCases,
+const summaryOptionsMatrix: OptionsMatrix<ISummaryRuntimeOptions> = {
+    disableIsolatedChannels: booleanCases,
+    disableSummaries: [false],
+    generateSummaries: [true],
+    initialSummarizerDelayMs: numberCases,
+    summaryConfigOverrides: [undefined],
+    maxOpsSinceLastSummary: numberCases,
+    summarizerClientElection: booleanCases,
+    summarizerOptions: [undefined],
+};
+
+export function generateRuntimeOptions(
+    seed: number, overrides: Partial<OptionsMatrix<IContainerRuntimeOptions>> | undefined) {
+    const gcOptions =
+        generatePairwiseOptions(applyOverrides(gcOptionsMatrix, overrides?.gcOptions as any), seed);
+    const summaryOptions =
+        generatePairwiseOptions(applyOverrides(summaryOptionsMatrix, overrides?.summaryOptions as any), seed);
+
+    const runtimeOptionsMatrix: OptionsMatrix<IContainerRuntimeOptions> = {
+        gcOptions: [undefined, ...gcOptions],
+        summaryOptions: [undefined, ...summaryOptions],
+        loadSequenceNumberVerification: [undefined],
     };
 
-    // Using an Omit here such that when new options are added, it is required to either explicitly omit them from
-    // the stress test matrix or else define the options matrix.
-    type OptionsUnderTest = Omit<IContainerRuntimeOptions, "addGlobalAgentSchedulerAndLeaderElection">;
-
-    const runtimeOptionsMatrix: OptionsMatrix<OptionsUnderTest> = {
-        gcOptions: [undefined, ...generatePairwiseOptions(gcOptionsMatrix, seed)],
-        summaryOptions: [undefined, ...generatePairwiseOptions(summaryOptionsMatrix, seed)],
-    };
-
-    return generatePairwiseOptions<OptionsUnderTest>(runtimeOptionsMatrix, seed);
+    return generatePairwiseOptions<IContainerRuntimeOptions>(
+        applyOverrides(
+            runtimeOptionsMatrix,
+            {...overrides, gcOptions: undefined, summaryOptions: undefined}),
+        seed);
 }

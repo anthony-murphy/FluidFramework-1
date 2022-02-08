@@ -4,6 +4,7 @@
  */
 
 import { parse } from "url";
+import { assert } from "@fluidframework/common-utils";
 import {
     IDocumentService,
     IDocumentServiceFactory,
@@ -19,6 +20,7 @@ import {
     getQuorumValuesFromProtocolSummary,
 } from "@fluidframework/driver-utils";
 import { ISummaryTree, NackErrorType } from "@fluidframework/protocol-definitions";
+import { defaultHash } from "@fluidframework/server-services-client";
 import { LocalDocumentDeltaConnection } from "./localDocumentDeltaConnection";
 import { createLocalDocumentService } from "./localDocumentService";
 
@@ -40,11 +42,12 @@ export class LocalDocumentServiceFactory implements IDocumentServiceFactory {
         private readonly innerDocumentService?: IDocumentService) { }
 
     public async createContainer(
-        createNewSummary: ISummaryTree,
+        createNewSummary: ISummaryTree | undefined,
         resolvedUrl: IResolvedUrl,
         logger?: ITelemetryBaseLogger,
     ): Promise<IDocumentService> {
         ensureFluidResolvedUrl(resolvedUrl);
+        assert(!!createNewSummary, 0x202 /* "create empty file not supported" */);
         const pathName = new URL(resolvedUrl.url).pathname;
         const pathArr = pathName.split("/");
         const tenantId = pathArr[pathArr.length - 2];
@@ -68,6 +71,7 @@ export class LocalDocumentServiceFactory implements IDocumentServiceFactory {
             appSummary,
             sequenceNumber,
             documentAttributes.term ?? 1,
+            defaultHash,
             quorumValues,
         );
         return this.createDocumentService(resolvedUrl, logger);

@@ -43,6 +43,14 @@ steps:
   artifact: _api-extractor-temp
 - download: common_utils
   artifact: _api-extractor-temp
+- download: container_definitions
+  artifact: _api-extractor-temp
+- download: core_interfaces
+  artifact: _api-extractor-temp
+- download: driver_definitions
+  artifact: _api-extractor-temp
+- download: protocol_definitions
+  artifact: _api-extractor-temp
 - download: client
   artifact: _api-extractor-temp
 - download: server
@@ -66,11 +74,11 @@ steps:
     OverWrite: false
     flattenFolders: true
     CleanTargetFolder: true
-    
+
 - task: UseNode@1
-  displayName: Use Node 12.x
+  displayName: Use Node 14.x
   inputs:
-    version: 12.x
+    version: 14.x
 
 - task: Npm@1
   displayName: npm ci

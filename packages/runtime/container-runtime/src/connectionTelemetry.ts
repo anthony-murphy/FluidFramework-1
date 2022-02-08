@@ -12,6 +12,11 @@ import {
 } from "@fluidframework/protocol-definitions";
 import { assert, performance } from "@fluidframework/common-utils";
 
+/**
+ * We report various latency-related errors when waiting for op roundtrip takes longer than that amout of time.
+ */
+export const latencyThreshold = 5000;
+
 class OpPerfTelemetry {
     private pongCount: number = 0;
     private socketLatency = 0;
@@ -56,6 +61,7 @@ class OpPerfTelemetry {
             }
         });
         this.deltaManager.on("disconnect", () => {
+            this.opSendTimeForLatencyStatisticsForMsnStatistics = undefined;
             this.clientSequenceNumberForLatencyStatistics = undefined;
             this.connectionOpSeqNumber = undefined;
             this.firstConnection = false;
@@ -97,7 +103,10 @@ class OpPerfTelemetry {
         this.socketLatency += latency;
         const aggregateCount = 100;
         if (this.pongCount === aggregateCount) {
-            this.logger.sendTelemetryEvent({ eventName: "DeltaLatency", value: this.socketLatency / aggregateCount });
+            this.logger.sendPerformanceEvent({
+                eventName: "DeltaLatency",
+                duration: this.socketLatency / aggregateCount,
+            });
             this.pongCount = 0;
             this.socketLatency = 0;
         }
@@ -135,10 +144,24 @@ class OpPerfTelemetry {
             this.clientSequenceNumberForLatencyStatistics === message.clientSequenceNumber) {
             assert(this.opSendTimeForLatencyStatistics !== undefined,
                 0x120 /* "Undefined latency statistics (op send time)" */);
+
+            const duration = Date.now() - this.opSendTimeForLatencyStatistics;
+
+            // One of the core expectations for Fluid service is to be fast.
+            // When it's not the case, we want to learn about it and be able to investigate, so
+            // raise awareness.
+            // This also helps identify cases where it's due to client behavior (sending too many ops)
+            // that results in overwhelming ordering service and thus starting to see long latencies.
+            // The threshold could be adjusted, but ideally it stays  workload-agnostic, as service
+            // performance impacts all workloads relying on service.
+            const category = duration > latencyThreshold ? "error" : "performance";
+
             this.logger.sendPerformanceEvent({
                 eventName: "OpRoundtripTime",
                 sequenceNumber,
-                duration: Date.now() - this.opSendTimeForLatencyStatistics,
+                referenceSequenceNumber: message.referenceSequenceNumber,
+                duration,
+                category,
             });
             this.clientSequenceNumberForLatencyStatistics = undefined;
         }

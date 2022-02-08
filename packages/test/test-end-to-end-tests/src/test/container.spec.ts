@@ -7,6 +7,7 @@ import { strict as assert } from "assert";
 import { IFluidCodeDetails, IRequest } from "@fluidframework/core-interfaces";
 import {
     IGenericError,
+    IPendingLocalState,
     ContainerErrorType,
     LoaderHeader,
 } from "@fluidframework/container-definitions";
@@ -19,6 +20,7 @@ import {
 } from "@fluidframework/container-loader";
 import {
     IDocumentServiceFactory,
+    IFluidResolvedUrl,
 } from "@fluidframework/driver-definitions";
 import { MockDocumentDeltaConnection } from "@fluidframework/test-loader-utils";
 import {
@@ -31,13 +33,13 @@ import {
 } from "@fluidframework/test-utils";
 import { ensureFluidResolvedUrl } from "@fluidframework/driver-utils";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
-import { ChildLogger } from "@fluidframework/telemetry-utils";
 import {
     getDataStoreFactory,
     ITestDataObject,
     TestDataObjectType,
     describeNoCompat,
 } from "@fluidframework/test-version-utils";
+import { IContainerRuntimeBase } from "@fluidframework/runtime-definitions";
 
 const id = "fluid-test://localhost/containerTest";
 const testRequest: IRequest = { url: id };
@@ -57,7 +59,7 @@ describeNoCompat("Container", (getTestObjectProvider) => {
     });
     before(async ()=>{
         const loader = new Loader({
-            logger: ChildLogger.create(getTestLogger?.(), undefined, { all: { driverType: provider.driver.type } }),
+            logger: provider.logger,
             urlResolver: provider.urlResolver,
             documentServiceFactory:
                 provider.documentServiceFactory,
@@ -73,7 +75,7 @@ describeNoCompat("Container", (getTestObjectProvider) => {
     async function loadContainer(props?: Partial<ILoaderProps>) {
         const loader = new Loader({
             ...props,
-            logger: ChildLogger.create(getTestLogger?.(), undefined, { all: { driverType: provider.driver.type } }),
+            logger: provider.logger,
             urlResolver: props?.urlResolver ?? provider.urlResolver,
             documentServiceFactory:
                 props?.documentServiceFactory ?? provider.documentServiceFactory,
@@ -97,7 +99,6 @@ describeNoCompat("Container", (getTestObjectProvider) => {
 
     it("Load container successfully", async () => {
         const container = await loadContainer();
-        assert.strictEqual(container.id, "containerTest", "Container's id should be set");
         assert.strictEqual(container.clientDetails.capabilities.interactive, true,
             "Client details should be set with interactive as true");
     });
@@ -111,16 +112,17 @@ describeNoCompat("Container", (getTestObjectProvider) => {
             mockFactory.createDocumentService = async (resolvedUrl) => {
                 const service = await documentServiceFactory.createDocumentService(resolvedUrl);
                 // Issue typescript-eslint/typescript-eslint #1256
-                // eslint-disable-next-line prefer-promise-reject-errors
-                service.connectToStorage = async () => Promise.reject(false);
+                service.connectToStorage = async () => Promise.reject(new Error("expectedFailure"));
                 return service;
             };
 
             await loadContainer({ documentServiceFactory: mockFactory });
             assert.fail("Error expected");
         } catch (error) {
-            const err = error as IGenericError;
-            success = err.error as boolean;
+            assert.strictEqual(error.errorType, ContainerErrorType.genericError, "Error should be a general error");
+            const genericError = error as IGenericError;
+            assert.equal(genericError.message, "expectedFailure", "Expected the injected error message");
+            success = false;
         }
         assert.strictEqual(success, false);
     });
@@ -134,17 +136,17 @@ describeNoCompat("Container", (getTestObjectProvider) => {
             mockFactory.createDocumentService = async (resolvedUrl) => {
                 const service = await documentServiceFactory.createDocumentService(resolvedUrl);
                 // Issue typescript-eslint/typescript-eslint #1256
-                // eslint-disable-next-line prefer-promise-reject-errors
-                service.connectToDeltaStorage = async () => Promise.reject(false);
+                service.connectToDeltaStorage = async () => Promise.reject(new Error("expectedFailure"));
                 return service;
             };
             const container2 = await loadContainer({ documentServiceFactory: mockFactory });
             await waitContainerToCatchUp(container2);
             assert.fail("Error expected");
         } catch (error) {
-            assert.strictEqual(error.errorType, ContainerErrorType.genericError, "Error is not a general error");
+            assert.strictEqual(error.errorType, ContainerErrorType.genericError, "Error should be a general error");
             const genericError = error as IGenericError;
-            success = genericError.error as boolean;
+            assert.equal(genericError.message, "expectedFailure", "Expected the injected error message");
+            success = false;
         }
         assert.strictEqual(success, false);
     });
@@ -166,10 +168,22 @@ describeNoCompat("Container", (getTestObjectProvider) => {
         const container = await loadContainer({ documentServiceFactory: mockFactory });
         assert.strictEqual(container.connectionState, ConnectionState.Connecting,
             "Container should be in Connecting state");
-        deltaConnection.close();
-        assert.strictEqual(container.connectionState, ConnectionState.Disconnected,
-            "Container should be in Disconnected state");
-        deltaConnection.removeAllListeners();
+        // Note: this will create infinite loop of reconnects as every reconnect would bring closed connection.
+        // Only closing container will break that cycle.
+        deltaConnection.dispose();
+        try {
+            assert.strictEqual(container.connectionState, ConnectionState.Disconnected,
+                "Container should be in Disconnected state");
+
+            // 'disconnected' event listener should be invoked right after registration
+            let disconnectedEventArgs;
+            container.on("disconnected", (...args) => { disconnectedEventArgs = args; });
+            await Promise.resolve();
+            assert.deepEqual(disconnectedEventArgs, []);
+        } finally {
+            deltaConnection.removeAllListeners();
+            container.close();
+        }
     });
 
     it("Raise connection error event", async () => {
@@ -196,13 +210,19 @@ describeNoCompat("Container", (getTestObjectProvider) => {
             message: "Test error",
             canRetry: false,
         };
+        // Note: this will create infinite loop of reconnects as every reconnect would bring closed connection.
+        // Only closing container will break that cycle.
         deltaConnection.emitError(err);
-        assert.strictEqual(container.connectionState, ConnectionState.Disconnected,
-            "Container should be in Disconnected state");
-        // All errors on socket are not critical!
-        assert.strictEqual(container.closed, false, "Container should not be closed");
-        assert.strictEqual(errorRaised, false, "Error event should not be raised.");
-        deltaConnection.removeAllListeners();
+        try {
+            assert.strictEqual(container.connectionState, ConnectionState.Disconnected,
+                "Container should be in Disconnected state");
+            // All errors on socket are not critical!
+            assert.strictEqual(container.closed, false, "Container should not be closed");
+            assert.strictEqual(errorRaised, false, "Error event should not be raised.");
+        } finally {
+            deltaConnection.removeAllListeners();
+            container.close();
+        }
     });
 
     it("Close called on container", async () => {
@@ -232,9 +252,13 @@ describeNoCompat("Container", (getTestObjectProvider) => {
     });
 
     it("Delta manager receives readonly event when calling container.forceReadonly()", async () => {
+        const innerRequestHandler = async (request: IRequest, runtime: IContainerRuntimeBase) =>
+            runtime.IFluidHandleContext.resolveHandle(request);
         const runtimeFactory = (_?: unknown) => new TestContainerRuntimeFactory(
             TestDataObjectType,
-            getDataStoreFactory());
+            getDataStoreFactory(),
+            {},
+            [innerRequestHandler]);
 
         const localTestObjectProvider = new TestObjectProvider(
             Loader,
@@ -251,8 +275,25 @@ describeNoCompat("Container", (getTestObjectProvider) => {
         });
 
         container.forceReadonly(true);
-        assert.strictEqual(container.readonly, true);
+        assert.strictEqual(container.readOnlyInfo.readonly, true);
 
         assert.strictEqual(runCount, 1);
+    });
+
+    it("closeAndGetPendingLocalState() called on container", async () => {
+        const runtimeFactory = (_?: unknown) => new TestContainerRuntimeFactory(
+            TestDataObjectType,
+            getDataStoreFactory());
+
+        const localTestObjectProvider = new TestObjectProvider(
+            Loader,
+            provider.driver,
+            runtimeFactory);
+
+        const container = await localTestObjectProvider.makeTestContainer() as Container;
+
+        const pendingLocalState: IPendingLocalState = JSON.parse(container.closeAndGetPendingLocalState());
+        assert.strictEqual(container.closed, true);
+        assert.strictEqual(pendingLocalState.url, (container.resolvedUrl as IFluidResolvedUrl).url);
     });
 });

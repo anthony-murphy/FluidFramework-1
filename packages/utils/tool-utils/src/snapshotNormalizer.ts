@@ -3,16 +3,14 @@
  * Licensed under the MIT License.
  */
 
-import { AttachmentTreeEntry, BlobTreeEntry, CommitTreeEntry, TreeTreeEntry } from "@fluidframework/protocol-base";
+import { AttachmentTreeEntry, BlobTreeEntry, TreeTreeEntry } from "@fluidframework/protocol-base";
 import {
     ITree,
     TreeEntry,
     ITreeEntry,
 } from "@fluidframework/protocol-definitions";
 
-export const gcBlobKey = "gc";
-// A list of runtime blob paths whose contents should be normalized.
-const runtimeBlobsToNormalize = [ gcBlobKey ];
+export const gcBlobPrefix = "__gc";
 
 export interface ISnapshotNormalizerConfig {
     // The paths of blobs whose contents should be normalized.
@@ -70,11 +68,23 @@ function getDeepSortedObject(obj: any): any {
 }
 
 /**
- * Function that sorts a blob's content. If the content is an object or an array, deep sorts them.
- * @returns the sorted blob content.
+ * Function that normalizes a blob's content. If the content is an object or an array, deep sorts them.
+ * Special handling for certain runtime blobs, such as the "gc" blob.
+ * @returns the normalized blob content.
  */
-function getSortedBlobContent(content: string): string {
-    let sortedContent = content;
+function getNormalizedBlobContent(blobContent: string, blobName: string): string {
+    let content = blobContent;
+    if (blobName.startsWith(gcBlobPrefix)) {
+        // GC blobs may contain `unreferencedTimestampMs` for node that became unreferenced. This is the timestamp
+        // of the last op processed or current timestamp and can differ between clients depending on when GC was run.
+        // So, remove it for the purposes of comparing snapshots.
+        const gcState = JSON.parse(content);
+        for (const [, data] of Object.entries(gcState.gcNodes)) {
+            delete (data as any).unreferencedTimestampMs;
+        }
+        content = JSON.stringify(gcState);
+    }
+
     // Deep sort the content if it's parseable.
     try {
         let contentObj = JSON.parse(content);
@@ -83,9 +93,9 @@ function getSortedBlobContent(content: string): string {
         } else if (contentObj instanceof Object) {
             contentObj = getDeepSortedObject(contentObj);
         }
-        sortedContent = JSON.stringify(contentObj);
+        content = JSON.stringify(contentObj);
     } catch {}
-    return sortedContent;
+    return content;
 }
 
 /**
@@ -100,16 +110,16 @@ function getSortedBlobContent(content: string): string {
 export function getNormalizedSnapshot(snapshot: ITree, config?: ISnapshotNormalizerConfig): ITree {
     // Merge blobs to normalize in the config with runtime blobs to normalize. The contents of these blobs will be
     // parsed and deep sorted.
-    const blobsToNormalize = [ ...runtimeBlobsToNormalize, ...config?.blobsToNormalize ?? [] ];
+    const blobsToNormalize = [ ...config?.blobsToNormalize ?? [] ];
     const normalizedEntries: ITreeEntry[] = [];
 
     for (const entry of snapshot.entries) {
         switch (entry.type) {
             case TreeEntry.Blob: {
                 let contents = entry.value.contents;
-                // If this blob has to be normalized, parse and sort the blob contents first.
-                if (blobsToNormalize.includes(entry.path)) {
-                    contents = getSortedBlobContent(contents);
+                // If this blob has to be normalized or it's a GC blob, parse and sort the blob contents first.
+                if (blobsToNormalize.includes(entry.path) || entry.path.startsWith(gcBlobPrefix)) {
+                    contents = getNormalizedBlobContent(contents, entry.path);
                 }
                 normalizedEntries.push(new BlobTreeEntry(entry.path, contents));
                 break;
@@ -122,9 +132,7 @@ export function getNormalizedSnapshot(snapshot: ITree, config?: ISnapshotNormali
                 normalizedEntries.push(new AttachmentTreeEntry(entry.path, (entry.value).id));
                 break;
             }
-            case TreeEntry.Commit:
-                normalizedEntries.push(new CommitTreeEntry(entry.path, entry.value));
-                break;
+
             default:
                 throw new Error("Unknown entry type");
         }

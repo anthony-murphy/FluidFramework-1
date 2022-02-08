@@ -10,6 +10,7 @@ import {
     createGenericNetworkError,
     AuthorizationError,
 } from "@fluidframework/driver-utils";
+import { pkgVersion as driverVersion } from "./packageVersion";
 
 export enum R11sErrorType {
     fileNotFoundOrAccessDeniedError = "fileNotFoundOrAccessDeniedError",
@@ -47,39 +48,45 @@ export interface IR11sError {
 export type R11sError = DriverError | IR11sError;
 
 export function createR11sNetworkError(
+    fluidErrorCode: string,
     errorMessage: string,
     statusCode?: number,
     retryAfterMs?: number,
 ): R11sError {
+    const props = { statusCode, driverVersion };
     switch (statusCode) {
         case undefined:
-            // If a service is temporarily down or a browser resource limit is reached, Axios will throw
+            // If a service is temporarily down or a browser resource limit is reached, RestWrapper will throw
             // a network error with no status code (e.g. err:ERR_CONN_REFUSED or err:ERR_FAILED) and
-            // error message, "Network Error".
-            return new GenericNetworkError(errorMessage, errorMessage === "Network Error", { statusCode });
+            // the error message will start with NetworkError as defined in restWrapper.ts
+            return new GenericNetworkError(
+                fluidErrorCode, errorMessage, errorMessage.startsWith("NetworkError"), props);
         case 401:
         case 403:
-            return new AuthorizationError(errorMessage, undefined, undefined, { statusCode });
+            return new AuthorizationError(
+                fluidErrorCode, errorMessage, undefined, undefined, props);
         case 404:
-            return new NonRetryableError(
-                errorMessage, R11sErrorType.fileNotFoundOrAccessDeniedError, { statusCode });
+            const errorType = R11sErrorType.fileNotFoundOrAccessDeniedError;
+            return new NonRetryableError(fluidErrorCode, errorMessage, errorType, props);
         case 429:
             return createGenericNetworkError(
-                errorMessage, true, retryAfterMs, { statusCode });
+                fluidErrorCode, errorMessage, { canRetry: true, retryAfterMs }, props);
         case 500:
-            return new GenericNetworkError(errorMessage, true, { statusCode });
+            return new GenericNetworkError(fluidErrorCode, errorMessage, true, props);
         default:
-            return createGenericNetworkError(
-                errorMessage, retryAfterMs !== undefined, retryAfterMs, { statusCode });
+            const retryInfo = { canRetry: retryAfterMs !== undefined, retryAfterMs };
+            return createGenericNetworkError(fluidErrorCode, errorMessage, retryInfo, props);
     }
 }
 
 export function throwR11sNetworkError(
+    fluidErrorCode: string,
     errorMessage: string,
     statusCode?: number,
     retryAfterMs?: number,
 ): never {
     const networkError = createR11sNetworkError(
+        fluidErrorCode,
         errorMessage,
         statusCode,
         retryAfterMs);
@@ -92,8 +99,9 @@ export function throwR11sNetworkError(
  * Returns network error based on error object from R11s socket (IR11sSocketError)
  */
 export function errorObjectFromSocketError(socketError: IR11sSocketError, handler: string): R11sError {
-    const message = `socket.io: ${handler}: ${socketError.message}`;
+    const message = `R11sSocketError (${handler}): ${socketError.message}`;
     return createR11sNetworkError(
+        "r11sSocketError",
         message,
         socketError.code,
         socketError.retryAfterMs,

@@ -8,7 +8,7 @@ import child_process from "child_process";
 import fs from "fs";
 import { assert, Lazy } from "@fluidframework/common-utils";
 import { ITelemetryBaseEvent, ITelemetryBaseLogger } from "@fluidframework/common-definitions";
-import { Container } from "@fluidframework/container-loader";
+import { IContainer } from "@fluidframework/container-definitions";
 import { ChildLogger, TelemetryLogger } from "@fluidframework/telemetry-utils";
 import {
     FileDeltaStorageService,
@@ -30,7 +30,12 @@ import {
     FileSnapshotReader,
     IFileSnapshot,
 } from "@fluidframework/replay-driver";
-import { compareWithReferenceSnapshot, getNormalizedFileSnapshot, loadContainer } from "./helpers";
+import { 
+    compareWithReferenceSnapshot,
+    getNormalizedFileSnapshot, 
+    loadContainer, 
+    uploadSummary,
+} from "./helpers";
 import { ReplayArgs } from "./replayArgs";
 
 // "worker_threads" does not resolve without --experimental-worker flag on command line
@@ -140,7 +145,7 @@ class Logger implements ITelemetryBaseLogger {
  * Helper class holding container and providing load / snapshot capabilities
  */
 class Document {
-    private container: Container;
+    private container: IContainer;
     private replayer: Replayer;
     private documentSeqNumber = 0;
     private from = -1;
@@ -191,7 +196,8 @@ class Document {
         this.container = await loadContainer(
             documentServiceFactory,
             FileStorageDocumentName,
-            this.docLogger);
+            this.docLogger,
+        );
 
         this.from = this.container.deltaManager.lastSequenceNumber;
         this.replayer = deltaConnection.getReplayer();
@@ -229,10 +235,8 @@ class Document {
         }
     }
 
-    public async snapshot() {
-        return this.container.snapshot(
-            `ReplayTool Snapshot: op ${this.currentOp}, ${this.getFileName()}`,
-            !this.args.incremental /* generateFullTreeNoOtimizations */);
+    public async summarize() {
+        await uploadSummary(this.container);
     }
 
     public extractContent(): ContainerContent {
@@ -399,7 +403,9 @@ export class ReplayTool {
         }
 
         if (this.args.fromVersion !== undefined) {
-            console.log(`Starting from ${this.args.fromVersion}, seq# = ${this.mainDocument.currentOp}`);
+            if (this.args.verbose) {
+                console.log(`Starting from ${this.args.fromVersion}, seq# = ${this.mainDocument.currentOp}`);
+            }
             if (this.mainDocument.currentOp > this.args.to) {
                 return Promise.reject(new Error("--to argument is below snapshot starting op. Nothing to do!"));
             }
@@ -492,7 +498,7 @@ export class ReplayTool {
                         this.documentsFromStorageSnapshots.push(doc);
                     }
                 } catch (error) {
-                    doc.logger.sendTelemetryEvent({ eventName: "FailedToLoadSnapshot" }, error);
+                    doc.logger.sendErrorEvent({ eventName: "FailedToLoadSnapshot" }, error);
                 }
             }
             this.documentsFromStorageSnapshots.sort((a: Document, b: Document) => a.fromOp > b.fromOp ? 1 : -1);
@@ -532,14 +538,14 @@ export class ReplayTool {
             }
 
             const final = this.mainDocument.currentOp < replayTo || this.args.to <= this.mainDocument.currentOp;
-            await this.generateSnapshot(final);
+            await this.generateSummary(final);
             if (final) {
                 break;
             }
         }
     }
 
-    private async generateMainSnapshot(dir: string, final: boolean): Promise<ContainerContent> {
+    private async generateMainSummary(dir: string, final: boolean): Promise<ContainerContent> {
         const op = this.mainDocument.currentOp;
 
         const content = this.mainDocument.extractContent();
@@ -567,7 +573,7 @@ export class ReplayTool {
             }
         }
 
-        await this.mainDocument.snapshot();
+        await this.mainDocument.summarize();
         if (final) {
             this.mainDocument.close();
         }
@@ -646,11 +652,11 @@ export class ReplayTool {
         await this.saveAndVerify(this.documentPriorWindow, dir, content, final);
     }
 
-    private async generateSnapshot(final: boolean) {
+    private async generateSummary(final: boolean) {
         const op = this.mainDocument.currentOp;
         const dir = this.args.outDirName; // `${this.args.outDirName}/${op}`;
 
-        const content = await this.generateMainSnapshot(dir, final);
+        const content = await this.generateMainSummary(dir, final);
         if (content.snapshot === undefined) {
             // Snapshots are not created if there is no "code" proposal
             // It takes some number of ops to get there (join, propose)
@@ -699,7 +705,7 @@ export class ReplayTool {
             content2.snapshot = snapshot;
         };
 
-        await document2.snapshot();
+        await document2.summarize();
         if (final) {
             document2.close();
         }
