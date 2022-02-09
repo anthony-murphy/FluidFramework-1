@@ -20,7 +20,6 @@ import { TestClient } from "./testClient";
 import { TestClientLogger } from "./testClientLogger";
 
 function applyMessagesWithReconnect(
-    startingSeq: number,
     messagesPerClient: ISequencedDocumentMessage[][],
     clients: readonly TestClient[],
     logger: TestClientLogger,
@@ -83,7 +82,7 @@ function applyMessagesWithReconnect(
     });
 
     // apply the reconnect ops to all clients
-    return applyMessages(seq, reconnectMsgs, clients, logger);
+    return applyMessages(reconnectMsgs, clients, logger);
 }
 
 export const defaultOptions: IMergeTreeOperationRunnerConfig & { minLength: number, clients: IConfigRange } = {

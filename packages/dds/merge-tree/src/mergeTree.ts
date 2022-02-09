@@ -5,7 +5,7 @@
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable @typescript-eslint/consistent-type-assertions */
-/* eslint-disable @typescript-eslint/no-shadow */
+/* eslint-disable max-lines */
 /* eslint-disable no-bitwise */
 
 import { assert, Trace } from "@fluidframework/common-utils";

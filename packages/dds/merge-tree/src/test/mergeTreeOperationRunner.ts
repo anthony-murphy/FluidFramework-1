@@ -88,7 +88,7 @@ export function runMergeTreeOperationRunner(
     apply = applyMessages) {
     let seq = startingSeq;
     const results: ReplayGroup[] = [];
-    // eslint-disable-next-line @typescript-eslint/unbound-method
+
     doOverRange(config.opsPerRoundRange, config.growthFunc, (opsPerRound) => {
         if (config.incrementalLog) {
             console.log(`MinLength: ${minLength} Clients: ${clients.length} Ops: ${opsPerRound} Seq: ${seq}`);
@@ -110,7 +110,7 @@ export function runMergeTreeOperationRunner(
                 config.operations,
             );
             const msgs = messageData.map((md)=>md[0]);
-            seq = apply(seq, messageData, clients, logger);
+            seq = apply(messageData, clients, logger);
             const resultText = logger.validate();
             results.push({
                 initialText,
@@ -120,11 +120,13 @@ export function runMergeTreeOperationRunner(
             });
         }
     });
+
     if(config.resultsFilePostfix !== undefined) {
         const resultsFilePath =
             `${replayResultsPath}/len_${minLength}-clients_${clients.length}-${config.resultsFilePostfix}`;
         fs.writeFileSync(resultsFilePath, JSON.stringify(results, undefined, 4));
     }
+
     return seq;
 }
 
@@ -165,7 +167,7 @@ export function generateOperationMessagesForClients(
             }
         }
         if (op !== undefined) {
-            // Precheck to avoid logger.toString() in the string template
+            // Pre-check to avoid logger.toString() in the string template
             if (sg === client.mergeTree.pendingSegments.last()) {
                 assert.notEqual(
                     sg,
@@ -203,12 +205,11 @@ export function generateClientNames(): string[] {
     addClientNames("A", 26);
     addClientNames("a", 26);
     addClientNames("0", 17);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+
     return clientNames;
 }
 
 export function applyMessages(
-    startingSeq: number,
     messagesPerClient: ISequencedDocumentMessage[][],
     clients: readonly TestClient[],
     logger: TestClientLogger,
