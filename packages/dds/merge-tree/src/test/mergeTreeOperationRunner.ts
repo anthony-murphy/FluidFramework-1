@@ -146,7 +146,8 @@ export function generateOperationMessagesForClients(
     for (let i = 0; i < opsPerRound; i++) {
         // pick a client greater than 0, client 0 only applies remote ops
         // and is our baseline
-        const client = clients[random.integer(1, clients.length - 1)(mt)];
+        const clientIndex = random.integer(1, clients.length - 1)(mt);
+        const client = clients[clientIndex];
         const len = client.getLength();
         const sg = client.mergeTree.pendingSegments.last();
         let op: IMergeTreeOp | undefined;
@@ -176,7 +177,7 @@ export function generateOperationMessagesForClients(
             }
             const message = client.makeOpMessage(op, ++seq);
             message.minimumSequenceNumber = minimumSequenceNumber;
-            logger.log();
+            logger.log({[clientIndex]: {...message, sequenceNumber: message.sequenceNumber * -1}});
             messagesPerClient.forEach((ca) => ca.push(message));
 
             // apply some random ops, so clients are in different states
@@ -218,15 +219,32 @@ export function applyMessages(
     const endingSeq = messagesPerClient[0][messagesPerClient[0].length - 1 ].sequenceNumber;
     // finish applying all the ops
     while (messagesPerClient.some((ops) => ops.length > 0)) {
-        for (let clientIndex = 0; clientIndex < clients.length; clientIndex++) {
-            if (messagesPerClient[clientIndex].length > 0) {
-                const message = messagesPerClient[clientIndex].shift();
+        // build a structure to combine clients that have the same next op to process
+        // this is primarily to optimize logging
+        const messageGroups =
+            messagesPerClient.reduce<Record<number,{msg: ISequencedDocumentMessage,clients: number[]}>>((pv,cv,ci)=>{
+                const msg = cv.shift();
+                if(msg !== undefined){
+                    if(pv[msg.sequenceNumber] === undefined){
+                        pv[msg.sequenceNumber] ={
+                            msg,
+                            clients:[ci],
+                        }
+                    }else{
+                        pv[msg.sequenceNumber].clients.push(ci)
+                    }
+                }
+                return pv;
+            },
+            {})
+        const log: Record<number, ISequencedDocumentMessage> = [];
+        for(const seq of Object.keys(messageGroups)){
+            const message = messageGroups[seq].msg;
+            for(const clientIndex of messageGroups[seq].clients){
                 const client = clients[clientIndex];
+                log[clientIndex] = message;
                 try {
                     client.applyMsg(message);
-                    if(clientIndex === 0) {
-                        logger.log({[clientIndex]: message});
-                    }
                 } catch (error) {
                     const msgStr = JSON.stringify(message, undefined, 1);
                     throw new Error(
@@ -234,7 +252,7 @@ export function applyMessages(
                 }
             }
         }
-        logger.log();
+        logger.log(log);
     }
     return  endingSeq;
 }
