@@ -59,6 +59,6 @@ describe("MergeTree.Client", () => {
                 assert.strictEqual(result, group.resultText, "Result text not as expected");
             }
         })
-        .timeout(30 * 1000);
+        .timeout(30 * 10000);
     }
 });
