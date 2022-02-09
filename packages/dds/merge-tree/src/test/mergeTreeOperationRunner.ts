@@ -180,12 +180,13 @@ export function generateOperationMessagesForClients(
             messagesPerClient.forEach((ca) => ca.push(message));
 
             // apply some random ops, so clients are in different states
-            let opToRun = random.integer(0, 5)(mt);
+            let opToRun = random.integer(0, messagesPerClient[0].length)(mt);
             while(--opToRun > 0) {
                 const clientIndex = random.integer(1, clients.length - 1)(mt);
                 if (messagesPerClient[clientIndex].length > 0) {
-                    clients[clientIndex].applyMsg(messagesPerClient[clientIndex].shift());
-                    logger.log();
+                    const msg =messagesPerClient[clientIndex].shift()
+                    clients[clientIndex].applyMsg(msg);
+                    logger.log({[clientIndex]: msg});
                 }
             }
         }
@@ -224,7 +225,7 @@ export function applyMessages(
                 try {
                     client.applyMsg(message);
                     if(clientIndex === 0) {
-                        logger.log(message);
+                        logger.log({[clientIndex]: message});
                     }
                 } catch (error) {
                     const msgStr = JSON.stringify(message, undefined, 1);

@@ -10,6 +10,19 @@ import { IMergeTreeOp } from "../ops";
 import { TextSegment } from "../textSegment";
 import { TestClient } from "./testClient";
 
+function getOpString(msg: ISequencedDocumentMessage | undefined){
+    if(msg === undefined){
+        return "";
+    }
+    const seq = msg ? msg.sequenceNumber.toString() : "";
+    const client = msg ? msg.clientId : "";
+    const op = msg ? msg.contents as IMergeTreeOp : undefined;
+    const opType = op ? op.type.toString() : "";
+    // eslint-disable-next-line @typescript-eslint/dot-notation, max-len
+    const opPos = op && op["pos1"] !== undefined ? `@${op["pos1"]}${op["pos2"] !== undefined ? `,${op["pos2"]}` : ""}` : "";
+    return `${seq}: ${client}${opType}${opPos}`;
+}
+
 export class TestClientLogger {
     private readonly incrementalLog = false;
 
@@ -19,32 +32,25 @@ export class TestClientLogger {
     constructor(
         private readonly clients: readonly TestClient[],
         private readonly title?: string) {
-        this.roundLogLines.push([
-            "seq",
-            "op",
-            ...this.clients.map((c) => `client ${c.longClientId}`),
-        ]);
+
+        const logHeaders = [];
+        for(const c of clients){
+            logHeaders.push("op")
+            logHeaders.push( `client ${c.longClientId}`);
+        }
+        this.roundLogLines.push(logHeaders);
 
         this.roundLogLines[0].forEach((v) => this.paddings.push(v.length));
     }
 
-    public log(msg?: ISequencedDocumentMessage, preAction?: (c: TestClient) => void) {
-        const seq = msg ? msg.sequenceNumber.toString() : "";
-        const client = msg ? msg.clientId : "";
-        const op = msg ? msg.contents as IMergeTreeOp : undefined;
-        const opType = op ? op.type.toString() : "";
-        // eslint-disable-next-line @typescript-eslint/dot-notation, max-len
-        const opPos = op && op["pos1"] !== undefined ? `@${op["pos1"]}${op["pos2"] !== undefined ? `,${op["pos2"]}` : ""}` : "";
-        const clientOp = ` ${client}${opType}${opPos}`;
-        const ackedLine: string[] = [
-            seq,
-            clientOp,
-        ];
+    public log(
+        clientMessages?: Record<number, ISequencedDocumentMessage> | ISequencedDocumentMessage,
+        preAction?: (c: TestClient) => void) {
+
+        const ackedLine: string[] = [];
         this.roundLogLines.push(ackedLine);
-        const localLine: string[] = ["", ""];
+        const localLine: string[] = [];
         let localChanges = false;
-        this.paddings[0] = Math.max(ackedLine[0].length, this.paddings[0]);
-        this.paddings[1] = Math.max(ackedLine[1].length, this.paddings[1]);
         this.clients.forEach((c, i) => {
             if (preAction) {
                 try {
@@ -54,13 +60,28 @@ export class TestClientLogger {
                     throw e;
                 }
             }
+            let message: ISequencedDocumentMessage | undefined = undefined;
+            if(clientMessages !== undefined){
+                if("sequenceNumber" in clientMessages){
+                    message = clientMessages
+                }else if(clientMessages[i] !== undefined){
+                    message = clientMessages[i]
+                }
+            }
+
             const segStrings = this.getSegString(c);
-            ackedLine.push(segStrings.acked);
-            localLine.push(segStrings.local);
+            const opString = getOpString(message);
+            ackedLine.push( opString, segStrings.acked);
+            localLine.push("", segStrings.local);
             if (!localChanges && segStrings.local.trim().length > 0) {
                 localChanges = true;
             }
-            this.paddings[i + 2] = Math.max(ackedLine[i + 2].length, this.paddings[i + 2]);
+            const clientLogIndex = i*2
+            this.paddings[clientLogIndex] =
+                Math.max(ackedLine[clientLogIndex].length, this.paddings[clientLogIndex]);
+            this.paddings[clientLogIndex + 1] =
+                Math.max(ackedLine[clientLogIndex + 1].length, this.paddings[clientLogIndex + 1]);
+
         });
         if (localChanges) {
             this.roundLogLines.push(localLine);
@@ -75,7 +96,7 @@ export class TestClientLogger {
         this.clients.forEach(
             (c) => {
                 if (c === this.clients[0]) { return; }
-                // Precheck to avoid this.toString() in the string template
+                // Pre-check to avoid this.toString() in the string template
                 if (c.getText() !== baseText) {
                     assert.equal(
                         c.getText(),
