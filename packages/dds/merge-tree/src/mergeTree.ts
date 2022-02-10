@@ -1023,7 +1023,7 @@ function tileShift(
     offset: number | undefined, end: number | undefined, searchInfo: IReferenceSearchInfo) {
     if (node.isLeaf()) {
         const seg = node;
-        if ((searchInfo.mergeTree.localNetLength(seg) > 0) && Marker.is(seg)) {
+        if (((searchInfo.mergeTree.localNetLength(seg) ?? 0) > 0) && Marker.is(seg)) {
             if (seg.hasTileLabel(searchInfo.tileLabel)) {
                 searchInfo.tile = seg;
             }
@@ -1149,7 +1149,10 @@ export class MergeTree {
     public localNetLength(segment: ISegment) {
         const removalInfo: IRemovalInfo = segment;
         if (removalInfo.removedSeq !== undefined) {
-            return 0;
+            if(removalInfo.removedSeq === UnassignedSequenceNumber){
+                return 0
+            }
+            return undefined;
         } else {
             return segment.cachedLength;
         }
@@ -1296,7 +1299,7 @@ export class MergeTree {
                                 && prevSegment.canAppend(segment)
                                 && matchProperties(prevSegment.properties, segment.properties)
                                 && prevSegment.trackingCollection.matches(segment.trackingCollection)
-                                && this.localNetLength(segment) > 0;
+                                && (this.localNetLength(segment) ?? 0) > 0;
 
                             if (canAppend) {
                                 if (MergeTree.traceAppend) {
@@ -1315,7 +1318,7 @@ export class MergeTree {
                                 segment.trackingCollection.trackingGroups.forEach((tg) => tg.unlink(segment));
                             } else {
                                 holdNodes.push(segment);
-                                if (this.localNetLength(segment) > 0) {
+                                if ((this.localNetLength(segment) ?? 0) > 0) {
                                     prevSegment = segment;
                                 } else {
                                     prevSegment = undefined;
