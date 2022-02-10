@@ -14,13 +14,17 @@ function getOpString(msg: ISequencedDocumentMessage | undefined){
     if(msg === undefined){
         return "";
     }
-    const seq = msg ? msg.sequenceNumber.toString() : "";
-    const client = msg ? msg.clientId : "";
-    const op = msg ? msg.contents as IMergeTreeOp : undefined;
-    const opType = op ? op.type.toString() : "";
+    const op =  msg.contents as IMergeTreeOp;
+    const opType = op.type.toString();
     // eslint-disable-next-line @typescript-eslint/dot-notation, max-len
     const opPos = op && op["pos1"] !== undefined ? `@${op["pos1"]}${op["pos2"] !== undefined ? `,${op["pos2"]}` : ""}` : "";
-    return `${seq}: ${client}${opType}${opPos}`;
+
+    const seq =
+        (msg.sequenceNumber < 0 ? "-" : "") +
+        (Math.abs(msg.sequenceNumber) - msg.minimumSequenceNumber).toString()
+    const ref = (msg.referenceSequenceNumber - msg.minimumSequenceNumber).toString();
+    const client = msg.clientId
+    return `${seq}:${ref}:${client}${opType}${opPos}`;
 }
 
 export class TestClientLogger {
@@ -102,7 +106,7 @@ export class TestClientLogger {
                         c.getText(),
                         baseText,
                         // eslint-disable-next-line max-len
-                        `${this.toString()}\nClient ${c.longClientId} does not match client ${this.clients[0].longClientId}`);
+                        `\n${this.toString()}\nClient ${c.longClientId} does not match client ${this.clients[0].longClientId}`);
                 }
             });
         return baseText;
