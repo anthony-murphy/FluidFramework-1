@@ -94,6 +94,17 @@ export function runMergeTreeOperationRunner(
             console.log(`MinLength: ${minLength} Clients: ${clients.length} Ops: ${opsPerRound} Seq: ${seq}`);
         }
         for (let round = 0; round < config.rounds; round++) {
+            // for test only. directly modify the text of the segments
+            // so all initial values are "Z". this makes modification easier to
+            // follow
+            clients.forEach((c)=>{
+                for(let i=0;i<c.getLength();i++){
+                    const segOff = c.getContainingSegment(i);
+                    if(segOff.offset === 0 && TextSegment.is(segOff.segment)){
+                        segOff.segment.text = "Z".repeat(segOff.segment.text.length);
+                    }
+                }
+            });
             const logger = new TestClientLogger(
                 clients,
                 `Clients: ${clients.length} Ops: ${opsPerRound} Round: ${round}`);
