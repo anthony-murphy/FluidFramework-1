@@ -534,6 +534,9 @@ export abstract class BaseSegment extends MergeNode implements ISegment {
         // TODO: deep clone properties
         b.properties = clone(this.properties);
         b.removedClientId = this.removedClientId;
+        if(this.removedClientOverlap){
+            b.removedClientOverlap = [... this.removedClientOverlap];
+        }
         // TODO: copy removed client overlap and branch removal info
         b.removedSeq = this.removedSeq;
         b.seq = this.seq;
