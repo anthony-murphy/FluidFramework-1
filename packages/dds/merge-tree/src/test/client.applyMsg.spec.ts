@@ -419,4 +419,59 @@ describe("client.applyMsg", () => {
         logger.log();
         logger.validate();
     });
+
+    it("Local insert after acked local delete", () => {
+        const text = "ZZ"
+        const setup = (c: TestClient)=>{
+            c.insertTextLocal(0, text);
+            while(c.getText().includes("-")){
+                const index = c.getText().indexOf("-");
+                c.removeRangeLocal(index, index +1);
+            }
+        }
+        const clientA = new TestClient();
+        setup(clientA)
+        clientA.startOrUpdateCollaboration("A");
+        const clientB = new TestClient();
+        setup(clientB)
+        clientB.startOrUpdateCollaboration("B");
+        const clientC = new TestClient();
+        setup(clientC)
+        clientC.startOrUpdateCollaboration("C");
+
+        const clients = [clientA, clientB, clientC];
+        const logger = new TestClientLogger(clients);
+
+        let seq = 0;
+
+        const op1 = clientC.makeOpMessage(clientC.removeRangeLocal(0, 1), ++seq);
+        clientC.applyMsg(op1);
+        logger.log()
+
+        const messages: ISequencedDocumentMessage[] =[
+            clientB.makeOpMessage(clientB.removeRangeLocal(1, 2), ++seq),
+        ]
+        logger.log();
+
+        messages.unshift(
+            clientC.makeOpMessage(
+                clientC.insertTextLocal(0, "C"), ++seq));
+        logger.log();
+
+        messages.unshift(clientB.makeOpMessage(clientB.insertTextLocal(1, "B"), ++seq))
+        logger.log();
+
+        clientA.applyMsg(op1);
+        clientB.applyMsg(op1);
+        logger.log();
+
+        while (messages.length > 0) {
+            const msg = messages.pop();
+            logger.log(msg, (c) => {
+                c.applyMsg(msg);
+            });
+        }
+
+        logger.validate();
+    });
 });

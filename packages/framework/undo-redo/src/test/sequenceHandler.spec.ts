@@ -143,4 +143,22 @@ describe("SharedSegmentSequenceUndoRedoHandler", () => {
 
         assert.equal(sharedString.getText(), text);
     });
+
+    it("Undo and Redo Delete - Bug Repro", () => {
+        insertTextAsChunks(sharedString);
+        const handler = new SharedSegmentSequenceUndoRedoHandler(undoRedoStack);
+        handler.attachSequence(sharedString);
+
+        sharedString.removeText(1, 2);
+        sharedString.insertText(5, "a");
+        sharedString.removeText(0, 1);
+        sharedString.insertText(5, "b");
+        sharedString.removeText(0, 1);
+
+
+        while (undoRedoStack.undoOperation()) {
+        }
+
+        assert.equal(sharedString.getText(), text);
+    });
 });
