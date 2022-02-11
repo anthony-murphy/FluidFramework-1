@@ -442,7 +442,7 @@ describe("client.applyMsg", () => {
     });
 
 
-    it("Local insert after acked local delete 2", () => {
+    it("Remote Remove before conflicting insert", () => {
         const clients = createClientsAtInitialState("Z", "A", "B", "C")
 
         const logger = new TestClientLogger(clients.all);
@@ -450,13 +450,10 @@ describe("client.applyMsg", () => {
         let seq = 0;
 
         const op1 = clients.B.makeOpMessage(clients.B.removeRangeLocal(0, 1), ++seq);
-
         const op2 = clients.B.makeOpMessage(clients.B.insertTextLocal(0, "B"), ++seq);
-
         clients.C.applyMsg(op1);
 
         const op3 = clients.C.makeOpMessage(clients.C.insertTextLocal(0, "C"), ++seq);
-
         clients.A.applyMsg(op1);
         clients.B.applyMsg(op1);
 

@@ -61,7 +61,8 @@ export class TestClientLogger {
 
     private ackedLine: string[];
     private localLine: string[];
-    private lastOp: ISequencedDocumentMessage | undefined;
+    // initialize to private instance, so first real edit will create a new line
+    private lastOp: ISequencedDocumentMessage | undefined ={} as ISequencedDocumentMessage;
 
     constructor(
         private readonly clients: readonly TestClient[],
@@ -104,8 +105,7 @@ export class TestClientLogger {
         });
         this.roundLogLines.push(logHeaders);
         this.roundLogLines[0].forEach((v) => this.paddings.push(v.length));
-        this.addNewLogLine();
-        this.addNewLogLine();
+        this.addNewLogLine(); // capture initial state
     }
 
     private addNewLogLine() {
