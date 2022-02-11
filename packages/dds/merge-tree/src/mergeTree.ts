@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 /*!
  * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
@@ -6,7 +5,7 @@
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable @typescript-eslint/consistent-type-assertions */
-
+/* eslint-disable @typescript-eslint/no-shadow */
 /* eslint-disable no-bitwise */
 
 import { assert, Trace } from "@fluidframework/common-utils";
@@ -151,12 +150,12 @@ export interface ISegment extends IMergeNodeCommon, IRemovalInfo {
 }
 
 export interface IMarkerModifiedAction {
-
+    // eslint-disable-next-line @typescript-eslint/prefer-function-type
     (marker: Marker): void;
 }
 
 export interface ISegmentAction<TClientData> {
-
+    // eslint-disable-next-line @typescript-eslint/prefer-function-type
     (segment: ISegment, pos: number, refSeq: number, clientId: number, start: number,
         end: number, accum: TClientData): boolean;
 }
@@ -167,7 +166,7 @@ export interface ISegmentChanges {
 }
 
 export interface BlockAction<TClientData> {
-
+    // eslint-disable-next-line @typescript-eslint/prefer-function-type
     (
         block: IMergeBlock,
         pos: number,
@@ -180,7 +179,7 @@ export interface BlockAction<TClientData> {
 }
 
 export interface NodeAction<TClientData> {
-
+    // eslint-disable-next-line @typescript-eslint/prefer-function-type
     (
         node: IMergeNode,
         pos: number,
@@ -260,7 +259,7 @@ export class MergeNode implements IMergeNodeCommon {
     }
 }
 
-
+// eslint-disable-next-line @typescript-eslint/ban-types
 function addTile(tile: ReferencePosition, tiles: object) {
     const tileLabels = tile.getTileLabels();
     if (tileLabels) {
@@ -270,7 +269,7 @@ function addTile(tile: ReferencePosition, tiles: object) {
     }
 }
 
-
+// eslint-disable-next-line @typescript-eslint/ban-types
 function addTileIfNotPresent(tile: ReferencePosition, tiles: object) {
     const tileLabels = tile.getTileLabels();
     if (tileLabels) {
@@ -283,7 +282,7 @@ function addTileIfNotPresent(tile: ReferencePosition, tiles: object) {
 }
 
 function applyStackDelta(currentStackMap: RangeStackMap, deltaStackMap: RangeStackMap) {
-    // eslint-disable-next-line guard-for-in
+    // eslint-disable-next-line guard-for-in, no-restricted-syntax
     for (const label in deltaStackMap) {
         const deltaStack = deltaStackMap[label];
         if (!deltaStack.empty()) {
@@ -469,7 +468,7 @@ class HierMergeBlock extends MergeBlock implements IMergeBlock {
 
     public hierToString(indentCount: number) {
         let strbuf = "";
-        // eslint-disable-next-line guard-for-in
+        // eslint-disable-next-line guard-for-in, no-restricted-syntax
         for (const key in this.rangeStacks) {
             const stack = this.rangeStacks[key];
             strbuf += internedSpaces(indentCount);
@@ -534,9 +533,6 @@ export abstract class BaseSegment extends MergeNode implements ISegment {
         // TODO: deep clone properties
         b.properties = clone(this.properties);
         b.removedClientId = this.removedClientId;
-        if(this.removedClientOverlap){
-            b.removedClientOverlap = [... this.removedClientOverlap];
-        }
         // TODO: copy removed client overlap and branch removal info
         b.removedSeq = this.removedSeq;
         b.seq = this.seq;
@@ -570,7 +566,7 @@ export abstract class BaseSegment extends MergeNode implements ISegment {
                 return true;
 
             case MergeTreeDeltaType.REMOVE:
-
+                // eslint-disable-next-line @typescript-eslint/no-this-alias
                 const removalInfo: IRemovalInfo = this;
                 assert(!!removalInfo, 0x046 /* "On remove ack, missing removal info!" */);
                 assert(!!removalInfo.removedSeq, 0x047 /* "On remove ack, missing removed sequence number!" */);
@@ -828,7 +824,7 @@ export class Marker extends BaseSegment implements ReferencePosition {
                 // Avoid circular reference when stringifying makers containing handles.
                 // (Substitute a debug string instead.)
                 const handle = !!value && value.IFluidHandle;
-
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-return
                 return handle
                     ? `#Handle(${handle.routeContext.path}/${handle.path})`
                     : value;
@@ -1026,7 +1022,7 @@ function tileShift(
     offset: number | undefined, end: number | undefined, searchInfo: IReferenceSearchInfo) {
     if (node.isLeaf()) {
         const seg = node;
-        if (((searchInfo.mergeTree.localNetLength(seg) ?? 0) > 0) && Marker.is(seg)) {
+        if ((searchInfo.mergeTree.localNetLength(seg) > 0) && Marker.is(seg)) {
             if (seg.hasTileLabel(searchInfo.tileLabel)) {
                 searchInfo.tile = seg;
             }
@@ -1152,10 +1148,7 @@ export class MergeTree {
     public localNetLength(segment: ISegment) {
         const removalInfo: IRemovalInfo = segment;
         if (removalInfo.removedSeq !== undefined) {
-            if(removalInfo.removedSeq === UnassignedSequenceNumber){
-                return 0
-            }
-            return undefined;
+            return 0;
         } else {
             return segment.cachedLength;
         }
@@ -1208,7 +1201,7 @@ export class MergeTree {
                 this.blockUpdate(block);
             }
 
-
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-return
             return blocks.length === 1          // If there is only one block at this layer...
                 ? blocks[0]                     // ...then we're done.  Return the root.
                 : buildMergeBlock(blocks);      // ...otherwise recursively build the next layer above blocks.
@@ -1302,7 +1295,7 @@ export class MergeTree {
                                 && prevSegment.canAppend(segment)
                                 && matchProperties(prevSegment.properties, segment.properties)
                                 && prevSegment.trackingCollection.matches(segment.trackingCollection)
-                                && (this.localNetLength(segment) ?? 0) > 0;
+                                && this.localNetLength(segment) > 0;
 
                             if (canAppend) {
                                 if (MergeTree.traceAppend) {
@@ -1321,7 +1314,7 @@ export class MergeTree {
                                 segment.trackingCollection.trackingGroups.forEach((tg) => tg.unlink(segment));
                             } else {
                                 holdNodes.push(segment);
-                                if ((this.localNetLength(segment) ?? 0) > 0) {
+                                if (this.localNetLength(segment) > 0) {
                                     prevSegment = segment;
                                 } else {
                                     prevSegment = undefined;
