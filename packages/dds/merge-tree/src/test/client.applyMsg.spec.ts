@@ -467,5 +467,59 @@ describe("client.applyMsg", () => {
 
         logger.validate();
     });
+    it("Local insert after acked local delete", () => {
+        const clients = createClientsAtInitialState("ZZ", "A", "B", "C")
+
+        const logger = new TestClientLogger(clients.all);
+
+        let seq = 0;
+
+        const op1 = clients.C.makeOpMessage(clients.C.removeRangeLocal(0, 1), ++seq);
+        clients.C.applyMsg(op1);
+
+        const op2 = clients.B.makeOpMessage(clients.B.removeRangeLocal(1, 2), ++seq);
+
+        const op3 = clients.C.makeOpMessage(clients.C.insertTextLocal(0, "C"), ++seq)
+
+        const op4 = clients.B.makeOpMessage(clients.B.insertTextLocal(1, "B"), ++seq);
+
+        clients.A.applyMsg(op1);
+        clients.B.applyMsg(op1);
+
+        const messages = [op2, op3, op4]
+        while (messages.length > 0) {
+            const msg = messages.shift();
+            clients.all.forEach((c)=>c.applyMsg(msg));
+        }
+
+        logger.validate();
+    });
+
+
+    it("Remote Remove before conflicting insert", () => {
+        const clients = createClientsAtInitialState("Z", "A", "B", "C")
+
+        const logger = new TestClientLogger(clients.all);
+
+        let seq = 0;
+
+        const op1 = clients.B.makeOpMessage(clients.B.removeRangeLocal(0, 1), ++seq);
+        const op2 = clients.B.makeOpMessage(clients.B.insertTextLocal(0, "B"), ++seq);
+        clients.C.applyMsg(op1);
+
+        const op3 = clients.C.makeOpMessage(clients.C.insertTextLocal(0, "C"), ++seq);
+        clients.A.applyMsg(op1);
+        clients.B.applyMsg(op1);
+
+        const messages = [op2, op3];
+        while (messages.length > 0) {
+            const msg = messages.shift();
+            clients.all.forEach((c) => {
+                c.applyMsg(msg);
+            });
+        }
+
+        logger.validate();
+    });
 });
 
