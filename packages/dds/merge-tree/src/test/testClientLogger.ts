@@ -14,7 +14,7 @@ function getOpString(msg: ISequencedDocumentMessage | undefined){
     if(msg === undefined){
         return "";
     }
-    const op =  msg.contents as IMergeTreeOp;
+    const op = msg.contents as IMergeTreeOp;
     const opType = op.type.toString();
     // eslint-disable-next-line @typescript-eslint/dot-notation, max-len
     const opPos = op && op["pos1"] !== undefined ? `@${op["pos1"]}${op["pos2"] !== undefined ? `,${op["pos2"]}` : ""}` : "";
@@ -27,6 +27,37 @@ function getOpString(msg: ISequencedDocumentMessage | undefined){
     return `${seq}:${ref}:${client}${opType}${opPos}`;
 }
 
+function negSeq(msg: ISequencedDocumentMessage): ISequencedDocumentMessage{
+    return {...msg, sequenceNumber: msg.sequenceNumber * -1}
+}
+
+type ClientMap = Partial<Record<"A" | "B" | "C" | "D" | "E", TestClient>>
+
+export function createClientsAtInitialState<TClients extends ClientMap>(
+    initialState: string,
+    ... clientIds: (string & keyof TClients)[]
+): Record<keyof TClients, TestClient> & {all: TestClient[]}
+{
+    const setup = (c: TestClient)=>{
+        c.insertTextLocal(0, initialState);
+        while(c.getText().includes("-")){
+            const index = c.getText().indexOf("-");
+            c.removeRangeLocal(index, index +1);
+        }
+    }
+    const all: TestClient[]=[];
+    const clients: Partial<Record<keyof TClients, TestClient>> ={};
+    for(const id of clientIds){
+        if(clients[id] === undefined){
+            clients[id]= new TestClient();
+            all.push(clients[id]);
+            setup(clients[id])
+            clients[id].startOrUpdateCollaboration(id);
+        }
+    }
+
+    return {...clients, all};
+}
 export class TestClientLogger {
     private readonly incrementalLog = false;
 
@@ -48,32 +79,35 @@ export class TestClientLogger {
     }
 
     public log(
-        clientMessages?: Record<number, ISequencedDocumentMessage> | ISequencedDocumentMessage,
+        message?: ISequencedDocumentMessage,
         preAction?: (c: TestClient) => void) {
+        const clientMessages: Record<number, ISequencedDocumentMessage>={};
+        try{
+            this.clients.forEach((c, i) => {
+                if (preAction) {
+                    preAction(c);
+                }
+                clientMessages[i]= message;
+            });
+        }catch(e){
+            // eslint-disable-next-line @typescript-eslint/dot-notation
+            e["message"] += this.toString();
+            throw e;
+        }finally{
+            this.logPartial(clientMessages);
+        }
+    }
+
+    public logPartial(clientMessages?: Record<number | string, ISequencedDocumentMessage>){
 
         const ackedLine: string[] = [];
         this.roundLogLines.push(ackedLine);
         const localLine: string[] = [];
         let localChanges = false;
-        this.clients.forEach((c, i) => {
-            if (preAction) {
-                try {
-                    preAction(c);
-                } catch (e) {
-                    e.message += this.toString();
-                    throw e;
-                }
-            }
-            let message: ISequencedDocumentMessage | undefined = undefined;
-            if(clientMessages !== undefined){
-                if("sequenceNumber" in clientMessages){
-                    message = clientMessages
-                }else if(clientMessages[i] !== undefined){
-                    message = clientMessages[i]
-                }
-            }
 
+        this.clients.forEach((c,i)=>{
             const segStrings = this.getSegString(c);
+            const message = clientMessages[i] ?? clientMessages[c.longClientId]
             const opString = getOpString(message);
             ackedLine.push( opString, segStrings.acked);
             localLine.push("", segStrings.local);
@@ -92,7 +126,14 @@ export class TestClientLogger {
         }
         if (this.incrementalLog) {
             console.log(ackedLine.map((v, i) => v.padEnd(this.paddings[i])).join(" | "));
+            console.log(ackedLine.map((v, i) => v.padEnd(this.paddings[i])).join(" | "));
         }
+    }
+
+    public logLocal(clientMessages: Record<number | string, ISequencedDocumentMessage>){
+        const keys = Object.keys(clientMessages);
+        assert(keys.length === 1);
+        this.logPartial({[keys[0]]: negSeq(clientMessages[keys[0]])})
     }
 
     public validate() {
