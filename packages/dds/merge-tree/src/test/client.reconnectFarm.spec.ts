@@ -41,7 +41,6 @@ function applyMessagesWithReconnect(
                 }
             }
         }
-        logger.log();
     }
 
     // replay all ops above water line from all clients expect 1
@@ -57,7 +56,6 @@ function applyMessagesWithReconnect(
             reconnectClientMsgs.push(message.contents as IMergeTreeOp);
         } else {
             message.sequenceNumber = ++seq;
-            logger.log();
             clients.forEach((c) => c.applyMsg(message));
             minSeq = message.minimumSequenceNumber;
         }

@@ -9,6 +9,7 @@ import { UnassignedSequenceNumber } from "../constants";
 import { IMergeTreeOp } from "../ops";
 import { TextSegment } from "../textSegment";
 import { TestClient } from "./testClient";
+import { IMergeTreeDeltaOpArgs, MergeTreeMaintenanceType } from "..";
 
 function getOpString(msg: ISequencedDocumentMessage | undefined){
     if(msg === undefined){
@@ -19,9 +20,7 @@ function getOpString(msg: ISequencedDocumentMessage | undefined){
     // eslint-disable-next-line @typescript-eslint/dot-notation, max-len
     const opPos = op && op["pos1"] !== undefined ? `@${op["pos1"]}${op["pos2"] !== undefined ? `,${op["pos2"]}` : ""}` : "";
 
-    const seq =
-        (msg.sequenceNumber < 0 ? "-" : "") +
-        (Math.abs(msg.sequenceNumber) - msg.minimumSequenceNumber).toString()
+    const seq = msg.sequenceNumber < 0 ? "L" : (msg.sequenceNumber - msg.minimumSequenceNumber).toString()
     const ref = (msg.referenceSequenceNumber - msg.minimumSequenceNumber).toString();
     const client = msg.clientId
     return `${seq}:${ref}:${client}${opType}${opPos}`;
@@ -60,78 +59,81 @@ export class TestClientLogger {
     private readonly paddings: number[] = [];
     private readonly roundLogLines: string[][] = [];
 
+    private ackedLine: string[];
+    private localLine: string[];
+    private lastOp: ISequencedDocumentMessage | undefined;
+
     constructor(
         private readonly clients: readonly TestClient[],
         private readonly title?: string) {
 
         const logHeaders = [];
-        for(const c of clients){
+        clients.forEach((c,i)=>{
             logHeaders.push("op")
             logHeaders.push( `client ${c.longClientId}`);
-        }
-        this.roundLogLines.push(logHeaders);
-
-        this.roundLogLines[0].forEach((v) => this.paddings.push(v.length));
-    }
-
-    public log(
-        message?: ISequencedDocumentMessage,
-        preAction?: (c: TestClient) => void) {
-        const clientMessages: Record<number, ISequencedDocumentMessage>={};
-        try{
-            this.clients.forEach((c, i) => {
-                if (preAction) {
-                    preAction(c);
+            const callback = (op: IMergeTreeDeltaOpArgs)=>{
+                if(this.lastOp !== op.sequencedMessage){
+                    this.addNewLogLine();
+                    this.lastOp = op.sequencedMessage;
                 }
-                clientMessages[i]= message;
-            });
-        }catch(e){
-            // eslint-disable-next-line @typescript-eslint/dot-notation
-            e["message"] += this.toString();
-            throw e;
-        }finally{
-            this.logPartial(clientMessages);
-        }
-    }
+                const clientLogIndex = i*2
 
-    public logPartial(clientMessages?: Record<number | string, ISequencedDocumentMessage>){
+                this.ackedLine[clientLogIndex]=getOpString(op.sequencedMessage ?? c.makeOpMessage(op.op))
+                const segStrings = this.getSegString(c);
+                this.ackedLine[clientLogIndex + 1] = segStrings.acked;
+                this.localLine[clientLogIndex +1] = segStrings.local;
 
-        const ackedLine: string[] = [];
-        this.roundLogLines.push(ackedLine);
-        const localLine: string[] = [];
-        let localChanges = false;
+                this.paddings[clientLogIndex] =
+                    Math.max(
+                        this.ackedLine[clientLogIndex].length,
+                        this.localLine[clientLogIndex].length,
+                        this.paddings[clientLogIndex]);
 
-        this.clients.forEach((c,i)=>{
-            const segStrings = this.getSegString(c);
-            const message = clientMessages[i] ?? clientMessages[c.longClientId]
-            const opString = getOpString(message);
-            ackedLine.push( opString, segStrings.acked);
-            localLine.push("", segStrings.local);
-            if (!localChanges && segStrings.local.trim().length > 0) {
-                localChanges = true;
+                this.paddings[clientLogIndex + 1] =
+                    Math.max(
+                        this.ackedLine[clientLogIndex + 1].length,
+                        this.localLine[clientLogIndex + 1].length,
+                        this.paddings[clientLogIndex + 1]);
             }
-            const clientLogIndex = i*2
-            this.paddings[clientLogIndex] =
-                Math.max(ackedLine[clientLogIndex].length, this.paddings[clientLogIndex]);
-            this.paddings[clientLogIndex + 1] =
-                Math.max(ackedLine[clientLogIndex + 1].length, this.paddings[clientLogIndex + 1]);
-
+            c.mergeTreeDeltaCallback = callback;
+            c.mergeTreeMaintenanceCallback= (main,op)=>{
+                if(main.operation === MergeTreeMaintenanceType.ACKNOWLEDGED){
+                    callback(op)
+                }
+            }
         });
-        if (localChanges) {
-            this.roundLogLines.push(localLine);
-        }
-        if (this.incrementalLog) {
-            console.log(ackedLine.map((v, i) => v.padEnd(this.paddings[i])).join(" | "));
-            console.log(ackedLine.map((v, i) => v.padEnd(this.paddings[i])).join(" | "));
-        }
+        this.roundLogLines.push(logHeaders);
+        this.roundLogLines[0].forEach((v) => this.paddings.push(v.length));
+        this.addNewLogLine();
+        this.addNewLogLine();
     }
 
-    public logLocal(clientMessages: Record<number | string, ISequencedDocumentMessage>){
-        const keys = Object.keys(clientMessages);
-        assert(keys.length === 1);
-        const msg = {...clientMessages[keys[0]]};
-        msg.sequenceNumber *= -1;
-        this.logPartial({[keys[0]]: msg})
+    private addNewLogLine() {
+        if (this.incrementalLog) {
+            console.log(this.ackedLine.map((v, i) => v.padEnd(this.paddings[i])).join(" | "));
+            console.log(this.ackedLine.map((v, i) => v.padEnd(this.paddings[i])).join(" | "));
+        }
+        this.ackedLine = [];
+        this.localLine = [];
+        this.clients.forEach((cc, clientLogIndex)=>{
+            const segStrings = this.getSegString(cc);
+            this.ackedLine.push("", segStrings.acked);
+            this.localLine.push("", segStrings.local);
+
+            this.paddings[clientLogIndex] =
+                Math.max(
+                    this.ackedLine[clientLogIndex].length,
+                    this.localLine[clientLogIndex].length,
+                    this.paddings[clientLogIndex]);
+
+            this.paddings[clientLogIndex + 1] =
+                Math.max(
+                    this.ackedLine[clientLogIndex + 1].length,
+                    this.localLine[clientLogIndex + 1].length,
+                    this.paddings[clientLogIndex + 1]);
+        });
+        this.roundLogLines.push(this.ackedLine);
+        this.roundLogLines.push(this.localLine);
     }
 
     public validate() {
@@ -157,13 +159,14 @@ export class TestClientLogger {
             + `-: Deleted\n`
             + `*: Unacked Insert and Delete\n`
             + `${this.clients[0].getCollabWindow().minSeq}: msn/offset\n`
-            + `Op format <seq>:<ref>:<client><op type>@<pos1>,<pos2>\n`
-            + `sequence number represented as offset from msn. negative are local.\n`
-            + `op types: 0) insert 1)remove 2)annotate\n`;
+            + `Op format <seq>:<ref>:<client><type>@<pos1>,<pos2>\n`
+            + `sequence number represented as offset from msn. L means local.\n`
+            + `op types: 0) insert 1) remove 2) annotate\n`;
         if (this.title) {
             str += `${this.title}\n`;
         }
         str += this.roundLogLines
+            .filter((line)=>line.some((c)=>c.trim().length >0))
             .map((line) => line.map((v, i) => v.padEnd(this.paddings[i])).join(" | "))
             .join("\n");
         return str;

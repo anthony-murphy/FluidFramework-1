@@ -108,7 +108,6 @@ export function runMergeTreeOperationRunner(
             const logger = new TestClientLogger(
                 clients,
                 `Clients: ${clients.length} Ops: ${opsPerRound} Round: ${round}`);
-            logger.log();
             const initialText = logger.validate();
 
             const messageData = generateOperationMessagesForClients(
@@ -165,7 +164,6 @@ export function generateOperationMessagesForClients(
             for(let opi=0;opi<random.integer(0, messagesPerClient[clientIndex].length)(mt); opi++){
                 const msg = messagesPerClient[clientIndex].shift()
                 client.applyMsg(msg);
-                logger.logPartial({[clientIndex]: msg});
             }
 
             const len = client.getLength();
@@ -197,7 +195,6 @@ export function generateOperationMessagesForClients(
                 }
                 const message = client.makeOpMessage(op, ++seq);
                 message.minimumSequenceNumber = minimumSequenceNumber;
-                logger.logLocal({[clientIndex]: message});
                 messagesPerClient.forEach((ca) => ca.push(message));
             }
         }
@@ -234,23 +231,19 @@ export function applyMessages(
     while (messagesPerClient.some((ops) => ops.length > 0)) {
         const lowest = Math.min(...messagesPerClient.map((m)=>m[0]?.sequenceNumber ?? endingSeq));
         const log: Record<number, ISequencedDocumentMessage> = [];
-        try{
-            clients.forEach((client, i)=>{
-                if(messagesPerClient[i][0]?.sequenceNumber === lowest){
-                    const message = messagesPerClient[i].shift();
-                    log[i] = message;
-                    try {
-                        client.applyMsg(message);
-                    } catch (error) {
-                        const msgStr = JSON.stringify(message, undefined, 1);
-                        throw new Error(
-                            `${logger.toString()}\nClient ${client.longClientId}: ${error}\n${msgStr}\n`);
-                    }
+        clients.forEach((client, i)=>{
+            if(messagesPerClient[i][0]?.sequenceNumber === lowest){
+                const message = messagesPerClient[i].shift();
+                log[i] = message;
+                try {
+                    client.applyMsg(message);
+                } catch (error) {
+                    const msgStr = JSON.stringify(message, undefined, 1);
+                    throw new Error(
+                        `${logger.toString()}\nClient ${client.longClientId}: ${error}\n${msgStr}\n`);
                 }
-            })
-        }finally{
-            logger.logPartial(log);
-        }
+            }
+        })
     }
     return endingSeq;
 }

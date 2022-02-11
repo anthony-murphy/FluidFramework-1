@@ -8,7 +8,7 @@ import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions"
 import { UnassignedSequenceNumber } from "../constants";
 import { SegmentGroup } from "../mergeTree";
 import { TestClient } from "./testClient";
-import { TestClientLogger } from "./testClientLogger";
+import { createClientsAtInitialState, TestClientLogger } from "./testClientLogger";
 
 describe("client.applyMsg", () => {
     const localUserLongId = "localUser";
@@ -234,12 +234,12 @@ describe("client.applyMsg", () => {
         const remoteClient = new TestClient();
         remoteClient.insertTextLocal(0, client.getText());
         remoteClient.startOrUpdateCollaboration("remoteUser");
-        const logger = new TestClientLogger([client, remoteClient]);
-        logger.log();
+        const clients = [client, remoteClient];
+        const logger = new TestClientLogger(clients);
         let seq = 0;
         const initialMsg = client.makeOpMessage(client.insertTextLocal(0, "-"), ++seq);
 
-        logger.log(initialMsg, (c) => c.applyMsg(initialMsg));
+        clients.forEach((c) => c.applyMsg(initialMsg));
         logger.validate();
 
         const messages = [
@@ -249,10 +249,9 @@ describe("client.applyMsg", () => {
             remoteClient.makeOpMessage(remoteClient.removeRangeLocal(1, 2), ++seq),
         ];
 
-        logger.log();
         while (messages.length > 0) {
             const msg = messages.shift();
-            logger.log(msg, (c) => c.applyMsg(msg));
+            clients.forEach((c) => c.applyMsg(msg));
         }
 
         logger.validate();
@@ -278,10 +277,9 @@ describe("client.applyMsg", () => {
         ];
 
         const logger = new TestClientLogger(clients);
-        logger.log();
         while (messages.length > 0) {
             const msg = messages.shift();
-            logger.log(msg, (c) => {
+            clients.forEach((c) => {
                 c.applyMsg(msg);
             });
         }
@@ -310,10 +308,9 @@ describe("client.applyMsg", () => {
         ];
 
         const logger = new TestClientLogger(clients);
-        logger.log();
         while (messages.length > 0) {
             const msg = messages.shift();
-            logger.log(msg, (c) => {
+            clients.forEach((c) => {
                 c.applyMsg(msg);
             });
         }
@@ -340,10 +337,9 @@ describe("client.applyMsg", () => {
         ];
 
         const logger = new TestClientLogger(clients);
-        logger.log();
         while (messages.length > 0) {
             const msg = messages.shift();
-            logger.log(msg, (c) => {
+            clients.forEach((c) => {
                 c.applyMsg(msg);
             });
         }
@@ -368,10 +364,9 @@ describe("client.applyMsg", () => {
         ];
 
         const logger = new TestClientLogger(clients);
-        logger.log();
         while (messages.length > 0) {
             const msg = messages.shift();
-            logger.log(msg, (c) => {
+            clients.forEach((c) => {
                 c.applyMsg(msg);
             });
         }
@@ -402,7 +397,6 @@ describe("client.applyMsg", () => {
             });
         }
         const logger = new TestClientLogger(clients);
-        logger.log();
         logger.validate();
 
         messages.push(
@@ -412,11 +406,10 @@ describe("client.applyMsg", () => {
         );
         while (messages.length > 0) {
             const msg = messages.shift();
-            logger.log(msg, (c) => {
+            clients.forEach((c) => {
                 c.applyMsg(msg);
             });
         }
-        logger.log();
         logger.validate();
     });
 
@@ -429,28 +422,48 @@ describe("client.applyMsg", () => {
 
         const op1 = clients.C.makeOpMessage(clients.C.removeRangeLocal(0, 1), ++seq);
         clients.C.applyMsg(op1);
-        logger.log()
 
-        const messages: ISequencedDocumentMessage[] =[
-            clients.B.makeOpMessage(clients.B.removeRangeLocal(1, 2), ++seq),
-        ]
-        logger.log();
+        const op2 = clients.B.makeOpMessage(clients.B.removeRangeLocal(1, 2), ++seq);
 
-        messages.unshift(
-            clients.C.makeOpMessage(
-                clients.C.insertTextLocal(0, "C"), ++seq));
-        logger.log();
+        const op3 = clients.C.makeOpMessage(clients.C.insertTextLocal(0, "C"), ++seq)
 
-        messages.unshift(clients.B.makeOpMessage(clients.B.insertTextLocal(1, "B"), ++seq))
-        logger.log();
+        const op4 = clients.B.makeOpMessage(clients.B.insertTextLocal(1, "B"), ++seq);
 
         clients.A.applyMsg(op1);
         clients.B.applyMsg(op1);
-        logger.log();
 
+        const messages = [op2, op3, op4]
         while (messages.length > 0) {
-            const msg = messages.pop();
-            logger.log(msg, (c) => {
+            const msg = messages.shift();
+            clients.all.forEach((c)=>c.applyMsg(msg));
+        }
+
+        logger.validate();
+    });
+
+
+    it("Local insert after acked local delete 2", () => {
+        const clients = createClientsAtInitialState("Z", "A", "B", "C")
+
+        const logger = new TestClientLogger(clients.all);
+
+        let seq = 0;
+
+        const op1 = clients.B.makeOpMessage(clients.B.removeRangeLocal(0, 1), ++seq);
+
+        const op2 = clients.B.makeOpMessage(clients.B.insertTextLocal(0, "B"), ++seq);
+
+        clients.C.applyMsg(op1);
+
+        const op3 = clients.C.makeOpMessage(clients.C.insertTextLocal(0, "C"), ++seq);
+
+        clients.A.applyMsg(op1);
+        clients.B.applyMsg(op1);
+
+        const messages = [op2, op3];
+        while (messages.length > 0) {
+            const msg = messages.shift();
+            clients.all.forEach((c) => {
                 c.applyMsg(msg);
             });
         }
@@ -459,30 +472,3 @@ describe("client.applyMsg", () => {
     });
 });
 
-type ClientMap = Partial<Record<"A" | "B" | "C" | "D" | "E", TestClient>>
-
-function createClientsAtInitialState<TClients extends ClientMap>(
-    initialState: string,
-    ... clientIds: (string & keyof TClients)[]
-): Record<keyof TClients, TestClient> & {all: TestClient[]}
-{
-    const setup = (c: TestClient)=>{
-        c.insertTextLocal(0, initialState);
-        while(c.getText().includes("-")){
-            const index = c.getText().indexOf("-");
-            c.removeRangeLocal(index, index +1);
-        }
-    }
-    const all: TestClient[]=[];
-    const clients: Partial<Record<keyof TClients, TestClient>> ={};
-    for(const id of clientIds){
-        if(clients[id] === undefined){
-            clients[id]= new TestClient();
-            all.push(clients[id]);
-            setup(clients[id])
-            clients[id].startOrUpdateCollaboration(id);
-        }
-    }
-
-    return {...clients, all};
-}
