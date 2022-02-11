@@ -154,54 +154,56 @@ export function generateOperationMessagesForClients(
     let seq = startingSeq;
     const messagesPerClient: ISequencedDocumentMessage[][] = [];
     clients.forEach((c) => messagesPerClient.push([]));
-    for (let i = 0; i < opsPerRound; i++) {
-        // pick a client greater than 0, client 0 only applies remote ops
-        // and is our baseline
-        const clientIndex = random.integer(1, clients.length - 1)(mt);
-        const client = clients[clientIndex];
-        const len = client.getLength();
-        const sg = client.mergeTree.pendingSegments.last();
-        let op: IMergeTreeOp | undefined;
-        if (len === 0 || len < minLength) {
-            const text = client.longClientId.repeat(random.integer(1, 3)(mt));
-            op = client.insertTextLocal(
-                random.integer(0, len)(mt),
-                text);
-        } else {
-            let opIndex = random.integer(0, operations.length - 1)(mt);
-            const start = random.integer(0, len - 1)(mt);
-            const end = random.integer(start + 1, len)(mt);
-
-            for (let y = 0; y < operations.length && op === undefined; y++) {
-                op = operations[opIndex](client, start, end, mt);
-                opIndex++;
-                opIndex %= operations.length;
-            }
-        }
-        if (op !== undefined) {
-            // Pre-check to avoid logger.toString() in the string template
-            if (sg === client.mergeTree.pendingSegments.last()) {
-                assert.notEqual(
-                    sg,
-                    client.mergeTree.pendingSegments.last(),
-                    `op created but segment group not enqueued.${logger}`);
-            }
-            const message = client.makeOpMessage(op, ++seq);
-            message.minimumSequenceNumber = minimumSequenceNumber;
-            logger.log({[clientIndex]: {...message, sequenceNumber: message.sequenceNumber * -1}});
-            messagesPerClient.forEach((ca) => ca.push(message));
+    try{
+        for (let i = 0; i < opsPerRound; i++) {
+            // pick a client greater than 0, client 0 only applies remote ops
+            // and is our baseline
+            const clientIndex = random.integer(1, clients.length - 1)(mt);
+            const client = clients[clientIndex];
 
             // apply some random ops, so clients are in different states
-            let opToRun = random.integer(0, messagesPerClient[0].length)(mt);
-            while(--opToRun > 0) {
-                const clientIndex = random.integer(1, clients.length - 1)(mt);
-                if (messagesPerClient[clientIndex].length > 0) {
-                    const msg =messagesPerClient[clientIndex].shift()
-                    clients[clientIndex].applyMsg(msg);
-                    logger.log({[clientIndex]: msg});
+            for(let opi=0;opi<random.integer(0, messagesPerClient[clientIndex].length)(mt); opi++){
+                const msg = messagesPerClient[clientIndex].shift()
+                client.applyMsg(msg);
+                logger.logPartial({[clientIndex]: msg});
+            }
+
+            const len = client.getLength();
+            const sg = client.mergeTree.pendingSegments.last();
+            let op: IMergeTreeOp | undefined;
+            if (len === 0 || len < minLength) {
+                const text = client.longClientId.repeat(random.integer(1, 3)(mt));
+                op = client.insertTextLocal(
+                    random.integer(0, len)(mt),
+                    text);
+            } else {
+                let opIndex = random.integer(0, operations.length - 1)(mt);
+                const start = random.integer(0, len - 1)(mt);
+                const end = random.integer(start + 1, len)(mt);
+
+                for (let y = 0; y < operations.length && op === undefined; y++) {
+                    op = operations[opIndex](client, start, end, mt);
+                    opIndex++;
+                    opIndex %= operations.length;
                 }
             }
+            if (op !== undefined) {
+                // Pre-check to avoid logger.toString() in the string template
+                if (sg === client.mergeTree.pendingSegments.last()) {
+                    assert.notEqual(
+                        sg,
+                        client.mergeTree.pendingSegments.last(),
+                        `op created but segment group not enqueued.${logger}`);
+                }
+                const message = client.makeOpMessage(op, ++seq);
+                message.minimumSequenceNumber = minimumSequenceNumber;
+                logger.logLocal({[clientIndex]: message});
+                messagesPerClient.forEach((ca) => ca.push(message));
+            }
         }
+    }catch(error){
+        throw new Error(
+            `${logger.toString()}\n${error}`);
     }
     return messagesPerClient;
 }
@@ -230,40 +232,25 @@ export function applyMessages(
     const endingSeq = messagesPerClient[0][messagesPerClient[0].length - 1 ].sequenceNumber;
     // finish applying all the ops
     while (messagesPerClient.some((ops) => ops.length > 0)) {
-        // build a structure to combine clients that have the same next op to process
-        // this is primarily to optimize logging
-        const messageGroups =
-            messagesPerClient.reduce<Record<number,{msg: ISequencedDocumentMessage,clients: number[]}>>((pv,cv,ci)=>{
-                const msg = cv.shift();
-                if(msg !== undefined){
-                    if(pv[msg.sequenceNumber] === undefined){
-                        pv[msg.sequenceNumber] ={
-                            msg,
-                            clients:[ci],
-                        }
-                    }else{
-                        pv[msg.sequenceNumber].clients.push(ci)
+        const lowest = Math.min(...messagesPerClient.map((m)=>m[0]?.sequenceNumber ?? endingSeq));
+        const log: Record<number, ISequencedDocumentMessage> = [];
+        try{
+            clients.forEach((client, i)=>{
+                if(messagesPerClient[i][0]?.sequenceNumber === lowest){
+                    const message = messagesPerClient[i].shift();
+                    log[i] = message;
+                    try {
+                        client.applyMsg(message);
+                    } catch (error) {
+                        const msgStr = JSON.stringify(message, undefined, 1);
+                        throw new Error(
+                            `${logger.toString()}\nClient ${client.longClientId}: ${error}\n${msgStr}\n`);
                     }
                 }
-                return pv;
-            },
-            {})
-        const log: Record<number, ISequencedDocumentMessage> = [];
-        for(const seq of Object.keys(messageGroups)){
-            const message = messageGroups[seq].msg;
-            for(const clientIndex of messageGroups[seq].clients){
-                const client = clients[clientIndex];
-                log[clientIndex] = message;
-                try {
-                    client.applyMsg(message);
-                } catch (error) {
-                    const msgStr = JSON.stringify(message, undefined, 1);
-                    throw new Error(
-                        `${logger.toString()}\nClient ${client.longClientId}: ${error}\n${msgStr}\n`);
-                }
-            }
+            })
+        }finally{
+            logger.logPartial(log);
         }
-        logger.log(log);
     }
-    return  endingSeq;
+    return endingSeq;
 }

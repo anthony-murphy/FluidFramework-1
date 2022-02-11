@@ -27,10 +27,6 @@ function getOpString(msg: ISequencedDocumentMessage | undefined){
     return `${seq}:${ref}:${client}${opType}${opPos}`;
 }
 
-function negSeq(msg: ISequencedDocumentMessage): ISequencedDocumentMessage{
-    return {...msg, sequenceNumber: msg.sequenceNumber * -1}
-}
-
 type ClientMap = Partial<Record<"A" | "B" | "C" | "D" | "E", TestClient>>
 
 export function createClientsAtInitialState<TClients extends ClientMap>(
@@ -133,7 +129,9 @@ export class TestClientLogger {
     public logLocal(clientMessages: Record<number | string, ISequencedDocumentMessage>){
         const keys = Object.keys(clientMessages);
         assert(keys.length === 1);
-        this.logPartial({[keys[0]]: negSeq(clientMessages[keys[0]])})
+        const msg = {...clientMessages[keys[0]]};
+        msg.sequenceNumber *= -1;
+        this.logPartial({[keys[0]]: msg})
     }
 
     public validate() {
