@@ -419,4 +419,70 @@ describe("client.applyMsg", () => {
         logger.log();
         logger.validate();
     });
+
+    it("Local insert after acked local delete", () => {
+        const clients = createClientsAtInitialState("ZZ", "A", "B", "C")
+
+        const logger = new TestClientLogger(clients.all);
+
+        let seq = 0;
+
+        const op1 = clients.C.makeOpMessage(clients.C.removeRangeLocal(0, 1), ++seq);
+        clients.C.applyMsg(op1);
+        logger.log()
+
+        const messages: ISequencedDocumentMessage[] =[
+            clients.B.makeOpMessage(clients.B.removeRangeLocal(1, 2), ++seq),
+        ]
+        logger.log();
+
+        messages.unshift(
+            clients.C.makeOpMessage(
+                clients.C.insertTextLocal(0, "C"), ++seq));
+        logger.log();
+
+        messages.unshift(clients.B.makeOpMessage(clients.B.insertTextLocal(1, "B"), ++seq))
+        logger.log();
+
+        clients.A.applyMsg(op1);
+        clients.B.applyMsg(op1);
+        logger.log();
+
+        while (messages.length > 0) {
+            const msg = messages.pop();
+            logger.log(msg, (c) => {
+                c.applyMsg(msg);
+            });
+        }
+
+        logger.validate();
+    });
 });
+
+type ClientMap = Partial<Record<"A" | "B" | "C" | "D" | "E", TestClient>>
+
+function createClientsAtInitialState<TClients extends ClientMap>(
+    initialState: string,
+    ... clientIds: (string & keyof TClients)[]
+): Record<keyof TClients, TestClient> & {all: TestClient[]}
+{
+    const setup = (c: TestClient)=>{
+        c.insertTextLocal(0, initialState);
+        while(c.getText().includes("-")){
+            const index = c.getText().indexOf("-");
+            c.removeRangeLocal(index, index +1);
+        }
+    }
+    const all: TestClient[]=[];
+    const clients: Partial<Record<keyof TClients, TestClient>> ={};
+    for(const id of clientIds){
+        if(clients[id] === undefined){
+            clients[id]= new TestClient();
+            all.push(clients[id]);
+            setup(clients[id])
+            clients[id].startOrUpdateCollaboration(id);
+        }
+    }
+
+    return {...clients, all};
+}
