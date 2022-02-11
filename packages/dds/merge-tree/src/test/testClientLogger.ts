@@ -152,7 +152,14 @@ export class TestClientLogger {
     }
 
     public toString() {
-        let str = "";
+        let str =
+            `_: Local State\n`
+            + `-: Deleted\n`
+            + `*: Unacked Insert and Delete\n`
+            + `${this.clients[0].getCollabWindow().minSeq}: msn/offset\n`
+            + `Op format <seq>:<ref>:<client><op type>@<pos1>,<pos2>\n`
+            + `sequence number represented as offset from msn. negative are local.\n`
+            + `op types: 0) insert 1)remove 2)annotate\n`;
         if (this.title) {
             str += `${this.title}\n`;
         }
