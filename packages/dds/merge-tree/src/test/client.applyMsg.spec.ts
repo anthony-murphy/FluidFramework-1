@@ -258,61 +258,38 @@ describe("client.applyMsg", () => {
     });
 
     it("intersecting insert after local delete", () => {
-        const clientA = new TestClient();
-        clientA.startOrUpdateCollaboration("A");
-        const clientB = new TestClient();
-        clientB.startOrUpdateCollaboration("B");
-        const clientC = new TestClient();
-        clientC.startOrUpdateCollaboration("C");
-
-        const clients = [clientA, clientB, clientC];
-
+        const clients = createClientsAtInitialState("","A","B","C");
         let seq = 0;
-
+        const logger = new TestClientLogger(clients.all);
         const messages = [
-            clientC.makeOpMessage(clientC.insertTextLocal(0, "c"), ++seq),
-            clientC.makeOpMessage(clientC.removeRangeLocal(0, 1), ++seq),
-            clientB.makeOpMessage(clientB.insertTextLocal(0, "b"), ++seq),
-            clientC.makeOpMessage(clientC.insertTextLocal(0, "c"), ++seq),
+            clients.C.makeOpMessage(clients.C.insertTextLocal(0, "c"), ++seq),
+            clients.C.makeOpMessage(clients.C.removeRangeLocal(0, 1), ++seq),
+            clients.B.makeOpMessage(clients.B.insertTextLocal(0, "b"), ++seq),
+            clients.C.makeOpMessage(clients.C.insertTextLocal(0, "c"), ++seq),
         ];
 
-        const logger = new TestClientLogger(clients);
         while (messages.length > 0) {
             const msg = messages.shift();
-            clients.forEach((c) => {
-                c.applyMsg(msg);
-            });
+            clients.all.forEach((c) => c.applyMsg(msg));
         }
 
         logger.validate();
     });
 
     it("conflicting insert after shared delete", () => {
-        const clientA = new TestClient();
-        clientA.insertTextLocal(0, "a");
-        clientA.startOrUpdateCollaboration("A");
-        const clientB = new TestClient();
-        clientB.insertTextLocal(0, clientA.getText());
-        clientB.startOrUpdateCollaboration("B");
-        const clientC = new TestClient();
-        clientC.insertTextLocal(0, clientA.getText());
-        clientC.startOrUpdateCollaboration("C");
-
-        const clients = [clientA, clientB, clientC];
+        const clients = createClientsAtInitialState("Z", "A", "B", "C");
         let seq = 0;
 
+        const logger = new TestClientLogger(clients.all);
         const messages = [
-            clientB.makeOpMessage(clientB.insertTextLocal(0, "b"), ++seq),
-            clientC.makeOpMessage(clientC.removeRangeLocal(0, clientC.getLength()), ++seq),
-            clientC.makeOpMessage(clientC.insertTextLocal(0, "c"), ++seq),
+            clients.B.makeOpMessage(clients.B.insertTextLocal(0, "B"), ++seq),
+            clients.C.makeOpMessage(clients.C.removeRangeLocal(0, clients.C.getLength()), ++seq),
+            clients.C.makeOpMessage(clients.C.insertTextLocal(0, "C"), ++seq),
         ];
 
-        const logger = new TestClientLogger(clients);
         while (messages.length > 0) {
             const msg = messages.shift();
-            clients.forEach((c) => {
-                c.applyMsg(msg);
-            });
+            clients.all.forEach((c) => c.applyMsg(msg));
         }
 
         logger.validate();
@@ -451,6 +428,8 @@ describe("client.applyMsg", () => {
 
         const op1 = clients.B.makeOpMessage(clients.B.removeRangeLocal(0, 1), ++seq);
         const op2 = clients.B.makeOpMessage(clients.B.insertTextLocal(0, "B"), ++seq);
+
+
         clients.C.applyMsg(op1);
 
         const op3 = clients.C.makeOpMessage(clients.C.insertTextLocal(0, "C"), ++seq);
