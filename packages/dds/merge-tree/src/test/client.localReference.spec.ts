@@ -78,7 +78,7 @@ describe("MergeTree.Client", () => {
         const c1LocalRef = new LocalReference(client1, segInfo.segment, segInfo.offset, ReferenceType.SlideOnRemove);
         client1.addLocalReference(c1LocalRef);
 
-        assert.equal(c1LocalRef.toPosition(), 2);
+        assert.equal(c1LocalRef.toPosition(), 2, "after add");
 
         const remove =
             client2.makeOpMessage(
@@ -88,7 +88,7 @@ describe("MergeTree.Client", () => {
         client1.applyMsg(remove);
         client2.applyMsg(remove);
 
-        assert.equal(c1LocalRef.toPosition(), 2);
+        assert.equal(c1LocalRef.toPosition(), 2, "after remove");
 
         for (let i = 0; i < 5; i++) {
             const insert =
@@ -100,7 +100,7 @@ describe("MergeTree.Client", () => {
             client2.applyMsg(insert);
         }
 
-        assert.equal(c1LocalRef.toPosition(), 2);
+        assert.equal(c1LocalRef.toPosition(), 2, "after insert");
     });
 
     it("Remove segments to end with sliding local reference", () => {
@@ -168,6 +168,6 @@ describe("MergeTree.Client", () => {
         client1.applyMsg(remove);
         client2.applyMsg(remove);
 
-        assert.equal(c1LocalRef.toPosition(), -1);
+        assert.equal(c1LocalRef.toPosition(), 0);
     });
 });

@@ -307,22 +307,24 @@ export class LocalReferenceCollection {
         }
     }
 
-    public addBeforeTombstones(...refs: Iterable<LocalReference>[]) {
+    public addBeforeTombstones(...refs: (Iterable<LocalReference> | undefined)[]) {
         const beforeRefs: LocalReference[] = [];
 
         for (const iterable of refs) {
-            for (const lref of iterable) {
-                // eslint-disable-next-line no-bitwise
-                if (lref.refType & ReferenceType.SlideOnRemove) {
-                    beforeRefs.push(lref);
-                    lref.segment = this.segment;
-                    lref.offset = 0;
-                    if (lref.hasRangeLabels() || lref.hasTileLabels()) {
-                        this.hierRefCount++;
+            if(iterable !== undefined){
+                for (const lref of iterable) {
+                    // eslint-disable-next-line no-bitwise
+                    if (lref.refType & ReferenceType.SlideOnRemove) {
+                        beforeRefs.push(lref);
+                        lref.segment = this.segment;
+                        lref.offset = 0;
+                        if (lref.hasRangeLabels() || lref.hasTileLabels()) {
+                            this.hierRefCount++;
+                        }
+                        this.refCount++;
+                    } else {
+                        lref.segment = undefined;
                     }
-                    this.refCount++;
-                } else {
-                    lref.segment = undefined;
                 }
             }
         }
@@ -337,22 +339,48 @@ export class LocalReferenceCollection {
         }
     }
 
-    public addAfterTombstones(...refs: Iterable<LocalReference>[]) {
+    public removeTombstones(){
+        const tombstones: LocalReference[] =[]
+        for(const offset of this.refsByOffset){
+            if(offset){
+                if(offset.before){
+                    tombstones.push(...offset.before);
+                    offset.before === undefined
+                }
+                if(offset.after){
+                    tombstones.push(... offset.after);
+                    offset.after = undefined;
+                }
+            }
+        }
+
+        tombstones.forEach((lref)=>{
+            if (lref.hasRangeLabels() || lref.hasTileLabels()) {
+                this.hierRefCount--;
+            }
+            this.refCount--;
+        });
+        return tombstones;
+    }
+
+    public addAfterTombstones(...refs: (Iterable<LocalReference> | undefined)[]) {
         const afterRefs: LocalReference[] = [];
 
         for (const iterable of refs) {
-            for (const lref of iterable) {
-                // eslint-disable-next-line no-bitwise
-                if (lref.refType & ReferenceType.SlideOnRemove) {
-                    afterRefs.push(lref);
-                    lref.segment = this.segment;
-                    lref.offset = this.segment.cachedLength - 1;
-                    if (lref.hasRangeLabels() || lref.hasTileLabels()) {
-                        this.hierRefCount++;
+            if(iterable !== undefined){
+                for (const lref of iterable) {
+                    // eslint-disable-next-line no-bitwise
+                    if (lref.refType & ReferenceType.SlideOnRemove) {
+                        afterRefs.push(lref);
+                        lref.segment = this.segment;
+                        lref.offset = this.segment.cachedLength - 1;
+                        if (lref.hasRangeLabels() || lref.hasTileLabels()) {
+                            this.hierRefCount++;
+                        }
+                        this.refCount++;
+                    } else {
+                        lref.segment = undefined;
                     }
-                    this.refCount++;
-                } else {
-                    lref.segment = undefined;
                 }
             }
         }
