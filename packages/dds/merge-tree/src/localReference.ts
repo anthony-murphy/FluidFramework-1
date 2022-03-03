@@ -214,6 +214,10 @@ export class LocalReferenceCollection {
     }
 
     public addLocalRef(lref: LocalReference) {
+        // eslint-disable-next-line no-bitwise
+        if(this.tombstoned && !(lref.refType & ReferenceType.SlideOnRemove)){
+            throw new Error("Only sliding references can be added to tombstoned segements");
+        }
         const refsAtOffset = this.refsByOffset[lref.offset];
         if (refsAtOffset === undefined) {
             this.refsByOffset[lref.offset] = {
@@ -230,18 +234,23 @@ export class LocalReferenceCollection {
         this.refCount++;
     }
 
+
+    private removeRefAtIndex(index:number, refs: LocalReference[]){
+        if (index >= 0) {
+            const lref = refs[index];
+            refs.splice(index, 1);
+            if (lref.hasRangeLabels() || lref.hasTileLabels()) {
+                this.hierRefCount--;
+            }
+            this.refCount--;
+            return lref;
+        }
+
+}
     public removeLocalRef(lref: LocalReference) {
         const tryRemoveRef = (refs: LocalReference[] | undefined) => {
             if (refs) {
-                const index = refs.indexOf(lref);
-                if (index >= 0) {
-                    refs.splice(index, 1);
-                    if (lref.hasRangeLabels() || lref.hasTileLabels()) {
-                        this.hierRefCount--;
-                    }
-                    this.refCount--;
-                    return lref;
-                }
+                return this.removeRefAtIndex(refs.indexOf(lref), refs);
             }
         };
         const refAtOffset = this.refsByOffset[lref.offset];
@@ -333,6 +342,21 @@ export class LocalReferenceCollection {
                 this.refsByOffset[0].before = beforeRefs;
             } else {
                 this.refsByOffset[0].before.unshift(...beforeRefs);
+            }
+        }
+    }
+    private tombstoned: boolean = false;
+    public tombstone(){
+        this.tombstoned = true;
+        for(const offset of this.refsByOffset){
+            const at = offset?.at;
+            if(at){
+                for(let i=0;i<at.length;i++){
+                    // eslint-disable-next-line no-bitwise
+                    if(!(at[i].refType & ReferenceType.SlideOnRemove)){
+                        this.removeRefAtIndex(i, at);
+                    }
+                }
             }
         }
     }

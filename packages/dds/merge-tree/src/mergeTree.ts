@@ -1213,11 +1213,20 @@ export class MergeTree {
                 const segment = childNode;
                 if (segment.segmentGroups.empty) {
                     if (segment.removedSeq !== undefined) {
-                        if (segment.removedSeq > this.collabWindow.minSeq) {
-                            holdNodes.push(segment);
-                        } else if (!segment.trackingCollection.empty) {
+                        if (k===0
+                            || segment.removedSeq > this.collabWindow.minSeq
+                            || !segment.trackingCollection.empty) {
                             holdNodes.push(segment);
                         } else {
+                            if(segment.localRefs?.empty === false){
+                                for(let j=k-1;j>=0;j--) {
+                                    const prev = node.children[j];
+                                    if(prev.isLeaf() && prev.parent !== undefined){
+                                        prev.localRefs = prev.localRefs ?? new LocalReferenceCollection(prev)
+                                        prev.localRefs.addAfterTombstones(segment.localRefs);
+                                    }
+                                }
+                            }
                             // Notify maintenance event observers that the segment is being unlinked from the MergeTree
                             if (this.mergeTreeMaintenanceCallback) {
                                 this.mergeTreeMaintenanceCallback({
@@ -1340,9 +1349,6 @@ export class MergeTree {
                 const block = segmentToScour.segment!.parent;
                 const childrenCopy: IMergeNode[] = [];
                 this.scourNode(block, childrenCopy);
-                // This will avoid the cost of re-scouring nodes
-                // that have recently been scoured
-                block.needsScour = false;
 
                 const newChildCount = childrenCopy.length;
 
@@ -2392,7 +2398,6 @@ export class MergeTree {
         this.ensureIntervalBoundary(end, refSeq, clientId);
         let segmentGroup: SegmentGroup;
         const removedSegments: IMergeTreeSegmentDelta[] = [];
-        const savedLocalRefs: LocalReferenceCollection[] = [];
         const localSeq = seq === UnassignedSequenceNumber ? ++this.collabWindow.localSeq : undefined;
         const markRemoved = (segment: ISegment, pos: number, start: number, end: number) => {
             const removalInfo: IRemovalInfo = segment;
@@ -2414,9 +2419,8 @@ export class MergeTree {
 
                 removedSegments.push({ segment });
                 if (segment.localRefs && !segment.localRefs.empty) {
-                    savedLocalRefs.push(segment.localRefs);
+                    segment.localRefs.tombstone();
                 }
-                segment.localRefs = undefined;
             }
 
             // Save segment so can assign removed sequence number when acked by server
@@ -2442,39 +2446,6 @@ export class MergeTree {
             return true;
         };
         this.mapRange({ leaf: markRemoved, post: afterMarkRemoved }, refSeq, clientId, undefined, start, end);
-        if (savedLocalRefs.length > 0) {
-            const length = this.getLength(refSeq, clientId);
-            let refSegment: ISegment | undefined;
-            if (start < length) {
-                const afterSegOff = this.getContainingSegment(start, refSeq, clientId);
-                refSegment = afterSegOff.segment;
-                assert(!!refSegment, 0x052 /* "Missing reference segment!" */);
-                if (!refSegment.localRefs) {
-                    refSegment.localRefs = new LocalReferenceCollection(refSegment);
-                }
-                refSegment.localRefs.addBeforeTombstones(...savedLocalRefs);
-            } else if (length > 0) {
-                const beforeSegOff = this.getContainingSegment(length - 1, refSeq, clientId);
-                refSegment = beforeSegOff.segment;
-                assert(!!refSegment, 0x053 /* "Missing reference segment!" */);
-                if (!refSegment.localRefs) {
-                    refSegment.localRefs = new LocalReferenceCollection(refSegment);
-                }
-                refSegment.localRefs.addAfterTombstones(...savedLocalRefs);
-            } else {
-                // TODO: The tree is empty, so there isn't anywhere to put these
-                // they should be preserved somehow
-                for (const refsCollection of savedLocalRefs) {
-                    refsCollection.clear();
-                }
-            }
-
-            if (refSegment) {
-                this.blockUpdatePathLengths(refSegment.parent, TreeMaintenanceSequenceNumber,
-                    LocalClientId);
-            }
-        }
-
         // opArgs == undefined => test code
         if (this.mergeTreeDeltaCallback) {
             this.mergeTreeDeltaCallback(
