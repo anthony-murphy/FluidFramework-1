@@ -225,24 +225,35 @@ export function applyMessages(
     clients: readonly TestClient[],
     logger: TestClientLogger,
 ) {
+
     const endingSeq = messagesPerClient[0][messagesPerClient[0].length - 1 ].sequenceNumber;
-    // finish applying all the ops
-    while (messagesPerClient.some((ops) => ops.length > 0)) {
-        const lowest = Math.min(...messagesPerClient.map((m)=>m[0]?.sequenceNumber ?? endingSeq));
-        const log: Record<number, ISequencedDocumentMessage> = [];
-        clients.forEach((client, i)=>{
-            if(messagesPerClient[i][0]?.sequenceNumber === lowest){
-                const message = messagesPerClient[i].shift();
-                log[i] = message;
-                try {
-                    client.applyMsg(message);
-                } catch (error) {
-                    const msgStr = JSON.stringify(message, undefined, 1);
-                    throw new Error(
-                        `${logger.toString()}\nClient ${client.longClientId}: ${error}\n${msgStr}\n`);
+    try{
+        // finish applying all the ops
+        while (messagesPerClient.some((ops) => ops.length > 0)) {
+            const lowest = Math.min(...messagesPerClient.map((m)=>m[0]?.sequenceNumber ?? endingSeq));
+            const log: Record<number, ISequencedDocumentMessage> = [];
+            clients.forEach((client, i)=>{
+                if(messagesPerClient[i][0]?.sequenceNumber === lowest){
+                    const message = messagesPerClient[i].shift();
+                    log[i] = message;
+                    try {
+                        client.applyMsg(message);
+                    } catch (error) {
+                        const msgStr = JSON.stringify(message, undefined, 1);
+                        throw new Error(
+                            `${logger.toString()}\nClient ${client.longClientId}: ${error}\n${msgStr}\n`);
+                    }
                 }
-            }
-        })
+            });
+        }
+    }catch(e){
+        if(e instanceof Error){
+            e.message += `\n${logger.toString()}`;
+        }
+        if(typeof e === "string"){
+            throw new Error(`${e}\n${logger.toString()}`);
+        }
+        throw e;
     }
     return endingSeq;
 }
