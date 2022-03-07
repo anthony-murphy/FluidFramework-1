@@ -1046,8 +1046,8 @@ export class MergeTree {
     root: IMergeBlock;
     private readonly blockUpdateActions: BlockUpdateActions = MergeTree.initBlockUpdateActions;
     public readonly collabWindow = new CollaborationWindow();
-    public pendingSegments: List<SegmentGroup> | undefined;
-    private segmentsToScour: Heap<LRUSegment> | undefined;
+    public readonly pendingSegments: List<SegmentGroup> = ListMakeHead<SegmentGroup>();
+    private readonly segmentsToScour: Heap<LRUSegment> =new Heap<LRUSegment>([], LRUSegmentComparer);
     // TODO: add remove on segment remove
     // for now assume only markers have ids and so point directly at the Segment
     // if we need to have pointers to non-markers, we can change to point at local refs
@@ -1176,8 +1176,7 @@ export class MergeTree {
         this.collabWindow.minSeq = minSeq;
         this.collabWindow.collaborating = true;
         this.collabWindow.currentSeq = currentSeq;
-        this.segmentsToScour = new Heap<LRUSegment>([], LRUSegmentComparer);
-        this.pendingSegments = ListMakeHead<SegmentGroup>();
+        this.pendingSegments.clear();
         this.nodeUpdateLengthNewStructure(this.root, true);
     }
 
@@ -1185,11 +1184,9 @@ export class MergeTree {
         // If the parent node has not yet been marked for scour (i.e., needsScour is not false or undefined),
         // add the segment and mark the mark the node now.
 
-        // TODO: 'seq' may be less than the current sequence number when inserting pre-ACKed
-        //       segments from a snapshot.  We currently skip these for now.
-        if (segment.parent!.needsScour !== true && seq > this.collabWindow.currentSeq) {
+        if (segment.parent!.needsScour !== true) {
             segment.parent!.needsScour = true;
-            this.segmentsToScour!.add({ segment, maxSeq: seq });
+            this.segmentsToScour.add({ segment, maxSeq: seq });
         }
     }
 
@@ -1322,11 +1319,11 @@ export class MergeTree {
         }
 
         for (let i = 0; i < zamboniSegmentsMaxCount; i++) {
-            let segmentToScour = this.segmentsToScour!.peek();
+            let segmentToScour = this.segmentsToScour.peek();
             if (!segmentToScour || segmentToScour.maxSeq > this.collabWindow.minSeq) {
                 break;
             }
-            segmentToScour = this.segmentsToScour!.get();
+            segmentToScour = this.segmentsToScour.get();
             // Only skip scouring if needs scour is explicitly false, not true or undefined
             if (segmentToScour.segment!.parent && segmentToScour.segment!.parent.needsScour !== false) {
                 const block = segmentToScour.segment!.parent;
@@ -2013,18 +2010,18 @@ export class MergeTree {
         let segmentGroup: SegmentGroup;
         const saveIfLocal = (locSegment: ISegment) => {
             // Save segment so can assign sequence number when acked by server
-            if (this.collabWindow.collaborating) {
-                if ((locSegment.seq === UnassignedSequenceNumber) &&
-                    (clientId === this.collabWindow.clientId)) {
-                    segmentGroup = this.addToPendingList(locSegment, segmentGroup, localSeq);
-                }
-                // LocSegment.seq === 0 when coming from SharedSegmentSequence.loadBody()
-                // In all other cases this has to be true (checked by addToLRUSet):
-                // locSegment.seq > this.collabWindow.currentSeq
-                else if ((locSegment.seq! > this.collabWindow.minSeq) &&
-                    MergeTree.options.zamboniSegments) {
-                    this.addToLRUSet(locSegment, locSegment.seq!);
-                }
+            if (this.collabWindow.collaborating
+                && (locSegment.seq === UnassignedSequenceNumber)
+                && (clientId === this.collabWindow.clientId)
+            ) {
+                segmentGroup = this.addToPendingList(locSegment, segmentGroup, localSeq);
+            }
+            // LocSegment.seq === 0 when coming from SharedSegmentSequence.loadBody()
+            // In all other cases this has to be true (checked by addToLRUSet):
+            // locSegment.seq > this.collabWindow.currentSeq
+            else if ((locSegment.seq! > this.collabWindow.minSeq) &&
+                MergeTree.options.zamboniSegments) {
+                this.addToLRUSet(locSegment, locSegment.seq!);
             }
         };
         const onLeaf = (segment: ISegment | undefined, pos: number, context: InsertContext) => {
@@ -2329,13 +2326,11 @@ export class MergeTree {
         const annotateSegment = (segment: ISegment) => {
             const propertyDeltas = segment.addProperties(props, combiningOp, seq, this.collabWindow);
             deltaSegments.push({ segment, propertyDeltas });
-            if (this.collabWindow.collaborating) {
-                if (seq === UnassignedSequenceNumber) {
-                    segmentGroup = this.addToPendingList(segment, segmentGroup, localSeq);
-                } else {
-                    if (MergeTree.options.zamboniSegments) {
-                        this.addToLRUSet(segment, seq);
-                    }
+            if (this.collabWindow.collaborating && seq === UnassignedSequenceNumber) {
+                segmentGroup = this.addToPendingList(segment, segmentGroup, localSeq);
+            } else {
+                if (MergeTree.options.zamboniSegments) {
+                    this.addToLRUSet(segment, seq);
                 }
             }
             return true;
@@ -2404,13 +2399,13 @@ export class MergeTree {
             }
 
             // Save segment so can assign removed sequence number when acked by server
-            if (this.collabWindow.collaborating) {
-                if (segment.removedSeq === UnassignedSequenceNumber && clientId === this.collabWindow.clientId) {
-                    segmentGroup = this.addToPendingList(segment, segmentGroup, localSeq);
-                } else {
-                    if (MergeTree.options.zamboniSegments) {
-                        this.addToLRUSet(segment, seq);
-                    }
+            if (this.collabWindow.collaborating
+                && segment.removedSeq === UnassignedSequenceNumber
+                && clientId === this.collabWindow.clientId) {
+                segmentGroup = this.addToPendingList(segment, segmentGroup, localSeq);
+            } else {
+                if (MergeTree.options.zamboniSegments) {
+                    this.addToLRUSet(segment, seq);
                 }
             }
             return true;
@@ -2466,7 +2461,7 @@ export class MergeTree {
                     deltaSegments: removedSegments,
                 });
         }
-        if (this.collabWindow.collaborating && (seq !== UnassignedSequenceNumber)) {
+        if ((seq !== UnassignedSequenceNumber)) {
             if (MergeTree.options.zamboniSegments) {
                 this.zamboniSegments();
             }

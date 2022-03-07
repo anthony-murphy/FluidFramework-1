@@ -29,11 +29,15 @@ const allOperations: TestOperation[] = [
 ];
 
 export const debugOptions: IConflictFarmConfig = {
-    minLength: { min: 1, max: 1 },
+    minLength: { min: 7, max: 7 },
     clients: { min: 3, max: 3 },
-    opsPerRoundRange: { min: 3, max: 3 },
-    rounds: 10000,
-    operations: allOperations,
+    opsPerRoundRange: { min: 1, max: 8 },
+    rounds: 50000,
+    operations: [
+        removeRange,
+        // annotateRange,
+        // insertAtRefPos,
+    ],
     incrementalLog: true,
     growthFunc: (input: number) => input + 1,
 };
@@ -59,9 +63,9 @@ export const longOptions: IConflictFarmConfig = {
 
 describe("MergeTree.Client", () => {
     const opts =
-    //    defaultOptions;
+        // defaultOptions;
         debugOptions;
-    // longOptions;
+        // longOptions;
 
     // Generate a list of single character client names, support up to 69 clients
     const clientNames = generateClientNames();

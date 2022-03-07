@@ -62,7 +62,7 @@ export class TestClientLogger {
     private ackedLine: string[];
     private localLine: string[];
     // initialize to private instance, so first real edit will create a new line
-    private lastOp: any | undefined ={};
+    private lastArgs: IMergeTreeDeltaOpArgs | undefined;
 
     constructor(
         private readonly clients: readonly TestClient[],
@@ -72,14 +72,16 @@ export class TestClientLogger {
         clients.forEach((c,i)=>{
             logHeaders.push("op")
             logHeaders.push( `client ${c.longClientId}`);
-            const callback = (op: IMergeTreeDeltaOpArgs)=>{
-                if(this.lastOp !== op.op){
+            const callback = (args: IMergeTreeDeltaOpArgs)=>{
+                if(this.lastArgs?.op !== args.op
+                    || this.lastArgs?.sequencedMessage !== args.sequencedMessage
+                ){
                     this.addNewLogLine();
-                    this.lastOp = op.op;
+                    this.lastArgs = args;
                 }
                 const clientLogIndex = i*2
 
-                this.ackedLine[clientLogIndex]=getOpString(op.sequencedMessage ?? c.makeOpMessage(op.op))
+                this.ackedLine[clientLogIndex]=getOpString(args.sequencedMessage ?? c.makeOpMessage(args.op))
                 const segStrings = this.getSegString(c);
                 this.ackedLine[clientLogIndex + 1] = segStrings.acked;
                 this.localLine[clientLogIndex +1] = segStrings.local;
@@ -97,9 +99,9 @@ export class TestClientLogger {
                         this.paddings[clientLogIndex + 1]);
             }
             c.mergeTreeDeltaCallback = callback;
-            c.mergeTreeMaintenanceCallback= (main,op)=>{
+            c.mergeTreeMaintenanceCallback= (main,args)=>{
                 if(main.operation === MergeTreeMaintenanceType.ACKNOWLEDGED){
-                    callback(op)
+                    callback(args)
                 }
             }
         });
@@ -109,9 +111,9 @@ export class TestClientLogger {
     }
 
     private addNewLogLine() {
-        if (this.incrementalLog) {
+        if (this.incrementalLog && this.ackedLine && this.localLine) {
             console.log(this.ackedLine.map((v, i) => v.padEnd(this.paddings[i])).join(" | "));
-            console.log(this.ackedLine.map((v, i) => v.padEnd(this.paddings[i])).join(" | "));
+            console.log(this.localLine.map((v, i) => v.padEnd(this.paddings[i])).join(" | "));
         }
         this.ackedLine = [];
         this.localLine = [];
@@ -186,8 +188,9 @@ export class TestClientLogger {
                                 acked += "_".repeat(node.text.length);
                                 if (node.seq === UnassignedSequenceNumber) {
                                     local += "*".repeat(node.text.length);
+                                }else{
+                                    local += "-".repeat(node.text.length);
                                 }
-                                local += "-".repeat(node.text.length);
                             } else {
                                 acked += "-".repeat(node.text.length);
                                 local += " ".repeat(node.text.length);

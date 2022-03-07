@@ -438,5 +438,30 @@ describe("client.applyMsg", () => {
 
         logger.validate();
     });
+
+
+    it.only("asdsad", () => {
+        const clients = createClientsAtInitialState("ZZZZZZ--------", "A", "B", "C")
+
+        const logger = new TestClientLogger(clients.all);
+
+        let seq = 0;
+
+        const op1 = clients.B.makeOpMessage(clients.B.insertTextLocal(4, "BB"), ++seq);
+
+        const op2 = clients.C.makeOpMessage(clients.C.insertTextLocal(4, "C"), ++seq);
+        const op3 = clients.C.makeOpMessage(clients.C.removeRangeLocal(2, 5), ++seq);
+        const op4 = clients.C.makeOpMessage(clients.C.insertTextLocal(3, "CCC"), ++seq);
+5
+        clients.all.forEach((c)=>c.applyMsg(op1));
+        clients.all.forEach((c)=>c.applyMsg(op2));
+        const op5 = clients.B.makeOpMessage(clients.B.removeRangeLocal(4, 6), ++seq);
+
+        for(const op of [op3,op4,op5]){
+            clients.all.forEach((c)=>c.applyMsg(op));
+        }
+        logger.validate();
+        console.log(logger.toString());
+    });
 });
 
