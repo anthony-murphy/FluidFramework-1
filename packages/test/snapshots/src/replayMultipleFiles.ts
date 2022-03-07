@@ -232,7 +232,7 @@ async function processNodeForUpdatingSnapshots(
 
     const versionFileName = `${currentSnapshotsDir}/snapshotVersion.json`;
     assert(fs.existsSync(versionFileName), `Version file ${versionFileName} does not exist`);
-
+    console.log(versionFileName);
     // Get the version of the current snapshots. This becomes the the folder name under the "src_snapshtos" folder
     // where these snapshots will be moved.
     const versionContent = JSON.parse(fs.readFileSync(`${versionFileName}`, "utf-8"));

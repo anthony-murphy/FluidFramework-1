@@ -11,6 +11,7 @@ import { IRequest } from "@fluidframework/core-interfaces";
 import { FluidDataStoreRuntime } from "@fluidframework/datastore";
 import { Ink } from "@fluidframework/ink";
 import { SharedMap, SharedDirectory } from "@fluidframework/map";
+import { SharedMatrix } from "@fluidframework/matrix";
 import { ConsensusQueue } from "@fluidframework/ordered-collection";
 import { ConsensusRegisterCollection } from "@fluidframework/register-collection";
 import {
@@ -108,6 +109,7 @@ export class ReplayDataStoreFactory implements IFluidDataStoreFactory, Partial<I
                 SparseMatrix.getFactory(),
                 SharedDirectory.getFactory(),
                 SharedIntervalCollection.getFactory(),
+                SharedMatrix.getFactory(),
             ].map((factory) => [factory.type, factory])),
             true /* existing */,
         );
