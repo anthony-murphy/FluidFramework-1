@@ -108,7 +108,7 @@ export interface IRemovalInfo {
     removedClientIds: number[];
 }
 export function toRemovalInfo(maybe: Partial<IRemovalInfo> | undefined): IRemovalInfo | undefined {
-    if(maybe?.removedClientIds !== undefined && maybe?.removedSeq !== undefined) {
+    if (maybe?.removedClientIds !== undefined && maybe?.removedSeq !== undefined) {
         return maybe as IRemovalInfo;
     }
     assert(maybe?.removedClientIds === undefined && maybe?.removedSeq === undefined,
@@ -155,12 +155,12 @@ export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo> {
 }
 
 export interface IMarkerModifiedAction {
-    // eslint-disable-next-line @typescript-eslint/prefer-function-type
+
     (marker: Marker): void;
 }
 
 export interface ISegmentAction<TClientData> {
-    // eslint-disable-next-line @typescript-eslint/prefer-function-type
+
     (segment: ISegment, pos: number, refSeq: number, clientId: number, start: number,
         end: number, accum: TClientData): boolean;
 }
@@ -171,7 +171,7 @@ export interface ISegmentChanges {
 }
 
 export interface BlockAction<TClientData> {
-    // eslint-disable-next-line @typescript-eslint/prefer-function-type
+
     (
         block: IMergeBlock,
         pos: number,
@@ -184,7 +184,7 @@ export interface BlockAction<TClientData> {
 }
 
 export interface NodeAction<TClientData> {
-    // eslint-disable-next-line @typescript-eslint/prefer-function-type
+
     (
         node: IMergeNode,
         pos: number,
@@ -285,7 +285,7 @@ function addTileIfNotPresent(tile: ReferencePosition, tiles: object) {
 }
 
 function applyStackDelta(currentStackMap: RangeStackMap, deltaStackMap: RangeStackMap) {
-    // eslint-disable-next-line guard-for-in, no-restricted-syntax
+    // eslint-disable-next-line guard-for-in
     for (const label in deltaStackMap) {
         const deltaStack = deltaStackMap[label];
         if (!deltaStack.empty()) {
@@ -463,7 +463,7 @@ class HierMergeBlock extends MergeBlock implements IMergeBlock {
 
     public hierToString(indentCount: number) {
         let strbuf = "";
-        // eslint-disable-next-line guard-for-in, no-restricted-syntax
+        // eslint-disable-next-line guard-for-in
         for (const key in this.rangeStacks) {
             const stack = this.rangeStacks[key];
             strbuf += internedSpaces(indentCount);
@@ -810,7 +810,7 @@ export class Marker extends BaseSegment implements ReferencePosition {
                 // (Substitute a debug string instead.)
                 const handle = !!value && value.IFluidHandle;
 
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+
                 return handle
                     ? `#Handle(${handle.routeContext.path}/${handle.path})`
                     : value;
@@ -1154,7 +1154,7 @@ export class MergeTree {
                 this.blockUpdate(block);
             }
 
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+
             return blocks.length === 1          // If there is only one block at this layer...
                 ? blocks[0]                     // ...then we're done.  Return the root.
                 : buildMergeBlock(blocks);      // ...otherwise recursively build the next layer above blocks.
@@ -2365,7 +2365,7 @@ export class MergeTree {
         const removedSegments: IMergeTreeSegmentDelta[] = [];
         const savedLocalRefs: LocalReferenceCollection[] = [];
         const localSeq = seq === UnassignedSequenceNumber ? ++this.collabWindow.localSeq : undefined;
-        const markRemoved = (segment: ISegment) => {
+        const markRemoved = (segment: ISegment, pos: number, _start: number, _end: number) => {
             const existingRemovalInfo = toRemovalInfo(segment);
             if (existingRemovalInfo !== undefined) {
                 _overwrite = true;

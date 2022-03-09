@@ -246,7 +246,7 @@ export function applyMessages(
                 }
             });
         }
-    }catch(e) {
+    } catch(e) {
         if(e instanceof Error) {
             e.message += `\n${logger.toString()}`;
         }
