@@ -2365,7 +2365,7 @@ export class MergeTree {
         const removedSegments: IMergeTreeSegmentDelta[] = [];
         const savedLocalRefs: LocalReferenceCollection[] = [];
         const localSeq = seq === UnassignedSequenceNumber ? ++this.collabWindow.localSeq : undefined;
-        const markRemoved = (segment: ISegment, pos: number, start: number, end: number) => {
+        const markRemoved = (segment: ISegment) => {
             const existingRemovalInfo = toRemovalInfo(segment);
             if (existingRemovalInfo !== undefined) {
                 _overwrite = true;
