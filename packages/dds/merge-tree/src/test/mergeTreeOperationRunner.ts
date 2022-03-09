@@ -98,9 +98,9 @@ export function runMergeTreeOperationRunner(
             // so all initial values are "Z". this makes modification easier to
             // follow
             clients.forEach((c)=>{
-                for(let i=0;i<c.getLength();i++){
+                for(let i = 0; i < c.getLength(); i++) {
                     const segOff = c.getContainingSegment(i);
-                    if(segOff.offset === 0 && TextSegment.is(segOff.segment)){
+                    if(segOff.offset === 0 && TextSegment.is(segOff.segment)) {
                         segOff.segment.text = "Z".repeat(segOff.segment.text.length);
                     }
                 }
@@ -161,8 +161,8 @@ export function generateOperationMessagesForClients(
             const client = clients[clientIndex];
 
             // apply some random ops, so clients are in different states
-            for(let opi=0;opi<random.integer(0, messagesPerClient[clientIndex].length)(mt); opi++){
-                const msg = messagesPerClient[clientIndex].shift()
+            for(let opi = 0; opi < random.integer(0, messagesPerClient[clientIndex].length)(mt); opi++) {
+                const msg = messagesPerClient[clientIndex].shift();
                 client.applyMsg(msg);
             }
 
@@ -198,7 +198,7 @@ export function generateOperationMessagesForClients(
                 messagesPerClient.forEach((ca) => ca.push(message));
             }
         }
-    }catch(error){
+    }catch(error) {
         throw new Error(
             `${logger.toString()}\n${error}`);
     }
@@ -226,7 +226,6 @@ export function applyMessages(
     clients: readonly TestClient[],
     logger: TestClientLogger,
 ) {
-
     const endingSeq = messagesPerClient[0][messagesPerClient[0].length - 1 ].sequenceNumber;
     try{
         // finish applying all the ops
@@ -234,7 +233,7 @@ export function applyMessages(
             const lowest = Math.min(...messagesPerClient.map((m)=>m[0]?.sequenceNumber ?? endingSeq));
             const log: Record<number, ISequencedDocumentMessage> = [];
             clients.forEach((client, i)=>{
-                if(messagesPerClient[i][0]?.sequenceNumber === lowest){
+                if(messagesPerClient[i][0]?.sequenceNumber === lowest) {
                     const message = messagesPerClient[i].shift();
                     log[i] = message;
                     try {
@@ -247,11 +246,11 @@ export function applyMessages(
                 }
             });
         }
-    }catch(e){
-        if(e instanceof Error){
+    }catch(e) {
+        if(e instanceof Error) {
             e.message += `\n${logger.toString()}`;
         }
-        if(typeof e === "string"){
+        if(typeof e === "string") {
             throw new Error(`${e}\n${logger.toString()}`);
         }
         throw e;
