@@ -1027,7 +1027,7 @@ export class MergeTree {
         zamboniSegments: boolean;
     };
     // (undocumented)
-    pendingSegments: List<SegmentGroup> | undefined;
+    readonly pendingSegments: List<SegmentGroup>;
     posFromRelativePos(relativePos: IRelativePosition, refseq?: number, clientId?: number): number;
     // (undocumented)
     referencePositionToLocalPosition(refPos: ReferencePosition, refSeq?: number, clientId?: number): number;
