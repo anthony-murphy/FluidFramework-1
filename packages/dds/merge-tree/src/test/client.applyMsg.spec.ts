@@ -385,7 +385,7 @@ describe("client.applyMsg", () => {
     });
 
     it("Local insert after acked local delete", () => {
-        const clients = createClientsAtInitialState("ZZ", "A", "B", "C")
+        const clients = createClientsAtInitialState("ZZ", "A", "B", "C");
 
         const logger = new TestClientLogger(clients.all);
 
@@ -396,14 +396,14 @@ describe("client.applyMsg", () => {
 
         const op2 = clients.B.makeOpMessage(clients.B.removeRangeLocal(1, 2), ++seq);
 
-        const op3 = clients.C.makeOpMessage(clients.C.insertTextLocal(0, "C"), ++seq)
+        const op3 = clients.C.makeOpMessage(clients.C.insertTextLocal(0, "C"), ++seq);
 
         const op4 = clients.B.makeOpMessage(clients.B.insertTextLocal(1, "B"), ++seq);
 
         clients.A.applyMsg(op1);
         clients.B.applyMsg(op1);
 
-        const messages = [op2, op3, op4]
+        const messages = [op2, op3, op4];
         while (messages.length > 0) {
             const msg = messages.shift();
             clients.all.forEach((c)=>c.applyMsg(msg));
@@ -412,9 +412,8 @@ describe("client.applyMsg", () => {
         logger.validate();
     });
 
-
     it("Remote Remove before conflicting insert", () => {
-        const clients = createClientsAtInitialState("Z", "A", "B", "C")
+        const clients = createClientsAtInitialState("Z", "A", "B", "C");
 
         const logger = new TestClientLogger(clients.all);
 
@@ -422,7 +421,6 @@ describe("client.applyMsg", () => {
 
         const op1 = clients.B.makeOpMessage(clients.B.removeRangeLocal(0, 1), ++seq);
         const op2 = clients.B.makeOpMessage(clients.B.insertTextLocal(0, "B"), ++seq);
-
 
         clients.C.applyMsg(op1);
 
@@ -439,9 +437,8 @@ describe("client.applyMsg", () => {
         logger.validate();
     });
 
-
     it.only("asdsad", () => {
-        const clients = createClientsAtInitialState("ZZZZZZ--------", "A", "B", "C")
+        const clients = createClientsAtInitialState("ZZZZZZ--------", "A", "B", "C");
 
         const logger = new TestClientLogger(clients.all);
 
@@ -452,16 +449,15 @@ describe("client.applyMsg", () => {
         const op2 = clients.C.makeOpMessage(clients.C.insertTextLocal(4, "C"), ++seq);
         const op3 = clients.C.makeOpMessage(clients.C.removeRangeLocal(2, 5), ++seq);
         const op4 = clients.C.makeOpMessage(clients.C.insertTextLocal(3, "CCC"), ++seq);
-5
+
         clients.all.forEach((c)=>c.applyMsg(op1));
         clients.all.forEach((c)=>c.applyMsg(op2));
         const op5 = clients.B.makeOpMessage(clients.B.removeRangeLocal(4, 6), ++seq);
 
-        for(const op of [op3,op4,op5]){
+        for(const op of [op3,op4,op5]) {
             clients.all.forEach((c)=>c.applyMsg(op));
         }
         logger.validate();
         console.log(logger.toString());
     });
 });
-

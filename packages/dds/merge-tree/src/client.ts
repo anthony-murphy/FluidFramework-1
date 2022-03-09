@@ -545,7 +545,7 @@ export class Client {
             }
         }
 
-        return { start, end } as IIntegerRange;
+        return { start: start!, end: end! };
     }
 
     /**
@@ -734,7 +734,7 @@ export class Client {
             if (newOp) {
                 const newSegmentGroup: SegmentGroup = { segments: [], localSeq: segmentGroup.localSeq };
                 segment.segmentGroups.enqueue(newSegmentGroup);
-                this.mergeTree.pendingSegments!.enqueue(newSegmentGroup);
+                this.mergeTree.pendingSegments.enqueue(newSegmentGroup);
                 opList.push(newOp);
             }
         }
