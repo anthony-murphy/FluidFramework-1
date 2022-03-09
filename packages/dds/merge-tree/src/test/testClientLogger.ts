@@ -5,14 +5,14 @@
 
 import { strict as assert } from "assert";
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { IMergeTreeDeltaOpArgs, MergeTreeMaintenanceType } from "..";
 import { UnassignedSequenceNumber } from "../constants";
 import { IMergeTreeOp } from "../ops";
 import { TextSegment } from "../textSegment";
 import { TestClient } from "./testClient";
-import { IMergeTreeDeltaOpArgs, MergeTreeMaintenanceType } from "..";
 
-function getOpString(msg: ISequencedDocumentMessage | undefined){
-    if(msg === undefined){
+function getOpString(msg: ISequencedDocumentMessage | undefined) {
+    if(msg === undefined) {
         return "";
     }
     const op = msg.contents as IMergeTreeOp;
@@ -20,13 +20,13 @@ function getOpString(msg: ISequencedDocumentMessage | undefined){
     // eslint-disable-next-line @typescript-eslint/dot-notation, max-len
     const opPos = op && op["pos1"] !== undefined ? `@${op["pos1"]}${op["pos2"] !== undefined ? `,${op["pos2"]}` : ""}` : "";
 
-    const seq = msg.sequenceNumber < 0 ? "L" : (msg.sequenceNumber - msg.minimumSequenceNumber).toString()
+    const seq = msg.sequenceNumber < 0 ? "L" : (msg.sequenceNumber - msg.minimumSequenceNumber).toString();
     const ref = (msg.referenceSequenceNumber - msg.minimumSequenceNumber).toString();
-    const client = msg.clientId
+    const client = msg.clientId;
     return `${seq}:${ref}:${client}${opType}${opPos}`;
 }
 
-type ClientMap = Partial<Record<"A" | "B" | "C" | "D" | "E", TestClient>>
+type ClientMap = Partial<Record<"A" | "B" | "C" | "D" | "E", TestClient>>;
 
 export function createClientsAtInitialState<TClients extends ClientMap>(
     initialState: string,
@@ -35,18 +35,18 @@ export function createClientsAtInitialState<TClients extends ClientMap>(
 {
     const setup = (c: TestClient)=>{
         c.insertTextLocal(0, initialState);
-        while(c.getText().includes("-")){
+        while(c.getText().includes("-")) {
             const index = c.getText().indexOf("-");
-            c.removeRangeLocal(index, index +1);
+            c.removeRangeLocal(index, index + 1);
         }
-    }
-    const all: TestClient[]=[];
-    const clients: Partial<Record<keyof TClients, TestClient>> ={};
-    for(const id of clientIds){
-        if(clients[id] === undefined){
-            clients[id]= new TestClient();
+    };
+    const all: TestClient[] = [];
+    const clients: Partial<Record<keyof TClients, TestClient>> = {};
+    for(const id of clientIds) {
+        if(clients[id] === undefined) {
+            clients[id] = new TestClient();
             all.push(clients[id]);
-            setup(clients[id])
+            setup(clients[id]);
             clients[id].startOrUpdateCollaboration(id);
         }
     }
@@ -54,6 +54,14 @@ export function createClientsAtInitialState<TClients extends ClientMap>(
     return {...clients, all};
 }
 export class TestClientLogger {
+    public static toString(clients: readonly TestClient[]) {
+        return clients.map((c)=>this.getSegString(c)).reduce<[string,string]>((pv,cv)=>{
+            pv[0] += `|${cv.acked.padEnd(cv.local.length,"")}`;
+            pv[1] += `|${cv.local.padEnd(cv.acked.length,"")}`;
+            return pv;
+        },["",""]).join("\n");
+    }
+
     private readonly incrementalLog = false;
 
     private readonly paddings: number[] = [];
@@ -66,25 +74,25 @@ export class TestClientLogger {
 
     constructor(
         private readonly clients: readonly TestClient[],
-        private readonly title?: string) {
-
+        private readonly title?: string,
+    ) {
         const logHeaders = [];
         clients.forEach((c,i)=>{
-            logHeaders.push("op")
-            logHeaders.push( `client ${c.longClientId}`);
+            logHeaders.push("op");
+            logHeaders.push(`client ${c.longClientId}`);
             const callback = (args: IMergeTreeDeltaOpArgs)=>{
                 if(this.lastArgs?.op !== args.op
                     || this.lastArgs?.sequencedMessage !== args.sequencedMessage
-                ){
+                ) {
                     this.addNewLogLine();
                     this.lastArgs = args;
                 }
-                const clientLogIndex = i*2
+                const clientLogIndex = i * 2;
 
-                this.ackedLine[clientLogIndex]=getOpString(args.sequencedMessage ?? c.makeOpMessage(args.op))
-                const segStrings = this.getSegString(c);
+                this.ackedLine[clientLogIndex] = getOpString(args.sequencedMessage ?? c.makeOpMessage(args.op));
+                const segStrings = TestClientLogger.getSegString(c);
                 this.ackedLine[clientLogIndex + 1] = segStrings.acked;
-                this.localLine[clientLogIndex +1] = segStrings.local;
+                this.localLine[clientLogIndex + 1] = segStrings.local;
 
                 this.paddings[clientLogIndex] =
                     Math.max(
@@ -97,13 +105,13 @@ export class TestClientLogger {
                         this.ackedLine[clientLogIndex + 1].length,
                         this.localLine[clientLogIndex + 1].length,
                         this.paddings[clientLogIndex + 1]);
-            }
+            };
             c.mergeTreeDeltaCallback = callback;
-            c.mergeTreeMaintenanceCallback= (main,args)=>{
-                if(main.operation === MergeTreeMaintenanceType.ACKNOWLEDGED){
-                    callback(args)
+            c.mergeTreeMaintenanceCallback = (main,op) => {
+                if(main.operation === MergeTreeMaintenanceType.ACKNOWLEDGED) {
+                    callback(op);
                 }
-            }
+            };
         });
         this.roundLogLines.push(logHeaders);
         this.roundLogLines[0].forEach((v) => this.paddings.push(v.length));
@@ -118,7 +126,7 @@ export class TestClientLogger {
         this.ackedLine = [];
         this.localLine = [];
         this.clients.forEach((cc, clientLogIndex)=>{
-            const segStrings = this.getSegString(cc);
+            const segStrings = TestClientLogger.getSegString(cc);
             this.ackedLine.push("", segStrings.acked);
             this.localLine.push("", segStrings.local);
 
@@ -155,26 +163,30 @@ export class TestClientLogger {
         return baseText;
     }
 
-    public toString() {
-        let str =
-            `_: Local State\n`
-            + `-: Deleted\n`
-            + `*: Unacked Insert and Delete\n`
-            + `${this.clients[0].getCollabWindow().minSeq}: msn/offset\n`
-            + `Op format <seq>:<ref>:<client><type>@<pos1>,<pos2>\n`
-            + `sequence number represented as offset from msn. L means local.\n`
-            + `op types: 0) insert 1) remove 2) annotate\n`;
-        if (this.title) {
-            str += `${this.title}\n`;
+    public toString(excludeHeader: boolean = false) {
+        let str = "";
+        if(!excludeHeader) {
+            str +=
+                `_: Local State\n`
+                + `-: Deleted\n`
+                + `*: Unacked Insert and Delete\n`
+                + `${this.clients[0].getCollabWindow().minSeq}: msn/offset\n`
+                + `Op format <seq>:<ref>:<client><type>@<pos1>,<pos2>\n`
+                + `sequence number represented as offset from msn. L means local.\n`
+                + `op types: 0) insert 1) remove 2) annotate\n`;
+
+            if (this.title) {
+                str += `${this.title}\n`;
+            }
         }
         str += this.roundLogLines
-            .filter((line)=>line.some((c)=>c.trim().length >0))
+            .filter((line) => line.some((c) => c.trim().length > 0))
             .map((line) => line.map((v, i) => v.padEnd(this.paddings[i])).join(" | "))
             .join("\n");
         return str;
     }
 
-    private getSegString(client: TestClient): { acked: string, local: string } {
+    private static getSegString(client: TestClient): { acked: string, local: string } {
         let acked: string = "";
         let local: string = "";
         const nodes = [...client.mergeTree.root.children];
