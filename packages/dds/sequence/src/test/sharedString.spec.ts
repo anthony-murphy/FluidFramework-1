@@ -23,6 +23,7 @@ import {
 } from "@fluidframework/test-runtime-utils";
 import { SharedString } from "../sharedString";
 import { SharedStringFactory } from "../sequenceFactory";
+import { IntervalCollection, IntervalType, SequenceInterval } from "../intervalCollection";
 
 describe("SharedString", () => {
     let sharedString: SharedString;
@@ -318,6 +319,60 @@ describe("SharedString", () => {
             sharedString2.connect(services2);
         });
 
+        it("can maintain interval consistency", () => {
+            const collection1 = sharedString.getIntervalCollection("test");
+            sharedString.insertText(0, "xyz");
+            containerRuntimeFactory.processAllMessages();
+            const collection2 = sharedString2.getIntervalCollection("test");
+            assert.notStrictEqual(collection2, undefined, "undefined");
+            assert.strictEqual(sharedString.getText(), sharedString2.getText(), "not equal text");
+
+            sharedString.insertText(0, "abc");
+            let interval = collection1.add(1, 1, IntervalType.SlideOnRemove);
+            const intervalId = interval.getIntervalId();
+            sharedString2.insertText(0, "wha");
+
+            containerRuntimeFactory.processAllMessages();
+            assert.strictEqual(sharedString.getText(), "whaabcxyz", "different text 1");
+            assert.strictEqual(sharedString.getText(), "whaabcxyz", "different text 2");
+
+            let testInterval = collection1.getIntervalById(intervalId);
+            assert.notStrictEqual(testInterval, undefined, "Interval not found 1");
+            assert.strictEqual(testInterval.start.toPosition(), 4, "different position 1");
+            assert.strictEqual(testInterval.end.toPosition(), 4, "different position 2");
+            for (interval of collection1) {
+                assert.strictEqual(testInterval, interval, "Unknown interval 1");
+            }
+            testInterval = collection2.getIntervalById(intervalId);
+            assert.notStrictEqual(testInterval, undefined, "Interval not found 2");
+            assert.strictEqual(testInterval.start.toPosition(), 4, "different position 3");
+            assert.strictEqual(testInterval.end.toPosition(), 4, "different position 4");
+            for (interval of collection2) {
+                assert.strictEqual(testInterval, interval, "Unknown interval 2");
+            }
+
+            collection2.change(intervalId, 1, 6);
+            sharedString.removeText(0, 2);
+            collection1.change(intervalId, 0, 5);
+
+            containerRuntimeFactory.processAllMessages();
+
+            testInterval = collection1.getIntervalById(intervalId);
+            assert.notStrictEqual(testInterval, undefined, "Interval not found 3");
+            assert.strictEqual(testInterval.start.toPosition(), 0, "different position 5");
+            assert.strictEqual(testInterval.end.toPosition(), 5, "different position 6");
+            for (interval of collection1) {
+                assert.strictEqual(testInterval, interval, "Unknown interval 3");
+            }
+            testInterval = collection2.getIntervalById(intervalId);
+            assert.notStrictEqual(testInterval, undefined, "Interval not found 4");
+            assert.strictEqual(testInterval.start.toPosition(), 0, "different position 7");
+            assert.strictEqual(testInterval.end.toPosition(), 5, "different position 8");
+            for (interval of collection2) {
+                assert.strictEqual(testInterval, interval, "Unknown interval 4");
+            }
+        });
+
         it("can insert text", async () => {
             // Insert text in first shared string.
             sharedString.insertText(0, "hello");
@@ -473,6 +528,60 @@ describe("SharedString", () => {
 
             const simpleMarker2 = sharedString.getMarkerFromId("markerId") as Marker;
             assert.equal(simpleMarker2.properties.color, "blue", "Could not annotate marker in remote string");
+        });
+
+        it("test IntervalCollection creation events", () => {
+            let createCalls1 = 0;
+            const createInfo1 = [];
+            const createCallback1 = (label: string, local: boolean, target: SharedString) => {
+                assert.strictEqual(target, sharedString, "Expected event to target sharedString");
+                createInfo1[createCalls1++] = { local, label };
+            };
+            sharedString.on("createIntervalCollection", createCallback1);
+
+            let createCalls2 = 0;
+            const createInfo2 = [];
+            const createCallback2 = (label: string, local: boolean, target: SharedString) => {
+                assert.strictEqual(target, sharedString2, "Expected event to target sharedString2");
+                createInfo2[createCalls2++] = { local, label };
+            };
+            sharedString2.on("createIntervalCollection", createCallback2);
+
+            const collection1: IntervalCollection<SequenceInterval> = sharedString.getIntervalCollection("test1");
+            const interval1 = collection1.add(0, 1, IntervalType.SlideOnRemove);
+            collection1.change(interval1.getIntervalId(), 1, 4);
+
+            const collection2: IntervalCollection<SequenceInterval> = sharedString2.getIntervalCollection("test2");
+            const interval2 = collection2.add(0, 2, IntervalType.SlideOnRemove);
+            collection2.removeIntervalById(interval2.getIntervalId());
+
+            const collection3: IntervalCollection<SequenceInterval> = sharedString2.getIntervalCollection("test3");
+            collection3.add(0, 3, IntervalType.SlideOnRemove);
+
+            containerRuntimeFactory.processAllMessages();
+
+            const verifyCreateEvents = (s: SharedString, createInfo, infoArray) => {
+                let i = 0;
+                const labels = s.getIntervalCollectionLabels();
+                for (const label of labels) {
+                    assert.equal(label, infoArray[i].label, `Bad label ${i}: ${label}`);
+                    assert.equal(label, createInfo[i].label, `Bad label ${i}: ${createInfo[i].label}`);
+                    assert.equal(
+                        createInfo[i].local, infoArray[i].local, `Bad local value ${i}: ${createInfo[i].local}`);
+                    i++;
+                }
+                assert.equal(infoArray.length, createInfo.length, `Wrong number of create calls: ${i}`);
+            };
+            verifyCreateEvents(sharedString, createInfo1, [
+                { label: "intervalCollections/test1", local: true },
+                { label: "intervalCollections/test2", local: false},
+                { label: "intervalCollections/test3", local: false},
+            ]);
+            verifyCreateEvents(sharedString2, createInfo2, [
+                { label: "intervalCollections/test2", local: true },
+                { label: "intervalCollections/test3", local: true },
+                { label: "intervalCollections/test1", local: false},
+            ]);
         });
     });
 
