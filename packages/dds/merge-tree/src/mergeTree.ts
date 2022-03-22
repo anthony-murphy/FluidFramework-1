@@ -1100,8 +1100,16 @@ export class MergeTree {
     }
 
     public localNetLength(segment: ISegment) {
-        const removalInfo: IRemovalInfo = segment;
-        if (removalInfo.removedSeq !== undefined) {
+        return this.localLength(segment) ?? 0;
+    }
+
+    private localLength(segment: ISegment) {
+        const removedSeq =
+            segment.removedSeq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER : segment.removedSeq;
+        if (removedSeq !== undefined) {
+            if(removedSeq <= this.collabWindow.minSeq) {
+                return undefined;
+            }
             return 0;
         } else {
             return segment.cachedLength;
@@ -1459,7 +1467,7 @@ export class MergeTree {
             if (!node.isLeaf()) {
                 return node.cachedLength;
             } else {
-                return this.localNetLength(node);
+                return this.localLength(node);
             }
         } else {
             // Sequence number within window
@@ -1467,24 +1475,28 @@ export class MergeTree {
                 return node.partialLengths!.getPartialLength(refSeq, clientId);
             } else {
                 const segment = node;
-                const removalInfo: IRemovalInfo = segment;
+                const segmentSeq =
+                    segment.seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER - 1 : segment.seq!;
+                const removedSeq =
+                    segment.removedSeq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER : segment.removedSeq;
 
-                if(removalInfo.removedSeq !== undefined
-                    && removalInfo.removedSeq !== UnassignedSequenceNumber
-                    && removalInfo.removedSeq <= refSeq) {
-                    // this segment is a tombstone eligible for zamboni
-                    // so should never be considered, as it may not exist
-                    // on other clients
-                    return undefined;
+                if(removedSeq) {
+                    if(removedSeq <= this.collabWindow.minSeq) {
+                        // this segment is a tombstone eligible for zamboni
+                        // so should never be considered, as it may not exist
+                        // on other clients
+                        return undefined;
+                    }
+                    if(removedSeq <= refSeq) {
+                        return 0;
+                    }
                 }
-                if (((segment.clientId === clientId) ||
-                    ((segment.seq !== UnassignedSequenceNumber) && (segment.seq! <= refSeq)))) {
+                if (segment.clientId === clientId || segmentSeq <= refSeq) {
                     // Segment happened by reference sequence number or segment from requesting client
-                    if (removalInfo.removedSeq !== undefined) {
+                    if (removedSeq !== undefined) {
                         if (
-                            removalInfo.removedClientId === clientId
-                            || (removalInfo.removedClientOverlap
-                                && removalInfo.removedClientOverlap.includes(clientId))
+                            segment.removedClientId === clientId
+                            || (segment.removedClientOverlap?.includes(clientId))
                         ) {
                             return 0;
                         } else {
@@ -1494,14 +1506,6 @@ export class MergeTree {
                         return segment.cachedLength;
                     }
                 } else {
-                    // the segment was inserted and removed before the
-                    // this context, so it will never exist for this
-                    // context
-                    if(removalInfo.removedSeq !== undefined
-                        && removalInfo.removedSeq !== UnassignedSequenceNumber) {
-                        return undefined;
-                    }
-                    // Segment invisible to client at reference sequence number/branch id/client id of op
                     return 0;
                 }
             }

@@ -5,8 +5,7 @@
 
 import random from "random-js";
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
-import { IMergeTreeOp } from "../ops";
-import { SegmentGroup } from "../mergeTree";
+import { IMergeTreeOp, MergeTreeDeltaType } from "../ops";
 import {
     generateClientNames,
     doOverRange,
@@ -21,19 +20,40 @@ import { TestClient } from "./testClient";
 import { TestClientLogger } from "./testClientLogger";
 
 function applyMessagesWithReconnect(
-    startingSeq: number,
-    messageDatas: [ISequencedDocumentMessage, SegmentGroup | SegmentGroup[]][],
+    messagesPerClient: ISequencedDocumentMessage[][],
     clients: readonly TestClient[],
     logger: TestClientLogger,
 ) {
-    let seq = startingSeq;
-    const reconnectClientMsgs: [IMergeTreeOp, SegmentGroup | SegmentGroup[]][] = [];
+    const replayWaterline = clients.reduce<number>((pv,cv)=>Math.max(pv, cv.getCurrentSeq()), 0);
+
+    // catch up all clients to the waterline
+    while(messagesPerClient.some((msgs) =>msgs[0].sequenceNumber <= replayWaterline)) {
+        for (let clientIndex = 0; clientIndex < clients.length; clientIndex++) {
+            if (messagesPerClient[clientIndex][0].sequenceNumber <= replayWaterline) {
+                const message = messagesPerClient[clientIndex].shift();
+                const client = clients[clientIndex];
+                try {
+                    client.applyMsg(message);
+                } catch (error) {
+                    const msgStr = JSON.stringify(message, undefined, 1);
+                    throw new Error(
+                        `${logger.toString()}\nClient ${client.longClientId}: ${error}\n${msgStr}\n`);
+                }
+            }
+        }
+    }
+
+    // replay all ops above water line from all clients expect 1
+    // store the ops for client 1, to replay via reconnect
+    let seq = replayWaterline;
+    const reconnectClientMsgs: IMergeTreeOp[] = [];
+    const messages = messagesPerClient[0];
     let minSeq = 0;
     // log and apply all the ops created in the round
-    while (messageDatas.length > 0) {
-        const [message, sg] = messageDatas.shift();
+    while (messages.length > 0) {
+        const message = messages.shift();
         if (message.clientId === clients[1].longClientId) {
-            reconnectClientMsgs.push([message.contents as IMergeTreeOp, sg]);
+            reconnectClientMsgs.push(message.contents as IMergeTreeOp);
         } else {
             message.sequenceNumber = ++seq;
             clients.forEach((c) => c.applyMsg(message));
@@ -41,19 +61,26 @@ function applyMessagesWithReconnect(
         }
     }
 
-    const reconnectMsgs: [ISequencedDocumentMessage, SegmentGroup | SegmentGroup[]][] = [];
-    reconnectClientMsgs.forEach((opData) => {
-        const newMsg = clients[1].makeOpMessage(
-            clients[1].regeneratePendingOp(
-                opData[0],
-                opData[1],
-            ));
+    // rebuild ops for client 1 to simulate reconnect
+    const reconnectMsgs: ISequencedDocumentMessage[][] = [];
+    clients.forEach(() => reconnectMsgs.push([]));
+    reconnectClientMsgs.forEach((op) => {
+        let count = op.type === MergeTreeDeltaType.GROUP ? op.ops.length : 1;
+        const sg = clients[1].mergeTree.pendingSegments.some(()=>{
+            return count-- > 0;
+        });
+        const newOp = clients[1].regeneratePendingOp(
+            op,
+            sg.length === 1 ? sg[0] : sg,
+        );
+        const newMsg = clients[1].makeOpMessage(newOp);
+        newMsg.sequenceNumber = ++seq;
         newMsg.minimumSequenceNumber = minSeq;
-        // apply message doesn't use the segment group, so just pass undefined
-        reconnectMsgs.push([newMsg, undefined]);
+        reconnectMsgs.forEach((m)=>m.push(newMsg));
     });
 
-    return applyMessages(seq, reconnectMsgs, clients, logger);
+    // apply the reconnect ops to all clients
+    return applyMessages(reconnectMsgs, clients, logger);
 }
 
 export const defaultOptions: IMergeTreeOperationRunnerConfig & { minLength: number, clients: IConfigRange } = {

@@ -70,7 +70,7 @@ export class TestClientLogger {
     private ackedLine: string[];
     private localLine: string[];
     // initialize to private instance, so first real edit will create a new line
-    private lastOp: any | undefined = {};
+    private lastArgs: IMergeTreeDeltaOpArgs | undefined;
 
     constructor(
         private readonly clients: readonly TestClient[],
@@ -80,14 +80,16 @@ export class TestClientLogger {
         clients.forEach((c,i)=>{
             logHeaders.push("op");
             logHeaders.push(`client ${c.longClientId}`);
-            const callback = (op: IMergeTreeDeltaOpArgs)=>{
-                if(this.lastOp !== op.op) {
+            const callback = (args: IMergeTreeDeltaOpArgs)=>{
+                if(this.lastArgs?.op !== args.op
+                    || this.lastArgs?.sequencedMessage !== args.sequencedMessage
+                ) {
                     this.addNewLogLine();
-                    this.lastOp = op.op;
+                    this.lastArgs = args;
                 }
                 const clientLogIndex = i * 2;
 
-                this.ackedLine[clientLogIndex] = getOpString(op.sequencedMessage ?? c.makeOpMessage(op.op));
+                this.ackedLine[clientLogIndex] = getOpString(args.sequencedMessage ?? c.makeOpMessage(args.op));
                 const segStrings = TestClientLogger.getSegString(c);
                 this.ackedLine[clientLogIndex + 1] = segStrings.acked;
                 this.localLine[clientLogIndex + 1] = segStrings.local;
@@ -117,13 +119,9 @@ export class TestClientLogger {
     }
 
     private addNewLogLine() {
-        if(this.incrementalLog) {
-            while(this.roundLogLines.length > 0) {
-                const logLine = this.roundLogLines.shift();
-                if(logLine.some((c)=>c.trim().length > 0)) {
-                    console.log(logLine.map((v, i) => v.padEnd(this.paddings[i])).join(" | "));
-                }
-            }
+        if (this.incrementalLog && this.ackedLine && this.localLine) {
+            console.log(this.ackedLine.map((v, i) => v.padEnd(this.paddings[i])).join(" | "));
+            console.log(this.localLine.map((v, i) => v.padEnd(this.paddings[i])).join(" | "));
         }
         this.ackedLine = [];
         this.localLine = [];
@@ -202,8 +200,9 @@ export class TestClientLogger {
                                 acked += "_".repeat(node.text.length);
                                 if (node.seq === UnassignedSequenceNumber) {
                                     local += "*".repeat(node.text.length);
+                                }else{
+                                    local += "-".repeat(node.text.length);
                                 }
-                                local += "-".repeat(node.text.length);
                             } else {
                                 acked += "-".repeat(node.text.length);
                                 local += " ".repeat(node.text.length);
