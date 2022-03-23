@@ -1475,37 +1475,30 @@ export class MergeTree {
                 return node.partialLengths!.getPartialLength(refSeq, clientId);
             } else {
                 const segment = node;
-                const segmentSeq =
-                    segment.seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER - 1 : segment.seq!;
-                const removedSeq =
-                    segment.removedSeq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER : segment.removedSeq;
+                const segmentSeq = segment.seq === UnassignedSequenceNumber
+                    ? Number.MAX_SAFE_INTEGER - 1
+                    : segment.seq!;
+                const removedSeq = segment.removedSeq === UnassignedSequenceNumber
+                    ? Number.MAX_SAFE_INTEGER
+                    : segment.removedSeq;
 
-                if(removedSeq) {
+                if(removedSeq !== undefined) {
                     if(removedSeq <= this.collabWindow.minSeq) {
                         // this segment is a tombstone eligible for zamboni
                         // so should never be considered, as it may not exist
                         // on other clients
                         return undefined;
                     }
-                    if(removedSeq <= refSeq) {
+                    if(removedSeq <= refSeq
+                        || segment.removedClientId === clientId
+                        || segment.removedClientOverlap?.includes(clientId)) {
                         return 0;
                     }
                 }
                 if (segment.clientId === clientId || segmentSeq <= refSeq) {
-                    // Segment happened by reference sequence number or segment from requesting client
-                    if (removedSeq !== undefined) {
-                        if (
-                            segment.removedClientId === clientId
-                            || (segment.removedClientOverlap?.includes(clientId))
-                        ) {
-                            return 0;
-                        } else {
-                            return segment.cachedLength;
-                        }
-                    } else {
                         return segment.cachedLength;
-                    }
                 } else {
+                    // Segment invisible to client at reference sequence number/branch id/client id of op
                     return 0;
                 }
             }

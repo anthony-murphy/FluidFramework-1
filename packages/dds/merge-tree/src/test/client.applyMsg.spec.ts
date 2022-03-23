@@ -437,26 +437,53 @@ describe("client.applyMsg", () => {
         logger.validate();
     });
 
-    it("asdsad", () => {
-        const clients = createClientsAtInitialState("ZZZZZZ--------", "A", "B", "C");
+    it("Conflicting inserts at deleted segment position", () => {
+        const clients = createClientsAtInitialState("a----bcd-ef", "A", "B", "C");
 
         const logger = new TestClientLogger(clients.all);
 
         let seq = 0;
+        const ops: ISequencedDocumentMessage[] = [];
+        ops.push(clients.B.makeOpMessage(clients.B.insertTextLocal(4, "B"), ++seq));
+        ops.push(clients.C.makeOpMessage(clients.C.insertTextLocal(4, "CC"), ++seq));
+        ops.push(clients.C.makeOpMessage(clients.C.removeRangeLocal(2, 8), ++seq));
+        clients.B.applyMsg(ops[0]);
+        clients.B.applyMsg(ops[1]);
+        ops.push(clients.B.makeOpMessage(clients.B.removeRangeLocal(5,8), ++seq));
 
-        const op1 = clients.B.makeOpMessage(clients.B.insertTextLocal(4, "BB"), ++seq);
-
-        const op2 = clients.C.makeOpMessage(clients.C.insertTextLocal(4, "C"), ++seq);
-        const op3 = clients.C.makeOpMessage(clients.C.removeRangeLocal(2, 5), ++seq);
-        const op4 = clients.C.makeOpMessage(clients.C.insertTextLocal(3, "CCC"), ++seq);
-
-        clients.all.forEach((c)=>c.applyMsg(op1));
-        clients.all.forEach((c)=>c.applyMsg(op2));
-        const op5 = clients.B.makeOpMessage(clients.B.removeRangeLocal(4, 6), ++seq);
-
-        for(const op of [op3,op4,op5]) {
-            clients.all.forEach((c)=>c.applyMsg(op));
+        for(const op of ops) {
+            clients.all.forEach(
+                (c)=>{
+                    if(c.getCollabWindow().currentSeq < op.sequenceNumber) {
+                        c.applyMsg(op);
+                    }
+                });
         }
+        logger.validate();
+    });
+
+    it("asdsad", () => {
+        const clients = createClientsAtInitialState("Z----ZZZ-ZZ", "A", "B", "C");
+
+        const logger = new TestClientLogger(clients.all);
+
+        let seq = 0;
+        const ops: ISequencedDocumentMessage[] = [];
+        ops.push(clients.B.makeOpMessage(clients.B.insertTextLocal(4, "B"), ++seq));
+        ops.push(clients.C.makeOpMessage(clients.C.insertTextLocal(4, "CC"), ++seq));
+        ops.push(clients.C.makeOpMessage(clients.C.removeRangeLocal(2, 8), ++seq));
+        clients.B.applyMsg(ops[0]);
+        clients.B.applyMsg(ops[1]);
+        ops.push(clients.B.makeOpMessage(clients.B.removeRangeLocal(5, 8), ++seq));
+
+        ops.forEach((op,i)=>{
+            clients.all.forEach(
+                (c)=>{
+                    if(c.getCollabWindow().currentSeq < op.sequenceNumber) {
+                        c.applyMsg(op);
+                    }
+                });
+        });
         logger.validate();
         console.log(logger.toString());
     });
