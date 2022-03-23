@@ -203,8 +203,8 @@ describe("client.applyMsg", () => {
 
         const start = 0;
         const end = 5;
-        const intialText = client.getText();
-        const initialLength = intialText.length;
+        const initialText = client.getText();
+        const initialLength = initialText.length;
 
         assert.equal(segmentInfo.segment.removedSeq, undefined);
         assert(segmentInfo.segment.segmentGroups.empty);
@@ -227,7 +227,7 @@ describe("client.applyMsg", () => {
         assert.equal(segmentInfo.segment.removedSeq, remoteMessage.sequenceNumber);
         assert(segmentInfo.segment.segmentGroups.empty);
         assert.equal(client.getLength(), initialLength - (end - start));
-        assert.equal(client.getText(), intialText.substring(0, start) + intialText.substring(end));
+        assert.equal(client.getText(), initialText.substring(0, start) + initialText.substring(end));
     });
 
     it("overlapping insert and delete", () => {
@@ -462,7 +462,7 @@ describe("client.applyMsg", () => {
         logger.validate();
     });
 
-    it("asdsad", () => {
+    it.only("asdsad", () => {
         const clients = createClientsAtInitialState("Z----ZZZ-ZZ", "A", "B", "C");
 
         const logger = new TestClientLogger(clients.all);

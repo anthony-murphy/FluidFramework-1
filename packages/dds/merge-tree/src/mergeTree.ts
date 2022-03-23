@@ -522,6 +522,7 @@ export abstract class BaseSegment extends MergeNode implements ISegment {
         // TODO: deep clone properties
         b.properties = clone(this.properties);
         b.removedClientId = this.removedClientId;
+        b.removedClientOverlap = b.removedClientOverlap?.slice();
         // TODO: copy removed client overlap and branch removal info
         b.removedSeq = this.removedSeq;
         b.seq = this.seq;
@@ -590,9 +591,7 @@ export abstract class BaseSegment extends MergeNode implements ISegment {
                 leafSegment.seq = this.seq;
                 leafSegment.localSeq = this.localSeq;
                 leafSegment.clientId = this.clientId;
-                if (this.removedClientOverlap) {
-                    leafSegment.removedClientOverlap = [...this.removedClientOverlap];
-                }
+                leafSegment.removedClientOverlap = this.removedClientOverlap?.slice();
                 this.segmentGroups.copyTo(leafSegment);
                 this.trackingCollection.copyTo(leafSegment);
                 if (this.localRefs) {
@@ -1107,7 +1106,7 @@ export class MergeTree {
         const removedSeq =
             segment.removedSeq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER : segment.removedSeq;
         if (removedSeq !== undefined) {
-            if(removedSeq <= this.collabWindow.minSeq) {
+            if(removedSeq < this.collabWindow.minSeq) {
                 return undefined;
             }
             return 0;
@@ -1211,7 +1210,7 @@ export class MergeTree {
                 const segment = childNode;
                 if (segment.segmentGroups.empty) {
                     if (segment.removedSeq !== undefined) {
-                        if (segment.removedSeq > this.collabWindow.minSeq) {
+                        if (segment.removedSeq >= this.collabWindow.minSeq) {
                             holdNodes.push(segment);
                         } else if (!segment.trackingCollection.empty) {
                             holdNodes.push(segment);
@@ -1224,12 +1223,11 @@ export class MergeTree {
                                 },
                                 undefined);
                             }
-
                             segment.parent = undefined;
                         }
                         prevSegment = undefined;
                     } else {
-                        if (segment.seq! <= this.collabWindow.minSeq) {
+                        if (segment.seq! < this.collabWindow.minSeq) {
                             const canAppend = prevSegment
                                 && prevSegment.canAppend(segment)
                                 && matchProperties(prevSegment.properties, segment.properties)
@@ -1329,7 +1327,7 @@ export class MergeTree {
 
         for (let i = 0; i < zamboniSegmentsMaxCount; i++) {
             let segmentToScour = this.segmentsToScour!.peek();
-            if (!segmentToScour || segmentToScour.maxSeq > this.collabWindow.minSeq) {
+            if (!segmentToScour || segmentToScour.maxSeq >= this.collabWindow.minSeq) {
                 break;
             }
             segmentToScour = this.segmentsToScour!.get();
@@ -1483,7 +1481,7 @@ export class MergeTree {
                     : segment.removedSeq;
 
                 if(removedSeq !== undefined) {
-                    if(removedSeq <= this.collabWindow.minSeq) {
+                    if(removedSeq < this.collabWindow.minSeq) {
                         // this segment is a tombstone eligible for zamboni
                         // so should never be considered, as it may not exist
                         // on other clients
@@ -1491,7 +1489,7 @@ export class MergeTree {
                     }
                     if(removedSeq <= refSeq
                         || segment.removedClientId === clientId
-                        || segment.removedClientOverlap?.includes(clientId)) {
+                        || segment.removedClientOverlap?.includes(clientId) === true) {
                         return 0;
                     }
                 }
@@ -2101,7 +2099,8 @@ export class MergeTree {
                 // if the current seg is local (UnassignedSequenceNumber) give it the second highest
                 // possible seq, as the highest is reserved for the previous.
                 const newSeq = seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER : seq;
-                const segSeq = node.seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER - 1 : node.seq ?? 0;
+                const segSeq = node.seq === UnassignedSequenceNumber ? Number.MAX_SAFE_INTEGER - 1 : node.seq;
+                assert(segSeq !== undefined,"node must have seq");
                 return newSeq > segSeq;
             }
             return false;
@@ -2378,7 +2377,7 @@ export class MergeTree {
         const removedSegments: IMergeTreeSegmentDelta[] = [];
         const savedLocalRefs: LocalReferenceCollection[] = [];
         const localSeq = seq === UnassignedSequenceNumber ? ++this.collabWindow.localSeq : undefined;
-        const markRemoved = (segment: ISegment, pos: number, _start: number, _end: number) => {
+        const markRemoved = (segment: ISegment) => {
             const removalInfo: IRemovalInfo = segment;
             if (removalInfo.removedSeq !== undefined) {
                 _overwrite = true;

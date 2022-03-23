@@ -214,8 +214,8 @@ export class PartialSequenceLengths {
         combinedPartialLengths.minLength = 0;
         combinedPartialLengths.segmentCount = block.childCount;
 
-        function seqLTE(seq: number, minSeq: number) {
-            return (seq !== UnassignedSequenceNumber) && (seq <= minSeq);
+        function seqLE(seq: number, minSeq: number) {
+            return (seq !== UnassignedSequenceNumber) && (seq < minSeq);
         }
 
         for (let i = 0; i < block.childCount; i++) {
@@ -224,7 +224,7 @@ export class PartialSequenceLengths {
                 // Leaf segment
                 const segment = child;
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                if (seqLTE(segment.seq!, collabWindow.minSeq)) {
+                if (seqLE(segment.seq!, collabWindow.minSeq)) {
                     combinedPartialLengths.minLength += segment.cachedLength;
                 } else {
                     if (segment.seq !== UnassignedSequenceNumber) {
@@ -233,7 +233,7 @@ export class PartialSequenceLengths {
                 }
                 const removalInfo: IRemovalInfo = segment;
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                if (seqLTE(removalInfo.removedSeq!, collabWindow.minSeq)) {
+                if (seqLE(removalInfo.removedSeq!, collabWindow.minSeq)) {
                     combinedPartialLengths.minLength -= segment.cachedLength;
                 } else {
                     if ((removalInfo.removedSeq !== undefined) &&
@@ -509,7 +509,7 @@ export class PartialSequenceLengths {
     // Clear away partial sums for sequence numbers earlier than the current window
     private zamboni(segmentWindow: CollaborationWindow) {
         function copyDown(partialLengths: PartialSequenceLength[]) {
-            const mindex = latestLEQ(partialLengths, segmentWindow.minSeq);
+            const mindex = latestLEQ(partialLengths, segmentWindow.minSeq - 1);
             let minLength = 0;
             if (mindex >= 0) {
                 minLength = partialLengths[mindex].len;
