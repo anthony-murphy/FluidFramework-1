@@ -29,10 +29,10 @@ const allOperations: TestOperation[] = [
 ];
 
 export const debugOptions: IConflictFarmConfig = {
-    minLength: { min: 7, max: 7 },
+    minLength: { min: 2, max: 2 },
     clients: { min: 3, max: 3 },
-    opsPerRoundRange: { min: 1, max: 8 },
-    rounds: 50000,
+    opsPerRoundRange: { min: 1, max: 5 },
+    rounds: 100000,
     operations: [
         removeRange,
         // annotateRange,
