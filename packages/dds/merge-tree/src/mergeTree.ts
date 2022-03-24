@@ -1203,7 +1203,7 @@ export class MergeTree {
                 const segment = childNode;
                 if (segment.segmentGroups.empty) {
                     if (segment.removedSeq !== undefined) {
-                        if (segment.removedSeq > this.collabWindow.minSeq) {
+                        if (segment.removedSeq >= this.collabWindow.minSeq) {
                             holdNodes.push(segment);
                         } else if (!segment.trackingCollection.empty) {
                             holdNodes.push(segment);
@@ -1221,7 +1221,7 @@ export class MergeTree {
                         }
                         prevSegment = undefined;
                     } else {
-                        if (segment.seq! <= this.collabWindow.minSeq) {
+                        if (segment.seq! < this.collabWindow.minSeq) {
                             const canAppend = prevSegment
                                 && prevSegment.canAppend(segment)
                                 && matchProperties(prevSegment.properties, segment.properties)
@@ -1321,7 +1321,7 @@ export class MergeTree {
 
         for (let i = 0; i < zamboniSegmentsMaxCount; i++) {
             let segmentToScour = this.segmentsToScour!.peek();
-            if (!segmentToScour || segmentToScour.maxSeq > this.collabWindow.minSeq) {
+            if (!segmentToScour || segmentToScour.maxSeq >= this.collabWindow.minSeq) {
                 break;
             }
             segmentToScour = this.segmentsToScour!.get();

@@ -93,7 +93,7 @@ describe("MergeTree.tracking", () => {
             segmentInfo = testClient.getContainingSegment(0);
             assert.equal(segmentInfo.segment.trackingCollection.trackingGroups.size, 1);
 
-            testClient.updateMinSeq(seq);
+            testClient.updateSeqNumbers(seq + 1,seq + 1);
 
             assert.equal(trackingGroup.size, 1);
             segmentInfo = testClient.getContainingSegment(0);

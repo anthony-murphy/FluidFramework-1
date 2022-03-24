@@ -402,4 +402,45 @@ describe("client.applyMsg", () => {
         }
         logger.validate();
     });
+
+    it.only("asdasdasd", () => {
+        const clientA = new TestClient();
+        clientA.startOrUpdateCollaboration("A");
+        const clientB = new TestClient();
+        clientB.startOrUpdateCollaboration("B");
+        const clientC = new TestClient();
+        clientC.startOrUpdateCollaboration("C");
+
+        const clients = [clientA, clientB, clientC];
+        const logger = new TestClientLogger(clients);
+        let seq = 0;
+        const messages: ISequencedDocumentMessage[] = [];
+        for(let i = 0; i < 6; i++) {
+            if(clientC.getLength() < 4 || clientB.getLength() < 3) {
+                messages.push(clientC.makeOpMessage(clientC.insertTextLocal(0, "C".repeat(4)), ++seq));
+                messages.push(clientB.makeOpMessage(clientB.insertTextLocal(0, "B".repeat(3)), ++seq));
+            }else{
+                messages.push(clientC.makeOpMessage(
+                    clientC.removeRangeLocal(0, Math.floor(clientC.getLength() / 4)), ++seq));
+                messages.push(clientB.makeOpMessage(
+                    clientB.removeRangeLocal(0, Math.floor(clientB.getLength() / 3)), ++seq));
+            }
+
+            if(i % 2 === 0) {
+                const msg = messages.shift();
+                msg.minimumSequenceNumber = msg.referenceSequenceNumber;
+                clients.forEach((c) => {
+                    c.applyMsg(msg);
+                });
+            }
+        }
+        while (messages.length > 0) {
+            const msg = messages.shift();
+            msg.minimumSequenceNumber = msg.referenceSequenceNumber;
+            clients.forEach((c) => {
+                c.applyMsg(msg);
+            });
+        }
+        logger.validate();
+    });
 });
