@@ -224,6 +224,8 @@ const getCodeProposal =
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     (quorum: IQuorumProposals) => quorum.get("code") ?? quorum.get("code2");
 
+const summarizerClientType = "summarizer";
+
 export class Container extends EventEmitterWithErrorHandling<IContainerEvents> implements IContainer {
     public static version = "^0.1.0";
 
@@ -381,7 +383,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
     private _context: ContainerContext | undefined;
     private get context() {
         if (this._context === undefined) {
-            throw new Error("Attempted to access context before it was defined");
+            throw new GenericError("Attempted to access context before it was defined");
         }
         return this._context;
     }
@@ -395,7 +397,6 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
 
     private resumedOpProcessingAfterLoad = false;
     private firstConnection = true;
-    private manualReconnectInProgress = false;
     private readonly connectionTransitionTimes: number[] = [];
     private messageCountAfterDisconnection: number = 0;
     private _loadedFromVersion: IVersion | undefined;
@@ -430,6 +431,10 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
 
     public get readOnlyInfo(): ReadOnlyInfo {
         return this._deltaManager.readOnlyInfo;
+    }
+
+    public get closeSignal(): AbortSignal {
+        return this._deltaManager.closeAbortController.signal;
     }
 
     /**
@@ -818,15 +823,20 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
                 const createNewResolvedUrl = await this.urlResolver.resolve(request);
                 ensureFluidResolvedUrl(createNewResolvedUrl);
                 if (this.service === undefined) {
+                    assert(this.client.details.type !== summarizerClientType,
+                        "client should not be summarizer before container is created");
                     this.service = await runWithRetry(
                         async () => this.serviceFactory.createContainer(
                             summary,
                             createNewResolvedUrl,
                             this.subLogger,
+                            false, // clientIsSummarizer
                         ),
                         "containerAttach",
                         this.mc.logger,
-                        {}, // progress
+                        {
+                            cancel: this.closeSignal,
+                        }, // progress
                     );
                 }
                 const resolvedUrl = this.service.resolvedUrl;
@@ -898,11 +908,31 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         );
     }
 
+    /**
+     * Dictates whether or not the current container will automatically attempt to reconnect to the delta stream
+     * after receiving a disconnect event
+     * @param reconnect - Boolean indicating if reconnect should automatically occur
+     * @deprecated - 0.58, This API will be removed in 1.0
+     * Use `connect()` and `disconnect()` instead of `setAutoReconnect(true)` and `setAutoReconnect(false)` respectively
+     * See https://github.com/microsoft/FluidFramework/issues/9167 for context
+     */
     public setAutoReconnect(reconnect: boolean) {
         if (this.closed) {
             throw new Error("Attempting to setAutoReconnect() a closed Container");
         }
+
         const mode = reconnect ? ReconnectMode.Enabled : ReconnectMode.Disabled;
+        this.setAutoReconnectInternal(mode);
+
+        // If container state is not attached and resumed, then don't connect to delta stream. Also don't set the
+        // manual reconnection flag to true as we haven't made the initial connection yet.
+        if (reconnect && this._attachState === AttachState.Attached && this.resumedOpProcessingAfterLoad) {
+            // Ensure connection to web socket
+            this.connectToDeltaStream({ reason: "autoReconnect" });
+        }
+    }
+
+    private setAutoReconnectInternal(mode: ReconnectMode) {
         const currentMode = this._deltaManager.connectionManager.reconnectMode;
 
         if (currentMode === mode) {
@@ -914,27 +944,65 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         this.setAutoReconnectTime = now;
 
         this.mc.logger.sendTelemetryEvent({
-            eventName: reconnect ? "AutoReconnectEnabled" : "AutoReconnectDisabled",
+            eventName: mode === ReconnectMode.Enabled ? "AutoReconnectEnabled" : "AutoReconnectDisabled",
             connectionMode: this.connectionMode,
             connectionState: ConnectionState[this.connectionState],
             duration,
         });
 
         this._deltaManager.connectionManager.setAutoReconnect(mode);
+    }
 
-        // If container state is not attached and resumed, then don't connect to delta stream. Also don't set the
-        // manual reconnection flag to true as we haven't made the initial connection yet.
-        if (reconnect && this._attachState === AttachState.Attached && this.resumedOpProcessingAfterLoad) {
-            if (this.connectionState === ConnectionState.Disconnected) {
-                // Only track this as a manual reconnection if we are truly the ones kicking it off.
-                this.manualReconnectInProgress = true;
-            }
-
-            // Ensure connection to web socket
-            this.connectToDeltaStream({ reason: "autoReconnect" });
+    public connect() {
+        if (this.closed) {
+            throw new UsageError(`The Container is closed and cannot be connected`);
+        }
+        else if (this._attachState !== AttachState.Attached) {
+            throw new UsageError(`The Container is not attached and cannot be connected`);
+        }
+        else if (!this.connected) {
+            // Note: no need to fetch ops as we do it preemptively as part of DeltaManager.attachOpHandler().
+            // If there is gap, we will learn about it once connected, but the gap should be small (if any),
+            // assuming that connect() is called quickly after initial container boot.
+            this.connectInternal({ reason: "DocumentConnect", fetchOpsFromStorage: false });
         }
     }
 
+    private connectInternal(args: IConnectionArgs) {
+        assert(!this.closed, "Attempting to connect() a closed Container");
+        assert(this._attachState === AttachState.Attached, "Attempting to connect() a container that is not attached");
+
+        // Resume processing ops and connect to delta stream
+        this.resumeInternal(args);
+
+        // Set Auto Reconnect Mode
+        const mode = ReconnectMode.Enabled;
+        this.setAutoReconnectInternal(mode);
+    }
+
+    public disconnect() {
+        if (this.closed) {
+            throw new UsageError(`The Container is closed and cannot be disconnected`);
+        }
+        else {
+            this.disconnectInternal();
+        }
+    }
+
+    private disconnectInternal() {
+        assert(!this.closed, "Attempting to disconnect() a closed Container");
+
+        // Set Auto Reconnect Mode
+        const mode = ReconnectMode.Disabled;
+        this.setAutoReconnectInternal(mode);
+    }
+
+    /**
+     * Have the container attempt to resume processing ops
+     * @deprecated - 0.58, This API will be removed in 1.0
+     * Use `connect()` instead
+     * See https://github.com/microsoft/FluidFramework/issues/9167 for context
+     */
     public resume() {
         if (!this.closed) {
             // Note: no need to fetch ops as we do it preemptively as part of DeltaManager.attachOpHandler().
@@ -1057,7 +1125,11 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         if (this._resolvedUrl === undefined) {
             throw new Error("Attempting to load without a resolved url");
         }
-        this.service = await this.serviceFactory.createDocumentService(this._resolvedUrl, this.subLogger);
+        this.service = await this.serviceFactory.createDocumentService(
+            this._resolvedUrl,
+            this.subLogger,
+            this.client.details.type === summarizerClientType,
+        );
 
         // Ideally we always connect as "read" by default.
         // Currently that works with SPO & r11s, because we get "write" connection when connecting to non-existing file.
@@ -1476,7 +1548,6 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         });
 
         deltaManager.on("disconnect", (reason: string) => {
-            this.manualReconnectInProgress = false;
             this.collabWindowTracker.stopSequenceNumberUpdate();
             this.connectionStateHandler.receivedDisconnectEvent(reason);
         });
@@ -1543,8 +1614,6 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
             }
             if (this.firstConnection) {
                 connectionInitiationReason = "InitialConnect";
-            } else if (this.manualReconnectInProgress) {
-                connectionInitiationReason = "ManualReconnect";
             } else {
                 connectionInitiationReason = "AutoReconnect";
             }
@@ -1569,7 +1638,6 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
 
         if (value === ConnectionState.Connected) {
             this.firstConnection = false;
-            this.manualReconnectInProgress = false;
         }
     }
 
