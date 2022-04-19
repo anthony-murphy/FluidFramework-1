@@ -63,11 +63,15 @@ export class LocalReference implements ReferencePosition {
     }
 
     public toPosition() {
-        if (this.segment && this.segment.parent) {
-            return this.getOffset() + this.client.getPosition(this.segment);
-        } else {
+        if(this.segment?.removedSeq !== undefined
+            // eslint-disable-next-line no-bitwise
+            && (this.refType & ReferenceType.SlideOnRemove) !== ReferenceType.SlideOnRemove) {
             return LocalReference.DetachedPosition;
         }
+        if(this.segment?.parent === undefined) {
+            return LocalReference.DetachedPosition;
+        }
+        return this.getOffset() + this.client.getPosition(this.segment);
     }
 
     public hasTileLabels() {
@@ -194,29 +198,6 @@ export class LocalReferenceCollection {
         return iterator;
     }
 
-    public clear() {
-        this.refCount = 0;
-        this.hierRefCount = 0;
-        const detachSegments = (refs: LocalReference[] | undefined) => {
-            if (refs) {
-                refs.forEach((r) => {
-                    if (r.segment === this.segment) {
-                        r.segment = undefined;
-                    }
-                });
-            }
-        };
-        for (let i = 0; i < this.refsByOffset.length; i++) {
-            const refsAtOffset = this.refsByOffset[i];
-            if (refsAtOffset) {
-                detachSegments(refsAtOffset.before);
-                detachSegments(refsAtOffset.at);
-                detachSegments(refsAtOffset.before);
-                this.refsByOffset[i] = undefined;
-            }
-        }
-    }
-
     public get empty() {
         return this.refCount === 0;
     }
@@ -250,6 +231,9 @@ export class LocalReferenceCollection {
                         this.hierRefCount--;
                     }
                     this.refCount--;
+                    if(lref.segment === this.segment) {
+                        lref.segment = undefined;
+                    }
                     return lref;
                 }
             }
@@ -320,23 +304,25 @@ export class LocalReferenceCollection {
         }
     }
 
-    public addBeforeTombstones(...refs: Iterable<LocalReference>[]) {
+    public addBeforeTombstones(refs: LocalReferenceCollection | undefined) {
+        if(refs?.empty !== false) {
+            return;
+        }
         const beforeRefs: LocalReference[] = [];
 
-        for (const iterable of refs) {
-            for (const lref of iterable) {
-                // eslint-disable-next-line no-bitwise
-                if (lref.refType & ReferenceType.SlideOnRemove) {
-                    beforeRefs.push(lref);
-                    lref.segment = this.segment;
-                    lref.offset = 0;
-                    if (lref.hasRangeLabels() || lref.hasTileLabels()) {
-                        this.hierRefCount++;
-                    }
-                    this.refCount++;
-                } else {
-                    lref.segment = undefined;
+        for (const lref of refs) {
+            refs.removeLocalRef(lref);
+            // eslint-disable-next-line no-bitwise
+            if (lref.refType & ReferenceType.SlideOnRemove) {
+                beforeRefs.push(lref);
+                lref.segment = this.segment;
+                lref.offset = 0;
+                if (lref.hasRangeLabels() || lref.hasTileLabels()) {
+                    this.hierRefCount++;
                 }
+                this.refCount++;
+            } else {
+                lref.segment = undefined;
             }
         }
         if (beforeRefs.length > 0) {
@@ -350,25 +336,28 @@ export class LocalReferenceCollection {
         }
     }
 
-    public addAfterTombstones(...refs: Iterable<LocalReference>[]) {
+    public addAfterTombstones(refs: LocalReferenceCollection | undefined) {
+        if(refs?.empty !== false) {
+            return;
+        }
         const afterRefs: LocalReference[] = [];
 
-        for (const iterable of refs) {
-            for (const lref of iterable) {
-                // eslint-disable-next-line no-bitwise
-                if (lref.refType & ReferenceType.SlideOnRemove) {
-                    afterRefs.push(lref);
-                    lref.segment = this.segment;
-                    lref.offset = this.segment.cachedLength - 1;
-                    if (lref.hasRangeLabels() || lref.hasTileLabels()) {
-                        this.hierRefCount++;
-                    }
-                    this.refCount++;
-                } else {
-                    lref.segment = undefined;
+        for (const lref of refs) {
+            refs.removeLocalRef(lref);
+            // eslint-disable-next-line no-bitwise
+            if ((lref.refType & ReferenceType.SlideOnRemove) === ReferenceType.SlideOnRemove) {
+                afterRefs.push(lref);
+                lref.segment = this.segment;
+                lref.offset = this.segment.cachedLength - 1;
+                if (lref.hasRangeLabels() || lref.hasTileLabels()) {
+                    this.hierRefCount++;
                 }
+                this.refCount++;
+            } else {
+                lref.segment = undefined;
             }
         }
+
         if (afterRefs.length > 0) {
             const refsAtOffset = this.refsByOffset[this.segment.cachedLength - 1];
             if (refsAtOffset === undefined) {

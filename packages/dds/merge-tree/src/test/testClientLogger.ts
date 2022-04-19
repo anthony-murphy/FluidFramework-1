@@ -5,10 +5,12 @@
 
 import { strict as assert } from "assert";
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
-import { IMergeTreeDeltaOpArgs, MergeTreeMaintenanceType } from "..";
+import { IMergeTreeDeltaOpArgs } from "..";
 import { UnassignedSequenceNumber } from "../constants";
 import { IMergeTreeOp } from "../ops";
 import { TextSegment } from "../textSegment";
+import { createGroupOp } from "../opBuilder";
+import { MergeTreeMaintenanceType } from "../mergeTreeDeltaCallback";
 import { TestClient } from "./testClient";
 
 function getOpString(msg: ISequencedDocumentMessage | undefined) {
@@ -54,15 +56,10 @@ export function createClientsAtInitialState<TClients extends ClientMap>(
 
     return {...clients as Record<keyof TClients, TestClient>, all};
 }
-export class TestClientLogger {
-    public static toString(clients: readonly TestClient[]) {
-        return clients.map((c)=>this.getSegString(c)).reduce<[string,string]>((pv,cv)=>{
-            pv[0] += `|${cv.acked.padEnd(cv.local.length,"")}`;
-            pv[1] += `|${cv.local.padEnd(cv.acked.length,"")}`;
-            return pv;
-        },["",""]).join("\n");
-    }
 
+const tableBar = ` ▐ `;
+
+export class TestClientLogger {
     private readonly incrementalLog = false;
 
     private readonly paddings: number[] = [];
@@ -71,11 +68,11 @@ export class TestClientLogger {
     private ackedLine: string[] = [];
     private localLine: string[] = [];
     // initialize to private instance, so first real edit will create a new line
-    private lastOp: any | undefined = {};
+    private lastOp: IMergeTreeOp | undefined = createGroupOp();
 
     constructor(
         private readonly clients: readonly TestClient[],
-        private readonly title?: string,
+        public title?: string,
     ) {
         const logHeaders: string[] = [];
         clients.forEach((c,i)=>{
@@ -109,7 +106,7 @@ export class TestClientLogger {
             };
             c.mergeTreeDeltaCallback = callback;
             c.mergeTreeMaintenanceCallback = (main,op) => {
-                if(main.operation === MergeTreeMaintenanceType.ACKNOWLEDGED) {
+                if(main.operation !== MergeTreeMaintenanceType.SPLIT) {
                     callback(op);
                 }
             };
@@ -124,7 +121,7 @@ export class TestClientLogger {
             while(this.roundLogLines.length > 0) {
                 const logLine = this.roundLogLines.shift();
                 if(logLine?.some((c)=>c.trim().length > 0)) {
-                    console.log(logLine.map((v, i) => v.padEnd(this.paddings[i])).join(" | "));
+                    console.log(logLine.map((v, i) => v.padEnd(this.paddings[i])).join(tableBar));
                 }
             }
         }
@@ -179,14 +176,13 @@ export class TestClientLogger {
                 + `Op format <seq>:<ref>:<client><type>@<pos1>,<pos2>\n`
                 + `sequence number represented as offset from msn. L means local.\n`
                 + `op types: 0) insert 1) remove 2) annotate\n`;
-
-            if (this.title) {
-                str += `${this.title}\n`;
-            }
+        }
+        if (this.title) {
+            str += `${this.title}\n`;
         }
         str += this.roundLogLines
-            .filter((line) => line.some((c) => c.trim().length > 0))
-            .map((line) => line.map((v, i) => v.padEnd(this.paddings[i])).join(" | "))
+            .filter((line) => line.some((c) => c.replace(/[ |]*/,"").length > 0))
+            .map((line) => line.map((v, i) => v.padEnd(this.paddings[i])).join(tableBar))
             .join("\n");
         return str;
     }
@@ -205,8 +201,9 @@ export class TestClientLogger {
                                 acked += "_".repeat(node.text.length);
                                 if (node.seq === UnassignedSequenceNumber) {
                                     local += "*".repeat(node.text.length);
+                                }else{
+                                    local += "-".repeat(node.text.length);
                                 }
-                                local += "-".repeat(node.text.length);
                             } else {
                                 acked += "-".repeat(node.text.length);
                                 local += " ".repeat(node.text.length);
@@ -220,6 +217,8 @@ export class TestClientLogger {
                                 local += " ".repeat(node.text.length);
                             }
                         }
+                        acked += "|";
+                        local += " ";
                     }
                 } else {
                     nodes.push(...node.children);

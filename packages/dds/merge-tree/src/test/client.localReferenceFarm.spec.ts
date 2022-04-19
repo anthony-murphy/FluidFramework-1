@@ -6,13 +6,16 @@
 
 import { strict as assert } from "assert";
 import random from "random-js";
-import { LocalReference, ReferenceType } from "..";
+import { LocalReference } from "../localReference";
+import { ReferenceType } from "../ops";
+import { TextSegment } from "../textSegment";
 import {
     IMergeTreeOperationRunnerConfig,
     removeRange,
     runMergeTreeOperationRunner,
     generateClientNames,
     IConfigRange,
+    applyMessages,
 } from "./mergeTreeOperationRunner";
 import { TestClient } from "./testClient";
 import { TestClientLogger } from "./testClientLogger";
@@ -37,9 +40,10 @@ describe("MergeTree.Client", () => {
                 const mt = random.engines.mt19937();
                 mt.seedWithArray([0xDEADBEEF, 0xFEEDBED, initLen, modLen]);
 
-                const clients: TestClient[] = new Array(3).fill(0).map(()=> new TestClient());
+                const clients: TestClient[] = new Array(2).fill(0).map(()=> new TestClient());
                 clients.forEach(
                     (c, i) => c.startOrUpdateCollaboration(clientNames[i]));
+                let logger = new TestClientLogger(clients);
 
                 let seq = 0;
                 // init with random values
@@ -49,25 +53,44 @@ describe("MergeTree.Client", () => {
                     clients,
                     initLen,
                     defaultOptions,
+                    applyMessages,
+                    logger,
                 );
                 // add local references
                 const refs: LocalReference[][] = [];
 
                 const validateRefs = (reason: string, workload: () => void)=>{
-                    const preWorkload = TestClientLogger.toString(clients);
+                    logger.title = reason;
                     workload();
+                    // logger.validate();
                     for(let c = 1; c < clients.length; c++) {
                         for(let r = 0; r < refs[c].length; r++) {
                             const pos0 = refs[0][r].toPosition();
                             const posC = refs[c][r].toPosition();
                             if(pos0 !== posC) {
+                                const seg0 = refs[0][r].getSegment();
+                                assert(TextSegment.is(seg0));
+                                const segC = refs[c][r].getSegment();
+                                assert(TextSegment.is(segC));
                                 assert.equal(
-                                    pos0, posC,
-                                    `${reason}:\n${preWorkload}\n${TestClientLogger.toString(clients)}`);
+                                    {
+                                        pos: pos0,
+                                        offset: refs[0][r].offset,
+                                        refsNum: r,
+                                        value: seg0?.text[refs[0][r].offset],
+                                        rSeq: seg0.removedSeq,
+                                    },
+                                    {
+                                        pos: posC,
+                                        offset: refs[c][r].offset,
+                                        refsNum: r,
+                                        value: segC?.text[refs[c][r].offset],
+                                        rSeq: segC.removedSeq,
+                                    },
+                                    `${reason}\n${logger.toString(true)}`);
                             }
                         }
                     }
-                    // console.log(`${reason}:\n${preWorkload}\n${TestClientLogger.toString(clients)}`)
                 };
 
                 validateRefs("Initialize", ()=>{
@@ -84,12 +107,13 @@ describe("MergeTree.Client", () => {
                 });
 
                 validateRefs("After Init Zamboni",()=>{
-                    // trigger zamboni multiple times as it is incremental
-                    for(let i = clients[0].getCollabWindow().minSeq; i <= seq; i++) {
-                        clients.forEach((c)=>c.updateMinSeq(i));
-                    }
+                    clients.forEach((c)=>{
+                        c.updateMinSeq(seq);
+                        c.fullZamboni();
+                    });
                 });
 
+                logger = new TestClientLogger(clients);
                 validateRefs("After More Ops", ()=>{
                     // init with random values
                     seq = runMergeTreeOperationRunner(
@@ -98,14 +122,16 @@ describe("MergeTree.Client", () => {
                         clients,
                         modLen,
                         defaultOptions,
+                        applyMessages,
+                        logger,
                     );
                 });
 
                 validateRefs("After Final Zamboni",()=>{
-                    // trigger zamboni multiple times as it is incremental
-                    for(let i = clients[0].getCollabWindow().minSeq; i <= seq; i++) {
-                        clients.forEach((c)=>c.updateMinSeq(i));
-                    }
+                    clients.forEach((c)=>{
+                        c.updateMinSeq(seq);
+                        c.fullZamboni();
+                    });
                 });
             });
         });

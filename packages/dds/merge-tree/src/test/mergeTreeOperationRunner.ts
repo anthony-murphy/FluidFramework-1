@@ -92,7 +92,8 @@ export function runMergeTreeOperationRunner(
     clients: readonly TestClient[],
     minLength: number,
     config: IMergeTreeOperationRunnerConfig,
-    apply = applyMessages) {
+    apply = applyMessages,
+    logger?: TestClientLogger) {
     let seq = startingSeq;
     const results: ReplayGroup[] = [];
 
@@ -102,21 +103,20 @@ export function runMergeTreeOperationRunner(
         }
         for (let round = 0; round < config.rounds; round++) {
             const initialText = clients[0].getText();
-            const logger = new TestClientLogger(
-                clients,
-                `Clients: ${clients.length} Ops: ${opsPerRound} Round: ${round}`);
+            const internalLogger = logger ?? new TestClientLogger(clients);
+            internalLogger.title = `Clients: ${clients.length} Ops: ${opsPerRound} Round: ${round}`;
             const messageData = generateOperationMessagesForClients(
                 mt,
                 seq,
                 clients,
-                logger,
+                internalLogger,
                 opsPerRound,
                 minLength,
                 config.operations,
             );
             const msgs = messageData.map((md)=>md[0]);
-            seq = apply(seq, messageData, clients, logger);
-            const resultText = logger.validate();
+            seq = apply(seq, messageData, clients, internalLogger);
+            const resultText = internalLogger.validate();
             results.push({
                 initialText,
                 resultText,

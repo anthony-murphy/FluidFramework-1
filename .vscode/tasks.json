@@ -35,9 +35,7 @@
                 "${workspaceRoot}",
                 "--vscode",
                 "-s",
-                "tsc",
-                "-s",
-                "build:test",
+                "build:compile",
                 "${fileDirname}"
             ],
             "group": "build",

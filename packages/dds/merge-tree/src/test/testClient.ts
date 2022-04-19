@@ -275,4 +275,8 @@ export class TestClient extends Client {
         const nextWord = this.searchFromPos(pos, /\s\w+\b/);
         return nextWord;
     }
+
+    public fullZamboni() {
+        this.mergeTree.fullZamboni();
+    }
 }
