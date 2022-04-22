@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { assert } from "@fluidframework/common-utils";
+import { assert, Lazy } from "@fluidframework/common-utils";
 import { Client } from "./client";
 import { List, ListMakeHead, ListRemoveEntry } from "./collections";
 import { TreeMaintenanceSequenceNumber } from "./constants";
@@ -18,6 +18,10 @@ import {
     compareReferencePositions,
     refHasRangeLabels,
     refHasTileLabels,
+    refGetRangeLabels,
+    refGetTileLabels,
+    refHasRangeLabel,
+    refHasTileLabel,
 } from "./referencePositions";
 
 /**
@@ -69,6 +73,33 @@ export abstract class LocalReference implements ReferencePosition {
      * @deprecated - use getOffset()
      */
     public get offset() {return this.getOffset();}
+
+    isLeaf(): boolean {
+        return false;
+    }
+    hasTileLabels() {
+        return refHasTileLabels(this);
+    }
+
+    hasRangeLabels() {
+        return refHasRangeLabels(this);
+    }
+
+    hasTileLabel(label: string): boolean {
+        return refHasTileLabel(this, label);
+    }
+
+    hasRangeLabel(label: string): boolean {
+        return refHasRangeLabel(this, label);
+    }
+
+    getTileLabels(): string[] | undefined {
+        return refGetTileLabels(this);
+    }
+
+    getRangeLabels(): string[] | undefined {
+        return refGetRangeLabels(this);
+    }
 }
 
 class SegmentOffsetReference implements ReferencePosition {
@@ -100,6 +131,33 @@ class SegmentOffsetReference implements ReferencePosition {
         }
         return this.offset;
     }
+
+    isLeaf(): boolean {
+        return false;
+    }
+    hasTileLabels() {
+        return refHasTileLabels(this);
+    }
+
+    hasRangeLabels() {
+        return refHasRangeLabels(this);
+    }
+
+    hasTileLabel(label: string): boolean {
+        return refHasTileLabel(this, label);
+    }
+
+    hasRangeLabel(label: string): boolean {
+        return refHasRangeLabel(this, label);
+    }
+
+    getTileLabels(): string[] | undefined {
+        return refGetTileLabels(this);
+    }
+
+    getRangeLabels(): string[] | undefined {
+        return refGetRangeLabels(this);
+    }
 }
 
 interface IRefsAtOffset {
@@ -108,9 +166,12 @@ interface IRefsAtOffset {
     after?: List<SegmentOffsetReference>;
 }
 const deadHead = ListMakeHead<SegmentOffsetReference>();
-const detachedSegment = Marker.make(ReferenceType.Transient);
-detachedSegment.seq = TreeMaintenanceSequenceNumber;
-detachedSegment.removedSeq = TreeMaintenanceSequenceNumber;
+const detachedSegment = new Lazy<ISegment>(()=> {
+    const marker = Marker.make(ReferenceType.Transient);
+    marker.seq = TreeMaintenanceSequenceNumber;
+    marker.removedSeq = TreeMaintenanceSequenceNumber;
+    return marker;
+});
 
 /**
  * Represents a collection of {@link ReferencePosition}s associated with one segment in a merge-tree.
@@ -211,7 +272,7 @@ export class LocalReferenceCollection {
             if (refs) {
                 refs.walk((r) => {
                     if (r.segment === this.segment) {
-                        r.segment = detachedSegment;
+                        r.segment = detachedSegment.value;
                     }
                 });
                 refs.clear();
@@ -239,7 +300,7 @@ export class LocalReferenceCollection {
     private removeLocalRefInternal(lref: ReferencePosition): lref is SegmentOffsetReference {
         if(lref instanceof SegmentOffsetReference) {
             ListRemoveEntry(lref.selfNode);
-            lref.segment = detachedSegment;
+            lref.segment = detachedSegment.value;
             lref.offset = 0;
             return true;
         }
@@ -322,7 +383,7 @@ export class LocalReferenceCollection {
                         }
                         this.refCount++;
                     } else {
-                        lref.segment = detachedSegment;
+                        lref.segment = detachedSegment.value;
                     }
                 }
             }
@@ -351,7 +412,7 @@ export class LocalReferenceCollection {
                         }
                         this.refCount++;
                     } else {
-                        lref.segment = detachedSegment;
+                        lref.segment = detachedSegment.value;
                     }
                 }
             }

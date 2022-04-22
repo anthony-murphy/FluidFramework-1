@@ -808,7 +808,21 @@ export abstract class LocalReference implements ReferencePosition {
     // (undocumented)
     abstract getOffset(): number;
     // (undocumented)
+    getRangeLabels(): string[] | undefined;
+    // (undocumented)
     abstract getSegment(): ISegment | undefined;
+    // (undocumented)
+    getTileLabels(): string[] | undefined;
+    // (undocumented)
+    hasRangeLabel(label: string): boolean;
+    // (undocumented)
+    hasRangeLabels(): boolean;
+    // (undocumented)
+    hasTileLabel(label: string): boolean;
+    // (undocumented)
+    hasTileLabels(): boolean;
+    // (undocumented)
+    isLeaf(): boolean;
     // @deprecated (undocumented)
     max(b: LocalReference): LocalReference;
     // @deprecated (undocumented)
@@ -1267,13 +1281,27 @@ export class RedBlackTree<TKey, TData> implements SortedDictionary<TKey, TData> 
 }
 
 // @public (undocumented)
-export interface ReferencePosition extends LabeledReference {
+export interface ReferencePosition {
     // (undocumented)
     addProperties(newProps: PropertySet, op?: ICombiningOp): void;
     // (undocumented)
     getOffset(): number;
+    // @deprecated (undocumented)
+    getRangeLabels(): string[] | undefined;
     // (undocumented)
     getSegment(): ISegment | undefined;
+    // @deprecated (undocumented)
+    getTileLabels(): string[] | undefined;
+    // @deprecated (undocumented)
+    hasRangeLabel(label: string): boolean;
+    // @deprecated (undocumented)
+    hasRangeLabels(): boolean;
+    // @deprecated (undocumented)
+    hasTileLabel(label: string): boolean;
+    // @deprecated (undocumented)
+    hasTileLabels(): boolean;
+    // @deprecated (undocumented)
+    isLeaf(): boolean;
     // (undocumented)
     properties?: PropertySet;
     // (undocumented)

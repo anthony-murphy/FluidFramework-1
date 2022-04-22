@@ -62,11 +62,10 @@ import {
     refHasTileLabel,
     refHasRangeLabel,
     DetachedReferencePosition,
+    RangeStackMap,
 } from "./referencePositions";
 import { SegmentGroupCollection } from "./segmentGroupCollection";
 import { PropertiesManager } from "./segmentPropertiesManager";
-
-export type RangeStackMap = MapLike<Stack<ReferencePosition>>;
 
 export interface IMergeNodeCommon {
     parent?: IMergeBlock;

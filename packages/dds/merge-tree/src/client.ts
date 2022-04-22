@@ -24,7 +24,6 @@ import {
     ISegmentAction,
     Marker,
     MergeTree,
-    RangeStackMap,
     SegmentGroup,
 } from "./mergeTree";
 import { MergeTreeDeltaCallback } from "./mergeTreeDeltaCallback";
@@ -56,6 +55,7 @@ import { SnapshotV1 } from "./snapshotV1";
 import {
     ReferencePosition,
     DetachedReferencePosition,
+    RangeStackMap,
 } from "./referencePositions";
 import {
     IMergeTreeClientSequenceArgs,

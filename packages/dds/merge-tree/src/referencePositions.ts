@@ -45,10 +45,10 @@ export function refHasRangeLabel(refPos: LabeledReference, label: string) {
     return false;
 }
 export function refHasTileLabels(refPos: LabeledReference) {
-    return !!refGetTileLabels(refPos);
+    return refGetTileLabels(refPos) !== undefined;
 }
 export function refHasRangeLabels(refPos: LabeledReference) {
-    return !!refGetRangeLabels(refPos);
+    return !!refGetRangeLabels(refPos) !== undefined;
 }
 
 export interface ReferencePosition {
@@ -56,7 +56,7 @@ export interface ReferencePosition {
     refType: ReferenceType;
     // True if this reference is a segment.
     /**
-     * @deprecated
+     * @deprecated - use Segment.is type guards instead
      */
     isLeaf(): boolean;
     getSegment(): ISegment | undefined;
@@ -64,30 +64,62 @@ export interface ReferencePosition {
     addProperties(newProps: PropertySet, op?: ICombiningOp): void;
 
     /**
-     * @deprecated
+     * @deprecated - use refHasRangeLabels
      */
     hasTileLabels(): boolean;
     /**
-     * @deprecated
+     * @deprecated - use refHasRangeLabels
      */
     hasRangeLabels(): boolean;
     /**
-     * @deprecated
+     * @deprecated - use refHasTileLabel
      */
     hasTileLabel(label: string): boolean;
     /**
-     * @deprecated
+     * @deprecated - use refHasRangeLabel
      */
     hasRangeLabel(label: string): boolean;
     /**
-     * @deprecated
+     * @deprecated - use refGetTileLabels
      */
     getTileLabels(): string[] | undefined;
     /**
-     * @deprecated
+     * @deprecated - use refGetRangeLabels
      */
     getRangeLabels(): string[] | undefined;
 }
 
 export type RangeStackMap = MapLike<Stack<ReferencePosition>>;
 export const DetachedReferencePosition = -1;
+
+export function minReferencePosition<T extends ReferencePosition>(a: T, b: T): T {
+    if (compareReferencePositions(a,b) < 0) {
+        return a;
+    } else {
+        return b;
+    }
+}
+
+export function maxReferencePosition<T extends ReferencePosition>(a: T, b: T): T {
+    if (compareReferencePositions(a, b) > 0) {
+        return a;
+    } else {
+        return b;
+    }
+}
+
+export function compareReferencePositions(a: ReferencePosition, b: ReferencePosition) {
+    const aSeg = a.getSegment();
+    const bSeg = b.getSegment();
+    if (aSeg === bSeg) {
+        return a.getOffset() - b.getOffset();
+    } else {
+        if (aSeg === undefined
+            || (bSeg !== undefined &&
+                aSeg.ordinal < bSeg.ordinal)) {
+            return -1;
+        } else {
+            return 1;
+        }
+    }
+}
