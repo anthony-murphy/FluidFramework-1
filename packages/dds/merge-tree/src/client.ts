@@ -86,7 +86,7 @@ class ClientLocalReference extends LocalReference {
         return this.internalRef.getSegment();
     }
     getOffset(): number {
-        return this.getOffset();
+        return this.internalRef.getOffset();
     }
     addProperties(newProps: PropertySet, op?: ICombiningOp): void {
         this.internalRef.addProperties(newProps, op);

@@ -126,7 +126,7 @@ class SegmentOffsetReference implements ReferencePosition {
     }
 
     public getOffset() {
-        if (this.getSegment()?.removedSeq) {
+        if (this.segment?.removedSeq !== undefined) {
             return 0;
         }
         return this.offset;
