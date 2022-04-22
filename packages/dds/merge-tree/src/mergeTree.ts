@@ -23,7 +23,9 @@ import {
     UnassignedSequenceNumber,
     UniversalSequenceNumber,
 } from "./constants";
-import { LocalReference, LocalReferenceCollection } from "./localReference";
+import {
+    LocalReferenceCollection,
+} from "./localReference";
 import {
     IMergeTreeDeltaOpArgs,
     IMergeTreeSegmentDelta,
@@ -50,24 +52,19 @@ import {
     matchProperties,
     PropertySet,
 } from "./properties";
+import {
+    ReferencePosition,
+    LabeledReference,
+    refGetTileLabels,
+    refGetRangeLabels,
+    refHasTileLabels,
+    refHasRangeLabels,
+    refHasTileLabel,
+    refHasRangeLabel,
+    DetachedReferencePosition,
+} from "./referencePositions";
 import { SegmentGroupCollection } from "./segmentGroupCollection";
 import { PropertiesManager } from "./segmentPropertiesManager";
-
-export interface ReferencePosition {
-    properties?: PropertySet;
-    refType: ReferenceType;
-    // True if this reference is a segment.
-    isLeaf(): boolean;
-    getSegment(): ISegment | undefined;
-    getOffset(): number;
-    addProperties(newProps: PropertySet, op?: ICombiningOp): void;
-    hasTileLabels(): boolean;
-    hasRangeLabels(): boolean;
-    hasTileLabel(label: string): boolean;
-    hasRangeLabel(label: string): boolean;
-    getTileLabels(): string[] | undefined;
-    getRangeLabels(): string[] | undefined;
-}
 
 export type RangeStackMap = MapLike<Stack<ReferencePosition>>;
 
@@ -264,8 +261,8 @@ export class MergeNode implements IMergeNodeCommon {
     }
 }
 
-function addTile(tile: ReferencePosition, tiles: object) {
-    const tileLabels = tile.getTileLabels();
+function addTile(tile: LabeledReference, tiles: object) {
+    const tileLabels = refGetTileLabels(tile);
     if (tileLabels) {
         for (const tileLabel of tileLabels) {
             tiles[tileLabel] = tile;
@@ -273,8 +270,8 @@ function addTile(tile: ReferencePosition, tiles: object) {
     }
 }
 
-function addTileIfNotPresent(tile: ReferencePosition, tiles: object) {
-    const tileLabels = tile.getTileLabels();
+function addTileIfNotPresent(tile: LabeledReference, tiles: object) {
+    const tileLabels = refGetTileLabels(tile);
     if (tileLabels) {
         for (const tileLabel of tileLabels) {
             if (tiles[tileLabel] === undefined) {
@@ -301,7 +298,7 @@ function applyStackDelta(currentStackMap: RangeStackMap, deltaStackMap: RangeSta
     }
 }
 
-function applyRangeReference(stack: Stack<ReferencePosition>, delta: ReferencePosition) {
+function applyRangeReference(stack: Stack<LabeledReference>, delta: LabeledReference) {
     if (delta.refType & ReferenceType.NestBegin) {
         stack.push(delta);
         return true;
@@ -320,9 +317,9 @@ function applyRangeReference(stack: Stack<ReferencePosition>, delta: ReferencePo
 
 function addNodeReferences(
     mergeTree: MergeTree, node: IMergeNode,
-    rightmostTiles: MapLike<ReferencePosition>,
-    leftmostTiles: MapLike<ReferencePosition>, rangeStacks: RangeStackMap) {
-    function updateRangeInfo(label: string, refPos: ReferencePosition) {
+    rightmostTiles: MapLike<LabeledReference>,
+    leftmostTiles: MapLike<LabeledReference>, rangeStacks: RangeStackMap) {
+    function updateRangeInfo(label: string, refPos: LabeledReference) {
         let stack = rangeStacks[label];
         if (stack === undefined) {
             stack = new Stack<ReferencePosition>();
@@ -345,9 +342,9 @@ function addNodeReferences(
                     addTileIfNotPresent(segment, leftmostTiles);
                 }
                 if (segment.refType & (ReferenceType.NestBegin | ReferenceType.NestEnd)) {
-                    const rangeLabels = segment.getRangeLabels();
+                    const rangeLabels = refGetRangeLabels(segment);
                     if (rangeLabels) {
-                        for (const label of segment.getRangeLabels()!) {
+                        for (const label of refGetRangeLabels(segment)!) {
                             updateRangeInfo(label, segment);
                         }
                     }
@@ -362,7 +359,7 @@ function addNodeReferences(
                             addTileIfNotPresent(lref, leftmostTiles);
                         }
                         if (lref.refType & (ReferenceType.NestBegin | ReferenceType.NestEnd)) {
-                            for (const label of lref.getRangeLabels()!) {
+                            for (const label of refGetRangeLabels(lref)!) {
                                 updateRangeInfo(label, lref);
                             }
                         }
@@ -622,42 +619,8 @@ export abstract class BaseSegment extends MergeNode implements ISegment {
     protected abstract createSplitSegmentAt(pos: number): BaseSegment | undefined;
 }
 
-export const reservedTileLabelsKey = "referenceTileLabels";
-export const reservedRangeLabelsKey = "referenceRangeLabels";
 export const reservedMarkerIdKey = "markerId";
 export const reservedMarkerSimpleTypeKey = "markerSimpleType";
-
-export const refGetTileLabels = (refPos: ReferencePosition) =>
-    (refPos.refType & ReferenceType.Tile)
-        && refPos.properties ? refPos.properties[reservedTileLabelsKey] as string[] : undefined;
-
-export const refGetRangeLabels = (refPos: ReferencePosition) =>
-    (refPos.refType & (ReferenceType.NestBegin | ReferenceType.NestEnd))
-        && refPos.properties ? refPos.properties[reservedRangeLabelsKey] as string[] : undefined;
-
-export function refHasTileLabel(refPos: ReferencePosition, label: string) {
-    const tileLabels = refPos.getTileLabels();
-    if (tileLabels) {
-        for (const refLabel of tileLabels) {
-            if (label === refLabel) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-export function refHasRangeLabel(refPos: ReferencePosition, label: string) {
-    const rangeLabels = refPos.getRangeLabels();
-    if (rangeLabels) {
-        for (const refLabel of rangeLabels) {
-            if (label === refLabel) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
 
 export interface IJSONMarkerSegment extends IJSONSegment {
     marker: IMarkerDef;
@@ -729,11 +692,11 @@ export class Marker extends BaseSegment implements ReferencePosition {
     }
 
     hasTileLabels() {
-        return !!this.getTileLabels();
+        return refHasTileLabels(this);
     }
 
     hasRangeLabels() {
-        return !!this.getRangeLabels();
+        return refHasRangeLabels(this);
     }
 
     hasTileLabel(label: string): boolean {
@@ -774,7 +737,7 @@ export class Marker extends BaseSegment implements ReferencePosition {
         if (id) {
             bbuf += ` (${id}) `;
         }
-        const tileLabels = this.getTileLabels();
+        const tileLabels = refGetTileLabels(this);
         if (tileLabels) {
             lbuf += "tile -- ";
             for (let i = 0, len = tileLabels.length; i < len; i++) {
@@ -785,7 +748,7 @@ export class Marker extends BaseSegment implements ReferencePosition {
                 lbuf += tileLabel;
             }
         }
-        const rangeLabels = this.getRangeLabels();
+        const rangeLabels = refGetRangeLabels(this);
         if (rangeLabels) {
             let rangeKind = "begin";
             if (this.refType & ReferenceType.NestEnd) {
@@ -931,7 +894,7 @@ interface IMarkerSearchRangeInfo {
 
 function applyLeafRangeMarker(marker: Marker, searchInfo: IMarkerSearchRangeInfo) {
     for (const rangeLabel of searchInfo.rangeLabels) {
-        if (marker.hasRangeLabel(rangeLabel)) {
+        if (refHasRangeLabel(marker, rangeLabel)) {
             let currentStack = searchInfo.stacks[rangeLabel];
             if (currentStack === undefined) {
                 currentStack = new Stack<Marker>();
@@ -981,7 +944,7 @@ function recordTileStart(
     end: number,
     searchInfo: IReferenceSearchInfo) {
     if (Marker.is(segment)) {
-        if (segment.hasTileLabel(searchInfo.tileLabel)) {
+        if (refHasTileLabel(segment, searchInfo.tileLabel)) {
             searchInfo.tile = segment;
         }
     }
@@ -994,7 +957,7 @@ function tileShift(
     if (node.isLeaf()) {
         const seg = node;
         if ((searchInfo.mergeTree.localNetLength(seg) > 0) && Marker.is(seg)) {
-            if (seg.hasTileLabel(searchInfo.tileLabel)) {
+            if (refHasTileLabel(seg, searchInfo.tileLabel)) {
                 searchInfo.tile = seg;
             }
         }
@@ -1023,7 +986,7 @@ const minListenerComparer: Comparer<MinListener> = {
     compare: (a, b) => a.minRequired - b.minRequired,
 };
 
-export type LocalReferenceMapper = (id: string) => LocalReference;
+export type LocalReferenceMapper = (id: string) => ReferencePosition;
 
 // Represents a sequence of text segments
 export class MergeTree {
@@ -1541,7 +1504,7 @@ export class MergeTree {
             const offset = !seg.removedSeq ? refPos.getOffset() : 0;
             return offset + this.getPosition(seg, refSeq, clientId);
         }
-        return LocalReference.DetachedPosition;
+        return DetachedReferencePosition;
     }
 
     public getStackContext(startPos: number, clientId: number, rangeLabels: string[]) {
@@ -1573,15 +1536,12 @@ export class MergeTree {
         }
 
         if (searchInfo.tile) {
-            let pos: number;
-            if (searchInfo.tile.isLeaf()) {
-                const marker = <Marker>searchInfo.tile;
-                pos = this.getPosition(marker, UniversalSequenceNumber, clientId);
-            } else {
-                const localRef = <LocalReference>searchInfo.tile;
-                pos = localRef.toPosition();
+            const segment = searchInfo.tile?.getSegment();
+            if(segment) {
+                const pos: number =
+                    this.getPosition(segment, UniversalSequenceNumber, clientId) + searchInfo.tile.getOffset();
+                return { tile: searchInfo.tile, pos };
             }
-            return { tile: searchInfo.tile, pos };
         }
     }
 
@@ -2467,26 +2427,25 @@ export class MergeTree {
         }
     }
 
-    public removeLocalReference(segment: ISegment, lref: LocalReference) {
-        if (segment.localRefs) {
-            const removedRef = segment.localRefs.removeLocalRef(lref);
-            if (removedRef) {
-                this.blockUpdatePathLengths(segment.parent, TreeMaintenanceSequenceNumber,
-                    LocalClientId);
-            }
+    public removeLocalReference(lref: ReferencePosition) {
+        const segment = lref.getSegment();
+
+        if (segment?.localRefs?.removeLocalRef(lref) === true) {
+            this.blockUpdatePathLengths(segment.parent, TreeMaintenanceSequenceNumber,
+                LocalClientId);
         }
     }
 
-    public addLocalReference(lref: LocalReference) {
-        const segment = lref.segment!;
-        let localRefs = segment.localRefs;
-        if (!localRefs) {
-            localRefs = new LocalReferenceCollection(segment);
-            segment.localRefs = localRefs;
-        }
-        localRefs.addLocalRef(lref);
+    public addLocalReference(
+        segment: ISegment, offset: number, refType: ReferenceType, properties: PropertySet | undefined,
+    ): ReferencePosition {
+        const localRefs = segment.localRefs = segment.localRefs ?? new LocalReferenceCollection(segment);
+
+        const segRef = localRefs.createReference(offset, refType, properties);
+
         this.blockUpdatePathLengths(segment.parent, TreeMaintenanceSequenceNumber,
             LocalClientId);
+        return segRef;
     }
 
     private blockUpdate(block: IMergeBlock) {

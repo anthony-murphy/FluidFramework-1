@@ -298,19 +298,15 @@ export abstract class SharedSegmentSequence<T extends ISegment>
         segment: T,
         offset: number,
         refType: ReferenceType): LocalReference {
-        const lref = new LocalReference(this.client, segment, offset, refType);
-        if (refType !== ReferenceType.Transient) {
-            this.addLocalReference(lref);
-        }
-        return lref;
+        return this.client.createLocalReference(
+            segment,
+            offset,
+            refType,
+            undefined);
     }
 
     public localRefToPos(localRef: LocalReference) {
-        if (localRef.segment) {
-            return localRef.offset + this.getPosition(localRef.segment);
-        } else {
-            return -1;
-        }
+        return this.client.getLocalReferencePosition(localRef);
     }
 
     /**
@@ -355,11 +351,7 @@ export abstract class SharedSegmentSequence<T extends ISegment>
         }
     }
 
-    public addLocalReference(lref: LocalReference) {
-        return this.client.addLocalReference(lref);
-    }
-
-    public removeLocalReference(lref: LocalReference) {
+    public removeLocalReference(lref: LocalReference | ReferencePosition) {
         return this.client.removeLocalReference(lref);
     }
 

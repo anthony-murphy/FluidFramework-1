@@ -319,13 +319,14 @@ function createPositionReference(
     op?: ISequencedDocumentMessage): LocalReference {
     const segoff = client.getContainingSegment(pos, op);
     if (segoff && segoff.segment) {
-        const lref = new LocalReference(client, segoff.segment, segoff.offset, refType);
-        if (refType !== ReferenceType.Transient) {
-            client.addLocalReference(lref);
-        }
-        return lref;
+        client.createLocalReference(
+            segoff.segment,
+            segoff.offset,
+            refType,
+            undefined,
+        );
     }
-    return new LocalReference(client, undefined);
+    throw new Error("Position does not exist");
 }
 
 function createSequenceInterval(
@@ -354,8 +355,6 @@ function createSequenceInterval(
     const startLref = createPositionReference(client, start, beginRefType, op);
     const endLref = createPositionReference(client, end, endRefType, op);
     if (startLref && endLref) {
-        startLref.pairedRef = endLref;
-        endLref.pairedRef = startLref;
         const rangeProp = {
             [reservedRangeLabelsKey]: [label],
         };

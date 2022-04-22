@@ -519,8 +519,6 @@ export class SharedObjectSequenceFactory implements IChannelFactory {
 // @public (undocumented)
 export abstract class SharedSegmentSequence<T extends ISegment> extends SharedObject<ISharedSegmentSequenceEvents> implements ISharedIntervalCollection<SequenceInterval> {
     constructor(dataStoreRuntime: IFluidDataStoreRuntime, id: string, attributes: IChannelAttributes, segmentFromSpec: (spec: IJSONSegment) => ISegment);
-    // (undocumented)
-    addLocalReference(lref: LocalReference): void;
     annotateRange(start: number, end: number, props: PropertySet, combiningOp?: ICombiningOp): void;
     // (undocumented)
     protected applyStashedOp(): void;
@@ -577,7 +575,7 @@ export abstract class SharedSegmentSequence<T extends ISegment> extends SharedOb
     protected processCore(message: ISequencedDocumentMessage, local: boolean, localOpMetadata: unknown): void;
     protected processGCDataCore(serializer: SummarySerializer): void;
     // (undocumented)
-    removeLocalReference(lref: LocalReference): void;
+    removeLocalReference(lref: LocalReference | ReferencePosition): void;
     // (undocumented)
     removeRange(start: number, end: number): IMergeTreeRemoveMsg;
     protected replaceRange(start: number, end: number, segment: ISegment): void;

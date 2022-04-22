@@ -395,7 +395,7 @@ describe("SharedString", () => {
             ]);
         });
 
-        it("can maintain consistency of LocalReference's when segments are packed", async () => {
+        it("can maintain consistency of ReferencePosition's when segments are packed", async () => {
             // sharedString.insertMarker(0, ReferenceType.Tile, { nodeType: "Paragraph" });
 
             const collection1 = sharedString.getIntervalCollection("test2");

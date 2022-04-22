@@ -16,7 +16,6 @@ import { LoggingError } from "@fluidframework/telemetry-utils";
 import { IIntegerRange } from "./base";
 import { RedBlackTree } from "./collections";
 import { UnassignedSequenceNumber, UniversalSequenceNumber } from "./constants";
-import { LocalReference } from "./localReference";
 import {
     CollaborationWindow,
     compareStrings,
@@ -47,6 +46,7 @@ import {
     IMergeTreeOp,
     IRelativePosition,
     MergeTreeDeltaType,
+    ReferenceType,
 } from "./ops";
 import { PropertySet } from "./properties";
 import { SnapshotLegacy } from "./snapshotlegacy";
@@ -54,14 +54,58 @@ import { SnapshotLoader } from "./snapshotLoader";
 import { MergeTreeTextHelper } from "./textSegment";
 import { SnapshotV1 } from "./snapshotV1";
 import {
+    ReferencePosition,
+    DetachedReferencePosition,
+} from "./referencePositions";
+import {
     IMergeTreeClientSequenceArgs,
     IMergeTreeDeltaOpArgs,
     MergeTreeMaintenanceCallback,
-    ReferencePosition,
+    LocalReference,
 } from "./index";
 
 function elapsedMicroseconds(trace: Trace) {
     return trace.trace().duration * 1000;
+}
+
+class ClientLocalReference extends LocalReference {
+    constructor(
+        public readonly client: Client,
+        public readonly internalRef: ReferencePosition,
+    ) {
+        super();
+    }
+
+    get properties(): PropertySet | undefined {
+        return this.internalRef.properties;
+    }
+    get refType(): ReferenceType {
+        return this.internalRef.refType;
+    }
+    getSegment(): ISegment | undefined {
+        return this.internalRef.getSegment();
+    }
+    getOffset(): number {
+        return this.getOffset();
+    }
+    addProperties(newProps: PropertySet, op?: ICombiningOp): void {
+        this.internalRef.addProperties(newProps, op);
+    }
+    /**
+     * @deprecated - This will be removed with no replacement.
+     *      It leaks internals. Consumer should use the owning dds
+     *      to resolve the position
+     */
+    toPosition(): number {
+        return this.client.getLocalReferencePosition(this.internalRef);
+    }
+    /**
+     * @deprecated - This will be removed with no replacement.
+     *      It leaks internals. Consumer should track the owning dds directly
+     */
+    getClient(): Client {
+        return this.client;
+    }
 }
 
 export class Client {
@@ -241,7 +285,7 @@ export class Client {
             this.getCurrentSeq(),
             this.getClientId());
 
-        if (pos === LocalReference.DetachedPosition) {
+        if (pos === DetachedReferencePosition) {
             return undefined;
         }
         const op = createInsertSegmentOp(
@@ -319,12 +363,27 @@ export class Client {
         return this.mergeTree.getPosition(segment, this.getCurrentSeq(), this.getClientId());
     }
 
-    public addLocalReference(lref: LocalReference) {
-        return this.mergeTree.addLocalReference(lref);
+    public createLocalReference(
+        segment: ISegment, offset: number, refType: ReferenceType, properties: PropertySet | undefined,
+    ): LocalReference & ReferencePosition {
+        return new ClientLocalReference(
+            this,
+            this.mergeTree.addLocalReference(segment, offset, refType, properties));
     }
 
-    public removeLocalReference(lref: LocalReference) {
-        return this.mergeTree.removeLocalReference(lref.segment!, lref);
+    public removeLocalReference(lref: LocalReference | ReferencePosition) {
+        return this.mergeTree.removeLocalReference(
+            lref instanceof ClientLocalReference
+            ? lref.internalRef
+            : lref);
+    }
+
+    public getLocalReferencePosition(lref: ReferencePosition) {
+        const segment = lref.getSegment();
+        if(segment === undefined) {
+            return DetachedReferencePosition;
+        }
+        return this.getPosition(segment) + lref.getOffset();
     }
 
     /**
