@@ -54,14 +54,11 @@ export function refHasRangeLabels(refPos: LabeledReference) {
 export interface ReferencePosition {
     properties?: PropertySet;
     refType: ReferenceType;
-    // True if this reference is a segment.
-    /**
-     * @deprecated - use Segment.is type guards instead
-     */
-    isLeaf(): boolean;
+
     getSegment(): ISegment | undefined;
     getOffset(): number;
     addProperties(newProps: PropertySet, op?: ICombiningOp): void;
+    isLeaf(): boolean;
 
     /**
      * @deprecated - use refHasRangeLabels

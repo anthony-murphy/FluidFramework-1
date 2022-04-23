@@ -30,20 +30,20 @@ import {
 export abstract class LocalReference implements ReferencePosition {
     public static DetachedPosition = DetachedReferencePosition;
     abstract get properties(): PropertySet | undefined;
+    /**
+     * @deprecated - use properties
+     */
+    public pairedRef?: LocalReference;
+    /**
+     * @deprecated - use getSegment()
+     */
+    public get segment() {return this.getSegment();}
+    /**
+     * @deprecated - use getOffset()
+     */
+    public get offset() {return this.getOffset();}
+
     abstract get refType(): ReferenceType;
-    abstract getSegment(): ISegment | undefined;
-    abstract getOffset(): number;
-    abstract addProperties(newProps: PropertySet, op?: ICombiningOp): void;
-
-    /**
-     * @deprecated - Consumer should use owning dss to get position
-     */
-    abstract toPosition(): number;
-
-    /**
-     * @deprecated - Consumer should keep track of owning dds directly
-     */
-    abstract getClient(): Client;
 
     /**
      * @deprecated - use minReferencePosition
@@ -65,18 +65,14 @@ export abstract class LocalReference implements ReferencePosition {
     public compare(b: LocalReference) {
         return compareReferencePositions(this,b);
     }
-    /**
-     * @deprecated - use getSegment()
-     */
-    public get segment() {return this.getSegment();}
-    /**
-     * @deprecated - use getOffset()
-     */
-    public get offset() {return this.getOffset();}
 
-    isLeaf(): boolean {
-        return false;
-    }
+    /**
+     * @deprecated - This will be removed with no replacement.
+     *      Consumer should use the owning dds
+     *      to resolve the position e.g. sharedString.localRefToPos
+     */
+    abstract toPosition(): number;
+
     hasTileLabels() {
         return refHasTileLabels(this);
     }
@@ -99,6 +95,28 @@ export abstract class LocalReference implements ReferencePosition {
 
     getRangeLabels(): string[] | undefined {
         return refGetRangeLabels(this);
+    }
+
+    isLeaf(): boolean {
+        return false;
+    }
+
+    abstract addProperties(newProps: PropertySet, op?: ICombiningOp): void;
+
+    /**
+     * @deprecated - This will be removed with no replacement.
+     *      Consumer should track the owning dds directly
+     */
+    abstract getClient(): Client;
+
+    abstract getSegment(): ISegment | undefined;
+    abstract getOffset(): number;
+
+    /**
+     * @deprecated - use properties
+     */
+    public getProperties() {
+        return this.properties;
     }
 }
 

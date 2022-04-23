@@ -91,18 +91,9 @@ class ClientLocalReference extends LocalReference {
     addProperties(newProps: PropertySet, op?: ICombiningOp): void {
         this.internalRef.addProperties(newProps, op);
     }
-    /**
-     * @deprecated - This will be removed with no replacement.
-     *      It leaks internals. Consumer should use the owning dds
-     *      to resolve the position
-     */
     toPosition(): number {
         return this.client.getLocalReferencePosition(this.internalRef);
     }
-    /**
-     * @deprecated - This will be removed with no replacement.
-     *      It leaks internals. Consumer should track the owning dds directly
-     */
     getClient(): Client {
         return this.client;
     }
