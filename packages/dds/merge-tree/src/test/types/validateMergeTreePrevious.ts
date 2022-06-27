@@ -1932,6 +1932,7 @@ declare function get_old_InterfaceDeclaration_LocalReferencePosition():
 declare function use_current_InterfaceDeclaration_LocalReferencePosition(
     use: TypeOnly<current.LocalReferencePosition>);
 use_current_InterfaceDeclaration_LocalReferencePosition(
+    // @ts-expect-error compatibility expected to be broken
     get_old_InterfaceDeclaration_LocalReferencePosition());
 
 /*
