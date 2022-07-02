@@ -117,12 +117,6 @@ export function createDetachedLocalReferencePosition(refType?: ReferenceType): L
     return new LocalReference(Marker.make(refType ?? ReferenceType.Simple), 0, refType, undefined);
 }
 
-interface IRefsAtOffset {
-    before?: List<LocalReference>;
-    at?: List<LocalReference>;
-    after?: List<LocalReference>;
-}
-
 export function assertLocalReferences(
     lref: any,
 ): asserts lref is LocalReference {
@@ -153,7 +147,7 @@ export class LocalReferenceCollection {
      * @internal - this method should only be called by mergeTree
      */
     public hierRefCount: number = 0;
-    private readonly refsByOffset: (IRefsAtOffset | undefined)[];
+    private readonly refsByOffset: (List<LocalReference> | undefined)[];
     private refCount: number = 0;
 
     /**
@@ -163,7 +157,7 @@ export class LocalReferenceCollection {
     constructor(
         /** Segment this `LocalReferenceCollection` is associated to. */
         private readonly segment: ISegment,
-        initialRefsByfOffset = new Array<IRefsAtOffset | undefined>(segment.cachedLength)) {
+        initialRefsByfOffset = new Array<List<LocalReference> | undefined>(segment.cachedLength)) {
         // Since javascript arrays are sparse the above won't populate any of the
         // indices, but it will ensure the length property of the array matches
         // the length of the segment.
@@ -175,29 +169,20 @@ export class LocalReferenceCollection {
      * @internal - this method should only be called by mergeTree
      */
     public [Symbol.iterator]() {
-        const subiterators: IterableIterator<LocalReferencePosition>[] = [];
-        for (const refs of this.refsByOffset) {
-            if (refs) {
-                if (refs.before) {
-                    subiterators.push(refs.before[Symbol.iterator]());
-                }
-                if (refs.at) {
-                    subiterators.push(refs.at[Symbol.iterator]());
-                }
-                if (refs.after) {
-                    subiterators.push(refs.after[Symbol.iterator]());
-                }
-            }
-        }
-
+        const subiterators = this.refsByOffset.map((o) => o?.[Symbol.iterator]());
         const iterator = {
             next(): IteratorResult<LocalReferencePosition> {
                 while (subiterators.length > 0) {
-                    const next = subiterators[0].next();
-                    if (next.done === true) {
+                    const subIt = subiterators[0];
+                    if (subIt === undefined) {
                         subiterators.shift();
                     } else {
-                        return next;
+                        const next = subIt.next();
+                        if (next.done === true) {
+                            subiterators.shift();
+                        } else {
+                            return next;
+                        }
                     }
                 }
 
@@ -208,33 +193,6 @@ export class LocalReferenceCollection {
             },
         };
         return iterator;
-    }
-
-        /**
-     *
-     * @internal - this method should only be called by mergeTree
-     */
-    public clear() {
-        this.refCount = 0;
-        this.hierRefCount = 0;
-        const detachSegments = (refs: List<LocalReference> | undefined) => {
-            if (refs) {
-                for (const r of refs) {
-                    if (r.getSegment() === this.segment) {
-                        r.unlink();
-                    }
-                }
-            }
-        };
-        for (let i = 0; i < this.refsByOffset.length; i++) {
-            const refsAtOffset = this.refsByOffset[i];
-            if (refsAtOffset) {
-                detachSegments(refsAtOffset.before);
-                detachSegments(refsAtOffset.at);
-                detachSegments(refsAtOffset.before);
-                this.refsByOffset[i] = undefined;
-            }
-        }
     }
 
     /**
@@ -275,11 +233,8 @@ export class LocalReferenceCollection {
             0x2df /* "transient references cannot be bound to segments" */);
         assertLocalReferences(lref);
         assert(offset < this.segment.cachedLength, "offset cannot be beyond segment length");
-        const refsAtOffset = this.refsByOffset[offset] =
+        const atRefs = this.refsByOffset[offset] =
             this.refsByOffset[offset]
-            ?? { at: ListMakeHead() };
-        const atRefs = refsAtOffset.at =
-            refsAtOffset.at
             ?? ListMakeHead();
 
         lref.link(this.segment, offset, atRefs.enqueue(lref));
@@ -360,11 +315,9 @@ export class LocalReferenceCollection {
         }
         const offset = lref.getOffset();
         const refsAtOffset = this.refsByOffset[offset];
-        if (refsAtOffset?.after === headNode
-            || refsAtOffset?.at === headNode
-            || refsAtOffset?.before === headNode) {
-                return true;
-            }
+        if (refsAtOffset === headNode) {
+            return true;
+        }
         return false;
     }
 
@@ -405,56 +358,62 @@ export class LocalReferenceCollection {
         }
     }
 
-    public addBeforeTombstones(...refs: Iterable<LocalReferencePosition>[]) {
-        const beforeRefs = this.refsByOffset[0]?.before ?? ListMakeHead();
+    public addBefore(...refs: LocalReferencePosition[]) {
+        const beforeRefs = this.refsByOffset[0] ?? ListMakeHead();
 
-        for (const iterable of refs) {
-            for (const lref of iterable) {
-                assertLocalReferences(lref);
-                if (refTypeIncludesFlag(lref, ReferenceType.SlideOnRemove)) {
-                    beforeRefs.unshift(lref);
-                    lref.link(this.segment, 0, beforeRefs.next);
-                    if (refHasRangeLabels(lref) || refHasTileLabels(lref)) {
-                        this.hierRefCount++;
-                    }
-                    this.refCount++;
-                } else {
-                    lref.unlink();
-                }
+        for (const lref of refs) {
+            assertLocalReferences(lref);
+            beforeRefs.unshift(lref);
+            lref.link(this.segment, 0, beforeRefs.next);
+            if (refHasRangeLabels(lref) || refHasTileLabels(lref)) {
+                this.hierRefCount++;
             }
+            this.refCount++;
         }
-        if (!beforeRefs.empty() && this.refsByOffset[0]?.before === undefined) {
-            const refsAtOffset = this.refsByOffset[0] =
-                this.refsByOffset[0]
-                ?? { before: beforeRefs };
-            refsAtOffset.before = refsAtOffset.before ?? beforeRefs;
+        if (!beforeRefs.empty() && this.refsByOffset[0] === undefined) {
+             this.refsByOffset[0] = beforeRefs;
         }
     }
 
-    public addAfterTombstones(...refs: Iterable<LocalReferencePosition>[]) {
-        const lastOffset = this.refsByOffset.length - 1;
-        const afterRefs =
-            this.refsByOffset[lastOffset]?.after ?? ListMakeHead();
+    public addAfter(...refs: LocalReferencePosition[]) {
+        const offset = this.segment.cachedLength - 1;
+        const afterRefs = this.refsByOffset[offset] ?? ListMakeHead();
 
-        for (const iterable of refs) {
-            for (const lref of iterable) {
-                assertLocalReferences(lref);
-                if (refTypeIncludesFlag(lref, ReferenceType.SlideOnRemove)) {
-                    lref.link(this.segment, lastOffset, afterRefs.enqueue(lref));
-                    if (refHasRangeLabels(lref) || refHasTileLabels(lref)) {
-                        this.hierRefCount++;
-                    }
-                    this.refCount++;
-                } else {
-                    lref.unlink();
-                }
+        for (const lref of refs) {
+            assertLocalReferences(lref);
+            afterRefs.enqueue(lref);
+            lref.link(this.segment, 0, afterRefs.prev);
+            if (refHasRangeLabels(lref) || refHasTileLabels(lref)) {
+                this.hierRefCount++;
             }
+            this.refCount++;
         }
-        if (!afterRefs.empty() && this.refsByOffset[lastOffset]?.after === undefined) {
-            const refsAtOffset = this.refsByOffset[lastOffset] =
-                this.refsByOffset[lastOffset]
-                ?? { after: afterRefs };
-            refsAtOffset.after = refsAtOffset.after ?? afterRefs;
+        if (!afterRefs.empty() && this.refsByOffset[offset] === undefined) {
+             this.refsByOffset[offset] = afterRefs;
+        }
+    }
+
+    public walkReferences(
+        visitor: (lref: LocalReferencePosition) => void,
+        start?: LocalReferencePosition,
+        forward: boolean = true) {
+        if (start !== undefined) {
+            assertLocalReferences(start);
+        }
+        let offset = start?.getOffset() ?? forward
+            ? 0
+            : this.segment.cachedLength - 1;
+
+        while (offset >= 0 && offset < this.refsByOffset.length) {
+            let current = start?.getListNode() ?? forward
+                ? this.refsByOffset[offset]?.next
+                : this.refsByOffset[offset]?.prev;
+            while (current?.isHead === false) {
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                visitor(current.data!);
+                current = forward ? current?.next : current?.prev;
+            }
+            offset = forward ? offset + 1 : offset - 1;
         }
     }
 }
