@@ -98,24 +98,35 @@ describe("SharedSegmentSequenceUndoRedoHandler", () => {
         assert.equal(sharedString.getText(), text);
     });
 
-    it("Undo and Redo Insert & Delete", () => {
+    it.only("Undo and Redo Insert & Delete", () => {
         const handler = new SharedSegmentSequenceUndoRedoHandler(undoRedoStack);
         handler.attachSequence(sharedString);
+
+        const states = [sharedString.getText()];
+        undoRedoStack.closeCurrentOperation();
+
         for (let i = 1; i < text.length; i *= 2) {
             insertTextAsChunks(sharedString, text.length - i);
+            undoRedoStack.closeCurrentOperation();
+            states.push(sharedString.getText());
+
             deleteTextByChunk(sharedString, i);
+            undoRedoStack.closeCurrentOperation();
+            states.push(sharedString.getText());
         }
-        const finalText = sharedString.getText();
 
-        assert.equal(sharedString.getText(), finalText);
+        let state = states.length;
+        do {
+            assert.equal(sharedString.getText(), states[--state], `undo ${state}`);
+            console.log(sharedString.getText());
+        }
+        while (undoRedoStack.undoOperation());
 
-        while (undoRedoStack.undoOperation()) { }
-
-        assert.equal(sharedString.getText(), "");
-
-        while (undoRedoStack.redoOperation()) { }
-
-        assert.equal(sharedString.getText(), finalText, sharedString.getText());
+        do {
+            assert.equal(sharedString.getText(), states[state++], `redo ${state}`);
+            console.log(sharedString.getText());
+        }
+        while (undoRedoStack.undoOperation());
     });
 
     it("Undo and redo insert of split segment", () => {
@@ -142,5 +153,21 @@ describe("SharedSegmentSequenceUndoRedoHandler", () => {
         undoRedoStack.redoOperation();
 
         assert.equal(sharedString.getText(), text);
+    });
+
+    it("simple insert", () => {
+        const handler = new SharedSegmentSequenceUndoRedoHandler(undoRedoStack);
+        handler.attachSequence(sharedString);
+        const initialText = "hello world";
+        sharedString.insertText(0, initialText);
+        containerRuntimeFactory.processAllMessages();
+        assert.equal(sharedString.getText(), initialText);
+
+        // undo and redo split insert
+        undoRedoStack.undoOperation();
+        assert.equal(sharedString.getText(), "");
+        undoRedoStack.redoOperation();
+
+        assert.equal(sharedString.getText(), initialText);
     });
 });
