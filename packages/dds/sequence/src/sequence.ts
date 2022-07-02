@@ -403,6 +403,18 @@ export abstract class SharedSegmentSequence<T extends ISegment>
         }
     }
 
+    public insertSegmentFromSpec?: (segmentSpec: IJSONSegment, position: number) => ISegment =
+        this.thing.bind(this);
+
+    private thing(segmentSpec: IJSONSegment, position: number): ISegment {
+        const segment = this.segmentFromSpec(segmentSpec);
+        const insertOp = this.client.insertSegmentLocal(position, segment);
+        if (insertOp) {
+            this.submitSequenceMessage(insertOp);
+        }
+        return segment;
+    }
+
     /**
      * @deprecated - IntervalCollections are created on a first-write wins basis, and concurrent creates
      * are supported. Use `getIntervalCollection` instead.
