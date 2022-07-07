@@ -412,7 +412,7 @@ export abstract class SharedSegmentSequence<T extends ISegment>
         if (insertOp) {
             this.submitSequenceMessage(insertOp);
         }
-        return segment;
+        return this.getContainingSegment(position).segment;
     }
 
     /**

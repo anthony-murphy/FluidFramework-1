@@ -9,7 +9,7 @@ import { List, ListMakeHead, ListRemoveEntry } from "./collections";
 import {
     ISegment, Marker,
 } from "./mergeTree";
-import { TrackingGroupCollection } from "./mergeTreeTracking";
+import { TrackingGroup, TrackingGroupCollection } from "./mergeTreeTracking";
 import { ICombiningOp, ReferenceType } from "./ops";
 import { addProperties, PropertySet } from "./properties";
 import {
@@ -80,12 +80,22 @@ class LocalReference implements LocalReferencePosition {
             && this.listNode !== undefined) {
             ListRemoveEntry(this.listNode);
         }
+
         this.listNode = listNode;
-        // this might be costly, need a better solution
-        this.trackingCollection.trackingGroups.forEach((tg) => tg.unlink(this));
-        this.segment = segment;
         this.offset = offset;
-        this.trackingCollection.trackingGroups.forEach((tg) => tg.link(this));
+
+        if (segment !== this.segment) {
+            const groups: TrackingGroup[] = [];
+            // this might be costly, need a better solution
+            this.trackingCollection.trackingGroups.forEach(
+                (tg) => {
+                    tg.unlink(this);
+                    groups.push(tg);
+                });
+            this.segment = segment;
+
+            groups.forEach((tg) => tg.link(this));
+        }
     }
 
     public isLeaf() {
@@ -358,7 +368,7 @@ export class LocalReferenceCollection {
         }
     }
 
-    public addBefore(...refs: LocalReferencePosition[]) {
+    public addBefore(refs: Iterable<LocalReferencePosition>) {
         const beforeRefs = this.refsByOffset[0] ?? ListMakeHead();
 
         for (const lref of refs) {
@@ -375,14 +385,14 @@ export class LocalReferenceCollection {
         }
     }
 
-    public addAfter(...refs: LocalReferencePosition[]) {
+    public addAfter(refs: Iterable<LocalReferencePosition>) {
         const offset = this.segment.cachedLength - 1;
         const afterRefs = this.refsByOffset[offset] ?? ListMakeHead();
 
         for (const lref of refs) {
             assertLocalReferences(lref);
             afterRefs.enqueue(lref);
-            lref.link(this.segment, 0, afterRefs.prev);
+            lref.link(this.segment, offset, afterRefs.prev);
             if (refHasRangeLabels(lref) || refHasTileLabels(lref)) {
                 this.hierRefCount++;
             }
