@@ -415,9 +415,9 @@ export class LocalReferenceCollection {
             : this.segment.cachedLength - 1;
 
         while (offset >= 0 && offset < this.refsByOffset.length) {
-            let current = start?.getListNode() ?? forward
+            let current = start?.getListNode() ?? (forward
                 ? this.refsByOffset[offset]?.next
-                : this.refsByOffset[offset]?.prev;
+                : this.refsByOffset[offset]?.prev);
             while (current?.isHead === false) {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 visitor(current.data!);

@@ -3,9 +3,13 @@
  * Licensed under the MIT License.
  */
 
+import { assert } from "@fluidframework/common-utils";
 import {
+    IMergeNode,
     ISegment,
+    ListMakeHead,
     LocalReferenceCollection,
+    LocalReferencePosition,
     matchProperties,
     MergeTreeDeltaOperationType,
     MergeTreeDeltaType,
@@ -124,48 +128,44 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
                             break;
 
                         case MergeTreeDeltaType.REMOVE:
-                            if (!sg.isLeaf()) {
-                                const insertPos = this.sequence.localReferencePositionToPosition(sg);
+                           assert(!sg.isLeaf(), "should be local reference");
+                            const insertPos = this.sequence.localReferencePositionToPosition(sg);
+                            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                            const insertSegment = this.sequence.insertSegmentFromSpec!(
                                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                                const insertSegment = this.sequence.insertSegmentFromSpec!(
-                                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                                    sg.properties!.segment,
-                                    insertPos);
+                                sg.properties!.segment,
+                                insertPos);
 
-                                sg.trackingCollection.trackingGroups.forEach((tg) => {
-                                    tg.link(insertSegment);
-                                    tg.unlink(sg);
-                                });
+                            sg.trackingCollection.trackingGroups.forEach((tg) => {
+                                tg.link(insertSegment);
+                                tg.unlink(sg);
+                            });
+                            const forward = sg.getSegment().ordinal < insertSegment.ordinal;
+                            const insertRef = ListMakeHead<LocalReferencePosition>();
 
-                                const insertRefs =
-                                    insertSegment.localRefs ??= new LocalReferenceCollection(insertSegment);
+                            nodeMap(
+                                sg.getSegment(),
+                                (seg) => {
+                                    if (seg === insertSegment) {
+                                        return false;
+                                    }
+                                    if (seg.localRefs?.empty === false) {
+                                        seg.localRefs.walkReferences(
+                                            (ref) => forward ? insertRef.enqueue(ref) : insertRef.unshift(ref),
+                                            seg === sg.getSegment() ? sg : undefined,
+                                            forward);
+                                    }
+                                    return true;
+                                },
+                                forward);
 
-                                const refPos = this.sequence.localReferencePositionToPosition(sg);
-                                const forward = refPos <= insertPos;
-
-                                this.sequence.walkSegments(
-                                    (segment) => {
-                                        const currentRefs = segment.localRefs;
-                                        if (currentRefs) {
-                                            currentRefs?.walkReferences(
-                                                (ref) => {
-                                                    if (forward) {
-                                                        insertRefs.addAfter(ref);
-                                                    } else {
-                                                        insertRefs.addBefore(ref);
-                                                    }
-                                                },
-                                                segment === sg.getSegment() ? sg : undefined,
-                                                forward,
-                                            );
-                                        }
-                                        return true;
-                                    },
-                                    forward ? refPos : insertPos,
-                                    forward ? insertPos : refPos,
-                                );
-                                sg.getSegment().localRefs?.removeLocalRef(sg);
+                            const localRefs = insertSegment.localRefs ??= new LocalReferenceCollection(insertSegment);
+                            if (forward) {
+                                localRefs.addBefore(insertRef);
+                            } else {
+                                localRefs.addAfter(insertRef);
                             }
+
                             break;
 
                         case MergeTreeDeltaType.ANNOTATE:
@@ -196,4 +196,31 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
             }
         }
     }
+}
+
+export function nodeMap(
+    block: IMergeNode, leafAction: (seg: ISegment) => boolean, forward: boolean): boolean {
+    const parent = block.parent;
+
+    if (parent === undefined) {
+        return false;
+    }
+
+    for (let childIndex = block.index;
+        childIndex >= 0 && childIndex < parent.childCount;
+        childIndex += (forward ? 1 : -1)) {
+        const child = parent.children[childIndex];
+
+        if (child.isLeaf()) {
+            if (!leafAction(child)) {
+                return false;
+            }
+        } else if (child.childCount > 0 && child !== block) {
+           return nodeMap(
+            forward ? child.children[0] : child.children[child.childCount - 1],
+            leafAction,
+            forward);
+        }
+    }
+    return nodeMap(parent, leafAction, forward);
 }
