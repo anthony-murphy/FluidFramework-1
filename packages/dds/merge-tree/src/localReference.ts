@@ -75,13 +75,14 @@ class LocalReference implements LocalReferencePosition {
         }
         this.listNode = undefined;
     }
-    public link(segment: ISegment, offset: number, listNode: List<LocalReference> | undefined = this.getListNode()) {
-        if (listNode !== this.listNode
-            && this.listNode !== undefined) {
-            ListRemoveEntry(this.listNode);
+    public link(segment: ISegment, offset: number, listNode: List<LocalReference> | undefined) {
+        if (listNode !== this.listNode) {
+            if (this.listNode !== undefined) {
+                ListRemoveEntry(this.listNode);
+            }
+            this.listNode = listNode;
         }
 
-        this.listNode = listNode;
         this.offset = offset;
 
         if (segment !== this.segment) {
@@ -265,6 +266,7 @@ export class LocalReferenceCollection {
             lref.unlink();
             return lref;
         }
+        return undefined;
     }
 
     /**
@@ -288,7 +290,8 @@ export class LocalReferenceCollection {
             assertLocalReferences(lref);
             lref.link(
                 this.segment,
-                lref.getOffset() + this.refsByOffset.length);
+                lref.getOffset() + this.refsByOffset.length,
+                lref.getListNode());
         }
 
         this.refsByOffset.push(...other.refsByOffset);
@@ -354,7 +357,8 @@ export class LocalReferenceCollection {
                 assertLocalReferences(lref);
                 lref.link(
                     splitSeg,
-                    lref.getOffset() - offset);
+                    lref.getOffset() - offset,
+                    lref.getListNode());
                 if (refHasRangeLabels(lref) || refHasTileLabels(lref)) {
                     this.hierRefCount--;
                     localRefs.hierRefCount++;
@@ -404,26 +408,34 @@ export class LocalReferenceCollection {
     }
 
     public walkReferences(
-        visitor: (lref: LocalReferencePosition) => void,
+        visitor: (lref: LocalReferencePosition) => boolean | void | undefined,
         start?: LocalReferencePosition,
         forward: boolean = true) {
         if (start !== undefined) {
             assertLocalReferences(start);
         }
-        let offset = start?.getOffset() ?? forward
+        let offset = start?.getOffset() ?? (forward
             ? 0
-            : this.segment.cachedLength - 1;
+            : this.segment.cachedLength - 1);
+
+        let current = start?.getListNode() ?? (forward
+            ? this.refsByOffset[offset]?.next
+            : this.refsByOffset[offset]?.prev);
+
+        const offsetIncrement = forward ? 1 : -1;
 
         while (offset >= 0 && offset < this.refsByOffset.length) {
-            let current = start?.getListNode() ?? (forward
-                ? this.refsByOffset[offset]?.next
-                : this.refsByOffset[offset]?.prev);
             while (current?.isHead === false) {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                visitor(current.data!);
+                if (visitor(current.data!) === false) {
+                    return;
+                }
                 current = forward ? current?.next : current?.prev;
             }
-            offset = forward ? offset + 1 : offset - 1;
+            offset += offsetIncrement;
+            current = forward
+                ? this.refsByOffset[offset]?.next
+                : this.refsByOffset[offset]?.prev;
         }
     }
 }
