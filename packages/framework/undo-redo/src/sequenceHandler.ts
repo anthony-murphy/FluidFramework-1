@@ -15,6 +15,7 @@ import {
     MergeTreeDeltaType,
     PropertySet,
     ReferenceType,
+    toRemovalInfo,
     Trackable,
     TrackingGroup,
 } from "@fluidframework/merge-tree";
@@ -64,17 +65,19 @@ interface ITrackedSharedSegmentSequenceRevertible {
  * Tracks a change on a shared segment sequence and allows reverting it
  */
 export class SharedSegmentSequenceRevertible implements IRevertible {
-    private readonly tracking: ITrackedSharedSegmentSequenceRevertible[];
+    private readonly revertibles: ITrackedSharedSegmentSequenceRevertible[];
 
     constructor(
         public readonly sequence: SharedSegmentSequence<ISegment>,
     ) {
-        this.tracking = [];
+        this.revertibles = [];
     }
 
     public add(event: SequenceDeltaEvent) {
         if (event.ranges.length > 0) {
-            let current = this.tracking.length > 0 ? this.tracking[this.tracking.length - 1] : undefined;
+            let currentRevertible = this.revertibles.length > 0
+                ? this.revertibles[this.revertibles.length - 1]
+                : undefined;
             for (const range of event.ranges) {
                 let trackable: Trackable = range.segment;
                 // on remove create a local reference position to track
@@ -94,32 +97,32 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
                     });
                 }
 
-                if (current !== undefined
-                    && current.operation === event.deltaOperation
-                    && matchProperties(current.propertyDelta, range.propertyDeltas)) {
-                    current.trackingGroup.link(trackable);
+                if (currentRevertible !== undefined
+                    && currentRevertible.operation === event.deltaOperation
+                    && matchProperties(currentRevertible.propertyDelta, range.propertyDeltas)) {
+                    currentRevertible.trackingGroup.link(trackable);
                 } else {
                     const tg = new TrackingGroup();
                     tg.link(trackable);
-                    current = {
+                    currentRevertible = {
                         trackingGroup: tg,
                         propertyDelta: range.propertyDeltas,
                         operation: event.deltaOperation,
                     };
-                    this.tracking.push(current);
+                    this.revertibles.push(currentRevertible);
                 }
             }
         }
     }
 
     public revert() {
-        while (this.tracking.length > 0) {
-            const tracked = this.tracking.pop();
-            if (tracked !== undefined) {
-                while (tracked.trackingGroup.size > 0) {
-                    const sg = tracked.trackingGroup.tracked[0];
-                    sg.trackingCollection.unlink(tracked.trackingGroup);
-                    switch (tracked.operation) {
+        while (this.revertibles.length > 0) {
+            const revertible = this.revertibles.pop();
+            if (revertible !== undefined) {
+                while (revertible.trackingGroup.size > 0) {
+                    const sg = revertible.trackingGroup.tracked[0];
+                    sg.trackingCollection.unlink(revertible.trackingGroup);
+                    switch (revertible.operation) {
                         case MergeTreeDeltaType.INSERT:
                             if (sg.isLeaf() && sg.removedSeq === undefined) {
                                 const start = this.sequence.getPosition(sg);
@@ -151,13 +154,23 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
                                     }
                                     if (seg.localRefs?.empty === false) {
                                         seg.localRefs.walkReferences(
-                                            (ref) => forward ? insertRef.enqueue(ref) : insertRef.unshift(ref),
+                                            (ref) => {
+                                                if (ref !== sg) {
+                                                    if (forward) {
+                                                        insertRef.enqueue(ref);
+                                                    } else {
+                                                        insertRef.unshift(ref);
+                                                    }
+                                                }
+                                            },
                                             seg === sg.getSegment() ? sg : undefined,
                                             forward);
                                     }
                                     return true;
                                 },
                                 forward);
+
+                            sg.getSegment().localRefs?.removeLocalRef(sg);
 
                             const localRefs = insertSegment.localRefs ??= new LocalReferenceCollection(insertSegment);
                             if (forward) {
@@ -174,7 +187,7 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
                                 this.sequence.annotateRange(
                                     start,
                                     start + sg.cachedLength,
-                                    tracked.propertyDelta,
+                                    revertible.propertyDelta,
                                     undefined);
                             }
                             break;
@@ -187,11 +200,11 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
     }
 
     public discard() {
-        while (this.tracking.length > 0) {
-            const tracked = this.tracking.pop();
+        while (this.revertibles.length > 0) {
+            const tracked = this.revertibles.pop();
             if (tracked !== undefined) {
                 while (tracked.trackingGroup.size > 0) {
-                    tracked.trackingGroup.unlink(tracked.trackingGroup.segments[0]);
+                    tracked.trackingGroup.unlink(tracked.trackingGroup.tracked[0]);
                 }
             }
         }
