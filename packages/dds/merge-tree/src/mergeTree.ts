@@ -25,7 +25,6 @@ import {
     UniversalSequenceNumber,
 } from "./constants";
 import {
-     assertLocalReferences,
      LocalReferenceCollection,
      LocalReferencePosition,
 } from "./localReference";
@@ -1438,14 +1437,19 @@ export class MergeTree {
             newSegment.localRefs = new LocalReferenceCollection(newSegment);
         }
         for (const ref of refsToSlide) {
-            assertLocalReferences(ref);
             ref.callbacks?.beforeSlide?.();
             const removedRef = segment.localRefs.removeLocalRef(ref);
             assert(ref === removedRef, 0x2f3 /* Ref not in the segment localRefs */);
-            if (newSegment) {
-                assert(!!newSegment.localRefs, 0x2f4 /* localRefs must be allocated */);
-                newSegment.localRefs.addLocalRef(ref, newSegoff.offset ?? 0);
+        }
+        if (newSegment) {
+            assert(!!newSegment.localRefs, 0x2f4 /* localRefs must be allocated */);
+            if (segment.ordinal < newSegment?.ordinal) {
+                newSegment.localRefs.addBeforeTombstones([refsToSlide], newSegoff.offset ?? 0);
+            } else {
+                newSegment.localRefs.addAfterTombstones([refsToSlide], newSegoff.offset ?? 0);
             }
+        }
+        for (const ref of refsToSlide) {
             ref.callbacks?.afterSlide?.();
         }
         // TODO is it required to update the path lengths?
