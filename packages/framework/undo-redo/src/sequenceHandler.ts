@@ -7,7 +7,6 @@ import { assert } from "@fluidframework/common-utils";
 import {
     IMergeNode,
     ISegment,
-    ListMakeHead,
     LocalReferenceCollection,
     LocalReferencePosition,
     matchProperties,
@@ -15,7 +14,6 @@ import {
     MergeTreeDeltaType,
     PropertySet,
     ReferenceType,
-    toRemovalInfo,
     Trackable,
     TrackingGroup,
 } from "@fluidframework/merge-tree";
@@ -144,7 +142,7 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
                                 tg.unlink(sg);
                             });
                             const forward = sg.getSegment().ordinal < insertSegment.ordinal;
-                            const insertRef = ListMakeHead<LocalReferencePosition>();
+                            const insertRef: LocalReferencePosition[] = [];
 
                             nodeMap(
                                 sg.getSegment(),
@@ -155,9 +153,12 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
                                     if (seg.localRefs?.empty === false) {
                                         seg.localRefs.walkReferences(
                                             (ref) => {
+                                                if (ref === undefined) {
+                                                    debugger;
+                                                }
                                                 if (ref !== sg) {
                                                     if (forward) {
-                                                        insertRef.enqueue(ref);
+                                                        insertRef.push(ref);
                                                     } else {
                                                         insertRef.unshift(ref);
                                                     }
@@ -171,12 +172,14 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
                                 forward);
 
                             sg.getSegment().localRefs?.removeLocalRef(sg);
-
-                            const localRefs = insertSegment.localRefs ??= new LocalReferenceCollection(insertSegment);
-                            if (forward) {
-                                localRefs.addBefore(insertRef);
-                            } else {
-                                localRefs.addAfter(insertRef);
+                            if (insertRef.length > 0) {
+                                const localRefs =
+                                    insertSegment.localRefs ??= new LocalReferenceCollection(insertSegment);
+                                if (forward) {
+                                    localRefs.addBeforeTombstones([insertRef]);
+                                } else {
+                                    localRefs.addAfterTombstones([insertRef]);
+                                }
                             }
 
                             break;
