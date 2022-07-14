@@ -163,7 +163,7 @@ export class LocalReferenceCollection {
      */
     public hierRefCount: number = 0;
     private readonly refsByOffset: (IRefsAtOffset | undefined)[];
-    private refCount: number = 0;
+    public refCount: number = 0;
 
     /**
      *
@@ -434,9 +434,7 @@ export class LocalReferenceCollection {
     }
 
     public walkReferences(
-        visitor: (
-            lref: LocalReferencePosition,
-            pos: "before" | "at" | "after") => boolean | void | undefined,
+        visitor: (lref: LocalReferencePosition) => boolean | void | undefined,
         start?: LocalReferencePosition,
         forward: boolean = true) {
         if (start !== undefined) {
@@ -446,56 +444,51 @@ export class LocalReferenceCollection {
             ? 0
             : this.segment.cachedLength - 1);
 
+        const offsetPositions: [IRefsAtOffset["before"], IRefsAtOffset["at"], IRefsAtOffset["after"]] =
+            [this.refsByOffset[offset]?.before, this.refsByOffset[offset]?.at, this.refsByOffset[offset]?.after];
+
         const startNode = start?.getListNode();
         const startList = startNode?.list;
 
-        const allListWalker = (refs: List<LocalReference>, pos: keyof IRefsAtOffset) => {
+        if (startList !== undefined) {
+            const index = offsetPositions.indexOf(startList);
+            if (forward) {
+                for (let i = 0; i < index; i++) {
+                    offsetPositions[i] = undefined;
+                }
+            } else {
+                for (let i = index + 1; i < offsetPositions.length; i++) {
+                    offsetPositions[i] = undefined;
+                }
+            }
+        }
+
+        const listVisitor = (node: ListNode<LocalReference>) => visitor(node.data);
+        const listWalker = (pos: List<LocalReference>) => {
             if (WalkList(
-                refs,
-                (node: ListNode<LocalReference>) => visitor(node.data, pos),
-                undefined,
+                pos,
+                listVisitor,
+                startList === pos ? startNode : undefined,
                 forward,
             ) === false) {
                 return false;
             }
         };
-        let listWalker = startList ?
-            (refs: List<LocalReference>, pos: keyof IRefsAtOffset) => {
-                if (startList) {
-                    if (refs !== startList) {
-                        return;
-                    }
-                }
-                if (WalkList(
-                    refs,
-                    (node: ListNode<LocalReference>) => visitor(node.data, pos),
-                    startNode,
-                    forward,
-                ) === false) {
-                    return false;
-                }
-                listWalker = allListWalker;
-            }
-            : allListWalker;
-
-        const offsetPositions: readonly ["before", "at", "after"] = ["before", "at", "after"];
-
-        let offsetPositionIndex =
-            forward ? 0 : offsetPositions.length - 1;
 
         while (offset >= 0 && offset < this.refsByOffset.length) {
-            while (offsetPositionIndex >= 0 && offsetPositionIndex < offsetPositions.length) {
-                const pos = offsetPositions[offsetPositionIndex];
-                const posList = this.refsByOffset[offset]?.[pos];
-                if (posList !== undefined) {
-                    if (listWalker(posList, pos) === false) {
+            while (offsetPositions.length > 0) {
+                const pos = forward
+                    ? offsetPositions.shift()
+                    : offsetPositions.pop();
+                if (pos !== undefined) {
+                    if (listWalker(pos) === false) {
                         return false;
                     }
                 }
-                offsetPositionIndex += forward ? 1 : -1;
            }
             offset += forward ? 1 : -1;
-            offsetPositionIndex = forward ? 0 : offsetPositions.length - 1;
+            offsetPositions.push(
+                this.refsByOffset[offset]?.before, this.refsByOffset[offset]?.at, this.refsByOffset[offset]?.after);
         }
         return true;
     }
