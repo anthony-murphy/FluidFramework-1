@@ -144,21 +144,26 @@ describe("SharedSegmentSequenceUndoRedoHandler", () => {
         assert.equal(sharedString.getText(), text);
     });
 
-    it("Test", () => {
+    it("Test", async () => {
         const handler = new SharedSegmentSequenceUndoRedoHandler(undoRedoStack);
         handler.attachSequence(sharedString);
-
-        for (let i = 0; i < 10; i++) {
+        let expected = "";
+        for (let i = 0; i < 100; i++) {
+            expected = i.toString() + expected;
             sharedString.insertText(0, i.toString());
-            if (i % 3 === 0) {
+            if (i % 5 === 0) {
                 undoRedoStack.closeCurrentOperation();
             }
+            if (i % 10 === 0) {
+                containerRuntimeFactory.processSomeMessages(
+                    Math.min(7, containerRuntimeFactory.outstandingMessageCount));
+            }
         }
-        assert.equal(sharedString.getText(), "9876543210", "after insert");
+        assert.equal(sharedString.getText(), expected, "after insert");
         while (undoRedoStack.undoOperation()) { }
         assert.equal(sharedString.getText(), "", "after undo");
         while (undoRedoStack.redoOperation()) { }
-        assert.equal(sharedString.getText(), "9876543210", "after redo");
+        assert.equal(sharedString.getText(), expected, "after redo");
     });
 
     it("Undo and Redo Delete - Bug Repro", () => {

@@ -5,17 +5,21 @@
 
 import { assert } from "@fluidframework/common-utils";
 import {
+    IMergeBlock,
     IMergeNode,
     ISegment,
     LocalReferenceCollection,
     LocalReferencePosition,
     matchProperties,
+    MergeTree,
     MergeTreeDeltaOperationType,
     MergeTreeDeltaType,
     PropertySet,
     ReferenceType,
+    TextSegment,
     Trackable,
     TrackingGroup,
+    UnassignedSequenceNumber,
 } from "@fluidframework/merge-tree";
 import { SequenceDeltaEvent, SharedSegmentSequence } from "@fluidframework/sequence";
 import { IRevertible, UndoRedoStackManager } from "./undoRedoStackManager";
@@ -144,8 +148,7 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
                             const forward = sg.getSegment().ordinal < insertSegment.ordinal;
                             const insertRef: LocalReferencePosition[] = [];
                             const refHandler = (
-                                lref: LocalReferencePosition,
-                                pos: "before" | "at" | "after") => {
+                                lref: LocalReferencePosition) => {
                                     if (sg !== lref) {
                                         if (forward) {
                                             insertRef.push(lref);
@@ -155,13 +158,14 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
                                     }
                                 };
                             nodeMap(
+                                sg.getSegment().parent,
                                 sg.getSegment(),
                                 (seg) => {
                                     if (seg === insertSegment) {
                                         return false;
                                     }
                                     if (seg.localRefs?.empty === false) {
-                                        seg.localRefs.walkReferences(
+                                        return seg.localRefs.walkReferences(
                                             refHandler,
                                             seg === sg.getSegment() ? sg : undefined,
                                             forward);
@@ -210,28 +214,80 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
 }
 
 export function nodeMap(
-    block: IMergeNode, leafAction: (seg: ISegment) => boolean, forward: boolean): boolean {
-    const parent = block.parent;
-
-    if (parent === undefined) {
-        return false;
+    block: IMergeBlock | undefined,
+    startChild: IMergeNode,
+    leafAction: (seg: ISegment) => boolean,
+    forward: boolean,
+): boolean {
+    if (block?.children?.[startChild?.index] !== startChild) {
+        throw new Error("invalid child");
     }
-
-    for (let childIndex = block.index;
-        childIndex >= 0 && childIndex < parent.childCount;
+    for (let childIndex = startChild.index;
+        childIndex >= 0 && childIndex < block.childCount;
         childIndex += (forward ? 1 : -1)) {
-        const child = parent.children[childIndex];
+        const child = block.children[childIndex];
 
         if (child.isLeaf()) {
-            if (!leafAction(child)) {
+            if (leafAction(child) === false) {
                 return false;
             }
-        } else if (child.childCount > 0 && child !== block) {
-           return nodeMap(
-            forward ? child.children[0] : child.children[child.childCount - 1],
-            leafAction,
-            forward);
+        } else {
+            if (nodeMap(child, child.children[forward ? 0 : child.childCount - 1], leafAction, forward) === false) {
+                return false;
+            }
         }
     }
-    return nodeMap(parent, leafAction, forward);
+    {
+        let child = block;
+        let parent = block.parent;
+        while (parent !== undefined) {
+            const nextIndex = forward ? child.index + 1 : child.index - 1;
+            if (parent.children[nextIndex] !== undefined) {
+                return nodeMap(parent, parent.children[nextIndex], leafAction, forward);
+            }
+            child = parent;
+            parent = child.parent;
+        }
+    }
+    return true;
+}
+
+export function getSegString(mergeTree: MergeTree): { acked: string; local: string; refs: string; } {
+    let acked: string = "";
+    let local: string = "";
+    let refs: string = "";
+    const nodes = [...mergeTree.root.children];
+    while (nodes.length > 0) {
+        const node = nodes.shift();
+        if (node) {
+            if (node.isLeaf()) {
+                if (TextSegment.is(node)) {
+                    if (node.removedSeq === undefined) {
+                        if (node.removedSeq === UnassignedSequenceNumber) {
+                            acked += "_".repeat(node.text.length);
+                            if (node.seq === UnassignedSequenceNumber) {
+                                local += "*".repeat(node.text.length);
+                            }
+                            local += "-".repeat(node.text.length);
+                        } else {
+                            acked += "-".repeat(node.text.length);
+                            local += " ".repeat(node.text.length);
+                        }
+                    } else {
+                        if (node.seq === UnassignedSequenceNumber) {
+                            acked += "_".repeat(node.text.length);
+                            local += node.text;
+                        } else {
+                            acked += node.text;
+                            local += " ".repeat(node.text.length);
+                        }
+                    }
+                    refs += (node.localRefs?.refCount ?? 0).toString().padEnd(node.text.length, " ");
+                }
+            } else {
+                nodes.push(...node.children);
+            }
+        }
+    }
+    return { acked, local, refs };
 }
