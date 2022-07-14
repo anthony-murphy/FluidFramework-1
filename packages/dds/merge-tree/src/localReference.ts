@@ -379,7 +379,7 @@ export class LocalReferenceCollection {
         const beforeRefs = this.refsByOffset[firstOffset]?.before ?? new List<LocalReference>();
 
         for (const iterable of refs) {
-            for (const lref of iterable) {
+            for (const lref of [...iterable].reverse()) {
                 assertLocalReferences(lref);
                 if (refTypeIncludesFlag(lref, ReferenceType.SlideOnRemove)) {
                     lref.link(
@@ -433,7 +433,7 @@ export class LocalReferenceCollection {
         }
     }
 
-    public walkReferences<Accum>(
+    public walkReferences(
         visitor: (
             lref: LocalReferencePosition,
             pos: "before" | "at" | "after") => boolean | void | undefined,

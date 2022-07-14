@@ -143,7 +143,17 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
                             });
                             const forward = sg.getSegment().ordinal < insertSegment.ordinal;
                             const insertRef: LocalReferencePosition[] = [];
-
+                            const refHandler = (
+                                lref: LocalReferencePosition,
+                                pos: "before" | "at" | "after") => {
+                                    if (sg !== lref) {
+                                        if (forward) {
+                                            insertRef.push(lref);
+                                        } else {
+                                            insertRef.unshift(lref);
+                                        }
+                                    }
+                                };
                             nodeMap(
                                 sg.getSegment(),
                                 (seg) => {
@@ -152,18 +162,7 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
                                     }
                                     if (seg.localRefs?.empty === false) {
                                         seg.localRefs.walkReferences(
-                                            (ref) => {
-                                                if (ref === undefined) {
-                                                    debugger;
-                                                }
-                                                if (ref !== sg) {
-                                                    if (forward) {
-                                                        insertRef.push(ref);
-                                                    } else {
-                                                        insertRef.unshift(ref);
-                                                    }
-                                                }
-                                            },
+                                            refHandler,
                                             seg === sg.getSegment() ? sg : undefined,
                                             forward);
                                     }
@@ -175,11 +174,7 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
                             if (insertRef.length > 0) {
                                 const localRefs =
                                     insertSegment.localRefs ??= new LocalReferenceCollection(insertSegment);
-                                if (forward) {
-                                    localRefs.addBeforeTombstones([insertRef]);
-                                } else {
-                                    localRefs.addAfterTombstones([insertRef]);
-                                }
+                                localRefs.addBeforeTombstones([insertRef]);
                             }
 
                             break;
