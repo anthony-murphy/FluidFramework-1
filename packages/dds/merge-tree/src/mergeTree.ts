@@ -1444,9 +1444,9 @@ export class MergeTree {
         if (newSegment) {
             assert(!!newSegment.localRefs, 0x2f4 /* localRefs must be allocated */);
             if (segment.ordinal < newSegment?.ordinal) {
-                newSegment.localRefs.addBeforeTombstones([refsToSlide], newSegoff.offset ?? 0);
+                newSegment.localRefs.addBeforeTombstones(refsToSlide, newSegoff.offset ?? 0);
             } else {
-                newSegment.localRefs.addAfterTombstones([refsToSlide], newSegoff.offset ?? 0);
+                newSegment.localRefs.addAfterTombstones(refsToSlide, newSegoff.offset ?? 0);
             }
         }
         for (const ref of refsToSlide) {
