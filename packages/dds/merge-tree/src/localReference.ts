@@ -70,14 +70,14 @@ class LocalReference implements LocalReferencePosition {
     }
 
     public unlink() {
-        this.listNode?.list?.remove(this.listNode);
-        this.listNode = undefined;
+        if (this.listNode !== undefined) {
+            this.listNode.list?.remove(this.listNode);
+            this.listNode = undefined;
+        }
     }
     public link(segment: ISegment, offset: number, listNode: ListNode<LocalReference> | undefined) {
         if (listNode !== this.listNode) {
-            if (this.listNode !== undefined) {
-                this.listNode?.list?.remove(this.listNode);
-            }
+            this.unlink();
             this.listNode = listNode;
         }
 
@@ -131,6 +131,7 @@ interface IRefsAtOffset {
     at?: List<LocalReference>;
     after?: List<LocalReference>;
 }
+
 export function assertLocalReferences(
     lref: any,
 ): asserts lref is LocalReference {
@@ -256,12 +257,8 @@ export class LocalReferenceCollection {
             0x2df /* "transient references cannot be bound to segments" */);
         assertLocalReferences(lref);
         assert(offset < this.segment.cachedLength, "offset cannot be beyond segment length");
-        const refsAtOffset = this.refsByOffset[offset] =
-            this.refsByOffset[offset]
-            ?? { at: new List<LocalReference>() };
-        const atRefs = refsAtOffset.at =
-            refsAtOffset.at
-            ?? new List<LocalReference>();
+        const refsAtOffset = this.refsByOffset[offset] ??= { at: new List<LocalReference>() };
+        const atRefs = refsAtOffset.at ??= new List<LocalReference>();
 
         lref.link(this.segment, offset, atRefs.push(lref).first);
 
@@ -399,10 +396,10 @@ export class LocalReferenceCollection {
             }
         }
         if (!beforeRefs.empty && this.refsByOffset[firstOffset]?.before === undefined) {
-            const refsAtOffset = this.refsByOffset[firstOffset] =
-                this.refsByOffset[firstOffset]
-                ?? { before: beforeRefs };
-            refsAtOffset.before = refsAtOffset.before ?? beforeRefs;
+            // ensure offset initialized
+            const refsAtOffset = this.refsByOffset[firstOffset] ??= { before: beforeRefs };
+            // ensure after initialized
+            refsAtOffset.before ??= beforeRefs;
         }
     }
 
@@ -429,10 +426,10 @@ export class LocalReferenceCollection {
             }
         }
         if (!afterRefs.empty && this.refsByOffset[lastOffset]?.after === undefined) {
-            const refsAtOffset = this.refsByOffset[lastOffset] =
-                this.refsByOffset[lastOffset]
-                ?? { after: afterRefs };
-            refsAtOffset.after = refsAtOffset.after ?? afterRefs;
+            // ensure offset initialized
+            const refsAtOffset = this.refsByOffset[lastOffset] ??= { after: afterRefs };
+            // ensure after refs initialized
+            refsAtOffset.after ??= afterRefs;
         }
     }
 

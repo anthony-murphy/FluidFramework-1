@@ -4,6 +4,8 @@
  * Licensed under the MIT License.
  */
 
+import { UsageError } from "@fluidframework/container-utils";
+
 export interface ListNode<T> {
     readonly list: List<T> | undefined;
     readonly data: T;
@@ -56,7 +58,7 @@ function append<T>(precedingNode: DataNode<T> | HeadNode<T>, ... items: T[]) {
     });
     oldNext._prev = pNode;
     pNode._next = oldNext;
-    return oldNext;
+    return precedingNode;
 }
 
 export function walk<T>(from: ListNode<T>, forward: boolean, handler: (node: ListNode<T>) => boolean | undefined) {
@@ -77,6 +79,7 @@ export class List<T> implements Iterable<ListNode<T>> {
     push(...items: T[]): { first: ListNode<T>; last: ListNode<T>; } {
         this._len += items.length;
         const pStart = append(this.headNode._prev, ... items);
+        // assert(pStart.next?.data === items[0], "bad unshift");
         return { first: pStart.next!, last: this.headNode.prev! };
     }
 
@@ -87,10 +90,11 @@ export class List<T> implements Iterable<ListNode<T>> {
     unshift(...items: T[]): { first: ListNode<T>; last: ListNode<T>; } {
         this._len += items.length;
         const pEnd = append(this.headNode, ... items);
+        // assert(this.headNode.next?.data === items[0], "bad unshift");
         return { first: this.headNode.next!, last: pEnd.prev! };
     }
 
-    public has(node: ListNode<T> | undefined): boolean {
+    public has(node: ListNode<T> | undefined): node is ListNode<T> {
         return this._has(node);
     }
 
@@ -100,14 +104,12 @@ export class List<T> implements Iterable<ListNode<T>> {
 
     remove(node: ListNode<T> | undefined): ListNode<T> | undefined {
         if (this._has(node)) {
-            if (node._next !== node._prev) {
-                node._prev._next = node._next;
-                node._next._prev = node._prev;
-                node._next = node._prev = node;
-                node.headNode = DeadHead;
-                this._len--;
-                return node;
-            }
+            node._prev._next = node._next;
+            node._next._prev = node._prev;
+            node._next = node._prev = DeadHead;
+            node.headNode = DeadHead;
+            this._len--;
+            return node;
         }
         return undefined;
     }
@@ -149,7 +151,16 @@ export function WalkList<T>(
     start?: ListNode<T>,
     forward: boolean = true,
 ) {
-    let current = start ?? (forward ? list.next : list.prev);
+    let current: ListNode<T> | undefined;
+    if (start) {
+        if (!list.has(start)) {
+            throw new UsageError("start must be in the provided list");
+        }
+        current = start;
+    } else {
+        current = forward ? list.next : list.prev;
+    }
+
     while (current !== undefined) {
         if (visitor(current) === false) {
             return false;
