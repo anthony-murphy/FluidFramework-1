@@ -178,7 +178,7 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
                             if (insertRef.length > 0) {
                                 const localRefs =
                                     insertSegment.localRefs ??= new LocalReferenceCollection(insertSegment);
-                                localRefs.addBeforeTombstones([insertRef]);
+                                localRefs.addBeforeTombstones(insertRef);
                             }
 
                             break;

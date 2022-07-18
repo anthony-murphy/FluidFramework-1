@@ -18,7 +18,7 @@ class HeadNode<T> {
     public _prev: HeadNode<T> | DataNode<T> = this;
     public headNode: HeadNode<T>;
     private readonly _list?: List<T>;
-    constructor(list?: List<T> | undefined) {
+    constructor(list: List<T> | undefined) {
         this.headNode = this;
         if (list) {
             this._list = list;
@@ -74,7 +74,7 @@ export function walk<T>(from: ListNode<T>, forward: boolean, handler: (node: Lis
 
 export class List<T> implements Iterable<ListNode<T>> {
     pop(): ListNode<T> | undefined {
-        return this.remove(this.prev);
+        return this.remove(this.last);
     }
     push(...items: T[]): { first: ListNode<T>; last: ListNode<T>; } {
         this._len += items.length;
@@ -84,7 +84,7 @@ export class List<T> implements Iterable<ListNode<T>> {
     }
 
     shift(): ListNode<T> | undefined {
-        return this.remove(this.next);
+        return this.remove(this.first);
     }
 
     unshift(...items: T[]): { first: ListNode<T>; last: ListNode<T>; } {
@@ -115,7 +115,7 @@ export class List<T> implements Iterable<ListNode<T>> {
     }
 
     public [Symbol.iterator](): IterableIterator<ListNode<T>> {
-        let value = this.next;
+        let value = this.first;
         const iterator: IterableIterator<ListNode<T>> = {
             next(): IteratorResult<ListNode<T>> {
                 if (value !== undefined) {
@@ -136,18 +136,18 @@ export class List<T> implements Iterable<ListNode<T>> {
     private readonly headNode: HeadNode<T> | DataNode<T> = new HeadNode(this);
     public get length() { return this._len; }
     public get empty() { return this.headNode._next === this.headNode; }
-    public get next(): ListNode<T> | undefined {
+    public get first(): ListNode<T> | undefined {
         return this.headNode.next;
     }
 
-    public get prev(): ListNode<T> | undefined {
+    public get last(): ListNode<T> | undefined {
         return this.headNode.prev;
     }
 }
 
 export function WalkList<T>(
     list: List<T>,
-    visitor: (lref: ListNode<T>) => boolean | void | undefined,
+    visitor: (lref: ListNode<T>) => boolean | void,
     start?: ListNode<T>,
     forward: boolean = true,
 ) {
@@ -158,7 +158,7 @@ export function WalkList<T>(
         }
         current = start;
     } else {
-        current = forward ? list.next : list.prev;
+        current = forward ? list.first : list.last;
     }
 
     while (current !== undefined) {

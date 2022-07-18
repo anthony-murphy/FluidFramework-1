@@ -1433,20 +1433,17 @@ export class MergeTree {
         assert(!!segment.localRefs, 0x2f2 /* Ref not in the segment localRefs */);
         const newSegoff = this._getSlideToSegment({ segment, offset: 0 });
         const newSegment = newSegoff.segment;
-        if (newSegment && !newSegment.localRefs) {
-            newSegment.localRefs = new LocalReferenceCollection(newSegment);
-        }
         for (const ref of refsToSlide) {
             ref.callbacks?.beforeSlide?.();
             const removedRef = segment.localRefs.removeLocalRef(ref);
             assert(ref === removedRef, 0x2f3 /* Ref not in the segment localRefs */);
         }
         if (newSegment) {
-            assert(!!newSegment.localRefs, 0x2f4 /* localRefs must be allocated */);
+            const localRefs = newSegment.localRefs ??= new LocalReferenceCollection(newSegment);
             if (segment.ordinal < newSegment?.ordinal) {
-                newSegment.localRefs.addBeforeTombstones(refsToSlide, newSegoff.offset ?? 0);
+                localRefs.addBeforeTombstones(refsToSlide, newSegoff.offset ?? 0);
             } else {
-                newSegment.localRefs.addAfterTombstones(refsToSlide, newSegoff.offset ?? 0);
+                localRefs.addAfterTombstones(refsToSlide, newSegoff.offset ?? 0);
             }
         }
         for (const ref of refsToSlide) {
