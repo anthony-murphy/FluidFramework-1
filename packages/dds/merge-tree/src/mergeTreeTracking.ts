@@ -4,7 +4,7 @@
  */
 
 import { LocalReferencePosition } from "./localReference";
-import { ISegment } from "./mergeTree";
+import { ISegment } from "./mergeTreeNodes";
 import { SortedSegmentSet } from "./sortedSegmentSet";
 
 export type Trackable = ISegment | LocalReferencePosition;

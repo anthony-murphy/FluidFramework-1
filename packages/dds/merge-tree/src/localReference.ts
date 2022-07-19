@@ -7,9 +7,8 @@ import { assert } from "@fluidframework/common-utils";
 import { UsageError } from "@fluidframework/container-utils";
 import { List, ListNode, WalkList } from "./list";
 import {
-    ISegment, Marker,
-} from "./mergeTree";
-import { TrackingGroup, TrackingGroupCollection } from "./mergeTreeTracking";
+    ISegment,
+} from "./mergeTreeNodes";
 import { ICombiningOp, ReferenceType } from "./ops";
 import { addProperties, PropertySet } from "./properties";
 import {
@@ -71,7 +70,7 @@ class LocalReference implements LocalReferencePosition {
 
     public link(segment: ISegment, offset: number, listNode: ListNode<LocalReference> | undefined) {
         if (listNode !== this.listNode) {
-            this.getSegment().localRefs?.removeLocalRef(this);
+            this.segment.localRefs?.removeLocalRef(this);
             this.listNode = listNode;
         }
 
@@ -270,6 +269,10 @@ export class LocalReferenceCollection {
         if (this.has(lref)) {
             assertLocalReferences(lref);
             lref.getListNode()?.list?.remove(lref.getListNode());
+            lref.link(
+                lref.getSegment(),
+                lref.getOffset(),
+                undefined);
             if (refHasRangeLabels(lref) || refHasTileLabels(lref)) {
                 this.hierRefCount--;
             }
@@ -372,9 +375,15 @@ export class LocalReferenceCollection {
         }
     }
 
-    public addBeforeTombstones(refs: Iterable<LocalReferencePosition>, offset?: number) {
-        const firstOffset = offset ?? 0;
+    public addBeforeTombstones(refs: Iterable<LocalReferencePosition>) {
+        const firstOffset =0;
         const beforeRefs = this.refsByOffset[firstOffset]?.before ?? new List<LocalReference>();
+        if (this.refsByOffset[firstOffset]?.before === undefined) {
+            // ensure offset initialized
+            const refsAtOffset = this.refsByOffset[firstOffset] ??= { before: beforeRefs };
+            // ensure after initialized
+            refsAtOffset.before ??= beforeRefs;
+        }
 
         for (const lref of [...refs].reverse()) {
             assertLocalReferences(lref);
@@ -391,18 +400,19 @@ export class LocalReferenceCollection {
                 lref.getSegment().localRefs?.removeLocalRef(lref);
             }
         }
-        if (!beforeRefs.empty && this.refsByOffset[firstOffset]?.before === undefined) {
-            // ensure offset initialized
-            const refsAtOffset = this.refsByOffset[firstOffset] ??= { before: beforeRefs };
-            // ensure after initialized
-            refsAtOffset.before ??= beforeRefs;
-        }
+
     }
 
-    public addAfterTombstones(refs: Iterable<LocalReferencePosition>, offset?: number) {
-        const lastOffset = offset ?? this.refsByOffset.length - 1;
+    public addAfterTombstones(refs: Iterable<LocalReferencePosition>) {
+        const lastOffset = this.refsByOffset.length - 1;
         const afterRefs =
             this.refsByOffset[lastOffset]?.after ?? new List<LocalReference>();
+            if (this.refsByOffset[lastOffset]?.after === undefined) {
+                // ensure offset initialized
+                const refsAtOffset = this.refsByOffset[lastOffset] ??= { after: afterRefs };
+                // ensure after refs initialized
+                refsAtOffset.after ??= afterRefs;
+            }
 
         for (const lref of refs) {
             assertLocalReferences(lref);
@@ -419,12 +429,7 @@ export class LocalReferenceCollection {
                 lref.getSegment().localRefs?.removeLocalRef(lref);
             }
         }
-        if (!afterRefs.empty && this.refsByOffset[lastOffset]?.after === undefined) {
-            // ensure offset initialized
-            const refsAtOffset = this.refsByOffset[lastOffset] ??= { after: afterRefs };
-            // ensure after refs initialized
-            refsAtOffset.after ??= afterRefs;
-        }
+
     }
 
     public walkReferences(
