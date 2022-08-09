@@ -14,7 +14,6 @@ import {
 import {
     IGarbageCollectionData,
     IGarbageCollectionDetailsBase,
-    IGarbageCollectionSummaryDetails,
 } from "./garbageCollection";
 
 /**
@@ -56,12 +55,16 @@ export interface ISummarizeResult {
 /**
  * Contains the same data as ISummaryResult but in order to avoid naming collisions,
  * the data store summaries are wrapped around an array of labels identified by pathPartsForChildren.
- * Ex: id:""
-       pathPartsForChildren: ["path1"]
-       stats: ...
-       summary:
-        ...
-            "path1":
+ *
+ * @example
+ * ```
+ * id:""
+ * pathPartsForChildren: ["path1"]
+ * stats: ...
+ * summary:
+ *   ...
+ *     "path1":
+ * ```
  */
 export interface ISummarizeInternalResult extends ISummarizeResult {
     id: string;
@@ -230,7 +233,7 @@ export interface ISummarizerNodeWithGC extends ISummarizerNode {
         /** Optional configuration affecting summarize behavior */
         config?: ISummarizerNodeConfigWithGC,
         getGCDataFn?: (fullGC?: boolean) => Promise<IGarbageCollectionData>,
-        getInitialGCSummaryDetailsFn?: () => Promise<IGarbageCollectionSummaryDetails>,
+        getBaseGCDetailsFn?: () => Promise<IGarbageCollectionDetailsBase>,
     ): ISummarizerNodeWithGC;
 
     /**
@@ -261,14 +264,8 @@ export interface ISummarizerNodeWithGC extends ISummarizerNode {
      */
     updateUsedRoutes(usedRoutes: string[], gcTimestamp?: number): void;
 
-    /**
-     * @deprecated - Renamed to getBaseGCDetails.
-     * Returns the GC details that may be added to this node's summary.
-     */
-    getGCSummaryDetails(): IGarbageCollectionSummaryDetails;
-
     /** Returns the GC details to be added to this node's summary and is used to initialize new nodes' GC state. */
-    getBaseGCDetails?(): IGarbageCollectionDetailsBase;
+    getBaseGCDetails(): IGarbageCollectionDetailsBase;
 }
 
 export const channelsTreeName = ".channels";

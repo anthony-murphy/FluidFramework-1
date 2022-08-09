@@ -25,6 +25,7 @@ import {
     UniversalSequenceNumber,
 } from "./constants";
 import {
+    assertLocalReferences,
      LocalReferenceCollection,
      LocalReferencePosition,
 } from "./localReference";
@@ -83,6 +84,7 @@ import {
 	refGetTileLabels,
 	refHasTileLabel,
  } from "./referencePositions";
+import { PropertiesRollback } from "./segmentPropertiesManager";
 
 const minListenerComparer: Comparer<MinListener> = {
     min: { minRequired: Number.MIN_VALUE, onMinGE: () => { assert(false, 0x048 /* "onMinGE()" */); } },
@@ -849,7 +851,8 @@ export class MergeTree {
         } else {
             for (const ref of refsToSlide) {
                 ref.callbacks?.beforeSlide?.();
-                segment.localRefs.removeLocalRef(ref);
+                assertLocalReferences(ref);
+                ref.link(ref.getSegment(), 0, undefined);
                 ref.callbacks?.afterSlide?.();
             }
         }
@@ -981,7 +984,7 @@ export class MergeTree {
     public referencePositionToLocalPosition(
         refPos: ReferencePosition,
         refSeq = this.collabWindow.currentSeq,
-        clientId = this.collabWindow.clientId) {
+        clientId = this.collabWindow.clientId): number {
         const seg = refPos.getSegment();
         if (seg?.parent === undefined) {
             return DetachedReferencePosition;
@@ -1036,6 +1039,8 @@ export class MergeTree {
             }
             return { tile: searchInfo.tile, pos };
         }
+
+        return undefined;
     }
 
     private search<TClientData>(
@@ -1188,19 +1193,30 @@ export class MergeTree {
         }
     }
 
-    private addToPendingList(segment: ISegment, segmentGroup?: SegmentGroup, localSeq?: number) {
+    private addToPendingList(segment: ISegment, segmentGroup?: SegmentGroup, localSeq?: number,
+        previousProps?: PropertySet) {
         let _segmentGroup = segmentGroup;
         if (_segmentGroup === undefined) {
             // TODO: review the cast
             _segmentGroup = { segments: [], localSeq } as SegmentGroup;
+            if (previousProps) {
+                _segmentGroup.previousProps = [];
+            }
             this.pendingSegments!.enqueue(_segmentGroup);
+        }
+        if ((!_segmentGroup.previousProps && previousProps) ||
+            (_segmentGroup.previousProps && !previousProps)) {
+            throw new Error("All segments in group should have previousProps or none");
+        }
+        if (previousProps) {
+            _segmentGroup.previousProps!.push(previousProps);
         }
         segment.segmentGroups.enqueue(_segmentGroup);
         return _segmentGroup;
     }
 
     // TODO: error checking
-    public getMarkerFromId(id: string) {
+    public getMarkerFromId(id: string): ISegment | undefined {
         return this.idToSegment.get(id);
     }
 
@@ -1762,10 +1778,12 @@ export class MergeTree {
      * @param clientId - The id of the client making the annotate
      * @param seq - The sequence number of the annotate operation
      * @param opArgs - The op args for the annotate op. this is passed to the merge tree callback if there is one
+     * @param rollback - Whether this is for a local rollback and what kind
      */
     public annotateRange(
         start: number, end: number, props: PropertySet, combiningOp: ICombiningOp | undefined, refSeq: number,
-        clientId: number, seq: number, opArgs: IMergeTreeDeltaOpArgs) {
+        clientId: number, seq: number, opArgs: IMergeTreeDeltaOpArgs,
+        rollback: PropertiesRollback = PropertiesRollback.None) {
         this.ensureIntervalBoundary(start, refSeq, clientId);
         this.ensureIntervalBoundary(end, refSeq, clientId);
         const deltaSegments: IMergeTreeSegmentDelta[] = [];
@@ -1773,11 +1791,12 @@ export class MergeTree {
         let segmentGroup: SegmentGroup | undefined;
 
         const annotateSegment = (segment: ISegment) => {
-            const propertyDeltas = segment.addProperties(props, combiningOp, seq, this.collabWindow);
+            const propertyDeltas = segment.addProperties(props, combiningOp, seq, this.collabWindow, rollback);
             deltaSegments.push({ segment, propertyDeltas });
             if (this.collabWindow.collaborating) {
                 if (seq === UnassignedSequenceNumber) {
-                    segmentGroup = this.addToPendingList(segment, segmentGroup, localSeq);
+                    segmentGroup = this.addToPendingList(segment, segmentGroup, localSeq,
+                        propertyDeltas ? propertyDeltas : {});
                 } else {
                     if (MergeTree.options.zamboniSegments) {
                         this.addToLRUSet(segment, seq);
@@ -1832,7 +1851,6 @@ export class MergeTree {
                     // keep first removal at the head.
                     existingRemovalInfo.removedClientIds.unshift(clientId);
                     existingRemovalInfo.removedSeq = seq;
-                    segment.localRemovedSeq = undefined;
                     if (segment.localRefs?.empty === false) {
                         localOverlapWithRefs.push(segment);
                     }
@@ -1870,8 +1888,11 @@ export class MergeTree {
         };
         this.mapRange({ leaf: markRemoved, post: afterMarkRemoved }, refSeq, clientId, undefined, start, end);
         // these segments are already viewed as being removed locally and are not event-ed
-        // so can slide immediately
-        localOverlapWithRefs.forEach((s) => this.slideReferences(s, s.localRefs!));
+        // so can slide non-StayOnRemove refs immediately
+        localOverlapWithRefs.forEach(
+            (s) => this.slideReferences(s, Array.from(s.localRefs!)
+                .filter((localRef) => !refTypeIncludesFlag(localRef, ReferenceType.StayOnRemove))),
+        );
         // opArgs == undefined => test code
         if (this.mergeTreeDeltaCallback && removedSegments.length > 0) {
             this.mergeTreeDeltaCallback(
@@ -1898,7 +1919,7 @@ export class MergeTree {
     private nodeUpdateLengthNewStructure(node: IMergeBlock, recur = false) {
         this.blockUpdate(node);
         if (this.collabWindow.collaborating) {
-            node.partialLengths = PartialSequenceLengths.combine(this, node, this.collabWindow, recur);
+            node.partialLengths = PartialSequenceLengths.combine(node, this.collabWindow, recur);
         }
     }
 
@@ -1987,9 +2008,9 @@ export class MergeTree {
                 && MergeTree.options.incrementalUpdate
                 && clientId !== NonCollabClient
             ) {
-                node.partialLengths.update(this, node, seq, clientId, this.collabWindow);
+                node.partialLengths.update(node, seq, clientId, this.collabWindow);
             } else {
-                node.partialLengths = PartialSequenceLengths.combine(this, node, this.collabWindow);
+                node.partialLengths = PartialSequenceLengths.combine(node, this.collabWindow);
             }
         }
     }

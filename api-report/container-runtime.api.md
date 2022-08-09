@@ -95,13 +95,11 @@ export class ContainerRuntime extends TypedEventEmitter<IContainerRuntimeEvents>
     // (undocumented)
     createDataStore(pkg: string | string[]): Promise<IDataStore>;
     // (undocumented)
-    _createDataStoreWithProps(pkg: string | string[], props?: any, id?: string, isRoot?: boolean): Promise<IDataStore>;
+    _createDataStoreWithProps(pkg: string | string[], props?: any, id?: string): Promise<IDataStore>;
     // (undocumented)
     createDetachedDataStore(pkg: Readonly<string[]>): IFluidDataStoreContextDetached;
     // (undocumented)
     createDetachedRootDataStore(pkg: Readonly<string[]>, rootDataStoreId: string): IFluidDataStoreContextDetached;
-    // @deprecated (undocumented)
-    createRootDataStore(pkg: string | string[], rootDataStoreId: string): Promise<IFluidRouter>;
     createSummary(blobRedirectTable?: Map<string, string>, telemetryContext?: ITelemetryContext): ISummaryTree;
     deleteUnusedRoutes(unusedRoutes: string[]): void;
     // (undocumented)
@@ -113,8 +111,7 @@ export class ContainerRuntime extends TypedEventEmitter<IContainerRuntimeEvents>
     get disposed(): boolean;
     // (undocumented)
     readonly enqueueSummarize: ISummarizer["enqueueSummarize"];
-    // (undocumented)
-    flush(): void;
+    flush(isImmediateBatch?: boolean): void;
     // (undocumented)
     get flushMode(): FlushMode;
     // (undocumented)
@@ -169,8 +166,6 @@ export class ContainerRuntime extends TypedEventEmitter<IContainerRuntimeEvents>
     setAttachState(attachState: AttachState.Attaching | AttachState.Attached): void;
     // (undocumented)
     setConnectionState(connected: boolean, clientId?: string): void;
-    // (undocumented)
-    setFlushMode(mode: FlushMode): void;
     // (undocumented)
     get storage(): IDocumentStorageService;
     // (undocumented)
@@ -312,6 +307,11 @@ export interface IClientSummaryWatcher extends IDisposable {
     watchSummary(clientSequenceNumber: number): ISummary;
 }
 
+// @public
+export interface ICompressionRuntimeOptions {
+    readonly minimumSize?: number;
+}
+
 // @public (undocumented)
 export interface IConnectableRuntime {
     // (undocumented)
@@ -328,6 +328,7 @@ export interface IConnectableRuntime {
 
 // @public
 export interface IContainerRuntimeOptions {
+    readonly compressionOptions?: ICompressionRuntimeOptions;
     readonly enableOfflineLoad?: boolean;
     readonly flushMode?: FlushMode;
     // (undocumented)
@@ -335,7 +336,6 @@ export interface IContainerRuntimeOptions {
     readonly loadSequenceNumberVerification?: "close" | "log" | "bypass";
     // (undocumented)
     readonly summaryOptions?: ISummaryRuntimeOptions;
-    readonly useDataStoreAliasing?: boolean;
 }
 
 // @public
@@ -361,6 +361,7 @@ export interface IGCRuntimeOptions {
     disableGC?: boolean;
     gcAllowed?: boolean;
     runFullGC?: boolean;
+    sessionExpiryTimeoutMs?: number;
     sweepAllowed?: boolean;
 }
 
@@ -416,14 +417,6 @@ export interface IPendingFlush {
     type: "flush";
 }
 
-// @public
-export interface IPendingFlushMode {
-    // (undocumented)
-    flushMode: FlushMode;
-    // (undocumented)
-    type: "flushMode";
-}
-
 // @public (undocumented)
 export interface IPendingLocalState {
     pendingStates: IPendingState[];
@@ -457,7 +450,7 @@ export interface IPendingRuntimeState {
 }
 
 // @public (undocumented)
-export type IPendingState = IPendingMessage | IPendingFlushMode | IPendingFlush;
+export type IPendingState = IPendingMessage | IPendingFlush;
 
 // @public @deprecated (undocumented)
 export interface IProvideSummarizer {

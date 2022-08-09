@@ -11,15 +11,12 @@ import {
     LocalReferenceCollection,
     LocalReferencePosition,
     matchProperties,
-    MergeTree,
     MergeTreeDeltaOperationType,
     MergeTreeDeltaType,
     PropertySet,
     ReferenceType,
-    TextSegment,
     Trackable,
     TrackingGroup,
-    UnassignedSequenceNumber,
 } from "@fluidframework/merge-tree";
 import { SequenceDeltaEvent, SharedSegmentSequence } from "@fluidframework/sequence";
 import { IRevertible, UndoRedoStackManager } from "./undoRedoStackManager";
@@ -250,44 +247,4 @@ export function nodeMap(
         }
     }
     return true;
-}
-
-export function getSegString(mergeTree: MergeTree): { acked: string; local: string; refs: string; } {
-    let acked: string = "";
-    let local: string = "";
-    let refs: string = "";
-    const nodes = [...mergeTree.root.children];
-    while (nodes.length > 0) {
-        const node = nodes.shift();
-        if (node) {
-            if (node.isLeaf()) {
-                if (TextSegment.is(node)) {
-                    if (node.removedSeq === undefined) {
-                        if (node.removedSeq === UnassignedSequenceNumber) {
-                            acked += "_".repeat(node.text.length);
-                            if (node.seq === UnassignedSequenceNumber) {
-                                local += "*".repeat(node.text.length);
-                            }
-                            local += "-".repeat(node.text.length);
-                        } else {
-                            acked += "-".repeat(node.text.length);
-                            local += " ".repeat(node.text.length);
-                        }
-                    } else {
-                        if (node.seq === UnassignedSequenceNumber) {
-                            acked += "_".repeat(node.text.length);
-                            local += node.text;
-                        } else {
-                            acked += node.text;
-                            local += " ".repeat(node.text.length);
-                        }
-                    }
-                    refs += (node.localRefs?.refCount ?? 0).toString().padEnd(node.text.length, " ");
-                }
-            } else {
-                nodes.push(...node.children);
-            }
-        }
-    }
-    return { acked, local, refs };
 }
