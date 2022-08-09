@@ -1,86 +1,128 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 /*!
  * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
 
-export function ListRemoveEntry<U>(entry: List<U>): List<U> | undefined {
-    if (entry === undefined) {
+import { UsageError } from "@fluidframework/container-utils";
+
+export interface ListNode<T> {
+    readonly list: List<T> | undefined;
+    readonly data: T;
+    readonly next: ListNode<T> | undefined;
+    readonly prev: ListNode<T> | undefined;
+}
+
+class HeadNode<T> {
+    public _next: HeadNode<T> | DataNode<T> = this;
+    public _prev: HeadNode<T> | DataNode<T> = this;
+    public headNode: HeadNode<T>;
+    private readonly _list?: List<T>;
+    constructor(list: List<T> | undefined) {
+        this.headNode = this;
+        if (list) {
+            this._list = list;
+        }
+    }
+    public get next(): DataNode<T> | undefined {
+        return this._next === this.headNode
+            ? undefined
+            : this._next as DataNode<T>;
+    }
+    public get prev(): DataNode<T> | undefined {
+        return this._prev === this.headNode
+            ? undefined
+            : this._prev as DataNode<T>;
+    }
+    public get list() {
+        return this.headNode._list;
+    }
+}
+
+const DeadHead = new HeadNode<any>(undefined);
+
+class DataNode<T> extends HeadNode<T> implements ListNode<T> {
+    constructor(headNode: HeadNode<T>, public readonly data: T) {
+        super(undefined);
+        this.headNode = headNode;
+    }
+}
+
+function append<T>(precedingNode: DataNode<T> | HeadNode<T>, ... items: T[]) {
+    let pNode = precedingNode;
+    const oldNext = pNode._next;
+    items.forEach((n) => {
+        pNode._next = new DataNode<T>(pNode.headNode, n);
+        pNode._next._prev = pNode;
+        pNode = pNode._next;
+    });
+    oldNext._prev = pNode;
+    pNode._next = oldNext;
+    return precedingNode;
+}
+
+export function walk<T>(from: ListNode<T>, forward: boolean, handler: (node: ListNode<T>) => boolean | undefined) {
+    let node: ListNode<T> | undefined = from;
+    while (node !== undefined) {
+        if (handler(node) === false) {
+            return false;
+        }
+        node = forward ? node.next : node.prev;
+    }
+    return true;
+}
+
+export class List<T> implements Iterable<ListNode<T>> {
+    pop(): ListNode<T> | undefined {
+        return this.remove(this.last);
+    }
+    push(...items: T[]): { first: ListNode<T>; last: ListNode<T>; } {
+        this._len += items.length;
+        const pStart = append(this.headNode._prev, ... items);
+        return { first: pStart.next!, last: this.headNode.prev! };
+    }
+
+    shift(): ListNode<T> | undefined {
+        return this.remove(this.first);
+    }
+
+    unshift(...items: T[]): { first: ListNode<T>; last: ListNode<T>; } {
+        this._len += items.length;
+        const pEnd = append(this.headNode, ... items);
+        return { first: this.headNode.next!, last: pEnd.prev! };
+    }
+
+    public has(node: ListNode<T> | undefined): node is ListNode<T> {
+        return this._has(node);
+    }
+
+    private _has(node: ListNode<T> | undefined): node is DataNode<T> {
+        return node instanceof DataNode && node.headNode === this.headNode;
+    }
+
+    remove(node: ListNode<T> | undefined): ListNode<T> | undefined {
+        if (this._has(node)) {
+            node._prev._next = node._next;
+            node._next._prev = node._prev;
+            node._next = node._prev = DeadHead;
+            node.headNode = DeadHead;
+            this._len--;
+            return node;
+        }
         return undefined;
-    } else if (entry.isHead) {
-        return undefined;
-    } else {
-        entry.next.prev = entry.prev;
-        entry.prev.next = entry.next;
-        entry.next = deadhead;
-        entry.prev = deadhead;
     }
-    return (entry);
-}
-
-function ListMakeEntry<U>(data: U): List<U> {
-    return new List<U>(false, data);
-}
-
-export function ListMakeHead<U>(): List<U> {
-    return new List<U>(true, undefined);
-}
-
-export class List<T> {
-    public next: List<T>;
-    public prev: List<T>;
-
-    constructor(public isHead: boolean, public data: T | undefined) {
-        this.prev = this;
-        this.next = this;
-    }
-
-    public clear(): void {
-        if (this.isHead) {
-            this.prev = this;
-            this.next = this;
+    clear() {
+        for (const node of this) {
+            this.remove(node);
         }
     }
 
-    private add(data: T): List<T> {
-        const entry = ListMakeEntry(data);
-        this.prev.next = entry;
-        entry.next = this;
-        entry.prev = this.prev;
-        this.prev = entry;
-        return (entry);
-    }
-
-    public dequeue(): T | undefined {
-        if (!this.empty()) {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            const removedEntry = ListRemoveEntry(this.next)!;
-            return removedEntry.data;
-        }
-    }
-
-    public enqueue(data: T): List<T> {
-        return this.add(data);
-    }
-
-    public pop?(): T | undefined {
-        const removedEntry = ListRemoveEntry(this.prev);
-        return removedEntry ? removedEntry.data : undefined;
-    }
-
-    public walk(fn: (data: T, l: List<T>) => void): void {
-        for (let entry = this.next; !(entry.isHead); entry = entry.next) {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            fn(entry.data!, entry);
-        }
-    }
-
-    public some(fn: (data: T, l: List<T>) => boolean, rev?: boolean): T[] {
+    public some(fn: (data: T) => boolean, rev?: boolean): T[] {
         const rtn: T[] = [];
-        const start = rev ? this.prev : this.next;
-        for (let entry = start; !(entry.isHead); entry = rev ? entry.prev : entry.next) {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            const data = entry.data!;
-            if (fn(data, entry)) {
+        const start = rev ? this.last : this.first;
+        for (let entry = start; entry !== undefined; entry = rev ? entry.prev : entry.next) {
+            const data = entry.data;
+            if (fn(data)) {
                 if (rev) {
                     // preserve list order when in reverse
                     rtn.unshift(data);
@@ -92,53 +134,14 @@ export class List<T> {
         return rtn;
     }
 
-    public count(): number {
-        let entry: List<T>;
-        let i: number;
-
-        entry = this.next;
-        for (i = 0; !(entry.isHead); i++) {
-            entry = entry.next;
-        }
-        return (i);
-    }
-
-    public first(): T | undefined {
-        if (!this.empty()) {
-            return (this.next.data);
-        }
-    }
-
-    public last(): T | undefined {
-        if (!this.empty()) {
-            return (this.prev.data);
-        }
-    }
-
-    public empty(): boolean {
-        return (this.next === this);
-    }
-
-    public unshift(data: T): void {
-        const entry = ListMakeEntry(data);
-        entry.data = data;
-        entry.isHead = false;
-        entry.next = this.next;
-        entry.prev = this;
-        this.next = entry;
-        entry.next.prev = entry;
-    }
-
-    public [Symbol.iterator]() {
-        let node: List<T> | undefined = this.next;
-        const iterator: IterableIterator<T> = {
-            next(): IteratorResult<T> {
-                while (node && node.isHead === false) {
-                    const value = node.data;
-                    node = node.next;
-                    if (value !== undefined) {
-                        return { value, done: false };
-                    }
+    public [Symbol.iterator](): IterableIterator<ListNode<T>> {
+        let value = this.first;
+        const iterator: IterableIterator<ListNode<T>> = {
+            next(): IteratorResult<ListNode<T>> {
+                if (value !== undefined) {
+                    const rtn = { value, done: false };
+                    value = value.next;
+                    return rtn;
                 }
                 return { value: undefined, done: true };
             },
@@ -148,6 +151,41 @@ export class List<T> {
         };
         return iterator;
     }
+
+    private _len: number = 0;
+    private readonly headNode: HeadNode<T> | DataNode<T> = new HeadNode(this);
+    public get length() { return this._len; }
+    public get empty() { return this.headNode._next === this.headNode; }
+    public get first(): ListNode<T> | undefined {
+        return this.headNode.next;
+    }
+
+    public get last(): ListNode<T> | undefined {
+        return this.headNode.prev;
+    }
 }
 
-const deadhead = ListMakeHead<any>();
+export function WalkList<T>(
+    list: List<T>,
+    visitor: (lref: ListNode<T>) => boolean | void,
+    start?: ListNode<T>,
+    forward: boolean = true,
+) {
+    let current: ListNode<T> | undefined;
+    if (start) {
+        if (!list.has(start)) {
+            throw new UsageError("start must be in the provided list");
+        }
+        current = start;
+    } else {
+        current = forward ? list.first : list.last;
+    }
+
+    while (current !== undefined) {
+        if (visitor(current) === false) {
+            return false;
+        }
+        current = forward ? current.next : current.prev;
+    }
+    return true;
+}

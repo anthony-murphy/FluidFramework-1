@@ -5,7 +5,7 @@
 
 import { assert } from "@fluidframework/common-utils";
 import { UsageError } from "@fluidframework/container-utils";
-import { List, ListNode, WalkList } from "./list";
+import { List, ListNode, WalkList } from "./collections";
 import {
     ISegment, Marker,
 } from "./mergeTreeNodes";
@@ -380,6 +380,9 @@ export class LocalReferenceCollection {
             // shrink the offset array when empty and splitting
             this.refsByOffset.length = offset;
         }
+    }
+    public clear() {
+
     }
 
     public addBeforeTombstones(refs: Iterable<LocalReferencePosition>) {

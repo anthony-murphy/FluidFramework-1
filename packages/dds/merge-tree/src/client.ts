@@ -114,7 +114,7 @@ export class Client {
      */
     public peekPendingSegmentGroups(count: number = 1) {
         if (count === 1) {
-            return this._mergeTree.pendingSegments?.last();
+            return this._mergeTree.pendingSegments?.last?.data;
         }
         let taken = 0;
         return this._mergeTree.pendingSegments?.some(() => {
@@ -371,7 +371,7 @@ export class Client {
      */
     public rollback?(op: any, localOpMetadata: unknown) {
         if (op.type === MergeTreeDeltaType.INSERT || op.type === MergeTreeDeltaType.ANNOTATE) {
-            const pendingSegmentGroup = this._mergeTree.pendingSegments?.pop?.();
+            const pendingSegmentGroup = this._mergeTree.pendingSegments?.pop?.()?.data;
             if (pendingSegmentGroup === undefined || pendingSegmentGroup !== localOpMetadata
                 || (op.type === MergeTreeDeltaType.ANNOTATE && !pendingSegmentGroup.previousProps)) {
                 throw new Error("Rollback op doesn't match last edit");
@@ -847,7 +847,7 @@ export class Client {
         resetOp: IMergeTreeDeltaOp,
         segmentGroup: SegmentGroup): IMergeTreeDeltaOp[] {
         assert(!!segmentGroup, 0x033 /* "Segment group undefined" */);
-        const NACKedSegmentGroup = this._mergeTree.pendingSegments?.dequeue();
+        const NACKedSegmentGroup = this._mergeTree.pendingSegments?.pop()?.data;
         assert(segmentGroup === NACKedSegmentGroup,
             0x034 /* "Segment group not at head of merge tree pending queue" */);
 
@@ -909,7 +909,7 @@ export class Client {
             if (newOp) {
                 const newSegmentGroup: SegmentGroup = { segments: [], localSeq: segmentGroup.localSeq };
                 segment.segmentGroups.enqueue(newSegmentGroup);
-                this._mergeTree.pendingSegments!.enqueue(newSegmentGroup);
+                this._mergeTree.pendingSegments?.push(newSegmentGroup);
                 opList.push(newOp);
             }
         }

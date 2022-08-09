@@ -14,7 +14,6 @@ import {
     Comparer,
     Heap,
     List,
-    ListMakeHead,
     Stack,
 } from "./collections";
 import {
@@ -528,7 +527,7 @@ export class MergeTree {
         this.collabWindow.collaborating = true;
         this.collabWindow.currentSeq = currentSeq;
         this.segmentsToScour = new Heap<LRUSegment>([], LRUSegmentComparer);
-        this.pendingSegments = ListMakeHead<SegmentGroup>();
+        this.pendingSegments = new List<SegmentGroup>();
         this.nodeUpdateLengthNewStructure(this.root, true);
     }
 
@@ -1151,7 +1150,7 @@ export class MergeTree {
      */
     public ackPendingSegment(opArgs: IMergeTreeDeltaOpArgs) {
         const seq = opArgs.sequencedMessage!.sequenceNumber;
-        const pendingSegmentGroup = this.pendingSegments!.dequeue();
+        const pendingSegmentGroup = this.pendingSegments?.pop()?.data;
         const nodesToUpdate: IMergeBlock[] = [];
         let overwrite = false;
         if (pendingSegmentGroup !== undefined) {
@@ -1202,14 +1201,7 @@ export class MergeTree {
             if (previousProps) {
                 _segmentGroup.previousProps = [];
             }
-            this.pendingSegments!.enqueue(_segmentGroup);
-        }
-        if ((!_segmentGroup.previousProps && previousProps) ||
-            (_segmentGroup.previousProps && !previousProps)) {
-            throw new Error("All segments in group should have previousProps or none");
-        }
-        if (previousProps) {
-            _segmentGroup.previousProps!.push(previousProps);
+            this.pendingSegments!.push(_segmentGroup);
         }
         segment.segmentGroups.enqueue(_segmentGroup);
         return _segmentGroup;

@@ -705,16 +705,16 @@ export class LocalReferenceCollection {
     constructor(
     segment: ISegment, initialRefsByfOffset?: (IRefsAtOffset | undefined)[]);
     // (undocumented)
-    addAfterTombstones(...refs: Iterable<LocalReferencePosition>[]): void;
+    addAfterTombstones(refs: Iterable<LocalReferencePosition>): void;
     // (undocumented)
-    addBeforeTombstones(...refs: Iterable<LocalReferencePosition>[]): void;
+    addBeforeTombstones(refs: Iterable<LocalReferencePosition>): void;
     // @internal (undocumented)
     addLocalRef(lref: LocalReferencePosition, offset: number): void;
     // (undocumented)
     static append(seg1: ISegment, seg2: ISegment): void;
     // @internal
     append(other: LocalReferenceCollection): void;
-    // @internal (undocumented)
+    // (undocumented)
     clear(): void;
     // @internal (undocumented)
     createLocalRef(offset: number, refType: ReferenceType, properties: PropertySet | undefined): LocalReferencePosition;
@@ -724,10 +724,14 @@ export class LocalReferenceCollection {
     has(lref: ReferencePosition): boolean;
     // @internal (undocumented)
     hierRefCount: number;
+    // (undocumented)
+    refCount: number;
     // @internal (undocumented)
     removeLocalRef(lref: LocalReferencePosition): LocalReferencePosition | undefined;
     // @internal
     split(offset: number, splitSeg: ISegment): void;
+    // (undocumented)
+    walkReferences(visitor: (lref: LocalReferencePosition) => boolean | void | undefined, start?: LocalReferencePosition, forward?: boolean): boolean;
 }
 
 // @public (undocumented)

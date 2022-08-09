@@ -72,7 +72,6 @@ declare function get_current_ClassDeclaration_BaseSegment():
 declare function use_old_ClassDeclaration_BaseSegment(
     use: TypeOnly<old.BaseSegment>);
 use_old_ClassDeclaration_BaseSegment(
-    // @ts-expect-error compatibility expected to be broken
     get_current_ClassDeclaration_BaseSegment());
 
 /*
@@ -907,7 +906,6 @@ declare function get_current_InterfaceDeclaration_IMergeBlock():
 declare function use_old_InterfaceDeclaration_IMergeBlock(
     use: TypeOnly<old.IMergeBlock>);
 use_old_InterfaceDeclaration_IMergeBlock(
-    // @ts-expect-error compatibility expected to be broken
     get_current_InterfaceDeclaration_IMergeBlock());
 
 /*
@@ -933,7 +931,6 @@ declare function get_current_TypeAliasDeclaration_IMergeNode():
 declare function use_old_TypeAliasDeclaration_IMergeNode(
     use: TypeOnly<old.IMergeNode>);
 use_old_TypeAliasDeclaration_IMergeNode(
-    // @ts-expect-error compatibility expected to be broken
     get_current_TypeAliasDeclaration_IMergeNode());
 
 /*
@@ -959,7 +956,6 @@ declare function get_current_InterfaceDeclaration_IMergeNodeCommon():
 declare function use_old_InterfaceDeclaration_IMergeNodeCommon(
     use: TypeOnly<old.IMergeNodeCommon>);
 use_old_InterfaceDeclaration_IMergeNodeCommon(
-    // @ts-expect-error compatibility expected to be broken
     get_current_InterfaceDeclaration_IMergeNodeCommon());
 
 /*
@@ -1321,7 +1317,6 @@ declare function get_current_ClassDeclaration_IncrementalMapState():
 declare function use_old_ClassDeclaration_IncrementalMapState(
     use: TypeOnly<old.IncrementalMapState<any>>);
 use_old_ClassDeclaration_IncrementalMapState(
-    // @ts-expect-error compatibility expected to be broken
     get_current_ClassDeclaration_IncrementalMapState());
 
 /*
@@ -1395,7 +1390,6 @@ declare function get_current_InterfaceDeclaration_InsertContext():
 declare function use_old_InterfaceDeclaration_InsertContext(
     use: TypeOnly<old.InsertContext>);
 use_old_InterfaceDeclaration_InsertContext(
-    // @ts-expect-error compatibility expected to be broken
     get_current_InterfaceDeclaration_InsertContext());
 
 /*
@@ -1637,7 +1631,6 @@ declare function get_current_InterfaceDeclaration_ISegmentChanges():
 declare function use_old_InterfaceDeclaration_ISegmentChanges(
     use: TypeOnly<old.ISegmentChanges>);
 use_old_InterfaceDeclaration_ISegmentChanges(
-    // @ts-expect-error compatibility expected to be broken
     get_current_InterfaceDeclaration_ISegmentChanges());
 
 /*
@@ -1759,7 +1752,6 @@ declare function get_current_ClassDeclaration_LocalReferenceCollection():
 declare function use_old_ClassDeclaration_LocalReferenceCollection(
     use: TypeOnly<old.LocalReferenceCollection>);
 use_old_ClassDeclaration_LocalReferenceCollection(
-    // @ts-expect-error compatibility expected to be broken
     get_current_ClassDeclaration_LocalReferenceCollection());
 
 /*
@@ -1957,7 +1949,6 @@ declare function get_current_ClassDeclaration_MergeBlock():
 declare function use_old_ClassDeclaration_MergeBlock(
     use: TypeOnly<old.MergeBlock>);
 use_old_ClassDeclaration_MergeBlock(
-    // @ts-expect-error compatibility expected to be broken
     get_current_ClassDeclaration_MergeBlock());
 
 /*
@@ -1983,7 +1974,6 @@ declare function get_current_ClassDeclaration_MergeNode():
 declare function use_old_ClassDeclaration_MergeNode(
     use: TypeOnly<old.MergeNode>);
 use_old_ClassDeclaration_MergeNode(
-    // @ts-expect-error compatibility expected to be broken
     get_current_ClassDeclaration_MergeNode());
 
 /*
@@ -3163,7 +3153,6 @@ declare function get_current_ClassDeclaration_TextSegment():
 declare function use_old_ClassDeclaration_TextSegment(
     use: TypeOnly<old.TextSegment>);
 use_old_ClassDeclaration_TextSegment(
-    // @ts-expect-error compatibility expected to be broken
     get_current_ClassDeclaration_TextSegment());
 
 /*

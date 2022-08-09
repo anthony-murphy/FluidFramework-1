@@ -4,6 +4,8 @@
 
 ```ts
 
+import { IMergeBlock } from '@fluidframework/merge-tree';
+import { IMergeNode } from '@fluidframework/merge-tree';
 import { ISegment } from '@fluidframework/merge-tree';
 import { ISharedMap } from '@fluidframework/map';
 import { IValueChanged } from '@fluidframework/map';
@@ -17,6 +19,9 @@ export interface IRevertible {
     // (undocumented)
     revert(): any;
 }
+
+// @public (undocumented)
+export function nodeMap(block: IMergeBlock | undefined, startChild: IMergeNode, leafAction: (seg: ISegment) => boolean, forward: boolean): boolean;
 
 // @public
 export class SharedMapRevertible implements IRevertible {

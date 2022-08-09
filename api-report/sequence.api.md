@@ -454,6 +454,8 @@ export abstract class SharedSegmentSequence<T extends ISegment> extends SharedOb
     // (undocumented)
     insertAtReferencePosition(pos: ReferencePosition, segment: T): void;
     // (undocumented)
+    insertSegmentFromSpec?: (segmentSpec: IJSONSegment, position: number) => ISegment;
+    // (undocumented)
     protected loadCore(storage: IChannelStorageService): Promise<void>;
     // (undocumented)
     get loaded(): Promise<void>;
