@@ -394,14 +394,19 @@ export class LocalReferenceCollection {
             // ensure after initialized
             refsAtOffset.before ??= beforeRefs;
         }
-
-        for (const lref of [...refs].reverse()) {
+        let precedingRef: ListNode<LocalReference> | undefined;
+        for (const lref of refs) {
             assertLocalReferences(lref);
             if (refTypeIncludesFlag(lref, ReferenceType.SlideOnRemove)) {
+                if (precedingRef === undefined) {
+                    precedingRef = beforeRefs.unshift(lref).first;
+                } else {
+                    precedingRef = beforeRefs.insertAfter(precedingRef, lref).first;
+                }
                 lref.link(
                     this.segment,
                     firstOffset,
-                    beforeRefs.unshift(lref).first);
+                    precedingRef);
                 if (refHasRangeLabels(lref) || refHasTileLabels(lref)) {
                     this.hierRefCount++;
                 }

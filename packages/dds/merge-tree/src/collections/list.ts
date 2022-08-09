@@ -92,6 +92,15 @@ export class List<T> implements Iterable<ListNode<T>> {
         return { first: this.headNode.next!, last: pEnd.prev! };
     }
 
+    insertAfter(node: ListNode<T>, ...items: T[]) {
+        if (!this._has(node)) {
+            throw new Error("node not in list");
+        }
+        this._len += items.length;
+        const pEnd = append(node, ... items);
+        return { first: node.next!, last: pEnd.prev! };
+    }
+
     public has(node: ListNode<T> | undefined): node is ListNode<T> {
         return this._has(node);
     }
