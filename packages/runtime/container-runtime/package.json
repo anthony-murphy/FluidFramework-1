@@ -151,16 +151,12 @@
       "TypeAliasDeclaration_IPendingState": {
         "forwardCompat": false
       },
-      "ClassDeclaration_ContainerRuntime": {
+      "RemovedInterfaceDeclaration_IPendingRuntimeState": {
+        "forwardCompat": false,
         "backCompat": false
       },
-      "InterfaceDeclaration_IPendingRuntimeState": {
-        "forwardCompat": false
-      },
-      "InterfaceDeclaration_ISummarizerRuntime": {
-        "backCompat": false
-      },
-      "InterfaceDeclaration_IConnectableRuntime": {
+      "TypeAliasDeclaration_SummarizerStopReason": {
+        "forwardCompat": false,
         "backCompat": false
       }
     }

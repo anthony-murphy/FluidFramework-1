@@ -41,7 +41,6 @@ import { IResponse } from '@fluidframework/core-interfaces';
 import { IRuntime } from '@fluidframework/container-definitions';
 import { ISequencedDocumentMessage } from '@fluidframework/protocol-definitions';
 import { ISignalMessage } from '@fluidframework/protocol-definitions';
-import { ISnapshotTree } from '@fluidframework/protocol-definitions';
 import { ISnapshotTreeWithBlobContents } from '@fluidframework/container-definitions';
 import { ISummaryAck } from '@fluidframework/protocol-definitions';
 import { ISummaryContent } from '@fluidframework/protocol-definitions';
@@ -124,7 +123,7 @@ export class ContainerRuntime extends TypedEventEmitter<IContainerRuntimeEvents>
     // Warning: (ae-forgotten-export) The symbol "GCNodeType" needs to be exported by the entry point index.d.ts
     getNodeType(nodePath: string): GCNodeType;
     // (undocumented)
-    getPendingLocalState(): IPendingRuntimeState;
+    getPendingLocalState(): unknown;
     // (undocumented)
     getQuorum(): IQuorumClients;
     // (undocumented)
@@ -440,15 +439,6 @@ export interface IPendingMessage {
     type: "message";
 }
 
-// @public
-export interface IPendingRuntimeState {
-    baseSnapshot: ISnapshotTree;
-    pending?: IPendingLocalState;
-    savedOps: ISequencedDocumentMessage[];
-    // Warning: (ae-forgotten-export) The symbol "ISerializedBaseSnapshotBlobs" needs to be exported by the entry point index.d.ts
-    snapshotBlobs: ISerializedBaseSnapshotBlobs;
-}
-
 // @public (undocumented)
 export type IPendingState = IPendingMessage | IPendingFlush;
 
@@ -747,7 +737,11 @@ export type SummarizerStopReason =
 * client to no longer be elected as responsible for summaries. Then it
 * tries to stop its spawned summarizer client.
 */
-| "parentShouldNotSummarize"
+| "notElectedParent"
+/**
+* We are not already running the summarizer and we are not the current elected client id.
+*/
+| "notElectedClient"
 /** Summarizer client was disconnected */
 | "summarizerClientDisconnected" | "summarizerException";
 
