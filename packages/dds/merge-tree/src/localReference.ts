@@ -5,7 +5,7 @@
 
 import { assert } from "@fluidframework/common-utils";
 import { UsageError } from "@fluidframework/container-utils";
-import { List, ListNode, WalkList } from "./collections";
+import { List, ListNode, walkList } from "./collections";
 import {
     ISegment, Marker,
 } from "./mergeTreeNodes";
@@ -158,7 +158,7 @@ export class LocalReferenceCollection {
      */
     public hierRefCount: number = 0;
     private readonly refsByOffset: (IRefsAtOffset | undefined)[];
-    public refCount: number = 0;
+    private refCount: number = 0;
 
     /**
      *
@@ -255,7 +255,7 @@ export class LocalReferenceCollection {
         const refsAtOffset = this.refsByOffset[offset] ??= { at: new List<LocalReference>() };
         const atRefs = refsAtOffset.at ??= new List<LocalReference>();
 
-        lref.link(this.segment, offset, atRefs.push(lref).first);
+        lref.link(this.segment, offset, atRefs.push(lref)?.first);
 
         if (refHasRangeLabels(lref) || refHasTileLabels(lref)) {
             this.hierRefCount++;
@@ -303,6 +303,7 @@ export class LocalReferenceCollection {
         this.hierRefCount += other.hierRefCount;
         this.refCount += other.refCount;
         other.hierRefCount = 0;
+        other.refCount = 0;
         for (const lref of other) {
             assertLocalReferences(lref);
             lref.link(
@@ -337,9 +338,10 @@ export class LocalReferenceCollection {
         const refsAtOffset = this.refsByOffset[offset];
         if (refsAtOffset?.after === listNode.list
             || refsAtOffset?.at === listNode.list
-            || refsAtOffset?.before === listNode.list) {
-                return true;
-            }
+            || refsAtOffset?.before === listNode.list
+        ) {
+            return true;
+        }
         return false;
     }
 
@@ -391,7 +393,7 @@ export class LocalReferenceCollection {
         if (this.refsByOffset[firstOffset]?.before === undefined) {
             // ensure offset initialized
             const refsAtOffset = this.refsByOffset[firstOffset] ??= { before: beforeRefs };
-            // ensure after initialized
+            // ensure before initialized
             refsAtOffset.before ??= beforeRefs;
         }
         let precedingRef: ListNode<LocalReference> | undefined;
@@ -399,9 +401,9 @@ export class LocalReferenceCollection {
             assertLocalReferences(lref);
             if (refTypeIncludesFlag(lref, ReferenceType.SlideOnRemove)) {
                 if (precedingRef === undefined) {
-                    precedingRef = beforeRefs.unshift(lref).first;
+                    precedingRef = beforeRefs.unshift(lref)?.first;
                 } else {
-                    precedingRef = beforeRefs.insertAfter(precedingRef, lref).first;
+                    precedingRef = beforeRefs.insertAfter(precedingRef, lref)?.first;
                 }
                 lref.link(
                     this.segment,
@@ -434,7 +436,7 @@ export class LocalReferenceCollection {
                 lref.link(
                     this.segment,
                     lastOffset,
-                    afterRefs.push(lref).first);
+                    afterRefs.push(lref)?.first);
                 if (refHasRangeLabels(lref) || refHasTileLabels(lref)) {
                     this.hierRefCount++;
                 }
@@ -475,25 +477,22 @@ export class LocalReferenceCollection {
             }
         }
 
-        const listVisitor = (node: ListNode<LocalReference>) => visitor(node.data);
         const listWalker = (pos: List<LocalReference>) => {
-            if (WalkList(
+            return walkList(
                 pos,
-                listVisitor,
+                (node) => visitor(node.data),
                 startList === pos ? startNode : undefined,
                 forward,
-            ) === false) {
-                return false;
-            }
+            );
         };
 
         while (offset >= 0 && offset < this.refsByOffset.length) {
             while (offsetPositions.length > 0) {
-                const pos = forward
+                const offsetPos = forward
                     ? offsetPositions.shift()
                     : offsetPositions.pop();
-                if (pos !== undefined) {
-                    if (listWalker(pos) === false) {
+                if (offsetPos !== undefined) {
+                    if (listWalker(offsetPos) === false) {
                         return false;
                     }
                 }

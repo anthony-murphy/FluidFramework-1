@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 /*!
  * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
@@ -11,6 +10,11 @@ export interface ListNode<T> {
     readonly data: T;
     readonly next: ListNode<T> | undefined;
     readonly prev: ListNode<T> | undefined;
+}
+
+export interface ListNodeRange<T> {
+    first: ListNode<T>;
+    last: ListNode<T>;
 }
 
 class HeadNode<T> {
@@ -48,48 +52,43 @@ class DataNode<T> extends HeadNode<T> implements ListNode<T> {
     }
 }
 
-function append<T>(precedingNode: DataNode<T> | HeadNode<T>, ... items: T[]) {
-    let pNode = precedingNode;
-    const oldNext = pNode._next;
+function insertAfter<T>(node: DataNode<T> | HeadNode<T>, ... items: T[]): ListNodeRange<T> | undefined {
+    let previousNode = node;
+    const oldNext = previousNode._next;
+    let newRange: ListNodeRange<T> | undefined;
     items.forEach((n) => {
-        pNode._next = new DataNode<T>(pNode.headNode, n);
-        pNode._next._prev = pNode;
-        pNode = pNode._next;
-    });
-    oldNext._prev = pNode;
-    pNode._next = oldNext;
-    return precedingNode;
-}
-
-export function walk<T>(from: ListNode<T>, forward: boolean, handler: (node: ListNode<T>) => boolean | undefined) {
-    let node: ListNode<T> | undefined = from;
-    while (node !== undefined) {
-        if (handler(node) === false) {
-            return false;
+        const newNode = new DataNode<T>(node.headNode, n);
+        if (newRange === undefined) {
+            newRange = { first: newNode, last: newNode };
+        } else {
+            newRange.last = newNode;
         }
-        node = forward ? node.next : node.prev;
-    }
-    return true;
+        newNode._prev = previousNode;
+        previousNode._next = newNode;
+        previousNode = newNode;
+    });
+    oldNext._prev = previousNode;
+    previousNode._next = oldNext;
+    return newRange;
 }
 
-export class List<T> implements Iterable<ListNode<T>> {
+export class List<T> implements Iterable<ListNode<T>>, Partial<ListNodeRange<T>> {
     pop(): ListNode<T> | undefined {
         return this.remove(this.last);
     }
-    push(...items: T[]): { first: ListNode<T>; last: ListNode<T>; } {
+    push(...items: T[]) {
         this._len += items.length;
-        const pStart = append(this.headNode._prev, ... items);
-        return { first: pStart.next!, last: this.headNode.prev! };
+        const start = this.headNode._prev;
+        return insertAfter(start, ... items);
     }
 
     shift(): ListNode<T> | undefined {
         return this.remove(this.first);
     }
 
-    unshift(...items: T[]): { first: ListNode<T>; last: ListNode<T>; } {
+    unshift(...items: T[]) {
         this._len += items.length;
-        const pEnd = append(this.headNode, ... items);
-        return { first: this.headNode.next!, last: pEnd.prev! };
+        return insertAfter(this.headNode, ... items);
     }
 
     insertAfter(node: ListNode<T>, ...items: T[]) {
@@ -97,8 +96,7 @@ export class List<T> implements Iterable<ListNode<T>> {
             throw new Error("node not in list");
         }
         this._len += items.length;
-        const pEnd = append(node, ... items);
-        return { first: node.next!, last: pEnd.prev! };
+        return insertAfter(node, ... items);
     }
 
     public has(node: ListNode<T> | undefined): node is ListNode<T> {
@@ -113,8 +111,7 @@ export class List<T> implements Iterable<ListNode<T>> {
         if (this._has(node)) {
             node._prev._next = node._next;
             node._next._prev = node._prev;
-            node._next = node._prev = DeadHead;
-            node.headNode = DeadHead;
+            node.headNode = node._next = node._prev = DeadHead;
             this._len--;
             return node;
         }
@@ -174,7 +171,7 @@ export class List<T> implements Iterable<ListNode<T>> {
     }
 }
 
-export function WalkList<T>(
+export function walkList<T>(
     list: List<T>,
     visitor: (lref: ListNode<T>) => boolean | void,
     start?: ListNode<T>,
