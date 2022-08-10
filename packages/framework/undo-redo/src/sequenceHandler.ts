@@ -119,34 +119,34 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
             const revertible = this.revertibles.pop();
             if (revertible !== undefined) {
                 while (revertible.trackingGroup.size > 0) {
-                    const sg = revertible.trackingGroup.tracked[0];
-                    sg.trackingCollection.unlink(revertible.trackingGroup);
+                    const tracked = revertible.trackingGroup.tracked[0];
+                    tracked.trackingCollection.unlink(revertible.trackingGroup);
                     switch (revertible.operation) {
                         case MergeTreeDeltaType.INSERT:
-                            if (sg.isLeaf() && sg.removedSeq === undefined) {
-                                const start = this.sequence.getPosition(sg);
-                                this.sequence.removeRange(start, start + sg.cachedLength);
+                            if (tracked.isLeaf() && tracked.removedSeq === undefined) {
+                                const start = this.sequence.getPosition(tracked);
+                                this.sequence.removeRange(start, start + tracked.cachedLength);
                             }
                             break;
 
                         case MergeTreeDeltaType.REMOVE:
-                           assert(!sg.isLeaf(), "should be local reference");
-                            const insertPos = this.sequence.localReferencePositionToPosition(sg);
+                           assert(!tracked.isLeaf(), "should be local reference");
+                            const insertPos = this.sequence.localReferencePositionToPosition(tracked);
                             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                             const insertSegment = this.sequence.insertSegmentFromSpec!(
                                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                                sg.properties!.segment,
+                                tracked.properties!.segment,
                                 insertPos);
 
-                            sg.trackingCollection.trackingGroups.forEach((tg) => {
+                            tracked.trackingCollection.trackingGroups.forEach((tg) => {
                                 tg.link(insertSegment);
-                                tg.unlink(sg);
+                                tg.unlink(tracked);
                             });
-                            const forward = sg.getSegment().ordinal < insertSegment.ordinal;
+                            const forward = tracked.getSegment().ordinal < insertSegment.ordinal;
                             const insertRef: LocalReferencePosition[] = [];
                             const refHandler = (
                                 lref: LocalReferencePosition) => {
-                                    if (sg !== lref) {
+                                    if (tracked !== lref) {
                                         if (forward) {
                                             insertRef.push(lref);
                                         } else {
@@ -155,8 +155,8 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
                                     }
                                 };
                             nodeMap(
-                                sg.getSegment().parent,
-                                sg.getSegment(),
+                                tracked.getSegment().parent,
+                                tracked.getSegment(),
                                 (seg) => {
                                     if (seg === insertSegment) {
                                         return false;
@@ -164,14 +164,14 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
                                     if (seg.localRefs?.empty === false) {
                                         return seg.localRefs.walkReferences(
                                             refHandler,
-                                            seg === sg.getSegment() ? sg : undefined,
+                                            seg === tracked.getSegment() ? tracked : undefined,
                                             forward);
                                     }
                                     return true;
                                 },
                                 forward);
 
-                            sg.getSegment().localRefs?.removeLocalRef(sg);
+                            tracked.getSegment().localRefs?.removeLocalRef(tracked);
                             if (insertRef.length > 0) {
                                 const localRefs =
                                     insertSegment.localRefs ??= new LocalReferenceCollection(insertSegment);
@@ -181,11 +181,11 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
                             break;
 
                         case MergeTreeDeltaType.ANNOTATE:
-                            if (sg.isLeaf() && sg.removedSeq === undefined) {
-                                const start = this.sequence.getPosition(sg);
+                            if (tracked.isLeaf() && tracked.removedSeq === undefined) {
+                                const start = this.sequence.getPosition(tracked);
                                 this.sequence.annotateRange(
                                     start,
-                                    start + sg.cachedLength,
+                                    start + tracked.cachedLength,
                                     revertible.propertyDelta,
                                     undefined);
                             }
