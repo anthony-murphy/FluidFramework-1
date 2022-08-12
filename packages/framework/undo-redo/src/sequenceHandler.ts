@@ -210,54 +210,45 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
     }
 }
 
-export function nodeMap(
-    block: IMergeBlock | undefined,
+export function nodeMap<TData>(
+    startBlock: IMergeBlock | undefined,
     startChild: IMergeNode,
-    leafAction: (seg: ISegment) => boolean,
+    leafAction: (seg: ISegment, accum?: TData) => boolean,
     forward: boolean,
+    accum?: TData,
 ): boolean {
-    if (block?.children?.[startChild?.index] !== startChild) {
+    if (startBlock?.children?.[startChild?.index] !== startChild) {
         throw new Error("invalid child");
     }
-    // the input defines the starting level of the tree.
-    // we do an efficient depth first search/iteration starting there.
-    // From the level search down until we've covered all children.
-    // then we move up and over depending on forward.
-    // we then repeat from the that next level of the tree.
     const increment = forward ? 1 : -1;
-    let nextLevel: { block: IMergeBlock; start: IMergeNode; } | undefined = { block, start: startChild };
-    const downMap: typeof nextLevel[] = [];
-    while (nextLevel !== undefined) {
-        downMap.push(nextLevel);
-        const nextIndex = nextLevel.block.index + increment;
-        if (nextLevel.block.parent?.children[nextIndex] !== undefined) {
-            nextLevel = {
-                block: nextLevel.block.parent,
-                start: nextLevel.block.parent.children[nextIndex] };
-        } else {
-            nextLevel = undefined;
+    let current: { block: IMergeBlock; start: IMergeNode; } | undefined = {
+        block: startBlock,
+        start: startChild,
+    };
+    while (current !== undefined) {
+        while (!current.start.isLeaf()) {
+            current.block = current.start;
+            current.start = current.block.children[forward ? 0 : current.block.childCount - 1];
         }
-
-        while (downMap.length > 0) {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            const current = downMap.shift()!;
-
-            for (let childIndex = current.start.index;
-                childIndex >= 0 && childIndex < current.block.childCount;
-                childIndex += increment) {
-                const child = current.block.children[childIndex];
-
-                if (child.isLeaf()) {
-                    if (leafAction(child) === false) {
-                        return false;
-                    }
-                } else {
-                    downMap.push({
-                        block: child,
-                        start: child.children[forward ? 0 : child.childCount - 1],
-                    });
-                }
+        for (let childIndex = current.start.index;
+            childIndex >= 0 && childIndex < current.block.childCount;
+            childIndex += increment) {
+            const child = current.block.children[childIndex];
+            assert(child.isLeaf(), "all children must be leaves when start is");
+            if (leafAction(child, accum) === false) {
+                return false;
             }
+        }
+        while (current.block.parent !== undefined
+            && current.block.parent.children[current.block.index + increment] === undefined) {
+            current.start = current.block;
+            current.block = current.block.parent;
+        }
+        if (current.block.parent !== undefined) {
+            current.start = current.block.parent.children[current.block.index + increment];
+            current.block = current.block.parent;
+        } else {
+            current = undefined;
         }
     }
     return true;
