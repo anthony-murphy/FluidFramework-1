@@ -15,7 +15,7 @@ import { UndoRedoStackManager } from "../undoRedoStackManager";
 
 const text =
     // eslint-disable-next-line max-len
-    "The SharedSegmentSequenceRevertible does the heavy lifting of tracking and reverting changes on the underlying SharedSegmentSequence. This is accomplished via TrackingGroup objects.";
+    "The SharedSegmentSequenceRevertible does the heavy lifting of tracking and reverting changes on the underlying SharedSegmentSequence.";
 
 function insertTextAsChunks(sharedString: SharedString, targetLength = text.length) {
     let chunks = 0;
@@ -144,7 +144,7 @@ describe("SharedSegmentSequenceUndoRedoHandler", () => {
         assert.equal(sharedString.getText(), text);
     });
 
-    it("Test", async () => {
+    it("Split operations and process remote messages", async () => {
         const handler = new SharedSegmentSequenceUndoRedoHandler(undoRedoStack);
         handler.attachSequence(sharedString);
         let expected = "";

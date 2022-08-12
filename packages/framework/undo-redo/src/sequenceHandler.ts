@@ -219,31 +219,45 @@ export function nodeMap(
     if (block?.children?.[startChild?.index] !== startChild) {
         throw new Error("invalid child");
     }
-    for (let childIndex = startChild.index;
-        childIndex >= 0 && childIndex < block.childCount;
-        childIndex += (forward ? 1 : -1)) {
-        const child = block.children[childIndex];
-
-        if (child.isLeaf()) {
-            if (leafAction(child) === false) {
-                return false;
-            }
+    // the input defines the starting level of the tree.
+    // we do an efficient depth first search/iteration starting there.
+    // From the level search down until we've covered all children.
+    // then we move up and over depending on forward.
+    // we then repeat from the that next level of the tree.
+    const increment = forward ? 1 : -1;
+    let nextLevel: { block: IMergeBlock; start: IMergeNode; } | undefined = { block, start: startChild };
+    const downMap: typeof nextLevel[] = [];
+    while (nextLevel !== undefined) {
+        downMap.push(nextLevel);
+        const nextIndex = nextLevel.block.index + increment;
+        if (nextLevel.block.parent?.children[nextIndex] !== undefined) {
+            nextLevel = {
+                block: nextLevel.block.parent,
+                start: nextLevel.block.parent.children[nextIndex] };
         } else {
-            if (nodeMap(child, child.children[forward ? 0 : child.childCount - 1], leafAction, forward) === false) {
-                return false;
-            }
+            nextLevel = undefined;
         }
-    }
-    {
-        let child = block;
-        let parent = block.parent;
-        while (parent !== undefined) {
-            const nextIndex = forward ? child.index + 1 : child.index - 1;
-            if (parent.children[nextIndex] !== undefined) {
-                return nodeMap(parent, parent.children[nextIndex], leafAction, forward);
+
+        while (downMap.length > 0) {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            const current = downMap.shift()!;
+
+            for (let childIndex = current.start.index;
+                childIndex >= 0 && childIndex < current.block.childCount;
+                childIndex += increment) {
+                const child = current.block.children[childIndex];
+
+                if (child.isLeaf()) {
+                    if (leafAction(child) === false) {
+                        return false;
+                    }
+                } else {
+                    downMap.push({
+                        block: child,
+                        start: child.children[forward ? 0 : child.childCount - 1],
+                    });
+                }
             }
-            child = parent;
-            parent = child.parent;
         }
     }
     return true;
