@@ -22,7 +22,7 @@ import {
 /**
  * @internal
  */
-export function _validateReferenceType(refType: ReferenceType) {
+function _validateReferenceType(refType: ReferenceType) {
     let exclusiveCount = 0;
     if (refTypeIncludesFlag(refType, ReferenceType.Transient)) {
         ++exclusiveCount;
@@ -127,7 +127,7 @@ interface IRefsAtOffset {
     after?: List<LocalReference>;
 }
 
-export function assertLocalReferences(
+function assertLocalReferences(
     lref: any,
 ): asserts lref is LocalReference {
     assert(lref instanceof LocalReference, 0x2e0 /* "lref not a Local Reference" */);
