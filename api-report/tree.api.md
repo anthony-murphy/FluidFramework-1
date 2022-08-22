@@ -19,11 +19,14 @@ export class AnchorSet {
     isEmpty(): boolean;
     locate(anchor: Anchor): UpPath | undefined;
     moveChildren(count: number, srcStart: UpPath | undefined, dst: UpPath | undefined): void;
-    track(path: UpPath): Anchor;
+    track(path: UpPath | null): Anchor;
 }
 
 // @public
 export type Brand<ValueType, Name extends string> = ValueType & BrandedType<ValueType, Name>;
+
+// @public
+export function brand<T extends Brand<any, string>>(value: T extends BrandedType<infer ValueType, string> ? ValueType : never): T;
 
 // @public
 export abstract class BrandedType<ValueType, Name extends string> {
@@ -31,6 +34,9 @@ export abstract class BrandedType<ValueType, Name extends string> {
     // (undocumented)
     protected _typeCheck?: Invariant<ValueType>;
 }
+
+// @public
+export function brandOpaque<T extends BrandedType<any, string>>(value: isAny<ValueFromBranded<T>> extends true ? never : ValueFromBranded<T>): BrandedType<ValueFromBranded<T>, NameFromBranded<T>>;
 
 // @public (undocumented)
 export function buildForest(schema: StoredSchemaRepository): IEditableForest;
@@ -95,6 +101,9 @@ export interface Covariant<T> {
 
 // @public
 export function cursorToJsonObject(reader: ITreeCursor): unknown;
+
+// @public
+export const defaultSchemaPolicy: FullSchemaPolicy;
 
 // @public
 interface Delete {
@@ -556,6 +565,9 @@ export interface NamedComputation {
 export type NamedTreeSchema = TreeSchema & Named<TreeSchemaIdentifier>;
 
 // @public
+export type NameFromBranded<T extends BrandedType<any, string>> = T extends BrandedType<any, infer Name> ? Name : never;
+
+// @public
 export const neverTree: TreeSchema;
 
 // @public
@@ -809,6 +821,9 @@ class ValueEncoder<T extends JsonCompatibleReadOnly> extends ChangeEncoder<T> {
     // (undocumented)
     encodeForJson(formatVersion: number, change: T): JsonCompatibleReadOnly;
 }
+
+// @public
+export type ValueFromBranded<T extends BrandedType<any, string>> = T extends BrandedType<infer ValueType, string> ? ValueType : never;
 
 // @public
 export enum ValueSchema {
