@@ -173,8 +173,8 @@ export function TestPack(verbose = true) {
             console.log(`local time ${client.localTime} us ops: ${client.localOps} ave time ${aveLocalTime}`);
         }
         console.log(`ord time average: ${aveOrdTime}us max ${stats.maxOrdTime}us`);
-        console.log(`${client.longClientId} accum time ${client.accumTime} us ops: ${client.accumOps} ave time ${aveTime} -  pack ${avePackTime} ave window ${aveWindow}`);
-        console.log(`${client.longClientId} accum window time ${client.accumWindowTime} us not in ops ${aveExtraWindowTime}; max ${client.maxWindowTime}`);
+        console.log(`${client.longClientId} accum time ${client.accumTime} us ops: ${client.accumOps} ave time ${aveTime} - pack ${avePackTime} ave window ${aveWindow}`);
+        console.log(`${client.longClientId} accum window time ${client.accumWindowTime} us ave window time not in ops ${aveExtraWindowTime}; max ${client.maxWindowTime}`);
     }
 
     function manyMergeTrees() {

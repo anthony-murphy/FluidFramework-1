@@ -22,6 +22,7 @@ import { SnapshotLegacy } from "../snapshotlegacy";
 import { TextSegment } from "../textSegment";
 import { MergeTree } from "../mergeTree";
 import { MergeTreeTextHelper } from "../MergeTreeTextHelper";
+import { walkAllChildSegments } from "../mergeTreeNodeWalk";
 import { TestSerializer } from "./testSerializer";
 import { nodeOrdinalsHaveIntegrity } from "./testUtils";
 
@@ -301,7 +302,7 @@ export class TestClient extends Client {
             (removedSeq !== undefined && removedSeq !== UnassignedSequenceNumber && removedSeq <= seqNumberFrom)
             || (localRemovedSeq !== undefined && localRemovedSeq <= localSeq);
 
-        this.mergeTree.walkAllSegments(this.mergeTree.root, (seg) => {
+        walkAllChildSegments(this.mergeTree.root, (seg) => {
             assert(seg.seq !== undefined || seg.localSeq !== undefined, "either seq or localSeq should be defined");
             segment = seg;
 
@@ -347,7 +348,7 @@ export class TestClient extends Client {
             position taking into account local segments that were modified,
             after the current segment.
         */
-        this.mergeTree.walkAllSegments(this.mergeTree.root, (seg) => {
+        walkAllChildSegments(this.mergeTree.root, (seg) => {
             // If we've found the desired segment, terminate the walk and return 'segmentPosition'.
             if (seg === segment) {
                 return false;

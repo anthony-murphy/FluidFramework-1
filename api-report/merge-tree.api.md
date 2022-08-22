@@ -1159,14 +1159,6 @@ export class SegmentGroupCollection {
     get size(): number;
 }
 
-// @public (undocumented)
-export function segmentWalk<TData>(startBlock: IMergeBlock, startChild: IMergeNode, opts: {
-    leafAction: (seg: ISegment, accum?: TData) => boolean;
-    forward?: boolean;
-    accum?: TData;
-    skip?: (block: IMergeNode) => boolean;
-}): boolean;
-
 // Warning: (ae-internal-missing-underscore) The name "SortedDictionary" should be prefixed with an underscore because the declaration is marked as @internal
 //
 // @internal (undocumented)
