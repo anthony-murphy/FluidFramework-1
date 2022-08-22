@@ -79,7 +79,8 @@ describe("resetPendingSegmentsToOp", () => {
                 },
             );
             const oldops = opList;
-            opList = oldops.map((op) => client.regeneratePendingOp(op, client.mergeTree.pendingSegments!.first()!));
+            opList = oldops.map((op) =>
+                client.regeneratePendingOp(op, client.mergeTree.pendingSegments!.first!.data));
             applyOpList(client);
             assert.equal(localPartialsComputeCount, 1);
         });

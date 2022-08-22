@@ -710,8 +710,6 @@ export class LocalReferenceCollection {
     has(lref: ReferencePosition): boolean;
     // @internal (undocumented)
     hierRefCount: number;
-    // (undocumented)
-    refCount: number;
     // @internal (undocumented)
     removeLocalRef(lref: LocalReferencePosition): LocalReferencePosition | undefined;
     // @internal
@@ -1161,6 +1159,14 @@ export class SegmentGroupCollection {
     get size(): number;
 }
 
+// @public (undocumented)
+export function segmentWalk<TData>(startBlock: IMergeBlock, startChild: IMergeNode, opts: {
+    leafAction: (seg: ISegment, accum?: TData) => boolean;
+    forward?: boolean;
+    accum?: TData;
+    skip?: (block: IMergeNode) => boolean;
+}): boolean;
+
 // Warning: (ae-internal-missing-underscore) The name "SortedDictionary" should be prefixed with an underscore because the declaration is marked as @internal
 //
 // @internal (undocumented)
@@ -1174,11 +1180,7 @@ export interface SortedDictionary<TKey, TData> extends Dictionary<TKey, TData> {
 }
 
 // @public
-export class SortedSegmentSet<T extends ISegment | {
-    readonly segment: ISegment;
-} | {
-    getSegment(): ISegment | undefined;
-} = ISegment> {
+export class SortedSegmentSet<T extends SortedSegmentSetItem = ISegment> {
     // (undocumented)
     addOrUpdate(newItem: T, update?: (existingItem: T, newItem: T) => T): void;
     // (undocumented)
@@ -1190,6 +1192,11 @@ export class SortedSegmentSet<T extends ISegment | {
     // (undocumented)
     get size(): number;
 }
+
+// @public (undocumented)
+export type SortedSegmentSetItem = ISegment | Pick<LocalReferencePosition, "getSegment"> | {
+    readonly segment: ISegment;
+};
 
 // @public (undocumented)
 export class Stack<T> {

@@ -904,7 +904,7 @@ export class MergeTree {
         if (!segment.localRefs || segment.localRefs.empty) {
             return undefined;
         }
-        const refsToSlide: ReferencePosition[] = [];
+        const refsToSlide: LocalReferencePosition[] = [];
         const removedRefs: LocalReferencePosition[] = [];
         for (const lref of segment.localRefs) {
             if (refTypeIncludesFlag(lref, ReferenceType.StayOnRemove)) {
@@ -1267,7 +1267,7 @@ export class MergeTree {
             if (previousProps) {
                 _segmentGroup.previousProps = [];
             }
-            this.pendingSegments!.enqueue(_segmentGroup);
+            this.pendingSegments!.push(_segmentGroup);
         }
 
         if ((!_segmentGroup.previousProps && previousProps) ||
@@ -1996,7 +1996,7 @@ export class MergeTree {
      */
     public rollback(op: IMergeTreeDeltaOp, localOpMetadata: SegmentGroup) {
         if (op.type === MergeTreeDeltaType.REMOVE) {
-            const pendingSegmentGroup = this.pendingSegments?.pop?.();
+            const pendingSegmentGroup = this.pendingSegments?.pop?.()?.data;
             if (pendingSegmentGroup === undefined || pendingSegmentGroup !== localOpMetadata) {
                 throw new Error("Rollback op doesn't match last edit");
             }
@@ -2036,7 +2036,7 @@ export class MergeTree {
                 }
             }
         } else if (op.type === MergeTreeDeltaType.INSERT || op.type === MergeTreeDeltaType.ANNOTATE) {
-            const pendingSegmentGroup = this.pendingSegments?.pop?.();
+            const pendingSegmentGroup = this.pendingSegments?.pop?.()?.data;
             if (pendingSegmentGroup === undefined || pendingSegmentGroup !== localOpMetadata
                 || (op.type === MergeTreeDeltaType.ANNOTATE && !pendingSegmentGroup.previousProps)) {
                 throw new Error("Rollback op doesn't match last edit");
