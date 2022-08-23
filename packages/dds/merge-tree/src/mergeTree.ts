@@ -1224,7 +1224,7 @@ export class MergeTree {
      */
     public ackPendingSegment(opArgs: IMergeTreeDeltaOpArgs) {
         const seq = opArgs.sequencedMessage!.sequenceNumber;
-        const pendingSegmentGroup = this.pendingSegments?.pop()?.data;
+        const pendingSegmentGroup = this.pendingSegments!.shift()?.data;
         const nodesToUpdate: IMergeBlock[] = [];
         let overwrite = false;
         if (pendingSegmentGroup !== undefined) {
@@ -1943,7 +1943,7 @@ export class MergeTree {
                 throw new Error("Rollback op doesn't match last edit");
             }
             for (const segment of pendingSegmentGroup.segments) {
-                const segmentSegmentGroup = segment.segmentGroups.pop ? segment.segmentGroups.pop() : undefined;
+                const segmentSegmentGroup = segment.segmentGroups?.pop?.();
                 assert(segmentSegmentGroup === pendingSegmentGroup, "Unexpected segmentGroup in segment");
 
                 assert(segment.removedClientIds !== undefined
@@ -1985,7 +1985,7 @@ export class MergeTree {
             }
             let i = 0;
             for (const segment of pendingSegmentGroup.segments) {
-                const segmentSegmentGroup = segment.segmentGroups.pop ? segment.segmentGroups.pop() : undefined;
+                const segmentSegmentGroup = segment.segmentGroups.pop?.();
                 assert(segmentSegmentGroup === pendingSegmentGroup, "Unexpected segmentGroup in segment");
 
                 const start = this.findRollbackPosition(segment);

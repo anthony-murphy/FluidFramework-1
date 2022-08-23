@@ -5,8 +5,7 @@
 
 import { strict as assert } from "assert";
 import {
-    List,
-    walkList,
+    List, walkList,
 } from "../collections";
 
 describe("Collections.List", () => {
@@ -35,29 +34,11 @@ describe("Collections.List", () => {
             () => assert.equal(list.last?.data, 0, "last item not expected value"));
     });
 
-    describe(".clear", () => {
-        it("List should be empty after clear, and all nodes should be detached",
-            () => {
-                const nodes = [... list];
-                list.clear();
-                assert.equal(list.length, 0, "length should be 0");
-                assert.equal(list.empty, true, "empty should be true");
-                assert.equal(list.first, undefined, "first should be undefined");
-                assert.equal(list.last, undefined, "last should be undefined");
-                nodes.forEach((n) => {
-                    assert.equal(n.list, undefined, `node(${n}) list should be undefined `);
-                    assert.equal(n.prev, undefined, `node(${n}) prev should be undefined `);
-                    assert.equal(n.next, undefined, `node(${n}) next should be undefined `);
-                    assert.equal(list.has(n), false, `list should not have node(${n})`);
-                });
-            });
-    });
-
     describe("walkList", () => {
         it("Should walk all items of the list", () => {
             let i = listCount - 1;
-            walkList(list, (item) => {
-                assert.equal(item.data, i, "element not expected value");
+            walkList(list, (node) => {
+                assert.equal(node.data, i, "elemeted not expected value");
                 i--;
             });
         });
@@ -67,7 +48,7 @@ describe("Collections.List", () => {
         it("Should walk all items of the list", () => {
             let i = listCount - 1;
             for (const item of list) {
-                assert.equal(item.data, i, "element not expected value");
+                assert.equal(item.data, i, "elemeted not expected value");
                 i--;
             }
         });
@@ -81,7 +62,7 @@ describe("Collections.List", () => {
                 assert.equal(list.length, listCount + 1, "The list count doesn't match the expected count.");
             });
     });
-    describe(".enqueue", () => {
+    describe(".push", () => {
         it("Should add item to the end of the list",
             () => {
                 list.push(99);

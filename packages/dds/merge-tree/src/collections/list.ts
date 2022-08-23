@@ -20,10 +20,9 @@ export interface ListNodeRange<T> {
 class HeadNode<T> {
     public _next: HeadNode<T> | DataNode<T> = this;
     public _prev: HeadNode<T> | DataNode<T> = this;
-    public headNode: HeadNode<T>;
+    public headNode: HeadNode<T> = this;
     private readonly _list?: List<T>;
     constructor(list: List<T> | undefined) {
-        this.headNode = this;
         if (list) {
             this._list = list;
         }
@@ -72,11 +71,17 @@ function insertAfter<T>(node: DataNode<T> | HeadNode<T>, ... items: T[]): ListNo
     return newRange;
 }
 
-export class List<T> implements Iterable<ListNode<T>>, Partial<ListNodeRange<T>> {
+export class List<T> implements
+    Iterable<ListNode<T>>,
+    Partial<ListNodeRange<T>>,
+    // try to match array signature and semantics where possible
+    Pick<ListNode<T>[], "pop" | "shift" | "length" | "includes"> {
     pop(): ListNode<T> | undefined {
         return this.remove(this.last);
     }
-    push(...items: T[]) {
+
+    push(item: T): ListNodeRange<T>;
+    push(...items: T[]): ListNodeRange<T> | undefined {
         this._len += items.length;
         const start = this.headNode._prev;
         return insertAfter(start, ... items);
@@ -86,29 +91,21 @@ export class List<T> implements Iterable<ListNode<T>>, Partial<ListNodeRange<T>>
         return this.remove(this.first);
     }
 
-    unshift(...items: T[]) {
+    unshift(...items: T[]): ListNodeRange<T> | undefined {
         this._len += items.length;
         return insertAfter(this.headNode, ... items);
     }
 
-    insertAfter(node: ListNode<T>, ...items: T[]) {
-        if (!this._has(node)) {
-            throw new Error("node not in list");
-        }
-        this._len += items.length;
-        return insertAfter(node, ... items);
+    public includes(node: ListNode<T> | undefined): node is ListNode<T> {
+        return this._includes(node);
     }
 
-    public has(node: ListNode<T> | undefined): node is ListNode<T> {
-        return this._has(node);
-    }
-
-    private _has(node: ListNode<T> | undefined): node is DataNode<T> {
+    private _includes(node: ListNode<T> | undefined): node is DataNode<T> {
         return node instanceof DataNode && node.headNode === this.headNode;
     }
 
     remove(node: ListNode<T> | undefined): ListNode<T> | undefined {
-        if (this._has(node)) {
+        if (this._includes(node)) {
             node._prev._next = node._next;
             node._next._prev = node._prev;
             node.headNode = node._next = node._prev = DeadHead;
@@ -116,28 +113,6 @@ export class List<T> implements Iterable<ListNode<T>>, Partial<ListNodeRange<T>>
             return node;
         }
         return undefined;
-    }
-    clear() {
-        for (const node of this) {
-            this.remove(node);
-        }
-    }
-
-    public some(fn: (data: T) => boolean, rev?: boolean): T[] {
-        const rtn: T[] = [];
-        const start = rev ? this.last : this.first;
-        for (let entry = start; entry !== undefined; entry = rev ? entry.prev : entry.next) {
-            const data = entry.data;
-            if (fn(data)) {
-                if (rev) {
-                    // preserve list order when in reverse
-                    rtn.unshift(data);
-                } else {
-                    rtn.push(data);
-                }
-            }
-        }
-        return rtn;
     }
 
     public [Symbol.iterator](): IterableIterator<ListNode<T>> {
@@ -161,7 +136,7 @@ export class List<T> implements Iterable<ListNode<T>>, Partial<ListNodeRange<T>>
     private _len: number = 0;
     private readonly headNode: HeadNode<T> | DataNode<T> = new HeadNode(this);
     public get length() { return this._len; }
-    public get empty() { return this.headNode._next === this.headNode; }
+    public get empty() { return this._len === 0; }
     public get first(): ListNode<T> | undefined {
         return this.headNode.next;
     }
@@ -173,13 +148,13 @@ export class List<T> implements Iterable<ListNode<T>>, Partial<ListNodeRange<T>>
 
 export function walkList<T>(
     list: List<T>,
-    visitor: (lref: ListNode<T>) => boolean | void,
+    visitor: (node: ListNode<T>) => boolean | void,
     start?: ListNode<T>,
     forward: boolean = true,
 ) {
     let current: ListNode<T> | undefined;
     if (start) {
-        if (!list.has(start)) {
+        if (!list.includes(start)) {
             throw new UsageError("start must be in the provided list");
         }
         current = start;

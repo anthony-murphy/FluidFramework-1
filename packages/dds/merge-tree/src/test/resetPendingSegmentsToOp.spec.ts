@@ -79,8 +79,7 @@ describe("resetPendingSegmentsToOp", () => {
                 },
             );
             const oldops = opList;
-            opList = oldops.map((op) =>
-                client.regeneratePendingOp(op, client.mergeTree.pendingSegments!.first!.data));
+            opList = oldops.map((op) => client.regeneratePendingOp(op, client.mergeTree.pendingSegments!.first!.data));
             applyOpList(client);
             assert.equal(localPartialsComputeCount, 1);
         });
@@ -90,7 +89,7 @@ describe("resetPendingSegmentsToOp", () => {
             opList = oldops.map((op) => client.regeneratePendingOp(op, client.mergeTree.pendingSegments!.first!.data));
             // we expect a nack op per segment since our original ops split segments
             // we should expect mores nack ops then original ops.
-            // only the first? op didn't split a segment, all the others did
+            // only the first op didn't split a segment, all the others did
             assert.equal(client.mergeTree.pendingSegments?.length, expectedSegmentCount);
             applyOpList(client);
             assert(client.mergeTree.pendingSegments?.empty);
@@ -110,11 +109,11 @@ describe("resetPendingSegmentsToOp", () => {
             assert(client.mergeTree.pendingSegments?.empty);
 
             opList.push(client.removeRangeLocal(0, client.getLength())!);
-            opList.push(client.regeneratePendingOp(opList.shift()!, client.mergeTree.pendingSegments!.first!.data));
+            opList.push(client.regeneratePendingOp(opList.shift()!, client.mergeTree.pendingSegments.first!.data));
             // we expect a nack op per segment since our original ops split segments
             // we should expect mores nack ops then original ops.
             // only the first op didn't split a segment, all the others did
-            assert.equal(client.mergeTree.pendingSegments.length, expectedSegmentCount);
+            assert.equal(client.mergeTree.pendingSegments?.length, expectedSegmentCount);
             applyOpList(client);
             assert(client.mergeTree.pendingSegments?.empty);
         });
@@ -145,11 +144,11 @@ describe("resetPendingSegmentsToOp", () => {
             assert(client.mergeTree.pendingSegments?.empty);
 
             opList.push(client.annotateRangeLocal(0, client.getLength(), { foo: "bar" }, undefined)!);
-            opList.push(client.regeneratePendingOp(opList.shift()!, client.mergeTree.pendingSegments!.first!.data));
+            opList.push(client.regeneratePendingOp(opList.shift()!, client.mergeTree.pendingSegments.first!.data));
             // we expect a nack op per segment since our original ops split segments
             // we should expect mores nack ops then original ops.
             // only the first op didn't split a segment, all the others did
-            assert.equal(client.mergeTree.pendingSegments.length, expectedSegmentCount);
+            assert.equal(client.mergeTree.pendingSegments?.length, expectedSegmentCount);
             applyOpList(client);
             assert(client.mergeTree.pendingSegments?.empty);
         });

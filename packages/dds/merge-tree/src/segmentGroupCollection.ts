@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { List } from "./collections";
+import { List, walkList } from "./collections";
 import { ISegment, SegmentGroup } from "./mergeTreeNodes";
 
 export class SegmentGroupCollection {
@@ -27,20 +27,26 @@ export class SegmentGroupCollection {
     }
 
     public dequeue(): SegmentGroup | undefined {
-        return this.segmentGroups.pop()?.data;
+        return this.segmentGroups.shift()?.data;
     }
 
     public pop?(): SegmentGroup | undefined {
-        return this.segmentGroups.pop()?.data;
+        return this.segmentGroups.pop ? this.segmentGroups.pop()?.data : undefined;
     }
 
+    /**
+     * @deprecated - method is unused and will be removed.
+     */
     public clear() {
-        this.segmentGroups.clear();
+        while (!this.segmentGroups.empty) {
+            this.segmentGroups.remove(this.segmentGroups.first);
+        }
     }
 
     public copyTo(segment: ISegment) {
-        for (const sg of this.segmentGroups) {
-            segment.segmentGroups.enqueue(sg.data);
-        }
+        walkList(
+            this.segmentGroups,
+            (sg) => segment.segmentGroups.enqueue(sg.data),
+        );
     }
 }
