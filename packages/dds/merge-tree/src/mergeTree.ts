@@ -24,8 +24,8 @@ import {
     UniversalSequenceNumber,
 } from "./constants";
 import {
-    LocalReferenceCollection,
-    LocalReferencePosition,
+     LocalReferenceCollection,
+     LocalReferencePosition,
 } from "./localReference";
 import {
 	BaseSegment,
