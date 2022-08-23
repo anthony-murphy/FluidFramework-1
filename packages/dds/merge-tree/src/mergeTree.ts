@@ -1463,7 +1463,7 @@ export class MergeTree {
             const insertRef: LocalReferencePosition[] = [];
             const refHandler = (
                 lref: LocalReferencePosition) => {
-                    if (referencePosition !== lref) {
+                    if (referencePosition !== lref && slideFilter(lref)) {
                         if (forward) {
                             insertRef.push(lref);
                         } else {
