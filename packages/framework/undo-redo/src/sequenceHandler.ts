@@ -5,8 +5,6 @@
 
 import { assert } from "@fluidframework/common-utils";
 import {
-    IMergeBlock,
-    IMergeNode,
     ISegment,
     matchProperties,
     MergeTreeDeltaOperationType,
