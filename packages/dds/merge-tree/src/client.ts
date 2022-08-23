@@ -233,8 +233,9 @@ export class Client {
      * @param segment - The segment to insert
      */
     public insertAtReferencePositionLocal(
-        refPos: ReferencePosition,
+        refPos: LocalReferencePosition,
         segment: ISegment,
+        slideFilter?: (lref: LocalReferencePosition) => boolean,
     ): IMergeTreeInsertMsg | undefined {
         const pos = this._mergeTree.referencePositionToLocalPosition(
             refPos,
@@ -257,7 +258,8 @@ export class Client {
         this._mergeTree.insertAtReferencePosition(
             refPos,
             segment,
-            opArgs);
+            opArgs,
+            slideFilter);
 
         this.completeAndLogOp(
             opArgs,

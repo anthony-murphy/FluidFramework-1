@@ -1358,9 +1358,10 @@ export class MergeTree {
     }
 
     public insertAtReferencePosition(
-        referencePosition: ReferencePosition,
+        referencePosition: LocalReferencePosition,
         insertSegment: ISegment,
         opArgs: IMergeTreeDeltaOpArgs,
+        slideFilter?: (lref: LocalReferencePosition) => boolean,
     ): void {
         if (insertSegment.cachedLength === 0) {
             return;
@@ -1456,6 +1457,47 @@ export class MergeTree {
         this.insertChildNode(startSeg.parent!, insertSegment, startSeg.index);
 
         rebalanceTree(insertSegment);
+
+        if (slideFilter) {
+            const forward = referencePosition.getSegment().ordinal < insertSegment.ordinal;
+            const insertRef: LocalReferencePosition[] = [];
+            const refHandler = (
+                lref: LocalReferencePosition) => {
+                    if (referencePosition !== lref) {
+                        if (forward) {
+                            insertRef.push(lref);
+                        } else {
+                            insertRef.unshift(lref);
+                        }
+                    }
+                };
+            depthFirstNodeWalk(
+                referencePosition.getSegment().parent!,
+                referencePosition.getSegment(),
+                undefined,
+                (seg) => {
+                    if (seg === insertSegment) {
+                        return false;
+                    }
+                    if (seg.localRefs?.empty === false) {
+                        return seg.localRefs.walkReferences(
+                            refHandler,
+                            seg === referencePosition.getSegment()
+                                ? referencePosition
+                                : undefined,
+                            forward);
+                    }
+                    return true;
+                },
+                undefined,
+                forward);
+
+            if (insertRef.length > 0) {
+                const localRefs =
+                    insertSegment.localRefs ??= new LocalReferenceCollection(insertSegment);
+                localRefs.addBeforeTombstones(insertRef);
+            }
+        }
 
         if (this.mergeTreeDeltaCallback) {
             this.mergeTreeDeltaCallback(

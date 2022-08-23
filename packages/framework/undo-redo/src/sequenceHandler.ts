@@ -8,8 +8,6 @@ import {
     IMergeBlock,
     IMergeNode,
     ISegment,
-    LocalReferenceCollection,
-    LocalReferencePosition,
     matchProperties,
     MergeTreeDeltaOperationType,
     MergeTreeDeltaType,
@@ -130,53 +128,17 @@ export class SharedSegmentSequenceRevertible implements IRevertible {
                             break;
 
                         case MergeTreeDeltaType.REMOVE:
-                           assert(!tracked.isLeaf(), "should be local reference");
-                            const insertPos = this.sequence.localReferencePositionToPosition(tracked);
+                            assert(!tracked.isLeaf(), "should be local reference");
                             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                            const insertSegment = this.sequence.insertSegmentFromSpec!(
-                                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                                tracked.properties!.segment,
-                                insertPos);
+                            const insertSegment = this.sequence.segmentFromSpec(tracked.properties!.segment);
+                            this.sequence.insertAtReferencePosition(tracked, insertSegment, () => true);
+
+                            tracked.getSegment().localRefs?.removeLocalRef(tracked);
 
                             tracked.trackingCollection.trackingGroups.forEach((tg) => {
                                 tg.link(insertSegment);
                                 tg.unlink(tracked);
                             });
-                            const forward = tracked.getSegment().ordinal < insertSegment.ordinal;
-                            const insertRef: LocalReferencePosition[] = [];
-                            const refHandler = (
-                                lref: LocalReferencePosition) => {
-                                    if (tracked !== lref) {
-                                        if (forward) {
-                                            insertRef.push(lref);
-                                        } else {
-                                            insertRef.unshift(lref);
-                                        }
-                                    }
-                                };
-                            nodeMap(
-                                tracked.getSegment().parent,
-                                tracked.getSegment(),
-                                (seg) => {
-                                    if (seg === insertSegment) {
-                                        return false;
-                                    }
-                                    if (seg.localRefs?.empty === false) {
-                                        return seg.localRefs.walkReferences(
-                                            refHandler,
-                                            seg === tracked.getSegment() ? tracked : undefined,
-                                            forward);
-                                    }
-                                    return true;
-                                },
-                                forward);
-
-                            tracked.getSegment().localRefs?.removeLocalRef(tracked);
-                            if (insertRef.length > 0) {
-                                const localRefs =
-                                    insertSegment.localRefs ??= new LocalReferenceCollection(insertSegment);
-                                localRefs.addBeforeTombstones(insertRef);
-                            }
 
                             break;
 
