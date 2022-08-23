@@ -243,7 +243,6 @@ export class LocalReferenceCollection {
      * @remarks This method should only be called by mergeTree.
      * @internal
      */
->>>>>>> d69ff5ac284e9109a638af34ff35c4b024bdb5ff
     public get empty() {
         return this.refCount === 0;
     }

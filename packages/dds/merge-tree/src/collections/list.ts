@@ -3,6 +3,7 @@
  * Licensed under the MIT License.
  */
 
+import { assert } from "@fluidframework/common-utils";
 import { UsageError } from "@fluidframework/container-utils";
 
 export interface ListNode<T> {
@@ -75,7 +76,13 @@ export class List<T> implements
     Iterable<ListNode<T>>,
     Partial<ListNodeRange<T>>,
     // try to match array signature and semantics where possible
-    Pick<ListNode<T>[], "pop" | "shift" | "length" | "includes"> {
+    Pick<ListNode<T>[], "pop" | "shift" | "length" | "includes" > {
+    insertAfter(preceding: ListNode<T>, ...items: T[]): ListNodeRange<T> | undefined {
+        assert(this._includes(preceding), "preceding not in list");
+        this._len += items.length;
+        return insertAfter(preceding, ... items);
+    }
+
     pop(): ListNode<T> | undefined {
         return this.remove(this.last);
     }
