@@ -29,7 +29,7 @@ export type MergeTreeDeltaRevertible = InsertRevertible | RemoveRevertible | Ann
 
 interface RemoveSegmentRefProperties extends PropertySet{
     segSpec: IJSONSegment;
-    space: "revertible";
+    referenceSpace: "revertible";
 }
 
 function appendLocalInsertToRevertible(
@@ -64,7 +64,7 @@ function appendLocalRemoveToRevertible(
     deltaSegments.forEach((t) => {
         const props: RemoveSegmentRefProperties = {
             segSpec: t.segment.toJSONObject(),
-            space: "revertible",
+            referenceSpace: "revertible",
         };
         const ref = client.createLocalReferencePosition(
             t.segment,
@@ -154,7 +154,11 @@ export function revertLocalRemove(client: Client, revertible: RemoveRevertible, 
         assert(!tracked.isLeaf(), "removes must track local refs");
         const props = tracked.properties as RemoveSegmentRefProperties;
         const insertSegment = client.specToSegment(props.segSpec);
-        const op = client.insertAtReferencePositionLocal(tracked, insertSegment, () => true);
+        const op = client.insertAtReferencePositionLocal(
+            tracked,
+            insertSegment,
+            (lref) =>
+                (lref?.properties as Partial<RemoveSegmentRefProperties> | undefined)?.referenceSpace === "revertible");
         tracked.getSegment().localRefs?.removeLocalRef(tracked);
         tracked.trackingCollection.trackingGroups.forEach((tg) => {
             tg.link(insertSegment);
