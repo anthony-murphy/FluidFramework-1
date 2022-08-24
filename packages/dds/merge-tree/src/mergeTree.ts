@@ -873,7 +873,7 @@ export class MergeTree {
         backwardExcursion(segment, goFurtherToFindSlideToSegment);
         return slideToSegment;
     }
-
+    private readonly detachedReferences = new List<LocalReferencePosition>();
     /**
      * This method should only be called when the current client sequence number is
      * max(remove segment sequence number, add reference sequence number).
@@ -899,6 +899,7 @@ export class MergeTree {
                 segment?.localRefs.removeLocalRef(ref);
                 ref.callbacks?.afterSlide?.();
             }
+            this.detachedReferences.unshift(... refsToSlide);
         }
         // TODO is it required to update the path lengths?
         if (newSegment) {
@@ -1361,130 +1362,64 @@ export class MergeTree {
         referencePosition: LocalReferencePosition,
         insertSegment: ISegment,
         opArgs: IMergeTreeDeltaOpArgs,
-        slideFilter?: (lref: LocalReferencePosition) => boolean,
+        localSlideFilter?: (lref: LocalReferencePosition) => boolean,
     ): void {
-        if (insertSegment.cachedLength === 0) {
-            return;
-        }
-        if (insertSegment.parent
-            || insertSegment.removedSeq
-            || insertSegment.seq !== UniversalSequenceNumber) {
-            throw new Error("Cannot insert segment that has already been inserted.");
-        }
-
-        const rebalanceTree = (segment: ISegment) => {
-            // Blocks should never be left full
-            // if the inserts makes the block full
-            // then we need to walk up the chain of parents
-            // and split the blocks until we find a block with
-            // room
-            let block = segment.parent;
-            let ordinalUpdateNode: IMergeBlock | undefined = block;
-            while (block !== undefined) {
-                if (block.childCount >= MaxNodesInBlock) {
-                    const splitNode = this.split(block);
-                    if (block === this.root) {
-                        this.updateRoot(splitNode);
-                        // Update root already updates all its children ordinals
-                        ordinalUpdateNode = undefined;
-                    } else {
-                        this.insertChildNode(block.parent!, splitNode, block.index + 1);
-                        ordinalUpdateNode = splitNode.parent;
-                        this.blockUpdateLength(block.parent!, UnassignedSequenceNumber, clientId);
-                    }
-                } else {
-                    this.blockUpdateLength(block, UnassignedSequenceNumber, clientId);
-                }
-                block = block.parent;
-            }
-            // Only update ordinals once, for all children,
-            // on the path
-            if (ordinalUpdateNode) {
-                this.nodeUpdateOrdinals(ordinalUpdateNode);
-            }
-        };
-
+        const refSeq = this.collabWindow.currentSeq;
         const clientId = this.collabWindow.clientId;
-        const refSegment = referencePosition.getSegment()!;
-        const refOffset = referencePosition.getOffset();
-        const refSegLen = this.nodeLength(refSegment, this.collabWindow.currentSeq, clientId);
-        let startSeg = refSegment;
-        // if the change isn't at a boundary, we need to split the segment
-        if (refOffset !== 0 && refSegLen !== undefined && refSegLen !== 0) {
-            const splitSeg = this.splitLeafSegment(refSegment, refOffset);
-            assert(!!splitSeg.next, 0x050 /* "Next segment changes are undefined!" */);
-            this.insertChildNode(refSegment.parent!, splitSeg.next, refSegment.index + 1);
-            rebalanceTree(splitSeg.next);
-            startSeg = splitSeg.next;
-        }
-        // walk back from the segment, to see if there is a previous tie break seg
-        backwardExcursion(startSeg, (backSeg) => {
-            if (!backSeg.isLeaf()) {
-                return true;
-            }
-            const backLen = this.nodeLength(backSeg, this.collabWindow.currentSeq, clientId);
-            // ignore removed segments
-            if (backLen === undefined) {
-                return true;
-            }
-            // Find the nearest 0 length seg we can insert over, as all other inserts
-            // go near to far
-            if (backLen === 0) {
-                if (this.breakTie(0, backSeg, UnassignedSequenceNumber)) {
-                    startSeg = backSeg;
-                }
-                return true;
-            }
-            return false;
-        });
 
-        if (this.collabWindow.collaborating) {
-            insertSegment.localSeq = ++this.collabWindow.localSeq;
-            insertSegment.seq = UnassignedSequenceNumber;
-        } else {
-            insertSegment.seq = UniversalSequenceNumber;
-        }
+        const pos = this.referencePositionToLocalPosition(
+            referencePosition, refSeq, clientId);
 
-        insertSegment.clientId = clientId;
+        this.ensureIntervalBoundary(pos, refSeq, clientId);
 
-        if (Marker.is(insertSegment)) {
-            const markerId = insertSegment.getId();
-            if (markerId) {
-                this.mapIdToSegment(markerId, insertSegment);
-            }
-        }
+        const localSeq = ++this.collabWindow.localSeq;
 
-        this.insertChildNode(startSeg.parent!, insertSegment, startSeg.index);
+        this.blockInsert(
+            pos === DetachedReferencePosition
+                ? this.getLength(refSeq, clientId)
+                : pos,
+            refSeq,
+            clientId,
+            UnassignedSequenceNumber,
+            localSeq,
+            [insertSegment]);
 
-        rebalanceTree(insertSegment);
-
-        if (slideFilter) {
-            const forward = referencePosition.getSegment().ordinal < insertSegment.ordinal;
+        if (localSlideFilter) {
             const insertRef: LocalReferencePosition[] = [];
-            const refHandler = (
-                lref: LocalReferencePosition) => {
-                    if (referencePosition !== lref && slideFilter(lref)) {
-                        if (forward) {
-                            insertRef.push(lref);
-                        } else {
-                            insertRef.unshift(lref);
-                        }
+            if (pos === DetachedReferencePosition) {
+                for (const refNode of this.detachedReferences) {
+                    if (refNode.data === referencePosition) {
+                        break;
                     }
-                };
+                    if (localSlideFilter(refNode.data)) {
+                        this.detachedReferences.remove(refNode);
+                        insertRef.push(refNode.data);
+                    }
+                }
+            }
+            const forward =
+                pos === DetachedReferencePosition
+                || insertSegment.ordinal < referencePosition.getSegment().ordinal;
             depthFirstNodeWalk(
-                referencePosition.getSegment().parent!,
-                referencePosition.getSegment(),
+                insertSegment.parent!,
+                insertSegment,
                 undefined,
                 (seg) => {
-                    if (seg === insertSegment) {
-                        return false;
-                    }
                     if (seg.localRefs?.empty === false) {
                         return seg.localRefs.walkReferences(
-                            refHandler,
-                            seg === referencePosition.getSegment()
-                                ? referencePosition
-                                : undefined,
+                            (lref: LocalReferencePosition) => {
+                                if (referencePosition === lref) {
+                                    return false;
+                                }
+                                if (localSlideFilter(lref)) {
+                                    if (forward) {
+                                        insertRef.push(lref);
+                                    } else {
+                                        insertRef.unshift(lref);
+                                    }
+                                }
+                            },
+                            undefined,
                             forward);
                     }
                     return true;
@@ -1499,17 +1434,18 @@ export class MergeTree {
             }
         }
 
-        if (this.mergeTreeDeltaCallback) {
+        // opArgs == undefined => loading snapshot or test code
+        if (this.mergeTreeDeltaCallback && opArgs !== undefined) {
             this.mergeTreeDeltaCallback(
                 opArgs,
                 {
-                    deltaSegments: [{ segment: insertSegment }],
                     operation: MergeTreeDeltaType.INSERT,
+                    deltaSegments: [{ segment: insertSegment }],
                 });
         }
 
-        if (this.collabWindow.collaborating) {
-            this.addToPendingList(insertSegment, undefined, insertSegment.localSeq);
+        if (this.collabWindow.collaborating && MergeTree.options.zamboniSegments) {
+            this.zamboniSegments();
         }
     }
 
@@ -1551,18 +1487,6 @@ export class MergeTree {
                 return this.getLength(segwindow.currentSeq, segwindow.clientId);
             }
         }
-    }
-
-    private insertChildNode(block: IMergeBlock, child: IMergeNode, childIndex: number) {
-        assert(block.childCount < MaxNodesInBlock, 0x051 /* "Too many children on merge block!" */);
-
-        for (let i = block.childCount; i > childIndex; i--) {
-            block.children[i] = block.children[i - 1];
-            block.children[i].index = i;
-        }
-
-        block.childCount++;
-        block.assignChild(child, childIndex, false);
     }
 
     private blockInsert<T extends ISegment>(

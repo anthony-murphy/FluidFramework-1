@@ -400,9 +400,9 @@ export abstract class SharedSegmentSequence<T extends ISegment>
     }
 
     public insertAtReferencePosition(
-        pos: LocalReferencePosition, segment: T, slideFilter?: (lref: LocalReferencePosition) => boolean,
+        pos: LocalReferencePosition, segment: T, localSlideFilter?: (lref: LocalReferencePosition) => boolean,
     ) {
-        const insertOp = this.client.insertAtReferencePositionLocal(pos, segment, slideFilter);
+        const insertOp = this.client.insertAtReferencePositionLocal(pos, segment, localSlideFilter);
         if (insertOp) {
             this.submitSequenceMessage(insertOp);
         }
