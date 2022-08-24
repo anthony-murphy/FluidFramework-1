@@ -242,8 +242,10 @@ export abstract class SharedSegmentSequence<T extends ISegment>
         return removeOp;
     }
 
-    public groupOperation(groupOp: IMergeTreeGroupMsg) {
-        this.client.localTransaction(groupOp);
+    public groupOperation(groupOp: IMergeTreeGroupMsg, submitOnly?: true) {
+        if (submitOnly !== true) {
+            this.client.localTransaction(groupOp);
+        }
         this.submitSequenceMessage(groupOp);
     }
 

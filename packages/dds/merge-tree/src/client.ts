@@ -53,7 +53,7 @@ import { SnapshotLegacy } from "./snapshotlegacy";
 import { SnapshotLoader } from "./snapshotLoader";
 import { IMergeTreeTextHelper } from "./textSegment";
 import { SnapshotV1 } from "./snapshotV1";
-import { ReferencePosition, RangeStackMap, DetachedReferencePosition } from "./referencePositions";
+import { ReferencePosition, RangeStackMap, DetachedReferencePosition, refTypeIncludesFlag } from "./referencePositions";
 import { MergeTree } from "./mergeTree";
 import { MergeTreeTextHelper } from "./MergeTreeTextHelper";
 import { walkAllChildSegments } from "./mergeTreeNodeWalk";
@@ -242,11 +242,16 @@ export class Client {
             this.getCurrentSeq(),
             this.getClientId());
 
-        if (pos === DetachedReferencePosition) {
+        const realPos =
+            pos === DetachedReferencePosition && refTypeIncludesFlag(refPos, ReferenceType.SlideOnRemove)
+                ? this.getLength()
+                : pos;
+
+        if (realPos === DetachedReferencePosition) {
             return undefined;
         }
         const op = createInsertSegmentOp(
-            pos,
+            realPos,
             segment);
 
         const opArgs = { op };
@@ -1014,6 +1019,7 @@ export class Client {
             return UniversalSequenceNumber;
         }
     }
+
     localTransaction(groupOp: IMergeTreeGroupMsg) {
         for (const op of groupOp.ops) {
             const opArgs: IMergeTreeDeltaOpArgs = {

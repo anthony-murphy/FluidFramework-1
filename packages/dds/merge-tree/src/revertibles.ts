@@ -1,11 +1,14 @@
+import { assert } from "@fluidframework/common-utils";
 import { UsageError } from "@fluidframework/container-utils";
 import { Client } from "./client";
 import {
     IMergeTreeDeltaCallbackArgs,
     IMergeTreeSegmentDelta,
 } from "./mergeTreeDeltaCallback";
-import { Trackable, TrackingGroup } from "./mergeTreeTracking";
-import { MergeTreeDeltaType, ReferenceType } from "./ops";
+import { toRemovalInfo } from "./mergeTreeNodes";
+import { TrackingGroup } from "./mergeTreeTracking";
+import { createGroupOp } from "./opBuilder";
+import { IJSONSegment, IMergeTreeDeltaOp, IMergeTreeGroupMsg, MergeTreeDeltaType, ReferenceType } from "./ops";
 import { matchProperties, PropertySet } from "./properties";
 
 export interface InsertRevertible {
@@ -24,114 +27,105 @@ export interface AnnotateRevertible {
 
 export type MergeTreeDeltaRevertible = InsertRevertible | RemoveRevertible | AnnotateRevertible;
 
-export function appendLocalInsertToRevertible(revertible: InsertRevertible, deltaSegments: IMergeTreeSegmentDelta[]) {
-    deltaSegments.forEach((t) => revertible.trackingGroup.link(t.segment));
-    return revertible;
+interface RemoveSegmentRefProperties extends PropertySet{
+    segSpec: IJSONSegment;
+    space: "revertible";
 }
 
-export function createLocalInsertRevertible(deltaSegments: IMergeTreeSegmentDelta[]) {
-    return appendLocalInsertToRevertible(
-        {
+function appendLocalInsertToRevertible(
+    revertibles: MergeTreeDeltaRevertible[], deltaSegments: IMergeTreeSegmentDelta[],
+) {
+    let last: MergeTreeDeltaRevertible | undefined = revertibles[revertibles.length - 1];
+    if (last?.operation !== MergeTreeDeltaType.INSERT) {
+        last = {
             operation: MergeTreeDeltaType.INSERT,
             trackingGroup: new TrackingGroup(),
-        },
-        deltaSegments);
+        };
+        revertibles.push(last);
+    }
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    deltaSegments.forEach((t) => last!.trackingGroup.link(t.segment));
+
+    return revertibles;
 }
 
-export function appendLocalRemoveToRevertible(
-    revertible: RemoveRevertible, client: Client, deltaSegments: IMergeTreeSegmentDelta[],
+function appendLocalRemoveToRevertible(
+    revertibles: MergeTreeDeltaRevertible[], client: Client, deltaSegments: IMergeTreeSegmentDelta[],
 ) {
+    let last: MergeTreeDeltaRevertible | undefined = revertibles[revertibles.length - 1];
+    if (last?.operation !== MergeTreeDeltaType.REMOVE) {
+        last = {
+            operation: MergeTreeDeltaType.REMOVE,
+            trackingGroup: new TrackingGroup(),
+        };
+        revertibles.push(last);
+    }
+
     deltaSegments.forEach((t) => {
+        const props: RemoveSegmentRefProperties = {
+            segSpec: t.segment.toJSONObject(),
+            space: "revertible",
+        };
         const ref = client.createLocalReferencePosition(
             t.segment,
             0,
             ReferenceType.SlideOnRemove,
-            { segSpec: t.segment.toJSONObject() });
+            props);
         t.segment.trackingCollection.trackingGroups.forEach((tg) => {
             tg.link(ref);
             tg.unlink(t.segment);
         });
-        revertible.trackingGroup.link(ref);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        last!.trackingGroup.link(ref);
     });
-    return revertible;
+    return revertibles;
 }
 
-export function createLocalRemoveRevertible(client: Client, deltaSegments: IMergeTreeSegmentDelta[]) {
-    return appendLocalRemoveToRevertible(
-        {
-            operation: MergeTreeDeltaType.REMOVE,
-            trackingGroup: new TrackingGroup(),
-        },
-        client,
-        deltaSegments);
-}
-
-export function appendLocalAnnotateToRevertibles(
+function appendLocalAnnotateToRevertibles(
     revertibles: MergeTreeDeltaRevertible[], deltaSegments: IMergeTreeSegmentDelta[],
 ) {
+    let last = revertibles[revertibles.length - 1];
     deltaSegments.forEach((ds) => {
         const propertyDeltas = ds.propertyDeltas;
         if (propertyDeltas) {
-            const lastRevertible: MergeTreeDeltaRevertible | undefined =
-                revertibles[revertibles.length - 1];
-            if (lastRevertible.operation === MergeTreeDeltaType.ANNOTATE
-                && matchProperties(lastRevertible?.propertyDeltas, propertyDeltas)) {
-                lastRevertible.trackingGroup.link(ds.segment);
+            if (last?.operation === MergeTreeDeltaType.ANNOTATE
+                && matchProperties(last?.propertyDeltas, propertyDeltas)) {
+                    last.trackingGroup.link(ds.segment);
             } else {
-                const trackingGroup = new TrackingGroup();
-                trackingGroup.link(ds.segment);
-                revertibles.push({
+                last = {
                     operation: MergeTreeDeltaType.ANNOTATE,
                     propertyDeltas,
-                    trackingGroup,
-                });
+                    trackingGroup: new TrackingGroup(),
+                };
+                last.trackingGroup.link(ds.segment);
+                revertibles.push(last);
             }
         }
     });
     return revertibles;
 }
 
-export function createLocalAnnotateRevertibles(deltaSegments: IMergeTreeSegmentDelta[]) {
-    return appendLocalAnnotateToRevertibles([], deltaSegments);
-}
-
-export function createRevertibles(
-    client: Client, event: IMergeTreeDeltaCallbackArgs,
-): MergeTreeDeltaRevertible | MergeTreeDeltaRevertible[] {
-    switch (event.operation) {
-        case MergeTreeDeltaType.INSERT:
-            return createLocalInsertRevertible(event.deltaSegments);
-        case MergeTreeDeltaType.REMOVE:
-            return createLocalRemoveRevertible(client, event.deltaSegments);
-        case MergeTreeDeltaType.ANNOTATE:
-            return createLocalAnnotateRevertibles(event.deltaSegments);
-        default:
-            throw new UsageError(`Unsupported event delta type: ${event.operation}`);
-    }
-}
-
 export function appendToRevertibles(
     revertibles: MergeTreeDeltaRevertible[], client: Client, event: IMergeTreeDeltaCallbackArgs,
 ) {
-    if (revertibles[revertibles.length - 1].operation !== event.operation) {
-        revertibles.concat(createRevertibles(client, event));
-    } else {
-        switch (event.operation) {
-            case MergeTreeDeltaType.INSERT:
-                appendLocalInsertToRevertible(
-                    revertibles[revertibles.length - 1] as InsertRevertible, event.deltaSegments);
-                break;
-            case MergeTreeDeltaType.REMOVE:
-                appendLocalRemoveToRevertible(
-                    revertibles[revertibles.length - 1] as RemoveRevertible, client, event.deltaSegments);
-                break;
-            case MergeTreeDeltaType.ANNOTATE:
-                appendLocalAnnotateToRevertibles(
-                    revertibles, event.deltaSegments);
-                break;
-            default:
-                throw new UsageError(`Unsupported event delta type: ${event.operation}`);
-        }
+    switch (event.operation) {
+        case MergeTreeDeltaType.INSERT:
+            appendLocalInsertToRevertible(
+                revertibles,
+                event.deltaSegments);
+            break;
+        case MergeTreeDeltaType.REMOVE:
+            appendLocalRemoveToRevertible(
+                revertibles,
+                client,
+                event.deltaSegments);
+            break;
+        case MergeTreeDeltaType.ANNOTATE:
+            appendLocalAnnotateToRevertibles(
+                revertibles, event.deltaSegments);
+            break;
+        default:
+            throw new UsageError(`Unsupported event delta type: ${event.operation}`);
     }
 }
 
@@ -141,83 +135,74 @@ export function discardRevertibles(... revertibles: MergeTreeDeltaRevertible[]) 
     });
 }
 
-export function revertLocalInsert(client: Client, revertible: InsertRevertible) {
-    let notRevertible: Trackable[] | undefined;
-
-    for (const tracked of revertible.trackingGroup.tracked) {
-        if (tracked.isLeaf()) {
-            tracked.trackingCollection.unlink(revertible.trackingGroup);
-            if (tracked.removedSeq === undefined) {
-                const start = client.getPosition(tracked);
-                client.removeRangeLocal(start, start + tracked.cachedLength);
-            }
-        } else {
-            notRevertible ??= [];
-            notRevertible.push(tracked);
-        }
-    }
-
-    return notRevertible;
-}
-
-export function revertLocalRemove(client: Client, revertible: RemoveRevertible) {
-    let notRevertible: Trackable[] | undefined;
-
-    for (const tracked of revertible.trackingGroup.tracked) {
-        if (!tracked.isLeaf()) {
-            tracked.trackingCollection.unlink(revertible.trackingGroup);
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            const insertSegment = client.specToSegment(tracked.properties!.segment);
-            client.insertAtReferencePositionLocal(tracked, insertSegment, () => true);
-
-            tracked.getSegment().localRefs?.removeLocalRef(tracked);
-
-            tracked.trackingCollection.trackingGroups.forEach((tg) => {
-                tg.link(insertSegment);
-                tg.unlink(tracked);
-            });
-        } else {
-            notRevertible ??= [];
-            notRevertible.push(tracked);
-        }
-    }
-
-    return notRevertible;
-}
-
-export function revertLocalAnnotate(client: Client, revertible: AnnotateRevertible) {
-    let notRevertible: Trackable[] | undefined;
-    for (const tracked of revertible.trackingGroup.tracked) {
+export function revertLocalInsert(client: Client, revertible: InsertRevertible, ops: IMergeTreeDeltaOp[]) {
+    while (revertible.trackingGroup.size > 0) {
+        const tracked = revertible.trackingGroup.tracked[0];
         tracked.trackingCollection.unlink(revertible.trackingGroup);
-        if (tracked.isLeaf()) {
+        assert(tracked.isLeaf(), "inserts must track segments");
+        if (toRemovalInfo(tracked) === undefined) {
             const start = client.getPosition(tracked);
-            client.annotateRangeLocal(
+            ops.push(client.removeRangeLocal(start, start + tracked.cachedLength));
+        }
+    }
+}
+
+export function revertLocalRemove(client: Client, revertible: RemoveRevertible, ops: IMergeTreeDeltaOp[]) {
+    while (revertible.trackingGroup.size > 0) {
+        const tracked = revertible.trackingGroup.tracked[0];
+        tracked.trackingCollection.unlink(revertible.trackingGroup);
+        assert(!tracked.isLeaf(), "removes must track local refs");
+        const props = tracked.properties as RemoveSegmentRefProperties;
+        const insertSegment = client.specToSegment(props.segSpec);
+        const op = client.insertAtReferencePositionLocal(tracked, insertSegment, () => true);
+        tracked.getSegment().localRefs?.removeLocalRef(tracked);
+        tracked.trackingCollection.trackingGroups.forEach((tg) => {
+            tg.link(insertSegment);
+            tg.unlink(tracked);
+        });
+        if (op) {
+            ops.push(op);
+        }
+    }
+}
+
+export function revertLocalAnnotate(client: Client, revertible: AnnotateRevertible, ops: IMergeTreeDeltaOp[]) {
+    while (revertible.trackingGroup.size > 0) {
+        const tracked = revertible.trackingGroup.tracked[0];
+        tracked.trackingCollection.unlink(revertible.trackingGroup);
+        assert(tracked.isLeaf(), "annotates must track segments");
+        if (toRemovalInfo(tracked) === undefined) {
+            const start = client.getPosition(tracked);
+            const op = client.annotateRangeLocal(
                 start,
                 start + tracked.cachedLength,
                 revertible.propertyDeltas,
                 undefined);
-        } else {
-            notRevertible ??= [];
-            notRevertible.push(tracked);
+            if (op) {
+                ops.push(op);
+            }
         }
     }
-
-    return notRevertible;
 }
 
-export function revert(client: Client, ... revertibles: MergeTreeDeltaRevertible[]) {
-    revertibles.forEach((r) => {
+export function revert(client: Client, ... revertibles: MergeTreeDeltaRevertible[]): IMergeTreeGroupMsg {
+    const ops: IMergeTreeDeltaOp[] = [];
+    while (revertibles.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const r = revertibles.pop()!;
         switch (r.operation) {
             case MergeTreeDeltaType.INSERT:
-                revertLocalInsert(client, r);
+                revertLocalInsert(client, r, ops);
                 break;
             case MergeTreeDeltaType.REMOVE:
-                revertLocalRemove(client, r);
+                revertLocalRemove(client, r, ops);
                 break;
             case MergeTreeDeltaType.ANNOTATE:
-                revertLocalAnnotate(client, r);
+                revertLocalAnnotate(client, r, ops);
                 break;
             default:
         }
-    });
+    }
+
+    return createGroupOp(...ops);
 }

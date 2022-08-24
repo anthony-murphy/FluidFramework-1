@@ -1051,7 +1051,8 @@ export class MergeTree {
     public referencePositionToLocalPosition(
         refPos: ReferencePosition,
         refSeq = this.collabWindow.currentSeq,
-        clientId = this.collabWindow.clientId): number {
+        clientId = this.collabWindow.clientId,
+        returnLenForDetached?: true): number {
         const seg = refPos.getSegment();
         if (seg?.parent === undefined) {
             return DetachedReferencePosition;
