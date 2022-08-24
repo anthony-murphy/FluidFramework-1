@@ -150,20 +150,28 @@ export class TestClientLogger {
         this.roundLogLines.push(this.localLine);
     }
 
-    public validate() {
-        const baseText = this.clients[0].getText();
+    public validate(opts?: {
+        clear?: true;
+        baseText?: string;
+    }) {
+        const baseText = opts?.baseText ?? this.clients[0].getText();
         this.clients.forEach(
             (c) => {
-                if (c === this.clients[0]) { return; }
+                if (opts?.baseText === undefined && c === this.clients[0]) { return; }
                 // Pre-check to avoid this.toString() in the string template
                 if (c.getText() !== baseText) {
                     assert.equal(
                         c.getText(),
                         baseText,
                         // eslint-disable-next-line max-len
-                        `\n${this.toString()}\nClient ${c.longClientId} does not match client ${this.clients[0].longClientId}`);
+                        `\n${this.toString()}\nClient ${c.longClientId} does not match client ${opts?.baseText ? "baseText" : this.clients[0].longClientId}`);
                 }
             });
+        if (opts?.clear) {
+            this.roundLogLines.splice(1, this.roundLogLines.length);
+            this.roundLogLines[0].forEach((v, i) => this.paddings[i] = v.length);
+            this.addNewLogLine(); // capture initial state
+        }
         return baseText;
     }
 
