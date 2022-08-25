@@ -9,6 +9,7 @@ import { UnassignedSequenceNumber } from "../constants";
 import { IMergeTreeOp } from "../ops";
 import { TextSegment } from "../textSegment";
 import { IMergeTreeDeltaOpArgs, MergeTreeMaintenanceType } from "../mergeTreeDeltaCallback";
+import { PropertySet } from "../properties";
 import { TestClient } from "./testClient";
 
 function getOpString(msg: ISequencedDocumentMessage | undefined) {
@@ -29,11 +30,14 @@ function getOpString(msg: ISequencedDocumentMessage | undefined) {
 type ClientMap = Partial<Record<"A" | "B" | "C" | "D" | "E", TestClient>>;
 
 export function createClientsAtInitialState<TClients extends ClientMap>(
-    initialState: string,
+    opts: {
+        initialState: string;
+        options?: PropertySet;
+    },
     ... clientIds: (string & keyof TClients)[]
 ): Record<keyof TClients, TestClient> & { all: TestClient[]; } {
     const setup = (c: TestClient) => {
-        c.insertTextLocal(0, initialState);
+        c.insertTextLocal(0, opts.initialState);
         while (c.getText().includes("-")) {
             const index = c.getText().indexOf("-");
             c.removeRangeLocal(index, index + 1);
@@ -43,7 +47,7 @@ export function createClientsAtInitialState<TClients extends ClientMap>(
     const clients: Partial<Record<keyof TClients, TestClient>> = {};
     for (const id of clientIds) {
         if (clients[id] === undefined) {
-            const client = new TestClient();
+            const client = new TestClient(opts.options);
             clients[id] = client;
             all.push(client);
             setup(client);
@@ -70,7 +74,7 @@ export class TestClientLogger {
     private ackedLine: string[] = [];
     private localLine: string[] = [];
     // initialize to private instance, so first real edit will create a new line
-    private lastOp: any | undefined = {};
+    private lastOp: any | undefined;
 
     constructor(
         private readonly clients: readonly TestClient[],
@@ -158,6 +162,12 @@ export class TestClientLogger {
         this.clients.forEach(
             (c) => {
                 if (opts?.baseText === undefined && c === this.clients[0]) { return; }
+                // ensure all clients have seen the same ops
+                assert.equal(
+                    c.getCurrentSeq(),
+                    this.clients[0].getCurrentSeq(),
+                    `Client ${c.longClientId} current seq does not match client ${this.clients[0].longClientId}`,
+                );
                 // Pre-check to avoid this.toString() in the string template
                 if (c.getText() !== baseText) {
                     assert.equal(
@@ -216,8 +226,9 @@ export class TestClientLogger {
                                 acked += "_".repeat(node.text.length);
                                 if (node.seq === UnassignedSequenceNumber) {
                                     local += "*".repeat(node.text.length);
+                                } else {
+                                    local += "-".repeat(node.text.length);
                                 }
-                                local += "-".repeat(node.text.length);
                             } else {
                                 acked += "-".repeat(node.text.length);
                                 local += " ".repeat(node.text.length);
