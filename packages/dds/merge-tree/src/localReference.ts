@@ -414,6 +414,10 @@ export class LocalReferenceCollection {
         }
     }
 
+    /**
+    * @remarks This method should only be called by mergeTree.
+    * @internal
+    */
     public addBeforeTombstones(refs: Iterable<LocalReferencePosition>) {
         const firstOffset = 0;
         const beforeRefs = this.refsByOffset[firstOffset]?.before ?? new List<LocalReference>();
@@ -445,7 +449,10 @@ export class LocalReferenceCollection {
             }
         }
     }
-
+    /**
+    * @remarks This method should only be called by mergeTree.
+    * @internal
+    */
     public addAfterTombstones(refs: Iterable<LocalReferencePosition>) {
         const lastOffset = this.refsByOffset.length - 1;
         const afterRefs =
@@ -474,6 +481,19 @@ export class LocalReferenceCollection {
         }
     }
 
+    /**
+    * @remarks This method should only be called by mergeTree.
+    * @internal
+    */
+    public isAfterTombstone(lref: LocalReferencePosition) {
+        assertLocalReferences(lref);
+        return this.refsByOffset[lref.getOffset()]?.after === lref.getListNode()?.list;
+    }
+
+    /**
+    * @remarks This method should only be called by mergeTree.
+    * @internal
+    */
     public walkReferences(
         visitor: (lref: LocalReferencePosition) => boolean | void | undefined,
         start?: LocalReferencePosition,

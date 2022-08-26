@@ -85,15 +85,16 @@ export class TestClientLogger {
             logHeaders.push("op");
             logHeaders.push(`client ${c.longClientId}`);
             const callback = (op: IMergeTreeDeltaOpArgs | undefined) => {
-                if (this.lastOp !== op?.op) {
+                if (this.lastOp !== op) {
                     this.addNewLogLine();
-                    this.lastOp = op?.op;
+                    this.lastOp = op;
                 }
                 const clientLogIndex = i * 2;
 
                 this.ackedLine[clientLogIndex] = op === undefined
                     ? ""
-                    : getOpString(op.sequencedMessage ?? c.makeOpMessage(op.op));
+                    : getOpString(op.sequencedMessage !== undefined
+                        ? { ...op.sequencedMessage, contents: op.op } : c.makeOpMessage(op.op));
                 const segStrings = TestClientLogger.getSegString(c);
                 this.ackedLine[clientLogIndex + 1] = segStrings.acked;
                 this.localLine[clientLogIndex + 1] = segStrings.local;
@@ -155,10 +156,12 @@ export class TestClientLogger {
     }
 
     public validate(opts?: {
-        clear?: true;
+        clear?: boolean;
         baseText?: string;
+        errorPrefix?: string;
     }) {
         const baseText = opts?.baseText ?? this.clients[0].getText();
+        const errorPrefix = opts?.errorPrefix ? `${opts?.errorPrefix}: ` : "";
         this.clients.forEach(
             (c) => {
                 if (opts?.baseText === undefined && c === this.clients[0]) { return; }
@@ -166,7 +169,7 @@ export class TestClientLogger {
                 assert.equal(
                     c.getCurrentSeq(),
                     this.clients[0].getCurrentSeq(),
-                    `Client ${c.longClientId} current seq does not match client ${this.clients[0].longClientId}`,
+                    `${errorPrefix}${c.longClientId} current seq does not match client ${this.clients[0].longClientId}`,
                 );
                 // Pre-check to avoid this.toString() in the string template
                 if (c.getText() !== baseText) {
@@ -174,10 +177,10 @@ export class TestClientLogger {
                         c.getText(),
                         baseText,
                         // eslint-disable-next-line max-len
-                        `\n${this.toString()}\nClient ${c.longClientId} does not match client ${opts?.baseText ? "baseText" : this.clients[0].longClientId}`);
+                        `${errorPrefix}\n${this.toString()}\nClient ${c.longClientId} does not match client ${opts?.baseText ? "baseText" : this.clients[0].longClientId}`);
                 }
             });
-        if (opts?.clear) {
+        if (opts?.clear === true) {
             this.roundLogLines.splice(1, this.roundLogLines.length);
             this.roundLogLines[0].forEach((v, i) => this.paddings[i] = v.length);
             this.addNewLogLine(); // capture initial state

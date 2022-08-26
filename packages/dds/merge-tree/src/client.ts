@@ -242,14 +242,17 @@ export class Client {
             this.getCurrentSeq(),
             this.getClientId());
 
-        const realPos =
-            pos === DetachedReferencePosition && refTypeIncludesFlag(refPos, ReferenceType.SlideOnRemove)
-                ? this.getLength()
-                : pos;
-
-        if (realPos === DetachedReferencePosition) {
-            return undefined;
+        let realPos = pos;
+        if (pos === DetachedReferencePosition) {
+            if (refTypeIncludesFlag(refPos, ReferenceType.SlideOnRemove)) {
+                realPos = this.getLength();
+            } else {
+                return undefined;
+            }
+        } else if (refPos.getSegment().localRefs?.isAfterTombstone(refPos)) {
+            realPos++;
         }
+
         const op = createInsertSegmentOp(
             realPos,
             segment);
@@ -262,6 +265,7 @@ export class Client {
 
         this._mergeTree.insertAtReferencePosition(
             refPos,
+            realPos,
             segment,
             opArgs,
             slideFilter);

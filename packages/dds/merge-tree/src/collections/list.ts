@@ -77,6 +77,24 @@ export class List<T> implements
     Partial<ListNodeRange<T>>,
     // try to match array signature and semantics where possible
     Pick<ListNode<T>[], "pop" | "shift" | "length" | "includes" > {
+    map<U>(callbackfn: (value: ListNode<T>) => U): Iterable<U> {
+        let node = this.first;
+        const iterator: IterableIterator<U> = {
+            next(): IteratorResult<U> {
+                if (node === undefined) {
+                    return { done: true, value: undefined };
+                }
+                const rtn = { value: callbackfn(node), done: false };
+                node = node.next;
+                return rtn;
+            },
+            [Symbol.iterator]() {
+                return this;
+            },
+        };
+        return iterator;
+    }
+
     insertAfter(preceding: ListNode<T>, ...items: T[]): ListNodeRange<T> | undefined {
         assert(this._includes(preceding), "preceding not in list");
         this._len += items.length;
