@@ -243,9 +243,11 @@ export class Client {
             this.getClientId());
 
         let realPos = pos;
+        let detached = false;
         if (pos === DetachedReferencePosition) {
             if (refTypeIncludesFlag(refPos, ReferenceType.SlideOnRemove)) {
                 realPos = this.getLength();
+                detached = true;
             } else {
                 return undefined;
             }
@@ -266,6 +268,7 @@ export class Client {
         this._mergeTree.insertAtReferencePosition(
             refPos,
             realPos,
+            detached,
             segment,
             opArgs,
             slideFilter);

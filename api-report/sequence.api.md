@@ -455,13 +455,13 @@ export abstract class SharedSegmentSequence<T extends ISegment> extends SharedOb
     // (undocumented)
     getStackContext(startPos: number, rangeLabels: string[]): RangeStackMap;
     // (undocumented)
-    groupOperation(groupOp: IMergeTreeGroupMsg): void;
+    groupOperation(groupOp: IMergeTreeGroupMsg, submitOnly?: true): void;
     // (undocumented)
     id: string;
     // (undocumented)
     protected initializeLocalCore(): void;
     // (undocumented)
-    insertAtReferencePosition(pos: ReferencePosition, segment: T): void;
+    insertAtReferencePosition(pos: LocalReferencePosition, segment: T, localSlideFilter?: (lref: LocalReferencePosition) => boolean): void;
     // (undocumented)
     insertSegmentFromSpec?: (segmentSpec: IJSONSegment, position: number) => ISegment;
     // (undocumented)

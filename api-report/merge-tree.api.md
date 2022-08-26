@@ -16,6 +16,19 @@ import { ITelemetryLogger } from '@fluidframework/common-definitions';
 export function addProperties(oldProps: PropertySet | undefined, newProps: PropertySet, op?: ICombiningOp, seq?: number): PropertySet;
 
 // @public (undocumented)
+export interface AnnotateRevertible {
+    // (undocumented)
+    operation: typeof MergeTreeDeltaType.ANNOTATE;
+    // (undocumented)
+    propertyDeltas: PropertySet;
+    // (undocumented)
+    trackingGroup: TrackingGroup;
+}
+
+// @public (undocumented)
+export function appendToRevertibles(revertibles: MergeTreeDeltaRevertible[], client: Client, event: IMergeTreeDeltaCallbackArgs): void;
+
+// @public (undocumented)
 export abstract class BaseSegment extends MergeNode implements ISegment {
     // (undocumented)
     ack(segmentGroup: SegmentGroup, opArgs: IMergeTreeDeltaOpArgs): boolean;
@@ -154,7 +167,7 @@ export class Client {
     // (undocumented)
     getStackContext(startPos: number, rangeLabels: string[]): RangeStackMap;
     // (undocumented)
-    insertAtReferencePositionLocal(refPos: ReferencePosition, segment: ISegment): IMergeTreeInsertMsg | undefined;
+    insertAtReferencePositionLocal(refPos: LocalReferencePosition, segment: ISegment, slideFilter?: (lref: LocalReferencePosition) => boolean): IMergeTreeInsertMsg | undefined;
     // (undocumented)
     insertSegmentLocal(pos: number, segment: ISegment): IMergeTreeInsertMsg | undefined;
     // (undocumented)
@@ -292,6 +305,9 @@ export interface Dictionary<TKey, TData> {
     // (undocumented)
     remove(key: TKey): void;
 }
+
+// @public (undocumented)
+export function discardRevertibles(...revertibles: MergeTreeDeltaRevertible[]): void;
 
 // @public (undocumented)
 export function extend<T>(base: MapLike<T>, extension: MapLike<T> | undefined, combiningOp?: ICombiningOp, seq?: number): MapLike<T>;
@@ -589,6 +605,14 @@ export interface InsertContext {
 }
 
 // @public (undocumented)
+export interface InsertRevertible {
+    // (undocumented)
+    operation: typeof MergeTreeDeltaType.INSERT;
+    // (undocumented)
+    trackingGroup: TrackingGroup;
+}
+
+// @public (undocumented)
 export function internedSpaces(n: number): string;
 
 // Warning: (ae-internal-missing-underscore) The name "IRBAugmentation" should be prefixed with an underscore because the declaration is marked as @internal
@@ -690,9 +714,9 @@ export class LocalReferenceCollection {
     // @internal
     constructor(
     segment: ISegment, initialRefsByfOffset?: (IRefsAtOffset | undefined)[]);
-    // (undocumented)
+    // @internal (undocumented)
     addAfterTombstones(refs: Iterable<LocalReferencePosition>): void;
-    // (undocumented)
+    // @internal (undocumented)
     addBeforeTombstones(refs: Iterable<LocalReferencePosition>): void;
     // @internal (undocumented)
     addLocalRef(lref: LocalReferencePosition, offset: number): void;
@@ -700,7 +724,7 @@ export class LocalReferenceCollection {
     static append(seg1: ISegment, seg2: ISegment): void;
     // @internal
     append(other: LocalReferenceCollection): void;
-    // (undocumented)
+    // @internal (undocumented)
     clear(): void;
     // @internal (undocumented)
     createLocalRef(offset: number, refType: ReferenceType, properties: PropertySet | undefined): LocalReferencePosition;
@@ -711,10 +735,12 @@ export class LocalReferenceCollection {
     // @internal (undocumented)
     hierRefCount: number;
     // @internal (undocumented)
+    isAfterTombstone(lref: LocalReferencePosition): boolean;
+    // @internal (undocumented)
     removeLocalRef(lref: LocalReferencePosition): LocalReferencePosition | undefined;
     // @internal
     split(offset: number, splitSeg: ISegment): void;
-    // (undocumented)
+    // @internal (undocumented)
     walkReferences(visitor: (lref: LocalReferencePosition) => boolean | void | undefined, start?: LocalReferencePosition, forward?: boolean): boolean;
 }
 
@@ -817,6 +843,9 @@ export type MergeTreeDeltaOperationType = typeof MergeTreeDeltaType.ANNOTATE | t
 
 // @public (undocumented)
 export type MergeTreeDeltaOperationTypes = MergeTreeDeltaOperationType | MergeTreeMaintenanceType;
+
+// @public (undocumented)
+export type MergeTreeDeltaRevertible = InsertRevertible | RemoveRevertible | AnnotateRevertible;
 
 // @public (undocumented)
 export const MergeTreeDeltaType: {
@@ -1089,6 +1118,14 @@ export function refHasTileLabels(refPos: ReferencePosition): boolean;
 export function refTypeIncludesFlag(refPosOrType: ReferencePosition | ReferenceType, flags: ReferenceType): boolean;
 
 // @public (undocumented)
+export interface RemoveRevertible {
+    // (undocumented)
+    operation: typeof MergeTreeDeltaType.REMOVE;
+    // (undocumented)
+    trackingGroup: TrackingGroup;
+}
+
+// @public (undocumented)
 export const reservedMarkerIdKey = "markerId";
 
 // @public (undocumented)
@@ -1099,6 +1136,18 @@ export const reservedRangeLabelsKey = "referenceRangeLabels";
 
 // @public (undocumented)
 export const reservedTileLabelsKey = "referenceTileLabels";
+
+// @public (undocumented)
+export function revert(client: Client, ...revertibles: MergeTreeDeltaRevertible[]): IMergeTreeGroupMsg;
+
+// @public (undocumented)
+export function revertLocalAnnotate(client: Client, revertible: AnnotateRevertible, ops: IMergeTreeDeltaOp[]): void;
+
+// @public (undocumented)
+export function revertLocalInsert(client: Client, revertible: InsertRevertible, ops: IMergeTreeDeltaOp[]): void;
+
+// @public (undocumented)
+export function revertLocalRemove(client: Client, revertible: RemoveRevertible, ops: IMergeTreeDeltaOp[]): void;
 
 // @public (undocumented)
 export interface SearchResult {

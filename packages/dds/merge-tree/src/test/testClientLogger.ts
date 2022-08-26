@@ -74,7 +74,7 @@ export class TestClientLogger {
     private ackedLine: string[] = [];
     private localLine: string[] = [];
     // initialize to private instance, so first real edit will create a new line
-    private lastOp: any | undefined = {};
+    private lastDeltaArgs: IMergeTreeDeltaOpArgs | undefined;
 
     constructor(
         private readonly clients: readonly TestClient[],
@@ -84,17 +84,18 @@ export class TestClientLogger {
         clients.forEach((c, i) => {
             logHeaders.push("op");
             logHeaders.push(`client ${c.longClientId}`);
-            const callback = (op: IMergeTreeDeltaOpArgs | undefined) => {
-                if (this.lastOp !== op) {
+            const callback = (deltaArgs: IMergeTreeDeltaOpArgs | undefined) => {
+                if (this.lastDeltaArgs?.sequencedMessage !== deltaArgs?.sequencedMessage
+                    || this.lastDeltaArgs?.op !== deltaArgs?.op) {
                     this.addNewLogLine();
-                    this.lastOp = op;
+                    this.lastDeltaArgs = deltaArgs;
                 }
                 const clientLogIndex = i * 2;
 
-                this.ackedLine[clientLogIndex] = op === undefined
+                this.ackedLine[clientLogIndex] = deltaArgs === undefined
                     ? ""
-                    : getOpString(op.sequencedMessage !== undefined
-                        ? { ...op.sequencedMessage, contents: op.op } : c.makeOpMessage(op.op));
+                    : getOpString(deltaArgs.sequencedMessage !== undefined
+                        ? { ...deltaArgs.sequencedMessage, contents: deltaArgs.op } : c.makeOpMessage(deltaArgs.op));
                 const segStrings = TestClientLogger.getSegString(c);
                 this.ackedLine[clientLogIndex + 1] = segStrings.acked;
                 this.localLine[clientLogIndex + 1] = segStrings.local;

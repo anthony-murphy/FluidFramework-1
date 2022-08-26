@@ -1402,6 +1402,7 @@ export class MergeTree {
     public insertAtReferencePosition(
         referencePosition: LocalReferencePosition,
         pos: number,
+        detached: boolean,
         insertSegment: ISegment,
         opArgs: IMergeTreeDeltaOpArgs,
         localSlideFilter?: (lref: LocalReferencePosition) => boolean,
@@ -1423,7 +1424,7 @@ export class MergeTree {
 
         if (localSlideFilter) {
             const insertRef = new List<LocalReferencePosition>();
-            if (pos === DetachedReferencePosition) {
+            if (detached) {
                 for (const refNode of this.detachedReferences) {
                     if (refNode.data === referencePosition) {
                         break;
@@ -1435,8 +1436,7 @@ export class MergeTree {
                 }
             }
             const forward =
-                pos === DetachedReferencePosition
-                || insertSegment.ordinal < referencePosition.getSegment().ordinal;
+                detached || insertSegment.ordinal < referencePosition.getSegment().ordinal;
             depthFirstNodeWalk(
                 insertSegment.parent!,
                 insertSegment,
@@ -1467,7 +1467,11 @@ export class MergeTree {
             if (insertRef.length > 0) {
                 const localRefs =
                     insertSegment.localRefs ??= new LocalReferenceCollection(insertSegment);
-                localRefs.addBeforeTombstones(insertRef.map((n) => n.data));
+                if (forward) {
+                    localRefs.addBeforeTombstones(insertRef.map((n) => n.data));
+                } else {
+                    localRefs.addAfterTombstones(insertRef.map((n) => n.data));
+                }
             }
         }
 
