@@ -20,7 +20,7 @@ import { createClientsAtInitialState, TestClientLogger } from "./testClientLogge
     initialOps: { min: 1, max: 1 },
     revertOps: { min: 3, max: 3 },
     ackBeforeRevert: [true],
-    rounds: 1000,
+    rounds: 10000,
     operations: [removeRange],
     growthFunc: (input: number) => input + 1,
 };
@@ -40,7 +40,7 @@ describe("MergeTree.Client", () => {
                                 initialState: "",
                                 options: { mergeTreeUseNewLengthCalculations: true },
                             },
-                            "A", "B", "C", "D");
+                            "A", "B", "C");
                         let seq = 0;
                         for (let rnd = 0; rnd < defaultOptions.rounds; rnd++) {
                             const logger = new TestClientLogger(clients.all, `Round ${rnd}`);
@@ -57,6 +57,8 @@ describe("MergeTree.Client", () => {
 
                                 seq = applyMessages(seq, initialMsgs, clients.all, logger);
                             }
+
+                            // cache the base text to ensure we get back to it after revert
                             const baseText = logger.validate({ clear: true, errorPrefix: "After Initial Ops" });
 
                             const clientB_Revertibles: MergeTreeDeltaRevertible[] = [];
@@ -86,15 +88,21 @@ describe("MergeTree.Client", () => {
                             clients.B.mergeTreeDeltaCallback = old;
                             {
                                 const revertOp = revert(clients.B, ... clientB_Revertibles);
-                                msgs.push(
-                                    [
-                                        clients.B.makeOpMessage(revertOp, undefined, undefined, undefined, seq),
-                                        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                                        clients.B.peekPendingSegmentGroups(revertOp.ops.length)!,
-                                    ]);
+                                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                                const segmentGroups = clients.B.peekPendingSegmentGroups(revertOp.ops.length)!;
+                                // spread the ops and apply one by one for better logging, as groups op
+                                // don't log well in the test client logger. grouped or not doesn't really
+                                // matter at this layer, as internally they get spread just the same
+                                revertOp.ops.forEach((op, i) => {
+                                    msgs.push(
+                                        [
+                                            clients.B.makeOpMessage(op, undefined, undefined, undefined, seq),
+                                            segmentGroups[i],
+                                        ]);
+                                    });
 
                                 seq = applyMessages(seq, msgs, clients.all, logger);
-                                logger.validate({ clear: true, baseText, errorPrefix: "After Revert and Ack" });
+                                logger.validate({ clear: true, baseText, errorPrefix: "After Revert" });
                             }
 
                             for (let i = clients.A.getCollabWindow().minSeq; i <= seq; i++) {

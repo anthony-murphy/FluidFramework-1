@@ -64,6 +64,7 @@ import { createAnnotateRangeOp, createInsertSegmentOp, createRemoveRangeOp } fro
 import {
     ICombiningOp,
     IMergeTreeDeltaOp,
+    IMergeTreeInsertMsg,
     IRelativePosition,
     MergeTreeDeltaType,
     ReferenceType,
@@ -1100,8 +1101,7 @@ export class MergeTree {
     public referencePositionToLocalPosition(
         refPos: ReferencePosition,
         refSeq = this.collabWindow.currentSeq,
-        clientId = this.collabWindow.clientId,
-        returnLenForDetached?: true): number {
+        clientId = this.collabWindow.clientId): number {
         const seg = refPos.getSegment();
         if (seg?.parent === undefined) {
             return DetachedReferencePosition;
@@ -1110,9 +1110,16 @@ export class MergeTree {
             return this.getPosition(refPos, refSeq, clientId);
         }
         if (refTypeIncludesFlag(refPos, ReferenceType.Transient)
-            || seg.localRefs?.has(refPos)) {
-                const offset = isRemoved(seg) ? 0 : refPos.getOffset();
-                return offset + this.getPosition(seg, refSeq, clientId);
+            || seg.localRefs?.has(refPos)
+            ) {
+            const offset = isRemoved(seg) ? 0 : refPos.getOffset();
+            const pos = offset + this.getPosition(seg, refSeq, clientId);
+            // pos === 0, is that right?
+            if (pos > 0 && seg.localRefs?.isAfterTombstone(refPos as LocalReferencePosition)) {
+                return pos + 1;
+            } else {
+                return pos;
+            }
         }
         return DetachedReferencePosition;
     }
@@ -1148,7 +1155,7 @@ export class MergeTree {
         if (searchInfo.tile) {
             let pos: number;
             if (searchInfo.tile.isLeaf()) {
-                const marker = <Marker>searchInfo.tile;
+                const marker = searchInfo.tile;
                 pos = this.getPosition(marker, UniversalSequenceNumber, clientId);
             } else {
                 const localRef = searchInfo.tile;
@@ -1410,21 +1417,37 @@ export class MergeTree {
 
     public insertAtReferencePosition(
         referencePosition: LocalReferencePosition,
-        pos: number,
-        detached: boolean,
         insertSegment: ISegment,
-        opArgs: IMergeTreeDeltaOpArgs,
         localSlideFilter?: (lref: LocalReferencePosition) => boolean,
-    ): void {
+    ): IMergeTreeDeltaOpArgs<IMergeTreeInsertMsg> | undefined {
         const refSeq = this.collabWindow.currentSeq;
         const clientId = this.collabWindow.clientId;
 
-        this.ensureIntervalBoundary(pos, refSeq, clientId);
+        const maybePos = this.referencePositionToLocalPosition(
+            referencePosition,
+            refSeq,
+            clientId);
+
+        let realPos = maybePos;
+        const detached = maybePos === DetachedReferencePosition;
+        if (detached) {
+            if (refTypeIncludesFlag(referencePosition, ReferenceType.SlideOnRemove)) {
+                realPos = this.getLength(refSeq, clientId);
+            } else {
+                return undefined;
+            }
+        }
+
+        const op = createInsertSegmentOp(
+            realPos,
+            insertSegment);
+
+        this.ensureIntervalBoundary(realPos, refSeq, clientId);
 
         const localSeq = ++this.collabWindow.localSeq;
 
         this.blockInsert(
-            pos,
+            realPos,
             refSeq,
             clientId,
             UnassignedSequenceNumber,
@@ -1432,26 +1455,9 @@ export class MergeTree {
             [insertSegment]);
 
         if (localSlideFilter) {
-            const insertRef = new List<LocalReferencePosition>();
-            if (detached) {
-                for (const refNode of this.detachedReferences) {
-                    if (refNode.data === referencePosition) {
-                        this.detachedReferences.remove(refNode);
-                        break;
-                    }
-                    // clean up on slide
-                    if (refNode.data.trackingCollection.empty === true) {
-                        this.detachedReferences.remove(refNode);
-                    }
+            let insertRef: Partial<Record<"before" | "after", List<LocalReferencePosition>>> | undefined;
 
-                    if (localSlideFilter(refNode.data)) {
-                        this.detachedReferences.remove(refNode);
-                        insertRef.push(refNode.data);
-                    }
-                }
-            }
-            const forward =
-                detached || insertSegment.ordinal < referencePosition.getSegment().ordinal;
+            const forward = detached || insertSegment.ordinal < referencePosition.getSegment().ordinal;
             depthFirstNodeWalk(
                 insertSegment.parent!,
                 insertSegment,
@@ -1464,10 +1470,13 @@ export class MergeTree {
                                     return false;
                                 }
                                 if (localSlideFilter(lref)) {
+                                    insertRef = insertRef ??= {};
                                     if (forward) {
-                                        insertRef.push(lref);
+                                        const before = insertRef.before ??= new List();
+                                        before.push(lref);
                                     } else {
-                                        insertRef.unshift(lref);
+                                        const after = insertRef.after ??= new List();
+                                        after.unshift(lref);
                                     }
                                 }
                             },
@@ -1479,19 +1488,37 @@ export class MergeTree {
                 undefined,
                 forward);
 
-            if (insertRef.length > 0) {
+            if (detached) {
+                for (const refNode of this.detachedReferences) {
+                    // clean up on slide
+                    if (refNode.data.trackingCollection.empty === true) {
+                        this.detachedReferences.remove(refNode);
+                    }
+                    if (localSlideFilter(refNode.data)) {
+                        insertRef = insertRef ??= {};
+                        this.detachedReferences.remove(refNode);
+                        const before = insertRef.before ??= new List();
+                        before.push(refNode.data);
+                    }
+                    if (refNode.data === referencePosition) {
+                        break;
+                    }
+                }
+            }
+
+            if (insertRef !== undefined) {
                 const localRefs =
                     insertSegment.localRefs ??= new LocalReferenceCollection(insertSegment);
-                if (forward) {
-                    localRefs.addBeforeTombstones(insertRef.map((n) => n.data));
-                } else {
-                    localRefs.addAfterTombstones(insertRef.map((n) => n.data));
+                if (insertRef.before?.empty === false) {
+                    localRefs.addBeforeTombstones(insertRef.before.map((n) => n.data));
+                }
+                if (insertRef.after?.empty === false) {
+                    localRefs.addAfterTombstones(insertRef.after.map((n) => n.data));
                 }
             }
         }
-
-        // opArgs == undefined => loading snapshot or test code
-        if (this.mergeTreeDeltaCallback && opArgs !== undefined) {
+        const opArgs = { op };
+        if (this.mergeTreeDeltaCallback) {
             this.mergeTreeDeltaCallback(
                 opArgs,
                 {
@@ -1503,6 +1530,7 @@ export class MergeTree {
         if (this.collabWindow.collaborating && MergeTree.options.zamboniSegments) {
             this.zamboniSegments();
         }
+        return opArgs;
     }
 
     /**
