@@ -39,9 +39,15 @@ function _validateReferenceType(refType: ReferenceType) {
     }
 }
 
-export interface LocalReferencePosition extends ReferencePosition {
+export interface LocalReferencePosition {
     callbacks?: Partial<Record<"beforeSlide" | "afterSlide", () => void>>;
     readonly trackingCollection: TrackingGroupCollection;
+    properties?: PropertySet;
+    refType: ReferenceType;
+    getSegment(): ISegment;
+    getOffset(): number;
+    addProperties(newProps: PropertySet, op?: ICombiningOp): void;
+    isLeaf(): this is ISegment;
 }
 
 /**

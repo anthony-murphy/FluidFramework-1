@@ -53,7 +53,7 @@ import { SnapshotLegacy } from "./snapshotlegacy";
 import { SnapshotLoader } from "./snapshotLoader";
 import { IMergeTreeTextHelper } from "./textSegment";
 import { SnapshotV1 } from "./snapshotV1";
-import { ReferencePosition, RangeStackMap, DetachedReferencePosition, refTypeIncludesFlag } from "./referencePositions";
+import { ReferencePosition, RangeStackMap } from "./referencePositions";
 import { MergeTree } from "./mergeTree";
 import { MergeTreeTextHelper } from "./MergeTreeTextHelper";
 import { walkAllChildSegments } from "./mergeTreeNodeWalk";
@@ -237,49 +237,27 @@ export class Client {
         segment: ISegment,
         slideFilter?: (lref: LocalReferencePosition) => boolean,
     ): IMergeTreeInsertMsg | undefined {
-        const pos = this._mergeTree.referencePositionToLocalPosition(
-            refPos,
-            this.getCurrentSeq(),
-            this.getClientId());
-
-        let realPos = pos;
-        let detached = false;
-        if (pos === DetachedReferencePosition) {
-            if (refTypeIncludesFlag(refPos, ReferenceType.SlideOnRemove)) {
-                realPos = this.getLength();
-                detached = true;
-            } else {
-                return undefined;
-            }
-        } else if (refPos.getSegment().localRefs?.isAfterTombstone(refPos)) {
-            realPos++;
-        }
-
-        const op = createInsertSegmentOp(
-            realPos,
-            segment);
-
-        const opArgs = { op };
         let traceStart: Trace | undefined;
         if (this.measureOps) {
             traceStart = Trace.start();
         }
 
-        this._mergeTree.insertAtReferencePosition(
+       const opArgs = this._mergeTree.insertAtReferencePosition(
             refPos,
-            realPos,
-            detached,
             segment,
-            opArgs,
             slideFilter);
+
+        if (!opArgs) {
+            return;
+        }
 
         this.completeAndLogOp(
             opArgs,
             this.getClientSequenceArgs(opArgs),
-            { start: op.pos1 },
+            { start: opArgs.op.pos1 },
             traceStart);
 
-        return op;
+        return opArgs.op;
     }
 
     public walkSegments<TClientData>(
