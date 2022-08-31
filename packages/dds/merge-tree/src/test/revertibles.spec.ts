@@ -40,4 +40,37 @@ describe("MergeTree.Revertibles", () => {
 
         logger.validate({ baseText: "12" });
     });
+
+    it("Re-Insert at position 0 in empty string", () => {
+        const clients = createClientsAtInitialState(
+            { initialState: "BBC-", options: { mergeTreeUseNewLengthCalculations: true } },
+            "A", "B", "C");
+
+        const logger = new TestClientLogger(clients.all);
+        let seq = 0;
+        const ops: ISequencedDocumentMessage[] = [];
+
+        const clientB_Revertibles: MergeTreeDeltaRevertible[] = [];
+        // the test logger uses these callbacks, so preserve it
+        const old = clients.B.mergeTreeDeltaCallback;
+        clients.B.mergeTreeDeltaCallback = (op, delta) => {
+            old?.(op, delta);
+            appendToRevertibles(clientB_Revertibles, clients.B, delta);
+        };
+
+        ops.push(clients.B.makeOpMessage(clients.B.removeRangeLocal(2, 3), ++seq));
+        ops.push(clients.B.makeOpMessage(clients.B.removeRangeLocal(0, 1), ++seq));
+        ops.push(clients.B.makeOpMessage(clients.B.insertTextLocal(1, "BB"), ++seq));
+
+        clients.B.mergeTreeDeltaCallback = old;
+
+        ops.splice(0).forEach((op) => clients.all.forEach((c) => c.applyMsg(op)));
+
+        const revertOp = revert(clients.B, ... clientB_Revertibles);
+        revertOp.ops.forEach((op) => ops.push(clients.B.makeOpMessage(op, ++seq)));
+
+        ops.splice(0).forEach((op) => clients.all.forEach((c) => c.applyMsg(op)));
+
+        logger.validate({ baseText: "BBC" });
+    });
 });

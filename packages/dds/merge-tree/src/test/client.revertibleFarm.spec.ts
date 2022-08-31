@@ -16,16 +16,16 @@ import {
 import { createClientsAtInitialState, TestClientLogger } from "./testClientLogger";
 
  const defaultOptions = {
-    minLength: { min: 2, max: 2 },
-    initialOps: { min: 1, max: 1 },
-    revertOps: { min: 3, max: 3 },
-    ackBeforeRevert: [true],
-    rounds: 10000,
+    minLength: { min: 1, max: 64 },
+    initialOps: { min: 1, max: 64 },
+    revertOps: { min: 1, max: 64 },
+    ackBeforeRevert: [true, false],
+    rounds: 10,
     operations: [removeRange],
-    growthFunc: (input: number) => input + 1,
+    growthFunc: (input: number) => input * 2,
 };
 
-describe("MergeTree.Client", () => {
+describe.only("MergeTree.Client", () => {
     doOverRange(defaultOptions.minLength, defaultOptions.growthFunc, (minLen) => {
         for (const ackBeforeRevert of defaultOptions.ackBeforeRevert) {
             doOverRange(defaultOptions.initialOps, defaultOptions.growthFunc, (initialOps) => {

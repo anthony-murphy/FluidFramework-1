@@ -1114,8 +1114,9 @@ export class MergeTree {
             ) {
             const offset = isRemoved(seg) ? 0 : refPos.getOffset();
             const pos = offset + this.getPosition(seg, refSeq, clientId);
-            // pos === 0, is that right?
-            if (pos > 0 && seg.localRefs?.isAfterTombstone(refPos as LocalReferencePosition)) {
+
+            if ((this.nodeLength(seg, refSeq, clientId) ?? 0) > 0
+                && seg.localRefs?.isAfterTombstone(refPos as LocalReferencePosition)) {
                 return pos + 1;
             } else {
                 return pos;
