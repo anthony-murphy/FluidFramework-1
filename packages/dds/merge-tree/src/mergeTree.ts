@@ -14,6 +14,7 @@ import {
     Comparer,
     Heap,
     List,
+    ListNode,
     Stack,
 } from "./collections";
 import {
@@ -905,12 +906,20 @@ export class MergeTree {
                 localRefs.addBeforeTombstones(refsToSlide);
             }
         } else {
+            let preceding: ListNode<LocalReferencePosition> | undefined;
             for (const ref of refsToSlide) {
                 ref.callbacks?.beforeSlide?.();
                 segment?.localRefs.removeLocalRef(ref);
                 ref.callbacks?.afterSlide?.();
+                // only store tracked references in
+                if (ref.trackingCollection.empty === false) {
+                    if (preceding === undefined) {
+                        preceding = this.detachedReferences.unshift(ref)?.first;
+                    } else {
+                        preceding = this.detachedReferences.insertAfter(preceding, ref)?.first;
+                    }
+                }
             }
-            this.detachedReferences.unshift(... refsToSlide);
         }
         // TODO is it required to update the path lengths?
         if (newSegment) {
@@ -1427,8 +1436,14 @@ export class MergeTree {
             if (detached) {
                 for (const refNode of this.detachedReferences) {
                     if (refNode.data === referencePosition) {
+                        this.detachedReferences.remove(refNode);
                         break;
                     }
+                    // clean up on slide
+                    if (refNode.data.trackingCollection.empty === true) {
+                        this.detachedReferences.remove(refNode);
+                    }
+
                     if (localSlideFilter(refNode.data)) {
                         this.detachedReferences.remove(refNode);
                         insertRef.push(refNode.data);
