@@ -16,10 +16,11 @@ import {
 import { createClientsAtInitialState, TestClientLogger } from "./testClientLogger";
 
  const defaultOptions = {
-    minLength: { min: 1, max: 64 },
-    initialOps: { min: 1, max: 64 },
-    revertOps: { min: 1, max: 64 },
+    minLength: { min: 1, max: 32 },
+    initialOps: 10,
+    revertOps: { min: 1, max: 32 },
     ackBeforeRevert: [true, false],
+    modifyBeforeRevert: [true, false],
     rounds: 10,
     operations: [removeRange],
     growthFunc: (input: number) => input * 2,
@@ -28,12 +29,19 @@ import { createClientsAtInitialState, TestClientLogger } from "./testClientLogge
 describe.only("MergeTree.Client", () => {
     doOverRange(defaultOptions.minLength, defaultOptions.growthFunc, (minLen) => {
         for (const ackBeforeRevert of defaultOptions.ackBeforeRevert) {
-            doOverRange(defaultOptions.initialOps, defaultOptions.growthFunc, (initialOps) => {
+            for (const modifyBeforeRevert of defaultOptions.modifyBeforeRevert) {
                 doOverRange(defaultOptions.revertOps, defaultOptions.growthFunc, (revertOps) => {
                     // eslint-disable-next-line max-len
-                    it(`MinLen: ${minLen} InitialOps: ${initialOps} RevertOps: ${revertOps} AckBeforeRevert: ${ackBeforeRevert}`, async () => {
+                    it(`MinLen: ${minLen} InitialOps: ${defaultOptions.initialOps} RevertOps: ${revertOps} AckBeforeRevert: ${ackBeforeRevert} ModifyBeforeRevert: ${modifyBeforeRevert}`, async () => {
                         const mt = random.engines.mt19937();
-                        mt.seedWithArray([0xDEADBEEF, 0xFEEDBED, minLen, initialOps, revertOps]);
+                        mt.seedWithArray([
+                            0xDEADBEEF,
+                            0xFEEDBED,
+                            minLen,
+                            revertOps,
+                            ackBeforeRevert ? 0x794e : 0x5A16E,
+                            modifyBeforeRevert ? 0x794e : 0x5A16E,
+                        ]);
 
                         const clients = createClientsAtInitialState(
                             {
@@ -51,7 +59,7 @@ describe.only("MergeTree.Client", () => {
                                     seq,
                                     clients.all,
                                     logger,
-                                    initialOps,
+                                    defaultOptions.initialOps,
                                     minLen,
                                     defaultOptions.operations);
 
@@ -84,6 +92,20 @@ describe.only("MergeTree.Client", () => {
                                     logger.validate({ errorPrefix: "Before Revert Ack" });
                                 }
                             }
+                            if (modifyBeforeRevert) {
+                                // add modifications form another client
+                                msgs.push(...generateOperationMessagesForClients(
+                                    mt,
+                                    seq,
+                                    [clients.A, clients.C],
+                                    logger,
+                                    defaultOptions.initialOps,
+                                    minLen,
+                                    defaultOptions.operations));
+                                if (ackBeforeRevert) {
+                                    seq = applyMessages(seq, msgs.splice(0, msgs.length), clients.all, logger);
+                                }
+                            }
 
                             clients.B.mergeTreeDeltaCallback = old;
                             {
@@ -101,8 +123,12 @@ describe.only("MergeTree.Client", () => {
                                         ]);
                                     });
 
-                                seq = applyMessages(seq, msgs, clients.all, logger);
-                                logger.validate({ clear: true, baseText, errorPrefix: "After Revert" });
+                                seq = applyMessages(seq, msgs.splice(0, msgs.length), clients.all, logger);
+                                logger.validate({
+                                    clear: true,
+                                    baseText: modifyBeforeRevert ? undefined : baseText,
+                                    errorPrefix: "After Revert",
+                                });
                             }
 
                             for (let i = clients.A.getCollabWindow().minSeq; i <= seq; i++) {
@@ -112,7 +138,7 @@ describe.only("MergeTree.Client", () => {
                         }
                     });
                 });
-            });
+            }
         }
     });
 });
