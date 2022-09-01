@@ -12,6 +12,7 @@ import {
     doOverRange,
     generateOperationMessagesForClients,
     applyMessages,
+    annotateRange,
 } from "./mergeTreeOperationRunner";
 import { createClientsAtInitialState, TestClientLogger } from "./testClientLogger";
 
@@ -22,11 +23,11 @@ import { createClientsAtInitialState, TestClientLogger } from "./testClientLogge
     ackBeforeRevert: [true, false],
     modifyBeforeRevert: [true, false],
     rounds: 10,
-    operations: [removeRange],
+    operations: [removeRange, annotateRange],
     growthFunc: (input: number) => input * 2,
 };
 
-describe.only("MergeTree.Client", () => {
+describe("MergeTree.Client", () => {
     doOverRange(defaultOptions.minLength, defaultOptions.growthFunc, (minLen) => {
         for (const ackBeforeRevert of defaultOptions.ackBeforeRevert) {
             for (const modifyBeforeRevert of defaultOptions.modifyBeforeRevert) {
