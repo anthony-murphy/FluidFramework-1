@@ -484,7 +484,7 @@ export class MergeTree {
     private segmentsToScour: Heap<LRUSegment> | undefined;
     /**
      * Whether or not all blocks in the mergeTree currently have information about local partial lengths computed.
-     * This information is only necessary on reconnect, and otherwise costly to bookkeep.
+     * This information is only necessary on reconnect, and otherwise costly to book keep.
      * This field enables tracking whether partials need to be recomputed using localSeq information.
      */
     private localPartialsComputed = false;
@@ -1482,8 +1482,8 @@ export class MergeTree {
         const clientId = this.collabWindow.clientId;
 
         let realPos = this.referencePositionToLocalPosition(referencePosition, refSeq, clientId);
-        const detached = realPos === DetachedReferencePosition;
         const refSeg = referencePosition.getSegment();
+        const detached = realPos === DetachedReferencePosition || refSeg === undefined;
 
         if (detached) {
             if (refTypeIncludesFlag(referencePosition, ReferenceType.SlideOnRemove)) {

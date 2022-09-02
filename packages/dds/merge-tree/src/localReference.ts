@@ -7,7 +7,7 @@ import { assert } from "@fluidframework/common-utils";
 import { UsageError } from "@fluidframework/container-utils";
 import { List, ListNode, walkList } from "./collections";
 import {
-    ISegment, Marker,
+    ISegment,
 } from "./mergeTreeNodes";
 import { TrackingGroup, TrackingGroupCollection } from "./mergeTreeTracking";
 import { ICombiningOp, ReferenceType } from "./ops";
@@ -53,7 +53,7 @@ export interface LocalReferencePosition extends ReferencePosition {
 class LocalReference implements LocalReferencePosition {
     public properties: PropertySet | undefined;
 
-    private segment: ISegment;
+    private segment: ISegment | undefined;
     private offset: number = 0;
     private listNode: ListNode<LocalReference> | undefined;
 
@@ -64,7 +64,7 @@ class LocalReference implements LocalReferencePosition {
     }
 
     constructor(
-        initSegment: ISegment,
+        initSegment: ISegment | undefined,
         initOffset: number,
         public refType = ReferenceType.Simple,
         properties?: PropertySet,
@@ -122,7 +122,7 @@ class LocalReference implements LocalReferencePosition {
 }
 
 export function createDetachedLocalReferencePosition(refType?: ReferenceType): LocalReferencePosition {
-    return new LocalReference(Marker.make(refType ?? ReferenceType.Simple), 0, refType, undefined);
+    return new LocalReference(undefined, 0, refType, undefined);
 }
 
 interface IRefsAtOffset {
@@ -300,7 +300,7 @@ export class LocalReferenceCollection {
      * @remarks This method should only be called by mergeTree.
      * @internal
      */
-     public removeLocalRef(lref: LocalReferencePosition): LocalReferencePosition | undefined {
+    public removeLocalRef(lref: LocalReferencePosition): LocalReferencePosition | undefined {
         if (this.has(lref)) {
             assertLocalReferences(lref);
 
@@ -449,7 +449,7 @@ export class LocalReferenceCollection {
                 }
                 this.refCount++;
             } else {
-                lref.getSegment().localRefs?.removeLocalRef(lref);
+                lref.getSegment()?.localRefs?.removeLocalRef(lref);
             }
         }
     }
@@ -480,7 +480,7 @@ export class LocalReferenceCollection {
                 }
                 this.refCount++;
             } else {
-                lref.getSegment().localRefs?.removeLocalRef(lref);
+                lref.getSegment()?.localRefs?.removeLocalRef(lref);
             }
         }
     }

@@ -5,6 +5,7 @@
 
 import { strict as assert } from "assert";
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { LoggingError } from "@fluidframework/telemetry-utils";
 import { UnassignedSequenceNumber } from "../constants";
 import { IMergeTreeOp } from "../ops";
 import { TextSegment } from "../textSegment";
@@ -243,6 +244,15 @@ export class TestClientLogger {
             .map((line) => line.map((v, i) => v.padEnd(this.paddings[i])).join(" | "))
             .join("\n");
         return str;
+    }
+
+    public addLogsToError(e: unknown): Error {
+        if (e instanceof Error) {
+            e.message += `\n${this.toString()}`;
+            return e;
+        }
+
+        return new LoggingError(`${e}\n${this.toString()}`);
     }
 
     private static getSegString(client: TestClient): { acked: string; local: string; } {

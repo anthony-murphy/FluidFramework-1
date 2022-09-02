@@ -158,7 +158,7 @@ export function revertLocalRemove(client: Client, revertible: RemoveRevertible, 
             insertSegment,
             (lref) =>
                 (lref?.properties as Partial<RemoveSegmentRefProperties> | undefined)?.referenceSpace === "revertible");
-        tracked.getSegment().localRefs?.removeLocalRef(tracked);
+        tracked.getSegment()?.localRefs?.removeLocalRef(tracked);
         tracked.trackingCollection.trackingGroups.forEach((tg) => {
             tg.link(insertSegment);
             tg.unlink(tracked);

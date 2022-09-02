@@ -468,9 +468,9 @@ export interface IMergeTreeDeltaCallbackArgs<TOperationType extends MergeTreeDel
 export type IMergeTreeDeltaOp = IMergeTreeInsertMsg | IMergeTreeRemoveMsg | IMergeTreeAnnotateMsg;
 
 // @public (undocumented)
-export interface IMergeTreeDeltaOpArgs {
+export interface IMergeTreeDeltaOpArgs<O extends IMergeTreeOp = IMergeTreeOp> {
     readonly groupOp?: IMergeTreeGroupMsg;
-    readonly op: IMergeTreeOp;
+    readonly op: O;
     readonly sequencedMessage?: ISequencedDocumentMessage;
 }
 
@@ -1065,7 +1065,7 @@ export interface ReferencePosition {
     // (undocumented)
     getOffset(): number;
     // (undocumented)
-    getSegment(): ISegment;
+    getSegment(): ISegment | undefined;
     // (undocumented)
     isLeaf(): this is ISegment;
     // (undocumented)
