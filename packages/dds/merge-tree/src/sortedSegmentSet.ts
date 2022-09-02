@@ -3,10 +3,14 @@
  * Licensed under the MIT License.
  */
 
+import { LocalReferencePosition } from "./localReference";
 import { ISegment } from "./mergeTreeNodes";
+import { computeNumericOrdinal } from "./ordinal";
 
-export type SortedSegmentSetItem = ISegment | { readonly segment: ISegment; };
-
+export type SortedSegmentSetItem =
+    ISegment
+    | LocalReferencePosition
+    | { readonly segment: ISegment; };
 /**
  * Stores a unique and sorted set of segments, or objects with segments
  *
@@ -18,7 +22,7 @@ export type SortedSegmentSetItem = ISegment | { readonly segment: ISegment; };
  * can be inserted into that order.
  */
 export class SortedSegmentSet<
-    T extends SortedSegmentSetItem= ISegment> {
+    T extends SortedSegmentSetItem = ISegment> {
     private readonly ordinalSortedItems: T[] = [];
 
     public get size(): number {
@@ -55,6 +59,14 @@ export class SortedSegmentSet<
     }
 
     private getOrdinal(item: T): string {
+        const maybeRef = item as Partial<LocalReferencePosition>;
+        if (maybeRef.getSegment !== undefined && maybeRef.isLeaf?.() === false) {
+            const lref = maybeRef as LocalReferencePosition;
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            const segment = lref.getSegment()!;
+            const offset = lref.getOffset();
+            return `${segment.ordinal}${String.fromCharCode(0)}${computeNumericOrdinal(offset)}`;
+        }
         const maybeObject = item as { readonly segment: ISegment; };
         if (maybeObject?.segment) {
             return maybeObject.segment.ordinal;
