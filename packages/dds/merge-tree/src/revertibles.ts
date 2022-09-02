@@ -35,16 +35,14 @@ interface RemoveSegmentRefProperties extends PropertySet{
 function appendLocalInsertToRevertible(
     revertibles: MergeTreeDeltaRevertible[], deltaSegments: IMergeTreeSegmentDelta[],
 ) {
-    let last: MergeTreeDeltaRevertible | undefined = revertibles[revertibles.length - 1];
-    if (last?.operation !== MergeTreeDeltaType.INSERT) {
-        last = {
+    if (revertibles[revertibles.length - 1]?.operation !== MergeTreeDeltaType.INSERT) {
+        revertibles.push({
             operation: MergeTreeDeltaType.INSERT,
             trackingGroup: new TrackingGroup(),
-        };
-        revertibles.push(last);
+        });
     }
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    deltaSegments.forEach((t) => last!.trackingGroup.link(t.segment));
+    const last = revertibles[revertibles.length - 1];
+    deltaSegments.forEach((t) => last.trackingGroup.link(t.segment));
 
     return revertibles;
 }
@@ -52,14 +50,13 @@ function appendLocalInsertToRevertible(
 function appendLocalRemoveToRevertible(
     revertibles: MergeTreeDeltaRevertible[], client: Client, deltaSegments: IMergeTreeSegmentDelta[],
 ) {
-    let last: MergeTreeDeltaRevertible | undefined = revertibles[revertibles.length - 1];
-    if (last?.operation !== MergeTreeDeltaType.REMOVE) {
-        last = {
+    if (revertibles[revertibles.length - 1]?.operation !== MergeTreeDeltaType.REMOVE) {
+        revertibles.push({
             operation: MergeTreeDeltaType.REMOVE,
             trackingGroup: new TrackingGroup(),
-        };
-        revertibles.push(last);
+        });
     }
+    const last = revertibles[revertibles.length - 1];
 
     deltaSegments.forEach((t) => {
         const props: RemoveSegmentRefProperties = {
@@ -75,8 +72,8 @@ function appendLocalRemoveToRevertible(
             tg.link(ref);
             tg.unlink(t.segment);
         });
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        last!.trackingGroup.link(ref);
+
+        last.trackingGroup.link(ref);
     });
     return revertibles;
 }
