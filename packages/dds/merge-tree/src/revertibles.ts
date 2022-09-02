@@ -136,7 +136,9 @@ export function revertLocalInsert(client: Client, revertible: InsertRevertible, 
     while (revertible.trackingGroup.size > 0) {
         const tracked = revertible.trackingGroup.tracked[0];
         tracked.trackingCollection.unlink(revertible.trackingGroup);
-        assert(tracked.isLeaf(), "inserts must track segments");
+        if (!tracked.isLeaf()) {
+            assert(tracked.isLeaf(), "inserts must track segments");
+        }
         if (toRemovalInfo(tracked) === undefined) {
             const start = client.getPosition(tracked);
             ops.push(client.removeRangeLocal(start, start + tracked.cachedLength));

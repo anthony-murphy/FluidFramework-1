@@ -14,7 +14,6 @@ import {
     Comparer,
     Heap,
     List,
-    ListNode,
     Stack,
 } from "./collections";
 import {
@@ -95,6 +94,9 @@ import {
     NodeAction,
     walkAllChildSegments,
 } from "./mergeTreeNodeWalk";
+import { TrackingGroupCollection } from "./mergeTreeTracking";
+import { SegmentGroupCollection } from "./segmentGroupCollection";
+import { computeHierarchicalOrdinal } from "./ordinal";
 
 const minListenerComparer: Comparer<MinListener> = {
     min: { minRequired: Number.MIN_VALUE, onMinGE: () => { assert(false, 0x048 /* "onMinGE()" */); } },
@@ -390,6 +392,74 @@ class HierMergeBlock extends MergeBlock implements IHierBlock {
 export interface LRUSegment {
     segment?: ISegment;
     maxSeq: number;
+}
+
+class EndOfTreeSegment implements ISegment {
+    constructor(private readonly mergeTree: MergeTree) {}
+    type: string = "EndOfTreeSegment";
+    get segmentGroups(): SegmentGroupCollection {
+        throw new Error("Method not implemented.");
+    }
+    get trackingCollection(): TrackingGroupCollection {
+        throw new Error("Method not implemented.");
+    }
+    seq = 0;
+    clientId = LocalClientId;
+    addProperties(): PropertySet | undefined {
+        throw new Error("Method not implemented.");
+    }
+    clone(): ISegment {
+        throw new Error("Method not implemented.");
+    }
+    canAppend(segment: ISegment): boolean {
+        return false;
+    }
+    append(segment: ISegment): void {
+        throw new Error("Method not implemented.");
+    }
+    splitAt(pos: number): ISegment | undefined {
+        throw new Error("Method not implemented.");
+    }
+    toJSONObject() {
+        throw new Error("Method not implemented.");
+    }
+    ack(segmentGroup: SegmentGroup, opArgs: IMergeTreeDeltaOpArgs): boolean {
+        throw new Error("Method not implemented.");
+    }
+    private lastRealSegment(): ISegment | undefined {
+        let lastSegment: ISegment | undefined;
+        depthFirstNodeWalk(
+            this.mergeTree.root,
+            this.mergeTree.root.children[0],
+            undefined,
+            (seg) => {
+                lastSegment = seg;
+                return false;
+            },
+        );
+        return lastSegment;
+    }
+
+    get parent() {
+        return this.lastRealSegment()?.parent;
+    }
+    cachedLength = 1;
+    get index() {
+        return this.lastRealSegment()?.parent?.childCount ?? 0;
+    }
+    get ordinal() {
+        const lastSegment = this.lastRealSegment();
+        return computeHierarchicalOrdinal(
+            MaxNodesInBlock,
+            (this.parent?.childCount ?? 0) + 1,
+            lastSegment?.parent?.ordinal ?? String.fromCharCode(0),
+            lastSegment?.ordinal,
+        );
+    }
+    isLeaf(): this is ISegment {
+        return true;
+    }
+    localRefs?: LocalReferenceCollection | undefined;
 }
 
 /**
@@ -886,14 +956,14 @@ export class MergeTree {
         backwardExcursion(segment, goFurtherToFindSlideToSegment);
         return slideToSegment;
     }
-    private readonly detachedReferences = new List<LocalReferencePosition>();
+    private readonly detachedReferences = new EndOfTreeSegment(this);
     /**
      * This method should only be called when the current client sequence number is
      * max(remove segment sequence number, add reference sequence number).
      * Otherwise eventual consistency is not guaranteed.
      * See `packages\dds\merge-tree\REFERENCEPOSITIONS.md`
      */
-    private slideReferences(segment: ISegment, refsToSlide: Iterable<LocalReferencePosition>) {
+    private slideReferences(segment: ISegment, refsToSlide: LocalReferencePosition[]) {
         assert(
             isRemovedAndAcked(segment),
             0x2f1 /* slideReferences from a segment which has not been removed and acked */);
@@ -907,20 +977,14 @@ export class MergeTree {
                 localRefs.addBeforeTombstones(refsToSlide);
             }
         } else {
-            let preceding: ListNode<LocalReferencePosition> | undefined;
             for (const ref of refsToSlide) {
                 ref.callbacks?.beforeSlide?.();
                 segment?.localRefs.removeLocalRef(ref);
                 ref.callbacks?.afterSlide?.();
-                // only store tracked references in
-                if (ref.trackingCollection.empty === false) {
-                    if (preceding === undefined) {
-                        preceding = this.detachedReferences.unshift(ref)?.first;
-                    } else {
-                        preceding = this.detachedReferences.insertAfter(preceding, ref)?.first;
-                    }
-                }
             }
+            const detachedRefs =
+                this.detachedReferences.localRefs ??= new LocalReferenceCollection(this.detachedReferences);
+            detachedRefs.addBeforeTombstones(refsToSlide.filter((ref) => ref.trackingCollection.empty === false));
         }
         // TODO is it required to update the path lengths?
         if (newSegment) {
@@ -1113,14 +1177,7 @@ export class MergeTree {
             || seg.localRefs?.has(refPos)
             ) {
             const offset = isRemoved(seg) ? 0 : refPos.getOffset();
-            const pos = offset + this.getPosition(seg, refSeq, clientId);
-
-            if ((this.nodeLength(seg, refSeq, clientId) ?? 0) > 0
-                && seg.localRefs?.isAfterTombstone(refPos as LocalReferencePosition)) {
-                return pos + 1;
-            } else {
-                return pos;
-            }
+            return offset + this.getPosition(seg, refSeq, clientId);
         }
         return DetachedReferencePosition;
     }
@@ -1424,18 +1481,21 @@ export class MergeTree {
         const refSeq = this.collabWindow.currentSeq;
         const clientId = this.collabWindow.clientId;
 
-        const maybePos = this.referencePositionToLocalPosition(
-            referencePosition,
-            refSeq,
-            clientId);
+        let realPos = this.referencePositionToLocalPosition(referencePosition, refSeq, clientId);
+        const detached = realPos === DetachedReferencePosition;
+        const refSeg = referencePosition.getSegment();
 
-        let realPos = maybePos;
-        const detached = maybePos === DetachedReferencePosition;
         if (detached) {
             if (refTypeIncludesFlag(referencePosition, ReferenceType.SlideOnRemove)) {
+                // check in detached
                 realPos = this.getLength(refSeq, clientId);
             } else {
                 return undefined;
+            }
+        } else {
+            if ((this.nodeLength(refSeg, refSeq, clientId) ?? 0) > 0
+                && refSeg.localRefs?.isAfterTombstone(referencePosition)) {
+                realPos++;
             }
         }
 
@@ -1458,7 +1518,7 @@ export class MergeTree {
         if (localSlideFilter) {
             let insertRef: Partial<Record<"before" | "after", List<LocalReferencePosition>>> | undefined;
 
-            const forward = detached || insertSegment.ordinal < referencePosition.getSegment().ordinal;
+            const forward = detached || insertSegment.ordinal < refSeg.ordinal;
             depthFirstNodeWalk(
                 insertSegment.parent!,
                 insertSegment,
@@ -1490,21 +1550,24 @@ export class MergeTree {
                 forward);
 
             if (detached) {
-                for (const refNode of this.detachedReferences) {
-                    // clean up on slide
-                    if (refNode.data.trackingCollection.empty === true) {
-                        this.detachedReferences.remove(refNode);
-                    }
-                    if (localSlideFilter(refNode.data)) {
-                        insertRef = insertRef ??= {};
-                        this.detachedReferences.remove(refNode);
-                        const before = insertRef.before ??= new List();
-                        before.push(refNode.data);
-                    }
-                    if (refNode.data === referencePosition) {
-                        break;
-                    }
-                }
+                this.detachedReferences.localRefs?.walkReferences(
+                    (lref: LocalReferencePosition) => {
+                        if (referencePosition === lref) {
+                            return false;
+                        }
+                        if (localSlideFilter(lref)) {
+                            insertRef = insertRef ??= {};
+                            if (forward) {
+                                const before = insertRef.before ??= new List();
+                                before.push(lref);
+                            } else {
+                                const after = insertRef.after ??= new List();
+                                after.unshift(lref);
+                            }
+                        }
+                    },
+                    undefined,
+                    forward);
             }
 
             if (insertRef !== undefined) {

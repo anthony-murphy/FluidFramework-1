@@ -17,14 +17,14 @@ import {
 import { createClientsAtInitialState, TestClientLogger } from "./testClientLogger";
 
  const defaultOptions = {
-    minLength: { min: 1, max: 32 },
+    minLength: { min: 4, max: 4 },
     initialOps: 10,
-    revertOps: { min: 1, max: 32 },
-    ackBeforeRevert: [true, false],
-    modifyBeforeRevert: [true, false],
-    rounds: 10,
+    revertOps: { min: 1, max: 1 },
+    ackBeforeRevert: [true], // false],
+    modifyBeforeRevert: [true], // false],
+    rounds: 1000,
     operations: [removeRange, annotateRange],
-    growthFunc: (input: number) => input * 2,
+    growthFunc: (input: number) => input + 1,
 };
 
 describe("MergeTree.Client", () => {
