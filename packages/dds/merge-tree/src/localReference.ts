@@ -38,16 +38,12 @@ function _validateReferenceType(refType: ReferenceType) {
             "Reference types can only be one of Transient, SlideOnRemove, and StayOnRemove");
     }
 }
-
-export interface LocalReferencePosition {
+/**
+ * @sealed
+ */
+export interface LocalReferencePosition extends ReferencePosition {
     callbacks?: Partial<Record<"beforeSlide" | "afterSlide", () => void>>;
     readonly trackingCollection: TrackingGroupCollection;
-    properties?: PropertySet;
-    refType: ReferenceType;
-    getSegment(): ISegment;
-    getOffset(): number;
-    addProperties(newProps: PropertySet, op?: ICombiningOp): void;
-    isLeaf(): this is ISegment;
 }
 
 /**
@@ -62,7 +58,10 @@ class LocalReference implements LocalReferencePosition {
     private listNode: ListNode<LocalReference> | undefined;
 
     public callbacks?: Partial<Record<"beforeSlide" | "afterSlide", () => void>> | undefined;
-    public readonly trackingCollection: TrackingGroupCollection = new TrackingGroupCollection(this);
+    private _trackingCollection?: TrackingGroupCollection;
+    public get trackingCollection(): TrackingGroupCollection {
+        return (this._trackingCollection ??= new TrackingGroupCollection(this));
+    }
 
     constructor(
         initSegment: ISegment,

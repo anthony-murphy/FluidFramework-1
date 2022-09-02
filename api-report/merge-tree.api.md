@@ -744,7 +744,7 @@ export class LocalReferenceCollection {
     walkReferences(visitor: (lref: LocalReferencePosition) => boolean | void | undefined, start?: LocalReferencePosition, forward?: boolean): boolean;
 }
 
-// @public (undocumented)
+// @public @sealed (undocumented)
 export interface LocalReferencePosition extends ReferencePosition {
     // (undocumented)
     callbacks?: Partial<Record<"beforeSlide" | "afterSlide", () => void>>;
@@ -1235,7 +1235,7 @@ export class SortedSegmentSet<T extends SortedSegmentSetItem = ISegment> {
 }
 
 // @public (undocumented)
-export type SortedSegmentSetItem = ISegment | Pick<LocalReferencePosition, "getSegment"> | {
+export type SortedSegmentSetItem = ISegment | LocalReferencePosition | {
     readonly segment: ISegment;
 };
 

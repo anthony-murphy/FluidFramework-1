@@ -5,10 +5,11 @@
 
 import { LocalReferencePosition } from "./localReference";
 import { ISegment } from "./mergeTreeNodes";
+import { computeNumericOrdinal } from "./ordinal";
 
 export type SortedSegmentSetItem =
     ISegment
-    | Pick<LocalReferencePosition, "getSegment">
+    | LocalReferencePosition
     | { readonly segment: ISegment; };
 /**
  * Stores a unique and sorted set of segments, or objects with segments
@@ -57,11 +58,21 @@ export class SortedSegmentSet<
     }
 
     private getOrdinal(item: T): string {
-        const maybeObject =
-            item as Partial<{ readonly segment: ISegment; getSegment(): ISegment; }> & Pick<ISegment, "ordinal">;
-        return maybeObject.segment?.ordinal
-            ?? maybeObject.getSegment?.().ordinal
-            ?? maybeObject.ordinal;
+        const maybeRef = item as Partial<LocalReferencePosition>;
+        if (maybeRef.getSegment !== undefined && maybeRef.isLeaf?.() === false) {
+            const lref = maybeRef as LocalReferencePosition;
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            const segment = lref.getSegment()!;
+            const offset = lref.getOffset();
+            return `${segment.ordinal}${String.fromCharCode(0)}${computeNumericOrdinal(offset)}`;
+        }
+        const maybeObject = item as { readonly segment: ISegment; };
+        if (maybeObject?.segment) {
+            return maybeObject.segment.ordinal;
+        }
+
+        const maybeSegment = item as ISegment;
+        return maybeSegment.ordinal;
     }
 
     private findItemPosition(item: T): { exists: boolean; index: number; } {
