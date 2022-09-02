@@ -24,8 +24,8 @@ import {
     UniversalSequenceNumber,
 } from "./constants";
 import {
-     LocalReferenceCollection,
-     LocalReferencePosition,
+    LocalReferenceCollection,
+    LocalReferencePosition,
 } from "./localReference";
 import {
 	BaseSegment,
@@ -979,7 +979,7 @@ export class MergeTree {
         } else {
             for (const ref of refsToSlide) {
                 ref.callbacks?.beforeSlide?.();
-                segment?.localRefs.removeLocalRef(ref);
+                segment.localRefs?.removeLocalRef(ref);
                 ref.callbacks?.afterSlide?.();
             }
             const detachedRefs =

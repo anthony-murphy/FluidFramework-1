@@ -75,26 +75,25 @@ class LocalReference implements LocalReferencePosition {
         this.properties = properties;
     }
 
-    public link(segment: ISegment, offset: number, listNode: ListNode<LocalReference> | undefined) {
-        if (listNode !== this.listNode) {
-            this.segment.localRefs?.removeLocalRef(this);
-            this.listNode = listNode;
+    public link(segment: ISegment | undefined, offset: number, listNode: ListNode<LocalReference> | undefined) {
+        if (listNode !== this.listNode && this.listNode !== undefined) {
+            this.segment?.localRefs?.removeLocalRef(this);
         }
-
-        this.offset = offset;
+        this.listNode = listNode;
 
         if (segment !== this.segment) {
             const groups: TrackingGroup[] = [];
-            // this might be costly, need a better solution
             this.trackingCollection.trackingGroups.forEach(
                 (tg) => {
                     tg.unlink(this);
                     groups.push(tg);
                 });
+
             this.segment = segment;
 
             groups.forEach((tg) => tg.link(this));
         }
+        this.offset = offset;
     }
 
     public isLeaf() {
