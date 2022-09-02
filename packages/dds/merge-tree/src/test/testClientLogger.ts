@@ -162,11 +162,12 @@ export class TestClientLogger {
         clear?: boolean;
         baseText?: string;
         errorPrefix?: string;
-        validateAnnotations?: boolean;
     }) {
         const baseText = opts?.baseText ?? this.clients[0].getText();
         const errorPrefix = opts?.errorPrefix ? `${opts?.errorPrefix}: ` : "";
-
+        // cache all the properties of client 0 for faster look up
+        const properties = Array.from({ length: this.clients[0].getLength() }).map(
+            (_, i) => this.clients[0].getPropertiesAtPosition(i));
         this.clients.forEach(
             (c) => {
                 if (opts?.baseText === undefined && c === this.clients[0]) { return; }
@@ -184,34 +185,31 @@ export class TestClientLogger {
                         // eslint-disable-next-line max-len
                         `${errorPrefix}\n${this.toString()}\nClient ${c.longClientId} does not match client ${opts?.baseText ? "baseText" : this.clients[0].longClientId}`);
                 }
-            });
-        if (opts?.validateAnnotations === true) {
-            const properties = Array.from({ length: this.clients[0].getLength() }).map(
-                (_, i) => this.clients[0].getPropertiesAtPosition(i));
-            this.clients.forEach(
-                (c) => {
-                    let pos = 0;
-                    depthFirstNodeWalk(
-                        c.mergeTree.root,
-                        c.mergeTree.root.children[0],
-                        undefined,
-                        (seg) => {
-                            if (toRemovalInfo(seg) === undefined) {
-                                const cProps = seg.properties;
-                                const oProps = properties[pos];
-                                if (matchProperties(cProps, oProps)) {
+
+                if (c === this.clients[0]) { return; }
+                let pos = 0;
+                depthFirstNodeWalk(
+                    c.mergeTree.root,
+                    c.mergeTree.root.children[0],
+                    undefined,
+                    (seg) => {
+                        if (toRemovalInfo(seg) === undefined) {
+                            const segProps = seg.properties;
+                            for (let i = 0; i < seg.cachedLength; i++) {
+                                if (!matchProperties(segProps, properties[pos + i])) {
                                     assert.deepStrictEqual(
-                                        cProps,
-                                        oProps,
+                                        segProps,
+                                        properties[pos + i],
                                         // eslint-disable-next-line max-len
-                                        `${errorPrefix}\n${this.toString()}\nClient ${c.longClientId} does not match client ${this.clients[0].longClientId} properties at pos ${pos}`);
+                                        `${errorPrefix}\n${this.toString()}\nClient ${c.longClientId} does not match client ${this.clients[0].longClientId} properties at pos ${pos + i}`);
                                 }
-                                pos += seg.cachedLength;
                             }
-                        },
-                    );
-                });
-        }
+                            pos += seg.cachedLength;
+                        }
+                    },
+                );
+            });
+
         if (opts?.clear === true) {
             this.roundLogLines.splice(1, this.roundLogLines.length);
             this.roundLogLines[0].forEach((v, i) => this.paddings[i] = v.length);
