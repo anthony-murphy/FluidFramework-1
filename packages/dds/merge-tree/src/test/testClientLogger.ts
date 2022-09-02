@@ -9,7 +9,9 @@ import { UnassignedSequenceNumber } from "../constants";
 import { IMergeTreeOp } from "../ops";
 import { TextSegment } from "../textSegment";
 import { IMergeTreeDeltaOpArgs, MergeTreeMaintenanceType } from "../mergeTreeDeltaCallback";
-import { PropertySet } from "../properties";
+import { matchProperties, PropertySet } from "../properties";
+import { depthFirstNodeWalk } from "../mergeTreeNodeWalk";
+import { toRemovalInfo } from "../mergeTreeNodes";
 import { TestClient } from "./testClient";
 
 function getOpString(msg: ISequencedDocumentMessage | undefined) {
@@ -160,9 +162,11 @@ export class TestClientLogger {
         clear?: boolean;
         baseText?: string;
         errorPrefix?: string;
+        validateAnnotations?: boolean;
     }) {
         const baseText = opts?.baseText ?? this.clients[0].getText();
         const errorPrefix = opts?.errorPrefix ? `${opts?.errorPrefix}: ` : "";
+
         this.clients.forEach(
             (c) => {
                 if (opts?.baseText === undefined && c === this.clients[0]) { return; }
@@ -181,6 +185,33 @@ export class TestClientLogger {
                         `${errorPrefix}\n${this.toString()}\nClient ${c.longClientId} does not match client ${opts?.baseText ? "baseText" : this.clients[0].longClientId}`);
                 }
             });
+        if (opts?.validateAnnotations === true) {
+            const properties = Array.from({ length: this.clients[0].getLength() }).map(
+                (_, i) => this.clients[0].getPropertiesAtPosition(i));
+            this.clients.forEach(
+                (c) => {
+                    let pos = 0;
+                    depthFirstNodeWalk(
+                        c.mergeTree.root,
+                        c.mergeTree.root.children[0],
+                        undefined,
+                        (seg) => {
+                            if (toRemovalInfo(seg) === undefined) {
+                                const cProps = seg.properties;
+                                const oProps = properties[pos];
+                                if (matchProperties(cProps, oProps)) {
+                                    assert.deepStrictEqual(
+                                        cProps,
+                                        oProps,
+                                        // eslint-disable-next-line max-len
+                                        `${errorPrefix}\n${this.toString()}\nClient ${c.longClientId} does not match client ${this.clients[0].longClientId} properties at pos ${pos}`);
+                                }
+                                pos += seg.cachedLength;
+                            }
+                        },
+                    );
+                });
+        }
         if (opts?.clear === true) {
             this.roundLogLines.splice(1, this.roundLogLines.length);
             this.roundLogLines[0].forEach((v, i) => this.paddings[i] = v.length);
