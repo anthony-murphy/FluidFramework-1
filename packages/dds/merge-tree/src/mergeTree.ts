@@ -1513,8 +1513,7 @@ export class MergeTree {
 
         if (localSlideFilter) {
             let insertRef: Partial<Record<"before" | "after", List<LocalReferencePosition>>> | undefined;
-            const detached = this.detachedReferences.localRefs?.has(referencePosition);
-            const forward = detached || insertSegment.ordinal < refSeg.ordinal;
+            const forward = insertSegment.ordinal < refSeg.ordinal;
             depthFirstNodeWalk(
                 insertSegment.parent!,
                 insertSegment,
@@ -1545,7 +1544,8 @@ export class MergeTree {
                 undefined,
                 forward);
 
-            if (detached) {
+            if (this.detachedReferences.localRefs?.has(referencePosition)) {
+                assert(forward, "forward should always be true when detached");
                 this.detachedReferences.localRefs?.walkReferences(
                     (lref: LocalReferencePosition) => {
                         if (referencePosition === lref) {
