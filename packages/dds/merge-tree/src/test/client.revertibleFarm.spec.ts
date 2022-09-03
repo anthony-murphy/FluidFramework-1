@@ -17,11 +17,11 @@ import {
 import { createClientsAtInitialState, TestClientLogger } from "./testClientLogger";
 
  const defaultOptions = {
-    minLength: { min: 1, max: 16 },
     initialOps: 10,
-    revertOps: { min: 1, max: 32 },
-    concurrentOpsWithRevert: { min: 0, max: 8 },
-    ackBeforeRevert: ["None", "Some", "All"] as ["None", "Some", "All"],
+    minLength: { min: 16, max: 16 },
+    ackBeforeRevert: ["All"] as ("None" | "Some" | "All")[],
+    concurrentOpsWithRevert: { min: 8, max: 8 },
+    revertOps: { min: 8, max: 32 },
     rounds: 10,
     operations: [removeRange, annotateRange],
     growthFunc: (input: number) => input * 2,
@@ -33,14 +33,14 @@ describe.only("MergeTree.Client", () => {
             doOverRange(defaultOptions.concurrentOpsWithRevert, defaultOptions.growthFunc, (opsWithRevert) => {
                 doOverRange(defaultOptions.revertOps, defaultOptions.growthFunc, (revertOps) => {
                     // eslint-disable-next-line max-len
-                    it(`MinLen: ${minLen} InitialOps: ${defaultOptions.initialOps} RevertOps: ${revertOps} AckBeforeRevert: ${ackBeforeRevert} ConcurrentOpsWithRevert: ${opsWithRevert}`, async () => {
+                    it(`InitialOps: ${defaultOptions.initialOps} MinLen: ${minLen} AckBeforeRevert: ${ackBeforeRevert} ConcurrentOpsWithRevert: ${opsWithRevert} RevertOps: ${revertOps} `, async () => {
                         const mt = random.engines.mt19937();
                         mt.seedWithArray([
                             0xDEADBEEF,
                             0xFEEDBED,
                             minLen,
                             revertOps,
-                            ackBeforeRevert ? 0x794e : 0x5A16E,
+                            [...ackBeforeRevert].reduce<number>((pv, cv) => pv + cv.charCodeAt(0), 0),
                             opsWithRevert,
                         ]);
 
@@ -109,16 +109,19 @@ describe.only("MergeTree.Client", () => {
                             }
 
                             if (ackBeforeRevert !== "None") {
+                                const ackAll = ackBeforeRevert === "All";
                                 seq = applyMessages(
                                     seq,
                                     msgs.splice(
                                         0,
-                                        ackBeforeRevert === "All"
-                                            ? undefined
+                                        ackAll
+                                            ? msgs.length
                                             : random.integer(0, msgs.length)(mt)),
                                     clients.all,
                                     logger);
-                                logger.validate({ errorPrefix: "Before Revert Ack" });
+                                if (ackAll) {
+                                    logger.validate({ errorPrefix: "Before Revert Ack" });
+                                }
                             }
 
                             try {
