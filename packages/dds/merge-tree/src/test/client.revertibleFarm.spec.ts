@@ -21,16 +21,16 @@ import { createClientsAtInitialState, TestClientLogger } from "./testClientLogge
     initialOps: 10,
     revertOps: { min: 1, max: 32 },
     ackBeforeRevert: [true, false],
-    modifyBeforeRevert: [true, false],
+    modifyWithRevert: [false, true],
     rounds: 10,
     operations: [removeRange, annotateRange],
-    growthFunc: (input: number) => input + 1,
+    growthFunc: (input: number) => input * 2,
 };
 
-describe("MergeTree.Client", () => {
+describe.only("MergeTree.Client", () => {
     doOverRange(defaultOptions.minLength, defaultOptions.growthFunc, (minLen) => {
         for (const ackBeforeRevert of defaultOptions.ackBeforeRevert) {
-            for (const modifyBeforeRevert of defaultOptions.modifyBeforeRevert) {
+            for (const modifyBeforeRevert of defaultOptions.modifyWithRevert) {
                 doOverRange(defaultOptions.revertOps, defaultOptions.growthFunc, (revertOps) => {
                     // eslint-disable-next-line max-len
                     it(`MinLen: ${minLen} InitialOps: ${defaultOptions.initialOps} RevertOps: ${revertOps} AckBeforeRevert: ${ackBeforeRevert} ModifyBeforeRevert: ${modifyBeforeRevert}`, async () => {
@@ -52,6 +52,8 @@ describe("MergeTree.Client", () => {
                             "A", "B", "C");
                         let seq = 0;
                         for (let rnd = 0; rnd < defaultOptions.rounds; rnd++) {
+                            clients.all.forEach((c) => c.updateMinSeq(seq));
+
                             const logger = new TestClientLogger(clients.all, `Round ${rnd}`);
                             {
                                 // init with random values
@@ -91,7 +93,7 @@ describe("MergeTree.Client", () => {
                                     defaultOptions.operations));
 
                                 if (ackBeforeRevert) {
-                                    seq = applyMessages(seq, msgs.splice(0, msgs.length), clients.all, logger);
+                                    seq = applyMessages(seq, msgs.splice(0), clients.all, logger);
                                     logger.validate({ errorPrefix: "Before Revert Ack" });
                                 }
                             }
@@ -124,7 +126,7 @@ describe("MergeTree.Client", () => {
                                         ]);
                                     });
 
-                                seq = applyMessages(seq, msgs.splice(0, msgs.length), clients.all, logger);
+                                seq = applyMessages(seq, msgs.splice(0), clients.all, logger);
                             } catch (e) {
                                 throw logger.addLogsToError(e);
                             }
@@ -133,11 +135,6 @@ describe("MergeTree.Client", () => {
                                 baseText: modifyBeforeRevert ? undefined : baseText,
                                 errorPrefix: "After Revert",
                             });
-
-                            for (let i = clients.A.getCollabWindow().minSeq; i <= seq; i++) {
-                                clients.all.forEach((c) => c.updateMinSeq(i));
-                            }
-                            logger.validate({ clear: true, errorPrefix: "After Zamboni" });
                         }
                     });
                 });

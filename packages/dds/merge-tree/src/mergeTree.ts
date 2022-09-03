@@ -430,12 +430,14 @@ class EndOfTreeSegment implements ISegment {
         let lastSegment: ISegment | undefined;
         depthFirstNodeWalk(
             this.mergeTree.root,
-            this.mergeTree.root.children[0],
+            this.mergeTree.root.children[this.mergeTree.root.childCount - 1],
             undefined,
             (seg) => {
                 lastSegment = seg;
                 return false;
             },
+            undefined,
+            false,
         );
         return lastSegment;
     }
@@ -1483,20 +1485,14 @@ export class MergeTree {
 
         let realPos = this.referencePositionToLocalPosition(referencePosition, refSeq, clientId);
         const refSeg = referencePosition.getSegment();
-        const detached = realPos === DetachedReferencePosition || refSeg === undefined;
 
-        if (detached) {
-            if (refTypeIncludesFlag(referencePosition, ReferenceType.SlideOnRemove)) {
-                // check in detached
-                realPos = this.getLength(refSeq, clientId);
-            } else {
-                return undefined;
-            }
-        } else {
-            if ((this.nodeLength(refSeg, refSeq, clientId) ?? 0) > 0
-                && refSeg.localRefs?.isAfterTombstone(referencePosition)) {
-                realPos++;
-            }
+        if (realPos === DetachedReferencePosition || refSeg === undefined) {
+            throw new UsageError("Cannot insert at detached references position");
+        }
+
+        if ((this.nodeLength(refSeg, refSeq, clientId) ?? 0) > 0
+            && refSeg.localRefs?.isAfterTombstone(referencePosition)) {
+            realPos++;
         }
 
         const op = createInsertSegmentOp(
@@ -1517,7 +1513,7 @@ export class MergeTree {
 
         if (localSlideFilter) {
             let insertRef: Partial<Record<"before" | "after", List<LocalReferencePosition>>> | undefined;
-
+            const detached = this.detachedReferences.localRefs?.has(referencePosition);
             const forward = detached || insertSegment.ordinal < refSeg.ordinal;
             depthFirstNodeWalk(
                 insertSegment.parent!,
@@ -1557,17 +1553,10 @@ export class MergeTree {
                         }
                         if (localSlideFilter(lref)) {
                             insertRef = insertRef ??= {};
-                            if (forward) {
-                                const before = insertRef.before ??= new List();
-                                before.push(lref);
-                            } else {
-                                const after = insertRef.after ??= new List();
-                                after.unshift(lref);
-                            }
+                            const before = insertRef.before ??= new List();
+                            before.push(lref);
                         }
-                    },
-                    undefined,
-                    forward);
+                    });
             }
 
             if (insertRef !== undefined) {
