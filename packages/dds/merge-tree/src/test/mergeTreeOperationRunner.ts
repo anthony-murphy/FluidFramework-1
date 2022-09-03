@@ -65,7 +65,7 @@ export function doOverRange(
     range: IConfigRange,
     growthFunc: (input: number) => number,
     doAction: (current: number) => void) {
-    for (let current = range.min; current <= range.max; current = growthFunc(current)) {
+    for (let current = range.min; current <= range.max; current = current === 0 ? 1 : growthFunc(current)) {
         doAction(current);
     }
 }

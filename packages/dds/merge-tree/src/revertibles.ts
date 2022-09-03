@@ -135,7 +135,9 @@ export function discardRevertibles(... revertibles: MergeTreeDeltaRevertible[]) 
 export function revertLocalInsert(client: Client, revertible: InsertRevertible, ops: IMergeTreeDeltaOp[]) {
     while (revertible.trackingGroup.size > 0) {
         const tracked = revertible.trackingGroup.tracked[0];
+        assert(tracked.trackingCollection.trackingGroups.has(revertible.trackingGroup), "tracked should exist");
         tracked.trackingCollection.unlink(revertible.trackingGroup);
+        assert(!tracked.trackingCollection.trackingGroups.has(revertible.trackingGroup), "tracked should be removed");
         if (!tracked.isLeaf()) {
             assert(tracked.isLeaf(), "inserts must track segments");
         }

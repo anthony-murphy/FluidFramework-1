@@ -1512,8 +1512,22 @@ export class MergeTree {
             [insertSegment]);
 
         if (localSlideFilter) {
-            let insertRef: Partial<Record<"before" | "after", List<LocalReferencePosition>>> | undefined;
+            const insertRef: Partial<Record<"before" | "after", List<LocalReferencePosition>>> = {};
             const forward = insertSegment.ordinal < refSeg.ordinal;
+            const refHandler = (lref: LocalReferencePosition) => {
+                if (referencePosition === lref) {
+                    return false;
+                }
+                if (localSlideFilter(lref)) {
+                    if (forward) {
+                        const before = insertRef.before ??= new List();
+                        before.push(lref);
+                    } else {
+                        const after = insertRef.after ??= new List();
+                        after.unshift(lref);
+                    }
+                }
+            };
             depthFirstNodeWalk(
                 insertSegment.parent!,
                 insertSegment,
@@ -1521,21 +1535,7 @@ export class MergeTree {
                 (seg) => {
                     if (seg.localRefs?.empty === false) {
                         return seg.localRefs.walkReferences(
-                            (lref: LocalReferencePosition) => {
-                                if (referencePosition === lref) {
-                                    return false;
-                                }
-                                if (localSlideFilter(lref)) {
-                                    insertRef = insertRef ??= {};
-                                    if (forward) {
-                                        const before = insertRef.before ??= new List();
-                                        before.push(lref);
-                                    } else {
-                                        const after = insertRef.after ??= new List();
-                                        after.unshift(lref);
-                                    }
-                                }
-                            },
+                            refHandler,
                             undefined,
                             forward);
                     }
@@ -1546,17 +1546,7 @@ export class MergeTree {
 
             if (this.detachedReferences.localRefs?.has(referencePosition)) {
                 assert(forward, "forward should always be true when detached");
-                this.detachedReferences.localRefs?.walkReferences(
-                    (lref: LocalReferencePosition) => {
-                        if (referencePosition === lref) {
-                            return false;
-                        }
-                        if (localSlideFilter(lref)) {
-                            insertRef = insertRef ??= {};
-                            const before = insertRef.before ??= new List();
-                            before.push(lref);
-                        }
-                    });
+                this.detachedReferences.localRefs?.walkReferences(refHandler);
             }
 
             if (insertRef !== undefined) {
