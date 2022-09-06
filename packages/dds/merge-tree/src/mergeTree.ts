@@ -1515,9 +1515,6 @@ export class MergeTree {
             const insertRef: Partial<Record<"before" | "after", List<LocalReferencePosition>>> = {};
             const forward = insertSegment.ordinal < refSeg.ordinal;
             const refHandler = (lref: LocalReferencePosition) => {
-                if (referencePosition === lref) {
-                    return false;
-                }
                 if (localSlideFilter(lref)) {
                     if (forward) {
                         const before = insertRef.before ??= new List();
@@ -1526,6 +1523,9 @@ export class MergeTree {
                         const after = insertRef.after ??= new List();
                         after.unshift(lref);
                     }
+                }
+                if (referencePosition === lref) {
+                    return false;
                 }
             };
             depthFirstNodeWalk(

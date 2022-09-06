@@ -135,7 +135,7 @@ export function discardRevertibles(... revertibles: MergeTreeDeltaRevertible[]) 
 export function revertLocalInsert(client: Client, revertible: InsertRevertible, ops: IMergeTreeDeltaOp[]) {
     while (revertible.trackingGroup.size > 0) {
         const tracked = revertible.trackingGroup.tracked[0];
-        assert(tracked.trackingCollection.trackingGroups.has(revertible.trackingGroup), "tracked should exist");
+        assert(tracked.trackingCollection.trackingGroups.has(revertible.trackingGroup), "insert tracked should exist");
         tracked.trackingCollection.unlink(revertible.trackingGroup);
         assert(!tracked.trackingCollection.trackingGroups.has(revertible.trackingGroup), "tracked should be removed");
         if (!tracked.isLeaf()) {
@@ -151,7 +151,11 @@ export function revertLocalInsert(client: Client, revertible: InsertRevertible, 
 export function revertLocalRemove(client: Client, revertible: RemoveRevertible, ops: IMergeTreeDeltaOp[]) {
     while (revertible.trackingGroup.size > 0) {
         const tracked = revertible.trackingGroup.tracked[0];
+
+        assert(tracked.trackingCollection.trackingGroups.has(revertible.trackingGroup), "remove tracked should exist");
         tracked.trackingCollection.unlink(revertible.trackingGroup);
+        assert(!tracked.trackingCollection.trackingGroups.has(revertible.trackingGroup), "tracked should be removed");
+
         assert(!tracked.isLeaf(), "removes must track local refs");
         const props = tracked.properties as RemoveSegmentRefProperties;
         const insertSegment = client.specToSegment(props.segSpec);
@@ -160,11 +164,19 @@ export function revertLocalRemove(client: Client, revertible: RemoveRevertible, 
             insertSegment,
             (lref) =>
                 (lref?.properties as Partial<RemoveSegmentRefProperties> | undefined)?.referenceSpace === "revertible");
-        tracked.getSegment()?.localRefs?.removeLocalRef(tracked);
+
         tracked.trackingCollection.trackingGroups.forEach((tg) => {
             tg.link(insertSegment);
+            assert(tg.has(insertSegment), "should be there");
+            if (!tg.has(tracked)) {
+                assert(tg.has(tracked), "should be there");
+            }
             tg.unlink(tracked);
+            assert(!tg.has(tracked), "should not be there");
         });
+
+        tracked.getSegment()?.localRefs?.removeLocalRef(tracked);
+
         if (op) {
             ops.push(op);
         }
@@ -174,7 +186,10 @@ export function revertLocalRemove(client: Client, revertible: RemoveRevertible, 
 export function revertLocalAnnotate(client: Client, revertible: AnnotateRevertible, ops: IMergeTreeDeltaOp[]) {
     while (revertible.trackingGroup.size > 0) {
         const tracked = revertible.trackingGroup.tracked[0];
+        assert(tracked.trackingCollection.trackingGroups.has(revertible.trackingGroup),
+        "annotate tracked should exist");
         tracked.trackingCollection.unlink(revertible.trackingGroup);
+        assert(!tracked.trackingCollection.trackingGroups.has(revertible.trackingGroup), "tracked should be removed");
         assert(tracked.isLeaf(), "annotates must track segments");
         if (toRemovalInfo(tracked) === undefined) {
             const start = client.getPosition(tracked);

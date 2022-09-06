@@ -18,22 +18,26 @@ import { createClientsAtInitialState, TestClientLogger } from "./testClientLogge
 
  const defaultOptions = {
     initialOps: 10,
-    minLength: { min: 16, max: 16 },
-    ackBeforeRevert: ["All"] as ("None" | "Some" | "All")[],
-    concurrentOpsWithRevert: { min: 8, max: 8 },
-    revertOps: { min: 8, max: 32 },
-    rounds: 10,
+    minLength: { min: 1, max: 1 },
+    concurrentOpsWithRevert: { min: 1, max: 1 },
+    revertOps: { min: 2, max: 2 },
+    ackBeforeRevert: [
+        // "None",
+        // "Some",
+        "All",
+    ] as ("None" | "Some" | "All")[],
+    rounds: 10000,
     operations: [removeRange, annotateRange],
     growthFunc: (input: number) => input * 2,
 };
 
 describe.only("MergeTree.Client", () => {
     doOverRange(defaultOptions.minLength, defaultOptions.growthFunc, (minLen) => {
-        for (const ackBeforeRevert of defaultOptions.ackBeforeRevert) {
-            doOverRange(defaultOptions.concurrentOpsWithRevert, defaultOptions.growthFunc, (opsWithRevert) => {
-                doOverRange(defaultOptions.revertOps, defaultOptions.growthFunc, (revertOps) => {
+        doOverRange(defaultOptions.concurrentOpsWithRevert, defaultOptions.growthFunc, (opsWithRevert) => {
+            doOverRange(defaultOptions.revertOps, defaultOptions.growthFunc, (revertOps) => {
+                for (const ackBeforeRevert of defaultOptions.ackBeforeRevert) {
                     // eslint-disable-next-line max-len
-                    it(`InitialOps: ${defaultOptions.initialOps} MinLen: ${minLen} AckBeforeRevert: ${ackBeforeRevert} ConcurrentOpsWithRevert: ${opsWithRevert} RevertOps: ${revertOps} `, async () => {
+                    it(`InitialOps: ${defaultOptions.initialOps} MinLen: ${minLen}  ConcurrentOpsWithRevert: ${opsWithRevert} RevertOps: ${revertOps} AckBeforeRevert: ${ackBeforeRevert}`, async () => {
                         const mt = random.engines.mt19937();
                         mt.seedWithArray([
                             0xDEADBEEF,
@@ -116,7 +120,7 @@ describe.only("MergeTree.Client", () => {
                                         0,
                                         ackAll
                                             ? msgs.length
-                                            : random.integer(0, msgs.length)(mt)),
+                                            : random.integer(0, Math.floor(msgs.length / 2))(mt)),
                                     clients.all,
                                     logger);
                                 if (ackAll) {
@@ -150,8 +154,8 @@ describe.only("MergeTree.Client", () => {
                             });
                         }
                     });
-                });
+                }
             });
-        }
+        });
     });
 });

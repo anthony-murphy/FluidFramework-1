@@ -235,4 +235,77 @@ Client A does not match client baseText
 
         logger.validate({ baseText: "123" });
     });
+    /**
+```
+MergeTree.Client
+       InitialOps: 10 MinLen: 1  ConcurrentOpsWithRevert: 1 RevertOps: 2 AckBeforeRevert: All:
+     Error: annotates must track segments
+_: Local State
+-: Deleted
+*: Unacked Insert and Delete
+25370: msn/offset
+Op format <seq>:<ref>:<client><type>@<pos1>,<pos2>
+sequence number represented as offset from msn. L means local.
+op types: 0) insert 1) remove 2) annotate
+Round 1665
+op         | client A  | op             | client B   | op             | client C
+           | CCCB----- |                | CCCB-----  |                | CCCB-----
+           | CCCB----- | L:25370:B2@0,4 | CCCB-----  |                | CCCB-----
+           | CCCB----- | L:25370:B1@1,2 | C_CB ----- |                | CCCB-----
+           |           |                |  -         |                |
+           | CCCB----- |                | C_CB ----- | L:25370:C2@3,4 | CCCB-----
+           |           |                |  -         |                |
+1:0:B2@0,4 | CCCB----- | 1:0:B2@0,4     | C_CB ----- | 1:0:B2@0,4     | CCCB-----
+           |           |                |  -         |                |
+2:0:B1@1,2 | C-CB      | 2:0:B1@1,2     | C-CB       | 2:0:B1@1,2     | C-CB
+3:0:C2@3,4 | C-CB      | 3:0:C2@3,4     | C-CB       | 3:0:C2@3,4     | C-CB
+           | C-CB      | L:25373:B0@1   | C_-CB      |                | C-CB
+           |           |                |  C         |                |
+           | C-CB      | L:25373:B2@0,1 | C_-CB      |                | C-CB
+           |           |                |  C         |                |
+           | C-CB      | L:25373:B2@1,2 | C_-CB      |                | C-CB
+           |           |                |  C         |                |
+           | C-CB      | L:25373:B2@2,3 | C_-CB      |                | C-CB
+           |           |                |  C         |                |
+           | C-CB      | L:25373:B2@3,4 | C_-CB      |                | C-CB
+           |           |                |  C         |                |
+      at assert (d:\code\fluid2\node_modules\@fluidframework\common-utils\dist\assert.js:19:15)
+      at revertLocalAnnotate (d:\code\fluid2\packages\dds\merge-tree\dist\revertibles.js:134:35)
+      at revert (d:\code\fluid2\packages\dds\merge-tree\dist\revertibles.js:158:17)
+```
+    */
+    it.only("asas", () => {
+        const clients = createClientsAtInitialState(
+            { initialState: "1234-----", options: { mergeTreeUseNewLengthCalculations: true } },
+            "A", "B", "C");
+
+        const logger = new TestClientLogger(clients.all);
+        let seq = 0;
+        const ops: ISequencedDocumentMessage[] = [];
+
+        const clientB_Revertibles: MergeTreeDeltaRevertible[] = [];
+        // the test logger uses these callbacks, so preserve it
+        const old = clients.B.mergeTreeDeltaCallback;
+        clients.B.mergeTreeDeltaCallback = (op, delta) => {
+            old?.(op, delta);
+            appendToRevertibles(clientB_Revertibles, clients.B, delta);
+        };
+
+        ops.push(clients.B.makeOpMessage(clients.B.annotateRangeLocal(0, 4, { test: 1 }, undefined), ++seq));
+        ops.push(clients.B.makeOpMessage(clients.B.removeRangeLocal(1, 2), ++seq));
+        clients.B.mergeTreeDeltaCallback = old;
+
+        ops.push(clients.C.makeOpMessage(clients.C.annotateRangeLocal(3, 4, { test: 1 }, undefined), ++seq));
+
+        ops.splice(0).forEach((op) => clients.all.forEach((c) => c.applyMsg(op)));
+        try {
+            const revertOp = revert(clients.B, ... clientB_Revertibles);
+            revertOp.ops.forEach((op) => ops.push(clients.B.makeOpMessage(op, ++seq)));
+            ops.splice(0).forEach((op) => clients.all.forEach((c) => c.applyMsg(op)));
+        } catch (e) {
+            throw logger.addLogsToError(e);
+        }
+
+        logger.validate();
+    });
 });

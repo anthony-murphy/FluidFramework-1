@@ -3,6 +3,7 @@
  * Licensed under the MIT License.
  */
 
+import { assert } from "@fluidframework/common-utils";
 import { LocalReferencePosition } from "./localReference";
 import { ISegment } from "./mergeTreeNodes";
 import { computeNumericOrdinal } from "./ordinal";
@@ -61,10 +62,10 @@ export class SortedSegmentSet<
         const maybeRef = item as Partial<LocalReferencePosition>;
         if (maybeRef.getSegment !== undefined && maybeRef.isLeaf?.() === false) {
             const lref = maybeRef as LocalReferencePosition;
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            const segment = lref.getSegment()!;
+            const segment = lref.getSegment();
+            assert(segment !== undefined, "local refs in tracking groups must have segments");
             const offset = lref.getOffset();
-            return `${segment.ordinal}${String.fromCharCode(0)}${computeNumericOrdinal(offset)}`;
+            return `${segment.ordinal}${String.fromCharCode(0)}${computeNumericOrdinal(offset + 1)}`;
         }
         const maybeObject = item as { readonly segment: ISegment; };
         if (maybeObject?.segment) {
