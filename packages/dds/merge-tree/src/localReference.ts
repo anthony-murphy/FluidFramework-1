@@ -276,24 +276,26 @@ export class LocalReferenceCollection {
      * @internal
      */
     public addLocalRef(lref: LocalReferencePosition, offset: number) {
-        assert(
-            !refTypeIncludesFlag(lref, ReferenceType.Transient),
-            0x2df /* "transient references cannot be bound to segments" */);
         assertLocalReferences(lref);
         assert(offset < this.segment.cachedLength, 0x348 /* offset cannot be beyond segment length */);
-        const refsAtOffset = this.refsByOffset[offset] =
-            this.refsByOffset[offset]
-            ?? { at: new List() };
-        const atRefs = refsAtOffset.at =
-            refsAtOffset.at
-            ?? new List();
 
-        lref.link(this.segment, offset, atRefs.push(lref).last);
+        if (refTypeIncludesFlag(lref, ReferenceType.Transient)) {
+            lref.link(this.segment, offset, undefined);
+        } else {
+            const refsAtOffset = this.refsByOffset[offset] =
+                this.refsByOffset[offset]
+                ?? { at: new List() };
+            const atRefs = refsAtOffset.at =
+                refsAtOffset.at
+                ?? new List();
 
-        if (refHasRangeLabels(lref) || refHasTileLabels(lref)) {
-            this.hierRefCount++;
+            lref.link(this.segment, offset, atRefs.push(lref).last);
+
+            if (refHasRangeLabels(lref) || refHasTileLabels(lref)) {
+                this.hierRefCount++;
+            }
+            this.refCount++;
         }
-        this.refCount++;
     }
 
     /**

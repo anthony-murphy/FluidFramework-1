@@ -1010,7 +1010,12 @@ export class MergeTree {
                     refsToSlide.push(lref);
                 }
             } else {
-                segment.localRefs.removeLocalRef(lref);
+                // since we are pending, don't actually remove it,
+                // return the set of refs that will be removed on ack
+                //
+                if (!pending) {
+                    segment.localRefs.removeLocalRef(lref);
+                }
                 removedRefs.push(lref);
             }
         }
