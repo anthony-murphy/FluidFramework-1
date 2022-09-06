@@ -53,7 +53,7 @@ import { SnapshotLegacy } from "./snapshotlegacy";
 import { SnapshotLoader } from "./snapshotLoader";
 import { IMergeTreeTextHelper } from "./textSegment";
 import { SnapshotV1 } from "./snapshotV1";
-import { ReferencePosition, RangeStackMap } from "./referencePositions";
+import { ReferencePosition, RangeStackMap, DetachedReferencePosition } from "./referencePositions";
 import { MergeTree } from "./mergeTree";
 import { MergeTreeTextHelper } from "./MergeTreeTextHelper";
 import { walkAllChildSegments } from "./mergeTreeNodeWalk";
