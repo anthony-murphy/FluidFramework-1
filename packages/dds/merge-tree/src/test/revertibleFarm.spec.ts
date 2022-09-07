@@ -14,6 +14,7 @@ import {
     applyMessages,
     annotateRange,
 } from "./mergeTreeOperationRunner";
+import { createRevertDriver } from "./revertibles.spec";
 import { createClientsAtInitialState, TestClientLogger } from "./testClientLogger";
 
  const defaultOptions = {
@@ -77,16 +78,20 @@ describe("MergeTree.Client", () => {
                             const baseText = logger.validate({ clear: true, errorPrefix: "After Initial Ops" });
 
                             const clientB_Revertibles: MergeTreeDeltaRevertible[] = [];
+                            const clientBDriver = createRevertDriver(clients.B);
 
                             const msgs: [ISequencedDocumentMessage, SegmentGroup | SegmentGroup[]][] = [];
                             {
-                                // the test logger uses these callbacks, so preserve it
                                 const old = clients.B.mergeTreeDeltaCallback;
+                                clientBDriver.opCreated = (op) => msgs.push(
+                                    [
+                                        clients.B.makeOpMessage(op, undefined, undefined, undefined, seq),
+                                        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                                        clients.B.peekPendingSegmentGroups()!,
+                                    ]);
                                 clients.B.mergeTreeDeltaCallback = (op, delta) => {
                                     old?.(op, delta);
-                                    if (op.sequencedMessage === undefined) {
-                                        appendToRevertibles(clientB_Revertibles, clients.B, delta);
-                                    }
+                                    appendToRevertibles(clientB_Revertibles, clientBDriver, delta);
                                 };
                                 msgs.push(...generateOperationMessagesForClients(
                                     mt,
@@ -129,20 +134,7 @@ describe("MergeTree.Client", () => {
                             }
 
                             try {
-                                const revertOp = revert(clients.B, ... clientB_Revertibles);
-                                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                                const segmentGroups = clients.B.peekPendingSegmentGroups(revertOp.ops.length)!;
-                                // spread the ops and apply one by one for better logging, as groups op
-                                // don't log well in the test client logger. grouped or not doesn't really
-                                // matter at this layer, as internally they get spread just the same
-                                revertOp.ops.forEach((op, i) => {
-                                    msgs.push(
-                                        [
-                                            clients.B.makeOpMessage(op, undefined, undefined, undefined, seq),
-                                            segmentGroups[i],
-                                        ]);
-                                    });
-
+                                revert(clientBDriver, ... clientB_Revertibles);
                                 seq = applyMessages(seq, msgs.splice(0), clients.all, logger);
                             } catch (e) {
                                 throw logger.addLogsToError(e);

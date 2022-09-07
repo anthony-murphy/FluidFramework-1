@@ -42,7 +42,7 @@ function _validateReferenceType(refType: ReferenceType) {
  * @sealed
  */
 export interface LocalReferencePosition extends ReferencePosition {
-    callbacks?: Partial<Record<"beforeSlide" | "afterSlide", () => void>>;
+    callbacks?: Partial<Record<"beforeSlide" | "afterSlide", (ref: this) => void>>;
     readonly trackingCollection: TrackingGroupCollection;
 }
 

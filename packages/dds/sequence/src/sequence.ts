@@ -436,19 +436,19 @@ export abstract class SharedSegmentSequence<T extends ISegment>
         if (insertOp) {
             this.submitSequenceMessage(insertOp);
         }
+        return insertOp;
     }
 
-    public insertSegmentFromSpec?: (segmentSpec: IJSONSegment, position: number) => ISegment =
-        this.thing.bind(this);
-
-    private thing(segmentSpec: IJSONSegment, position: number): ISegment {
-        const segment = this.segmentFromSpec(segmentSpec);
-        const insertOp = this.client.insertSegmentLocal(position, segment);
-        if (insertOp) {
-            this.submitSequenceMessage(insertOp);
+    public insertFromSpec(pos: number, spec: IJSONSegment): ISegment {
+        const segment = this.segmentFromSpec(spec);
+        const op = this.client.insertSegmentLocal(
+            pos,
+            this.segmentFromSpec(spec),
+        );
+        if (op) {
+            this.submitSequenceMessage(op);
         }
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        return this.getContainingSegment(position).segment!;
+        return segment;
     }
 
     /**

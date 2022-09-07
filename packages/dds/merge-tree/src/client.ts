@@ -233,31 +233,39 @@ export class Client {
      * @param segment - The segment to insert
      */
     public insertAtReferencePositionLocal(
-        refPos: LocalReferencePosition,
+        refPos: ReferencePosition,
         segment: ISegment,
-        slideFilter?: (lref: LocalReferencePosition) => boolean,
     ): IMergeTreeInsertMsg | undefined {
+        const pos = this._mergeTree.referencePositionToLocalPosition(
+            refPos,
+            this.getCurrentSeq(),
+            this.getClientId());
+
+        if (pos === DetachedReferencePosition) {
+            return undefined;
+        }
+        const op = createInsertSegmentOp(
+            pos,
+            segment);
+
+        const opArgs = { op };
         let traceStart: Trace | undefined;
         if (this.measureOps) {
             traceStart = Trace.start();
         }
 
-       const opArgs = this._mergeTree.insertAtReferencePosition(
+        this._mergeTree.insertAtReferencePosition(
             refPos,
             segment,
-            slideFilter);
-
-        if (!opArgs) {
-            return;
-        }
+            opArgs);
 
         this.completeAndLogOp(
             opArgs,
             this.getClientSequenceArgs(opArgs),
-            { start: opArgs.op.pos1 },
+            { start: op.pos1 },
             traceStart);
 
-        return opArgs.op;
+        return op;
     }
 
     public walkSegments<TClientData>(
@@ -1025,7 +1033,6 @@ export class Client {
             return UniversalSequenceNumber;
         }
     }
-
     localTransaction(groupOp: IMergeTreeGroupMsg) {
         for (const op of groupOp.ops) {
             const opArgs: IMergeTreeDeltaOpArgs = {
