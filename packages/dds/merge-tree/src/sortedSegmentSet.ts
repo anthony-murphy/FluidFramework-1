@@ -6,7 +6,6 @@
 import { assert } from "@fluidframework/common-utils";
 import { LocalReferencePosition } from "./localReference";
 import { ISegment } from "./mergeTreeNodes";
-import { computeNumericOrdinal } from "./ordinal";
 
 export type SortedSegmentSetItem =
     ISegment
@@ -64,8 +63,7 @@ export class SortedSegmentSet<
             const lref = maybeRef as LocalReferencePosition;
             const segment = lref.getSegment();
             assert(segment !== undefined, "local refs in tracking groups must have segments");
-            const offset = lref.getOffset();
-            return `${segment.ordinal}${String.fromCharCode(0)}${computeNumericOrdinal(offset + 1)}`;
+            return segment.ordinal;
         }
         const maybeObject = item as { readonly segment: ISegment; };
         if (maybeObject?.segment) {
@@ -75,8 +73,14 @@ export class SortedSegmentSet<
         const maybeSegment = item as ISegment;
         return maybeSegment.ordinal;
     }
-
     private findItemPosition(item: T): { exists: boolean; index: number; } {
+        const result = this.findItemPosition2(item);
+        if (result.exists === false && this.ordinalSortedItems.includes(item)) {
+            assert(false, "what");
+        }
+        return result;
+    }
+    private findItemPosition2(item: T): { exists: boolean; index: number; } {
         if (this.ordinalSortedItems.length === 0) {
             return { exists: false, index: 0 };
         }

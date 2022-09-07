@@ -152,9 +152,9 @@ export function revertLocalRemove(client: Client, revertible: RemoveRevertible, 
     while (revertible.trackingGroup.size > 0) {
         const tracked = revertible.trackingGroup.tracked[0];
 
-        assert(tracked.trackingCollection.trackingGroups.has(revertible.trackingGroup), "remove tracked should exist");
-        tracked.trackingCollection.unlink(revertible.trackingGroup);
-        assert(!tracked.trackingCollection.trackingGroups.has(revertible.trackingGroup), "tracked should be removed");
+        assert(
+            tracked.trackingCollection.unlink(revertible.trackingGroup),
+        "tracking group removed");
 
         assert(!tracked.isLeaf(), "removes must track local refs");
         const props = tracked.properties as RemoveSegmentRefProperties;
@@ -167,12 +167,7 @@ export function revertLocalRemove(client: Client, revertible: RemoveRevertible, 
 
         tracked.trackingCollection.trackingGroups.forEach((tg) => {
             tg.link(insertSegment);
-            assert(tg.has(insertSegment), "should be there");
-            if (!tg.has(tracked)) {
-                assert(tg.has(tracked), "should be there");
-            }
             tg.unlink(tracked);
-            assert(!tg.has(tracked), "should not be there");
         });
 
         tracked.getSegment()?.localRefs?.removeLocalRef(tracked);
@@ -186,11 +181,8 @@ export function revertLocalRemove(client: Client, revertible: RemoveRevertible, 
 export function revertLocalAnnotate(client: Client, revertible: AnnotateRevertible, ops: IMergeTreeDeltaOp[]) {
     while (revertible.trackingGroup.size > 0) {
         const tracked = revertible.trackingGroup.tracked[0];
-        assert(tracked.trackingCollection.trackingGroups.has(revertible.trackingGroup),
-        "annotate tracked should exist");
-        tracked.trackingCollection.unlink(revertible.trackingGroup);
-        assert(!tracked.trackingCollection.trackingGroups.has(revertible.trackingGroup), "tracked should be removed");
-        assert(tracked.isLeaf(), "annotates must track segments");
+        const unlinked = tracked.trackingCollection.unlink(revertible.trackingGroup);
+        assert(unlinked && tracked.isLeaf(), "annotates must track segments");
         if (toRemovalInfo(tracked) === undefined) {
             const start = client.getPosition(tracked);
             const op = client.annotateRangeLocal(

@@ -274,7 +274,7 @@ op         | client A  | op             | client B   | op             | client C
       at revert (d:\code\fluid2\packages\dds\merge-tree\dist\revertibles.js:158:17)
 ```
     */
-    it.only("asas", () => {
+    it("asas", () => {
         const clients = createClientsAtInitialState(
             { initialState: "1234-----", options: { mergeTreeUseNewLengthCalculations: true } },
             "A", "B", "C");
@@ -291,13 +291,15 @@ op         | client A  | op             | client B   | op             | client C
             appendToRevertibles(clientB_Revertibles, clients.B, delta);
         };
 
-        ops.push(clients.B.makeOpMessage(clients.B.annotateRangeLocal(0, 4, { test: 1 }, undefined), ++seq));
+        ops.push(clients.B.makeOpMessage(clients.B.annotateRangeLocal(0, 4, { test: "B" }, undefined), ++seq));
         ops.push(clients.B.makeOpMessage(clients.B.removeRangeLocal(1, 2), ++seq));
         clients.B.mergeTreeDeltaCallback = old;
 
-        ops.push(clients.C.makeOpMessage(clients.C.annotateRangeLocal(3, 4, { test: 1 }, undefined), ++seq));
+        ops.push(clients.C.makeOpMessage(clients.C.annotateRangeLocal(3, 4, { test: "C" }, undefined), ++seq));
 
         ops.splice(0).forEach((op) => clients.all.forEach((c) => c.applyMsg(op)));
+        logger.validate();
+
         try {
             const revertOp = revert(clients.B, ... clientB_Revertibles);
             revertOp.ops.forEach((op) => ops.push(clients.B.makeOpMessage(op, ++seq)));
