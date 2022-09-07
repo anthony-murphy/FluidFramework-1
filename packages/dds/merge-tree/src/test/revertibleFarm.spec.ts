@@ -31,7 +31,7 @@ import { createClientsAtInitialState, TestClientLogger } from "./testClientLogge
     growthFunc: (input: number) => input * 2,
 };
 
-describe.only("MergeTree.Client", () => {
+describe("MergeTree.Client", () => {
     doOverRange(defaultOptions.minLength, defaultOptions.growthFunc, (minLen) => {
         doOverRange(defaultOptions.concurrentOpsWithRevert, defaultOptions.growthFunc, (opsWithRevert) => {
             doOverRange(defaultOptions.revertOps, defaultOptions.growthFunc, (revertOps) => {
