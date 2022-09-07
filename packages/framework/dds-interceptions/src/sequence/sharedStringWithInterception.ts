@@ -252,7 +252,7 @@ export function createSharedStringWithInterception(
      * @param segment - The segment to insert
      */
     sharedStringWithInterception.insertAtReferencePosition = (
-        pos: MergeTree.ReferencePosition,
+        pos: MergeTree.LocalReferencePosition,
         segment: MergeTree.TextSegment) => {
         // Wrapper methods should not be called from the interception callback as this will lead to
         // infinite recursion.
