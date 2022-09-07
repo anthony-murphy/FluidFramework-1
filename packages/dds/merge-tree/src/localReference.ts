@@ -310,7 +310,7 @@ export class LocalReferenceCollection {
             node?.list?.remove(node);
 
             lref.link(
-                lref.getSegment(),
+                undefined,
                 lref.getOffset(),
                 undefined);
             if (refHasRangeLabels(lref) || refHasTileLabels(lref)) {

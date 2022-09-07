@@ -3,7 +3,6 @@
  * Licensed under the MIT License.
  */
 
-import { assert } from "@fluidframework/common-utils";
 import { LocalReferencePosition } from "./localReference";
 import { ISegment } from "./mergeTreeNodes";
 
@@ -61,8 +60,8 @@ export class SortedSegmentSet<
         const maybeRef = item as Partial<LocalReferencePosition>;
         if (maybeRef.getSegment !== undefined && maybeRef.isLeaf?.() === false) {
             const lref = maybeRef as LocalReferencePosition;
-            const segment = lref.getSegment();
-            assert(segment !== undefined, "local refs in tracking groups must have segments");
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            const segment = lref.getSegment()!;
             return segment.ordinal;
         }
         const maybeObject = item as { readonly segment: ISegment; };
@@ -74,13 +73,6 @@ export class SortedSegmentSet<
         return maybeSegment.ordinal;
     }
     private findItemPosition(item: T): { exists: boolean; index: number; } {
-        const result = this.findItemPosition2(item);
-        if (result.exists === false && this.ordinalSortedItems.includes(item)) {
-            assert(false, "what");
-        }
-        return result;
-    }
-    private findItemPosition2(item: T): { exists: boolean; index: number; } {
         if (this.ordinalSortedItems.length === 0) {
             return { exists: false, index: 0 };
         }

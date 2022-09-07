@@ -86,6 +86,10 @@ describe("SortedSegmentSet", () => {
     });
 
     it("SortedSegmentSet of local references", () => {
+        // using a sorted segment set directly creates problems,
+        // as we don't correctly split, or merge, so leverage
+        // the tracking group for correct behavior in those case
+        // and spy it's internal set
         const set = new TrackingGroup();
         for (let i = 0; i < client.getLength(); i++) {
             for (const pos of [i, client.getLength() - 1 - i]) {
@@ -98,9 +102,7 @@ describe("SortedSegmentSet", () => {
                 assert.equal(set.has(lref), true);
             }
         }
-
         assert.equal(set.size, client.getLength() * 2);
-
         validateSet<LocalReferencePosition>(
             client, (set as any).trackedSet, (i) => i.getSegment()?.ordinal);
     });
