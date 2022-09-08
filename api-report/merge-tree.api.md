@@ -687,9 +687,9 @@ export class LocalReferenceCollection {
     // @internal
     constructor(
     segment: ISegment, initialRefsByfOffset?: (IRefsAtOffset | undefined)[]);
-    // (undocumented)
+    // @internal (undocumented)
     addAfterTombstones(...refs: Iterable<LocalReferencePosition>[]): void;
-    // (undocumented)
+    // @internal (undocumented)
     addBeforeTombstones(...refs: Iterable<LocalReferencePosition>[]): void;
     // @internal (undocumented)
     addLocalRef(lref: LocalReferencePosition, offset: number): void;
@@ -716,7 +716,7 @@ export class LocalReferenceCollection {
 // @public @sealed (undocumented)
 export interface LocalReferencePosition extends ReferencePosition {
     // (undocumented)
-    callbacks?: Partial<Record<"beforeSlide" | "afterSlide", () => void>>;
+    callbacks?: Partial<Record<"beforeSlide" | "afterSlide", (ref: LocalReferencePosition) => void>>;
     // (undocumented)
     readonly trackingCollection: TrackingGroupCollection;
 }
