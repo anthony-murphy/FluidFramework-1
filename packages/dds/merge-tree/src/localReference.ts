@@ -42,7 +42,7 @@ function _validateReferenceType(refType: ReferenceType) {
  * @sealed
  */
 export interface LocalReferencePosition extends ReferencePosition {
-    callbacks?: Partial<Record<"beforeSlide" | "afterSlide", (ref: this) => void>>;
+    callbacks?: Partial<Record<"beforeSlide" | "afterSlide", (ref: LocalReferencePosition) => void>>;
     readonly trackingCollection: TrackingGroupCollection;
 }
 
@@ -57,21 +57,17 @@ class LocalReference implements LocalReferencePosition {
     private offset: number = 0;
     private listNode: ListNode<LocalReference> | undefined;
 
-    public callbacks?: Partial<Record<"beforeSlide" | "afterSlide", () => void>> | undefined;
+    public callbacks?: Partial<Record<"beforeSlide" | "afterSlide", (ref: LocalReferencePosition) => void>> | undefined;
     private _trackingCollection?: TrackingGroupCollection;
     public get trackingCollection(): TrackingGroupCollection {
         return (this._trackingCollection ??= new TrackingGroupCollection(this));
     }
 
     constructor(
-        initSegment: ISegment | undefined,
-        initOffset: number,
         public refType = ReferenceType.Simple,
         properties?: PropertySet,
     ) {
         _validateReferenceType(refType);
-        this.segment = initSegment;
-        this.offset = initOffset;
         this.properties = properties;
     }
 
@@ -122,7 +118,7 @@ class LocalReference implements LocalReferencePosition {
 }
 
 export function createDetachedLocalReferencePosition(refType?: ReferenceType): LocalReferencePosition {
-    return new LocalReference(undefined, 0, refType, undefined);
+    return new LocalReference(refType, undefined);
 }
 
 interface IRefsAtOffset {
@@ -260,13 +256,13 @@ export class LocalReferenceCollection {
         refType: ReferenceType,
         properties: PropertySet | undefined): LocalReferencePosition {
         const ref = new LocalReference(
-            this.segment,
-            offset,
             refType,
             properties,
         );
         if (!refTypeIncludesFlag(ref, ReferenceType.Transient)) {
             this.addLocalRef(ref, offset);
+        } else {
+            ref.link(this.segment, offset, undefined);
         }
         return ref;
     }
@@ -305,7 +301,6 @@ export class LocalReferenceCollection {
     public removeLocalRef(lref: LocalReferencePosition): LocalReferencePosition | undefined {
         if (this.has(lref)) {
             assertLocalReferences(lref);
-
             const node = lref.getListNode();
             node?.list?.remove(node);
 
@@ -362,7 +357,8 @@ export class LocalReferenceCollection {
             || refTypeIncludesFlag(lref, ReferenceType.Transient)) {
             return false;
         }
-        if (lref.getSegment() !== this.segment) {
+        const seg = lref.getSegment();
+        if (seg !== this.segment) {
             return false;
         }
         // we should be able to optimize finding the
@@ -424,34 +420,34 @@ export class LocalReferenceCollection {
     * @remarks This method should only be called by mergeTree.
     * @internal
     */
-    public addBeforeTombstones(refs: Iterable<LocalReferencePosition>) {
-        const firstOffset = 0;
-        const beforeRefs = this.refsByOffset[firstOffset]?.before ?? new List<LocalReference>();
-        if (this.refsByOffset[firstOffset]?.before === undefined) {
-            // ensure offset initialized
-            const refsAtOffset = this.refsByOffset[firstOffset] ??= { before: beforeRefs };
-            // ensure before initialized
+    public addBeforeTombstones(...refs: Iterable<LocalReferencePosition>[]) {
+        const beforeRefs = this.refsByOffset[0]?.before ?? new List();
+
+        if (this.refsByOffset[0]?.before === undefined) {
+            const refsAtOffset = this.refsByOffset[0] ??= { before: beforeRefs };
             refsAtOffset.before ??= beforeRefs;
         }
+
         let precedingRef: ListNode<LocalReference> | undefined;
-        for (const lref of refs) {
-            assertLocalReferences(lref);
-            if (refTypeIncludesFlag(lref, ReferenceType.SlideOnRemove)) {
-                if (precedingRef === undefined) {
-                    precedingRef = beforeRefs.unshift(lref)?.first;
+        for (const iterable of refs) {
+            for (const lref of iterable) {
+                assertLocalReferences(lref);
+                if (refTypeIncludesFlag(lref, ReferenceType.SlideOnRemove)) {
+                    lref.callbacks?.beforeSlide?.(lref);
+                    if (precedingRef === undefined) {
+                        precedingRef = beforeRefs.unshift(lref)?.first;
+                    } else {
+                        precedingRef = beforeRefs.insertAfter(precedingRef, lref)?.first;
+                    }
+                    lref.link(this.segment, 0, precedingRef);
+                    if (refHasRangeLabels(lref) || refHasTileLabels(lref)) {
+                        this.hierRefCount++;
+                    }
+                    this.refCount++;
+                    lref.callbacks?.afterSlide?.(lref);
                 } else {
-                    precedingRef = beforeRefs.insertAfter(precedingRef, lref)?.first;
+                    lref.getSegment()?.localRefs?.removeLocalRef(lref);
                 }
-                lref.link(
-                    this.segment,
-                    firstOffset,
-                    precedingRef);
-                if (refHasRangeLabels(lref) || refHasTileLabels(lref)) {
-                    this.hierRefCount++;
-                }
-                this.refCount++;
-            } else {
-                lref.getSegment()?.localRefs?.removeLocalRef(lref);
             }
         }
     }
@@ -459,30 +455,30 @@ export class LocalReferenceCollection {
     * @remarks This method should only be called by mergeTree.
     * @internal
     */
-    public addAfterTombstones(refs: Iterable<LocalReferencePosition>) {
-        const lastOffset = this.refsByOffset.length - 1;
-        const afterRefs =
-            this.refsByOffset[lastOffset]?.after ?? new List<LocalReference>();
-            if (this.refsByOffset[lastOffset]?.after === undefined) {
-                // ensure offset initialized
-                const refsAtOffset = this.refsByOffset[lastOffset] ??= { after: afterRefs };
-                // ensure after refs initialized
-                refsAtOffset.after ??= afterRefs;
-            }
+    public addAfterTombstones(...refs: Iterable<LocalReferencePosition>[]) {
+        const lastOffset = this.segment.cachedLength - 1;
+        const afterRefs = this.refsByOffset[lastOffset]?.after ?? new List();
 
-        for (const lref of refs) {
-            assertLocalReferences(lref);
-            if (refTypeIncludesFlag(lref, ReferenceType.SlideOnRemove)) {
-                lref.link(
-                    this.segment,
-                    lastOffset,
-                    afterRefs.push(lref)?.first);
-                if (refHasRangeLabels(lref) || refHasTileLabels(lref)) {
-                    this.hierRefCount++;
+        if (this.refsByOffset[lastOffset]?.after === undefined) {
+            const refsAtOffset = this.refsByOffset[lastOffset] ??= { after: afterRefs };
+            refsAtOffset.after ??= afterRefs;
+        }
+
+        for (const iterable of refs) {
+            for (const lref of iterable) {
+                assertLocalReferences(lref);
+                if (refTypeIncludesFlag(lref, ReferenceType.SlideOnRemove)) {
+                    lref.callbacks?.beforeSlide?.(lref);
+                    afterRefs.push(lref);
+                    lref.link(this.segment, lastOffset, afterRefs.last);
+                    if (refHasRangeLabels(lref) || refHasTileLabels(lref)) {
+                        this.hierRefCount++;
+                    }
+                    this.refCount++;
+                    lref.callbacks?.afterSlide?.(lref);
+                } else {
+                    lref.getSegment()?.localRefs?.removeLocalRef(lref);
                 }
-                this.refCount++;
-            } else {
-                lref.getSegment()?.localRefs?.removeLocalRef(lref);
             }
         }
     }
@@ -491,7 +487,7 @@ export class LocalReferenceCollection {
     * @remarks This method should only be called by mergeTree.
     * @internal
     */
-    public isAfterTombstone(lref: LocalReferencePosition) {
+     public isAfterTombstone(lref: LocalReferencePosition) {
         assertLocalReferences(lref);
         return this.refsByOffset[lref.getOffset()]?.after === lref.getListNode()?.list;
     }
