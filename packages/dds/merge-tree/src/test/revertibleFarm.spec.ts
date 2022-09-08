@@ -149,14 +149,17 @@ describe("MergeTree.Client", () => {
 
                             try {
                                 // reset the callback before the final revert
+                                // to avoid accruing any new detached references
                                 clients.B.mergeTreeDeltaCallback = oldCallback;
                                 revertMergeTreeDeltaRevertibles(clientBDriver, clientB_Revertibles.splice(0));
                                 seq = applyMessages(seq, msgs.splice(0), clients.all, logger);
 
                                 // validate that there are no lingering/leaked references in detached references
-                                assert.notStrictEqual(
-                                    (clientBDriver as any)?.__mergeTreeRevertible?.detachedReferences?.localRefs?.empty,
-                                    false,
+                                const detachedReferences =
+                                    (clientBDriver as any)?.__mergeTreeRevertible?.detachedReferences?.localRefs;
+                                assert.strictEqual(
+                                    detachedReferences?.empty ?? true,
+                                    true,
                                     "detachedReferences not empty");
                             } catch (e) {
                                 throw logger.addLogsToError(e);

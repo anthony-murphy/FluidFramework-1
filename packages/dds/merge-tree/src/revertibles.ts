@@ -82,6 +82,7 @@ export interface MergeTreeRevertibleDriver{
     getContainingSegment(pos: number): { segment: ISegment | undefined; offset: number | undefined; };
 
 }
+
 type InternalRevertDriver = MergeTreeRevertibleDriver & {
     __mergeTreeRevertible?: {
         detachedReferences?: ISegment & IRemovalInfo;
