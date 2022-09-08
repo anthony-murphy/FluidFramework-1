@@ -26,7 +26,7 @@ export interface AnnotateRevertible {
 }
 
 // @public (undocumented)
-export function appendToRevertibles(revertibles: MergeTreeDeltaRevertible[], client: Client, event: IMergeTreeDeltaCallbackArgs): void;
+export function appendToRevertibles(revertibles: MergeTreeDeltaRevertible[], driver: MergeTreeRevertibleDriver, event: IMergeTreeDeltaCallbackArgs): void;
 
 // @public (undocumented)
 export abstract class BaseSegment extends MergeNode implements ISegment {
@@ -166,7 +166,7 @@ export class Client {
     // (undocumented)
     getStackContext(startPos: number, rangeLabels: string[]): RangeStackMap;
     // (undocumented)
-    insertAtReferencePositionLocal(refPos: LocalReferencePosition, segment: ISegment, slideFilter?: (lref: LocalReferencePosition) => boolean): IMergeTreeInsertMsg | undefined;
+    insertAtReferencePositionLocal(refPos: ReferencePosition, segment: ISegment): IMergeTreeInsertMsg | undefined;
     // (undocumented)
     insertSegmentLocal(pos: number, segment: ISegment): IMergeTreeInsertMsg | undefined;
     // (undocumented)
@@ -465,9 +465,9 @@ export interface IMergeTreeDeltaCallbackArgs<TOperationType extends MergeTreeDel
 export type IMergeTreeDeltaOp = IMergeTreeInsertMsg | IMergeTreeRemoveMsg | IMergeTreeAnnotateMsg;
 
 // @public (undocumented)
-export interface IMergeTreeDeltaOpArgs<O extends IMergeTreeOp = IMergeTreeOp> {
+export interface IMergeTreeDeltaOpArgs {
     readonly groupOp?: IMergeTreeGroupMsg;
-    readonly op: O;
+    readonly op: IMergeTreeOp;
     readonly sequencedMessage?: ISequencedDocumentMessage;
 }
 
@@ -744,7 +744,7 @@ export class LocalReferenceCollection {
 // @public @sealed (undocumented)
 export interface LocalReferencePosition extends ReferencePosition {
     // (undocumented)
-    callbacks?: Partial<Record<"beforeSlide" | "afterSlide", () => void>>;
+    callbacks?: Partial<Record<"beforeSlide" | "afterSlide", (ref: this) => void>>;
     // (undocumented)
     readonly trackingCollection: TrackingGroupCollection;
 }
@@ -868,6 +868,24 @@ export const MergeTreeMaintenanceType: {
 
 // @public (undocumented)
 export type MergeTreeMaintenanceType = typeof MergeTreeMaintenanceType[keyof typeof MergeTreeMaintenanceType];
+
+// @public (undocumented)
+export interface MergeTreeRevertibleDriver {
+    annotateRange(start: number, end: number, props: PropertySet): any;
+    createLocalReferencePosition(segment: ISegment, offset: number, refType: ReferenceType, properties: PropertySet | undefined): LocalReferencePosition;
+    // (undocumented)
+    getContainingSegment(pos: number): {
+        segment: ISegment | undefined;
+        offset: number | undefined;
+    };
+    getPosition(segment: ISegment): number;
+    // (undocumented)
+    insertFromSpec(pos: number, spec: IJSONSegment): any;
+    // (undocumented)
+    localReferencePositionToPosition(lref: LocalReferencePosition): number;
+    // (undocumented)
+    removeRange(start: number, end: number): any;
+}
 
 // @public (undocumented)
 export interface MergeTreeStats {
@@ -1131,16 +1149,16 @@ export const reservedRangeLabelsKey = "referenceRangeLabels";
 export const reservedTileLabelsKey = "referenceTileLabels";
 
 // @public (undocumented)
-export function revert(client: Client, ...revertibles: MergeTreeDeltaRevertible[]): IMergeTreeGroupMsg;
+export function revert(driver: MergeTreeRevertibleDriver, ...revertibles: MergeTreeDeltaRevertible[]): void;
 
 // @public (undocumented)
-export function revertLocalAnnotate(client: Client, revertible: AnnotateRevertible, ops: IMergeTreeDeltaOp[]): void;
+export function revertLocalAnnotate(driver: MergeTreeRevertibleDriver, revertible: AnnotateRevertible): void;
 
 // @public (undocumented)
-export function revertLocalInsert(client: Client, revertible: InsertRevertible, ops: IMergeTreeDeltaOp[]): void;
+export function revertLocalInsert(driver: MergeTreeRevertibleDriver, revertible: InsertRevertible): void;
 
 // @public (undocumented)
-export function revertLocalRemove(client: Client, revertible: RemoveRevertible, ops: IMergeTreeDeltaOp[]): void;
+export function revertLocalRemove(driver: MergeTreeRevertibleDriver, revertible: RemoveRevertible): void;
 
 // @public (undocumented)
 export interface SearchResult {
@@ -1300,7 +1318,7 @@ export class TrackingGroup {
     // (undocumented)
     get tracked(): readonly Trackable[];
     // (undocumented)
-    unlink(segment: Trackable): void;
+    unlink(trackable: Trackable): boolean;
 }
 
 // @public (undocumented)
@@ -1317,7 +1335,7 @@ export class TrackingGroupCollection {
     // (undocumented)
     readonly trackingGroups: Set<TrackingGroup>;
     // (undocumented)
-    unlink(trackingGroup: TrackingGroup): void;
+    unlink(trackingGroup: TrackingGroup): boolean;
 }
 
 // @public (undocumented)

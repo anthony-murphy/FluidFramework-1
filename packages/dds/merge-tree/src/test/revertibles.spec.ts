@@ -161,55 +161,7 @@ describe("MergeTree.Revertibles", () => {
 
         logger.validate({ baseText: "BBC" });
     });
-    /**
-```
-1) MergeTree.Client
-       MinLen: 1 InitialOps: 10 RevertOps: 3 AckBeforeRevert: true ModifyBeforeRevert: false:
 
-      AssertionError [ERR_ASSERTION]: After Revert:
-_: Local State
--: Deleted
-*: Unacked Insert and Delete
-194: msn/offset
-Op format <seq>:<ref>:<client><type>@<pos1>,<pos2>
-sequence number represented as offset from msn. L means local.
-op types: 0) insert 1) remove 2) annotate
-Round 11
-op         | client A | op           | client B | op         | client C
-           | B-CC--   |              | B-CC--   |            | B-CC--
-           | B-CC--   | L:191:B1@0,2 | _-_C--   |            | B-CC--
-           |          |              | - -      |            |
-           | B-CC--   | L:191:B2@0,1 | _-_C--   |            | B-CC--
-           |          |              | - -      |            |
-           | B-CC--   | L:191:B1@0,1 | _-__--   |            | B-CC--
-           |          |              | - --     |            |
-1:0:B1@0,2 | ---C--   | 1:0:B1@0,2   | ---_--   | 1:0:B1@0,2 | ---C--
-           |          |              |    -     |            |
-2:0:B2@0,1 | --C      | 2:0:B2@0,1   | --_      | 2:0:B2@0,1 | --C
-           |          |              |   -      |            |
-3:0:B1@0,1 | ---      | 3:0:B1@0,1   | ---      | 3:0:B1@0,1 | ---
-           | ---      | L:194:B0@0   | _---     |            | ---
-           |          |              | C        |            |
-           | ---      | L:194:B2@0,1 | _---     |            | ---
-           |          |              | C        |            |
-           | ---      | L:194:B0@1   | __---    |            | ---
-           |          |              | CB       |            |
-           | ---      | L:194:B0@2   | ___---   |            | ---
-           |          |              | CBC      |            |
-1:0:B0@0   | C---     | 1:0:B0@0     | C__---   | 1:0:B0@0   | C---
-           |          |              |  BC      |            |
-2:0:B2@0,1 | C        | 2:0:B2@0,1   | C__      | 2:0:B2@0,1 | C
-           |          |              |  BC      |            |
-3:0:B0@1   | CB       | 3:0:B0@1     | CB_      | 3:0:B0@1   | CB
-           |          |              |   C      |            |
-4:0:B0@2   | CBC      | 4:0:B0@2     | CBC      | 4:0:B0@2   | CBC
-Client A does not match client baseText
-      + expected - actual
-
-      -CBC
-      +BCC
-```
-     */
     it("Revert remove to empty with annotate", () => {
         const clients = createClientsAtInitialState(
             { initialState: "1-23--", options: { mergeTreeUseNewLengthCalculations: true } },
@@ -242,6 +194,7 @@ Client A does not match client baseText
 
         logger.validate({ baseText: "123" });
     });
+
     it("Revert Local annotate and remove with intersecting remote annotate", () => {
         const clients = createClientsAtInitialState(
             { initialState: "1234-----", options: { mergeTreeUseNewLengthCalculations: true } },

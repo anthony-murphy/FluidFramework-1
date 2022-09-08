@@ -24,7 +24,7 @@ import { MergeTree } from "../mergeTree";
 import { MergeTreeTextHelper } from "../MergeTreeTextHelper";
 import { walkAllChildSegments } from "../mergeTreeNodeWalk";
 import { LocalReferencePosition } from "../localReference";
-import { RevertDriver } from "../revertibles";
+import { MergeTreeRevertibleDriver } from "../revertibles";
 import { TestSerializer } from "./testSerializer";
 import { nodeOrdinalsHaveIntegrity } from "./testUtils";
 
@@ -376,8 +376,12 @@ export class TestClient extends Client {
     }
 }
 
+// the client doesn't submit ops, so this adds a callback to capture them
+export type TestClientRevertibleDriver =
+    MergeTreeRevertibleDriver & Partial<{ submitOpCallback?: (op: IMergeTreeOp | undefined) => void; }>;
+
 export const createRevertDriver =
-    (client: TestClient): RevertDriver & Partial<{ submitOpCallback?: (op: IMergeTreeOp | undefined) => void; }> => {
+    (client: TestClient): TestClientRevertibleDriver => {
     return {
         createLocalReferencePosition: client.createLocalReferencePosition.bind(client),
 
@@ -395,16 +399,14 @@ export const createRevertDriver =
                 const op = client.annotateRangeLocal(start, end, props, undefined);
                 this.submitOpCallback?.(op);
             },
-        insertFromSpec(pos: number, spec: IJSONSegment): ISegment {
+        insertFromSpec(pos: number, spec: IJSONSegment) {
             const op = client.insertSegmentLocal(pos, client.specToSegment(spec));
             this.submitOpCallback?.(op);
-
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            return client.getContainingSegment(pos).segment!;
         },
         localReferencePositionToPosition(lref: LocalReferencePosition): number {
             return client.localReferencePositionToPosition(lref);
         },
+        getContainingSegment: client.getContainingSegment.bind(client),
 
     };
 };
