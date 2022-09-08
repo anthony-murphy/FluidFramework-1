@@ -26,7 +26,7 @@ export interface AnnotateRevertible {
 }
 
 // @public (undocumented)
-export function appendToRevertibles(revertibles: MergeTreeDeltaRevertible[], driver: MergeTreeRevertibleDriver, event: IMergeTreeDeltaCallbackArgs): void;
+export function appendToRevertibles(driver: MergeTreeRevertibleDriver, event: IMergeTreeDeltaCallbackArgs, revertibles: MergeTreeDeltaRevertible[]): void;
 
 // @public (undocumented)
 export abstract class BaseSegment extends MergeNode implements ISegment {
@@ -304,7 +304,7 @@ export interface Dictionary<TKey, TData> {
 }
 
 // @public (undocumented)
-export function discardRevertibles(...revertibles: MergeTreeDeltaRevertible[]): void;
+export function discardMergeTreeDeltaRevertible(revertibles: MergeTreeDeltaRevertible[]): void;
 
 // @public (undocumented)
 export function extend<T>(base: MapLike<T>, extension: MapLike<T> | undefined, combiningOp?: ICombiningOp, seq?: number): MapLike<T>;
@@ -1149,9 +1149,6 @@ export const reservedRangeLabelsKey = "referenceRangeLabels";
 export const reservedTileLabelsKey = "referenceTileLabels";
 
 // @public (undocumented)
-export function revert(driver: MergeTreeRevertibleDriver, ...revertibles: MergeTreeDeltaRevertible[]): void;
-
-// @public (undocumented)
 export function revertLocalAnnotate(driver: MergeTreeRevertibleDriver, revertible: AnnotateRevertible): void;
 
 // @public (undocumented)
@@ -1159,6 +1156,9 @@ export function revertLocalInsert(driver: MergeTreeRevertibleDriver, revertible:
 
 // @public (undocumented)
 export function revertLocalRemove(driver: MergeTreeRevertibleDriver, revertible: RemoveRevertible): void;
+
+// @public (undocumented)
+export function revertMergeTreeDeltaRevertibles(driver: MergeTreeRevertibleDriver, revertibles: MergeTreeDeltaRevertible[]): void;
 
 // @public (undocumented)
 export interface SearchResult {

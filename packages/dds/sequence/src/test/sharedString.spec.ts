@@ -15,7 +15,7 @@ import {
     reservedMarkerIdKey,
     reservedMarkerSimpleTypeKey,
     reservedTileLabelsKey,
-    revert,
+    revertMergeTreeDeltaRevertibles,
 } from "@fluidframework/merge-tree";
 import {
     MockFluidDataStoreRuntime,
@@ -552,23 +552,23 @@ describe("SharedString", () => {
 
     // revertibles are deeply test in the merge tree package
     // these test just validate high level integration
-    only("revertible smoke tests", () => {
+    describe("revertible smoke tests", () => {
         it("insert", () => {
             const revertibles: MergeTreeDeltaRevertible[] = [];
             sharedString.on(
                 "sequenceDelta",
-                (event) => appendToRevertibles(revertibles, sharedString, event.deltaArgs));
+                (event) => appendToRevertibles(sharedString, event.deltaArgs, revertibles));
             for (let i = 0; i < 10; i++) {
                 sharedString.insertText(sharedString.getLength(), i.toString());
             }
             assert.equal(sharedString.getText(), "0123456789");
 
             // undo all inserts
-            revert(sharedString, ...revertibles.splice(0));
+            revertMergeTreeDeltaRevertibles(sharedString, revertibles.splice(0));
             assert.equal(sharedString.getText(), "");
 
             // redo all inserts
-            revert(sharedString, ...revertibles.splice(0));
+            revertMergeTreeDeltaRevertibles(sharedString, revertibles.splice(0));
             assert.equal(sharedString.getText(), "0123456789");
         });
 
@@ -577,7 +577,7 @@ describe("SharedString", () => {
             const revertibles: MergeTreeDeltaRevertible[] = [];
             sharedString.on(
                 "sequenceDelta",
-                (event) => appendToRevertibles(revertibles, sharedString, event.deltaArgs));
+                (event) => appendToRevertibles(sharedString, event.deltaArgs, revertibles));
             while (sharedString.getLength() > 0) {
                 const middle = Math.floor(sharedString.getLength() / 2);
                 sharedString.removeRange(middle, middle + 1);
@@ -585,11 +585,11 @@ describe("SharedString", () => {
             assert.equal(sharedString.getText(), "");
 
             // undo all removes
-            revert(sharedString, ...revertibles.splice(0));
+            revertMergeTreeDeltaRevertibles(sharedString, revertibles.splice(0));
             assert.equal(sharedString.getText(), "hello world");
 
             // redo all removes
-            revert(sharedString, ...revertibles.splice(0));
+            revertMergeTreeDeltaRevertibles(sharedString, revertibles.splice(0));
             assert.equal(sharedString.getText(), "");
         });
 
@@ -601,7 +601,7 @@ describe("SharedString", () => {
             const revertibles: MergeTreeDeltaRevertible[] = [];
             sharedString.on(
                 "sequenceDelta",
-                (event) => appendToRevertibles(revertibles, sharedString, event.deltaArgs));
+                (event) => appendToRevertibles(sharedString, event.deltaArgs, revertibles));
 
             for (let i = 0; i < sharedString.getLength(); i++) {
                 sharedString.annotateRange(i, i + 1, { test: i });
@@ -611,13 +611,13 @@ describe("SharedString", () => {
                 assert(matchProperties(sharedString.getPropertiesAtPosition(i), { test: i })));
 
             // undo all annotates
-            revert(sharedString, ...revertibles.splice(0));
+            revertMergeTreeDeltaRevertibles(sharedString, revertibles.splice(0));
             assert.equal(sharedString.getText(), "hello world");
             Array.from({ length: sharedString.getLength() }).forEach((_, i) =>
                 assert(matchProperties(sharedString.getPropertiesAtPosition(i), { })));
 
             // redo all annotates
-            revert(sharedString, ...revertibles.splice(0));
+            revertMergeTreeDeltaRevertibles(sharedString, revertibles.splice(0));
             assert.equal(sharedString.getText(), "hello world");
             Array.from({ length: sharedString.getLength() }).forEach((_, i) =>
                 assert(matchProperties(sharedString.getPropertiesAtPosition(i), { test: i })));

@@ -7,7 +7,7 @@ import assert from "assert";
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
 import random from "random-js";
 import { SegmentGroup } from "../mergeTreeNodes";
-import { appendToRevertibles, MergeTreeDeltaRevertible, revert } from "../revertibles";
+import { appendToRevertibles, MergeTreeDeltaRevertible, revertMergeTreeDeltaRevertibles } from "../revertibles";
 import {
     removeRange,
     doOverRange,
@@ -93,7 +93,7 @@ describe("MergeTree.Client", () => {
                                 clients.B.mergeTreeDeltaCallback = (op, delta) => {
                                     oldCallback?.(op, delta);
                                     if (op.sequencedMessage === undefined) {
-                                        appendToRevertibles(clientB_Revertibles, clientBDriver, delta);
+                                        appendToRevertibles(clientBDriver, delta, clientB_Revertibles);
                                     }
                                 };
                                 msgs.push(...generateOperationMessagesForClients(
@@ -136,7 +136,7 @@ describe("MergeTree.Client", () => {
                             }
 
                             try {
-                                revert(clientBDriver, ... clientB_Revertibles.splice(0));
+                                revertMergeTreeDeltaRevertibles(clientBDriver, clientB_Revertibles.splice(0));
                                 seq = applyMessages(seq, msgs.splice(0), clients.all, logger);
                             } catch (e) {
                                 throw logger.addLogsToError(e);
@@ -150,7 +150,7 @@ describe("MergeTree.Client", () => {
                             try {
                                 // reset the callback before the final revert
                                 clients.B.mergeTreeDeltaCallback = oldCallback;
-                                revert(clientBDriver, ... clientB_Revertibles.splice(0));
+                                revertMergeTreeDeltaRevertibles(clientBDriver, clientB_Revertibles.splice(0));
                                 seq = applyMessages(seq, msgs.splice(0), clients.all, logger);
 
                                 // validate that there are no lingering/leaked references in detached references

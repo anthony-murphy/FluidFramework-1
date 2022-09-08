@@ -36,7 +36,7 @@ export type MergeTreeDeltaRevertible = InsertRevertible | RemoveRevertible | Ann
 
 interface RemoveSegmentRefProperties extends PropertySet{
     segSpec: IJSONSegment;
-    referenceSpace: "revertible";
+    referenceSpace: "mergeTreeDeltaRevertible";
 }
 
 export interface MergeTreeRevertibleDriver{
@@ -88,8 +88,9 @@ type InternalRevertDriver = MergeTreeRevertibleDriver & {
         refCallbacks?: LocalReferencePosition["callbacks"]; };
 };
 
-function appendLocalInsertToRevertible(
-    revertibles: MergeTreeDeltaRevertible[], deltaSegments: IMergeTreeSegmentDelta[],
+function appendLocalInsertToRevertibles(
+    deltaSegments: IMergeTreeSegmentDelta[],
+    revertibles: MergeTreeDeltaRevertible[],
 ) {
     if (revertibles[revertibles.length - 1]?.operation !== MergeTreeDeltaType.INSERT) {
         revertibles.push({
@@ -103,8 +104,10 @@ function appendLocalInsertToRevertible(
     return revertibles;
 }
 
-function appendLocalRemoveToRevertible(
-    revertibles: MergeTreeDeltaRevertible[], driver: MergeTreeRevertibleDriver, deltaSegments: IMergeTreeSegmentDelta[],
+function appendLocalRemoveToRevertibles(
+    driver: MergeTreeRevertibleDriver,
+    deltaSegments: IMergeTreeSegmentDelta[],
+    revertibles: MergeTreeDeltaRevertible[],
 ) {
     if (revertibles[revertibles.length - 1]?.operation !== MergeTreeDeltaType.REMOVE) {
         revertibles.push({
@@ -117,7 +120,7 @@ function appendLocalRemoveToRevertible(
     deltaSegments.forEach((t) => {
         const props: RemoveSegmentRefProperties = {
             segSpec: t.segment.toJSONObject(),
-            referenceSpace: "revertible",
+            referenceSpace: "mergeTreeDeltaRevertible",
         };
         const ref = driver.createLocalReferencePosition(
             t.segment,
@@ -147,7 +150,8 @@ function appendLocalRemoveToRevertible(
 }
 
 function appendLocalAnnotateToRevertibles(
-    revertibles: MergeTreeDeltaRevertible[], deltaSegments: IMergeTreeSegmentDelta[],
+    deltaSegments: IMergeTreeSegmentDelta[],
+    revertibles: MergeTreeDeltaRevertible[],
 ) {
     let last = revertibles[revertibles.length - 1];
     deltaSegments.forEach((ds) => {
@@ -171,30 +175,36 @@ function appendLocalAnnotateToRevertibles(
 }
 
 export function appendToRevertibles(
-    revertibles: MergeTreeDeltaRevertible[], driver: MergeTreeRevertibleDriver, event: IMergeTreeDeltaCallbackArgs,
+    driver: MergeTreeRevertibleDriver,
+    event: IMergeTreeDeltaCallbackArgs,
+    revertibles: MergeTreeDeltaRevertible[],
 ) {
     switch (event.operation) {
         case MergeTreeDeltaType.INSERT:
-            appendLocalInsertToRevertible(
-                revertibles,
-                event.deltaSegments);
+            appendLocalInsertToRevertibles(
+                event.deltaSegments,
+                revertibles);
             break;
+
         case MergeTreeDeltaType.REMOVE:
-            appendLocalRemoveToRevertible(
-                revertibles,
+            appendLocalRemoveToRevertibles(
                 driver,
-                event.deltaSegments);
+                event.deltaSegments,
+                revertibles);
             break;
+
         case MergeTreeDeltaType.ANNOTATE:
             appendLocalAnnotateToRevertibles(
-                revertibles, event.deltaSegments);
+                event.deltaSegments,
+                revertibles);
             break;
+
         default:
             throw new UsageError(`Unsupported event delta type: ${event.operation}`);
     }
 }
 
-export function discardRevertibles(... revertibles: MergeTreeDeltaRevertible[]) {
+export function discardMergeTreeDeltaRevertible(revertibles: MergeTreeDeltaRevertible[]) {
     revertibles.forEach((r) => {
         r.trackingGroup.tracked.forEach((t) => t.trackingCollection.unlink(r.trackingGroup));
     });
@@ -244,7 +254,7 @@ export function revertLocalRemove(driver: MergeTreeRevertibleDriver, revertible:
         assert(insertSegment !== undefined, "insert segment must exist at position");
 
         const localSlideFilter = (lref: LocalReferencePosition) =>
-            (lref.properties as Partial<RemoveSegmentRefProperties>)?.referenceSpace === "revertible";
+            (lref.properties as Partial<RemoveSegmentRefProperties>)?.referenceSpace === "mergeTreeDeltaRevertible";
 
         const insertRef: Partial<Record<"before" | "after", List<LocalReferencePosition>>> = {};
         const forward = insertSegment.ordinal < refSeg.ordinal;
@@ -318,7 +328,9 @@ export function revertLocalAnnotate(driver: MergeTreeRevertibleDriver, revertibl
     }
 }
 
-export function revert(driver: MergeTreeRevertibleDriver, ... revertibles: MergeTreeDeltaRevertible[]) {
+export function revertMergeTreeDeltaRevertibles(
+    driver: MergeTreeRevertibleDriver,
+    revertibles: MergeTreeDeltaRevertible[]) {
     while (revertibles.length > 0) {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const r = revertibles.pop()!;
