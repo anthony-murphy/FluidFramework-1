@@ -15,7 +15,7 @@ import { UndoRedoStackManager } from "../undoRedoStackManager";
 
 const text =
     // eslint-disable-next-line max-len
-    "The SharedSegmentSequenceRevertible does the heavy lifting of tracking and reverting changes on the underlying SharedSegmentSequence. The SharedSegmentSequenceRevertible does the heavy lifting of tracking and reverting changes on the underlying SharedSegmentSequence. The SharedSegmentSequenceRevertible does the heavy lifting of tracking and reverting changes on the underlying SharedSegmentSequence. The SharedSegmentSequenceRevertible does the heavy lifting of tracking and reverting changes on the underlying SharedSegmentSequence. The SharedSegmentSequenceRevertible does the heavy lifting of tracking and reverting changes on the underlying SharedSegmentSequence.The SharedSegmentSequenceRevertible does the heavy lifting of tracking and reverting changes on the underlying SharedSegmentSequence. The SharedSegmentSequenceRevertible does the heavy lifting of tracking and reverting changes on the underlying SharedSegmentSequence. The SharedSegmentSequenceRevertible does the heavy lifting of tracking and reverting changes on the underlying SharedSegmentSequence. The SharedSegmentSequenceRevertible does the heavy lifting of tracking and reverting changes on the underlying SharedSegmentSequence.";
+    "The SharedSegmentSequenceRevertible does the heavy lifting of tracking and reverting changes on the underlying SharedSegmentSequence. This is accomplished via TrackingGroup objects.";
 
 function insertTextAsChunks(sharedString: SharedString, targetLength = text.length) {
     let chunks = 0;
@@ -140,44 +140,6 @@ describe("SharedSegmentSequenceUndoRedoHandler", () => {
         // undo and redo split insert
         undoRedoStack.undoOperation();
         undoRedoStack.redoOperation();
-
-        assert.equal(sharedString.getText(), text);
-    });
-
-    it("Split operations and process remote messages", async () => {
-        const handler = new SharedSegmentSequenceUndoRedoHandler(undoRedoStack);
-        handler.attachSequence(sharedString);
-        let expected = "";
-        for (let i = 0; i < 100; i++) {
-            expected = i.toString() + expected;
-            sharedString.insertText(0, i.toString());
-            if (i % 5 === 0) {
-                undoRedoStack.closeCurrentOperation();
-            }
-            if (i % 10 === 0) {
-                containerRuntimeFactory.processSomeMessages(
-                    Math.min(7, containerRuntimeFactory.outstandingMessageCount));
-            }
-        }
-        assert.equal(sharedString.getText(), expected, "after insert");
-        while (undoRedoStack.undoOperation()) { }
-        assert.equal(sharedString.getText(), "", "after undo");
-        while (undoRedoStack.redoOperation()) { }
-        assert.equal(sharedString.getText(), expected, "after redo");
-    });
-
-    it("Undo and Redo Delete - Bug Repro", () => {
-        insertTextAsChunks(sharedString);
-        const handler = new SharedSegmentSequenceUndoRedoHandler(undoRedoStack);
-        handler.attachSequence(sharedString);
-
-        sharedString.removeText(1, 2);
-        sharedString.insertText(5, "a");
-        sharedString.removeText(0, 1);
-        sharedString.insertText(5, "b");
-        sharedString.removeText(0, 1);
-
-        while (undoRedoStack.undoOperation()) { }
 
         assert.equal(sharedString.getText(), text);
     });
