@@ -23,6 +23,8 @@ import { TextSegment } from "../textSegment";
 import { MergeTree } from "../mergeTree";
 import { MergeTreeTextHelper } from "../MergeTreeTextHelper";
 import { walkAllChildSegments } from "../mergeTreeNodeWalk";
+import { LocalReferencePosition } from "../localReference";
+import { RevertDriver } from "../revertibles";
 import { TestSerializer } from "./testSerializer";
 import { nodeOrdinalsHaveIntegrity } from "./testUtils";
 
@@ -373,3 +375,36 @@ export class TestClient extends Client {
         return segmentPosition;
     }
 }
+
+export const createRevertDriver =
+    (client: TestClient): RevertDriver & Partial<{ submitOpCallback?: (op: IMergeTreeOp | undefined) => void; }> => {
+    return {
+        createLocalReferencePosition: client.createLocalReferencePosition.bind(client),
+
+        removeRange(start: number, end: number) {
+            const op = client.removeRangeLocal(start, end);
+            this.submitOpCallback?.(op);
+        },
+        getPosition(segment: ISegment): number {
+            return client.getPosition(segment);
+        },
+        annotateRange(
+            start: number,
+            end: number,
+            props: PropertySet) {
+                const op = client.annotateRangeLocal(start, end, props, undefined);
+                this.submitOpCallback?.(op);
+            },
+        insertFromSpec(pos: number, spec: IJSONSegment): ISegment {
+            const op = client.insertSegmentLocal(pos, client.specToSegment(spec));
+            this.submitOpCallback?.(op);
+
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            return client.getContainingSegment(pos).segment!;
+        },
+        localReferencePositionToPosition(lref: LocalReferencePosition): number {
+            return client.localReferencePositionToPosition(lref);
+        },
+
+    };
+};

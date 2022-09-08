@@ -4,46 +4,9 @@
  */
 
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
-import { LocalReferencePosition } from "../localReference";
-import { ISegment } from "../mergeTreeNodes";
-import { IJSONSegment, IMergeTreeOp } from "../ops";
-import { PropertySet } from "../properties";
-import { appendToRevertibles, MergeTreeDeltaRevertible, revert, RevertDriver } from "../revertibles";
-import { TestClient } from "./testClient";
+import { appendToRevertibles, MergeTreeDeltaRevertible, revert } from "../revertibles";
+import { createRevertDriver } from "./testClient";
 import { createClientsAtInitialState, TestClientLogger } from "./testClientLogger";
-
-export const createRevertDriver =
-    (client: TestClient): RevertDriver & Partial<{ opCreated?: (op: IMergeTreeOp | undefined) => void; }> => {
-    return {
-        createLocalReferencePosition: client.createLocalReferencePosition.bind(client),
-
-        removeRange(start: number, end: number) {
-            const op = client.removeRangeLocal(start, end);
-            this.opCreated?.(op);
-        },
-        getPosition(segment: ISegment): number {
-            return client.getPosition(segment);
-        },
-        annotateRange(
-            start: number,
-            end: number,
-            props: PropertySet) {
-                const op = client.annotateRangeLocal(start, end, props, undefined);
-                this.opCreated?.(op);
-            },
-        insertFromSpec(pos: number, spec: IJSONSegment): ISegment {
-            const op = client.insertSegmentLocal(pos, client.specToSegment(spec));
-            this.opCreated?.(op);
-
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            return client.getContainingSegment(pos).segment!;
-        },
-        localReferencePositionToPosition(lref: LocalReferencePosition): number {
-            return client.localReferencePositionToPosition(lref);
-        },
-
-    };
-};
 
 describe("MergeTree.Revertibles", () => {
     it("revert insert", () => {
@@ -58,7 +21,7 @@ describe("MergeTree.Revertibles", () => {
         // the test logger uses these callbacks, so preserve it
         const old = clients.B.mergeTreeDeltaCallback;
         const clientBDriver = createRevertDriver(clients.B);
-        clientBDriver.opCreated = (op) => ops.push(clients.B.makeOpMessage(op, ++seq));
+        clientBDriver.submitOpCallback = (op) => ops.push(clients.B.makeOpMessage(op, ++seq));
         clients.B.mergeTreeDeltaCallback = (op, delta) => {
             old?.(op, delta);
             appendToRevertibles(clientB_Revertibles, clientBDriver, delta);
@@ -86,7 +49,7 @@ describe("MergeTree.Revertibles", () => {
         // the test logger uses these callbacks, so preserve it
         const old = clients.B.mergeTreeDeltaCallback;
         const clientBDriver = createRevertDriver(clients.B);
-        clientBDriver.opCreated = (op) => ops.push(clients.B.makeOpMessage(op, ++seq));
+        clientBDriver.submitOpCallback = (op) => ops.push(clients.B.makeOpMessage(op, ++seq));
         clients.B.mergeTreeDeltaCallback = (op, delta) => {
             old?.(op, delta);
             appendToRevertibles(clientB_Revertibles, clientBDriver, delta);
@@ -115,7 +78,7 @@ describe("MergeTree.Revertibles", () => {
         // the test logger uses these callbacks, so preserve it
         const old = clients.B.mergeTreeDeltaCallback;
         const clientBDriver = createRevertDriver(clients.B);
-        clientBDriver.opCreated = (op) => ops.push(clients.B.makeOpMessage(op, ++seq));
+        clientBDriver.submitOpCallback = (op) => ops.push(clients.B.makeOpMessage(op, ++seq));
         clients.B.mergeTreeDeltaCallback = (op, delta) => {
             old?.(op, delta);
             appendToRevertibles(clientB_Revertibles, clientBDriver, delta);
@@ -145,7 +108,7 @@ describe("MergeTree.Revertibles", () => {
         // the test logger uses these callbacks, so preserve it
         const old = clients.B.mergeTreeDeltaCallback;
         const clientBDriver = createRevertDriver(clients.B);
-        clientBDriver.opCreated = (op) => ops.push(clients.B.makeOpMessage(op, ++seq));
+        clientBDriver.submitOpCallback = (op) => ops.push(clients.B.makeOpMessage(op, ++seq));
         clients.B.mergeTreeDeltaCallback = (op, delta) => {
             old?.(op, delta);
             appendToRevertibles(clientB_Revertibles, clientBDriver, delta);
@@ -178,7 +141,7 @@ describe("MergeTree.Revertibles", () => {
         // the test logger uses these callbacks, so preserve it
         const old = clients.B.mergeTreeDeltaCallback;
         const clientBDriver = createRevertDriver(clients.B);
-        clientBDriver.opCreated = (op) => ops.push(clients.B.makeOpMessage(op, ++seq));
+        clientBDriver.submitOpCallback = (op) => ops.push(clients.B.makeOpMessage(op, ++seq));
         clients.B.mergeTreeDeltaCallback = (op, delta) => {
             old?.(op, delta);
             appendToRevertibles(clientB_Revertibles, clientBDriver, delta);
@@ -259,7 +222,7 @@ Client A does not match client baseText
         const clientB_Revertibles: MergeTreeDeltaRevertible[] = [];
         const old = clients.B.mergeTreeDeltaCallback;
         const clientBDriver = createRevertDriver(clients.B);
-        clientBDriver.opCreated = (op) => ops.push(clients.B.makeOpMessage(op, ++seq));
+        clientBDriver.submitOpCallback = (op) => ops.push(clients.B.makeOpMessage(op, ++seq));
         clients.B.mergeTreeDeltaCallback = (op, delta) => {
             old?.(op, delta);
             appendToRevertibles(clientB_Revertibles, clientBDriver, delta);
@@ -279,46 +242,7 @@ Client A does not match client baseText
 
         logger.validate({ baseText: "123" });
     });
-    /**
-```
-MergeTree.Client
-       InitialOps: 10 MinLen: 1  ConcurrentOpsWithRevert: 1 RevertOps: 2 AckBeforeRevert: All:
-     Error: annotates must track segments
-_: Local State
--: Deleted
-*: Unacked Insert and Delete
-25370: msn/offset
-Op format <seq>:<ref>:<client><type>@<pos1>,<pos2>
-sequence number represented as offset from msn. L means local.
-op types: 0) insert 1) remove 2) annotate
-Round 1665
-op         | client A  | op             | client B   | op             | client C
-           | CCCB----- |                | CCCB-----  |                | CCCB-----
-           | CCCB----- | L:25370:B2@0,4 | CCCB-----  |                | CCCB-----
-           | CCCB----- | L:25370:B1@1,2 | C_CB ----- |                | CCCB-----
-           |           |                |  -         |                |
-           | CCCB----- |                | C_CB ----- | L:25370:C2@3,4 | CCCB-----
-           |           |                |  -         |                |
-1:0:B2@0,4 | CCCB----- | 1:0:B2@0,4     | C_CB ----- | 1:0:B2@0,4     | CCCB-----
-           |           |                |  -         |                |
-2:0:B1@1,2 | C-CB      | 2:0:B1@1,2     | C-CB       | 2:0:B1@1,2     | C-CB
-3:0:C2@3,4 | C-CB      | 3:0:C2@3,4     | C-CB       | 3:0:C2@3,4     | C-CB
-           | C-CB      | L:25373:B0@1   | C_-CB      |                | C-CB
-           |           |                |  C         |                |
-           | C-CB      | L:25373:B2@0,1 | C_-CB      |                | C-CB
-           |           |                |  C         |                |
-           | C-CB      | L:25373:B2@1,2 | C_-CB      |                | C-CB
-           |           |                |  C         |                |
-           | C-CB      | L:25373:B2@2,3 | C_-CB      |                | C-CB
-           |           |                |  C         |                |
-           | C-CB      | L:25373:B2@3,4 | C_-CB      |                | C-CB
-           |           |                |  C         |                |
-      at assert (d:\code\fluid2\node_modules\@fluidframework\common-utils\dist\assert.js:19:15)
-      at revertLocalAnnotate (d:\code\fluid2\packages\dds\merge-tree\dist\revertibles.js:134:35)
-      at revert (d:\code\fluid2\packages\dds\merge-tree\dist\revertibles.js:158:17)
-```
-    */
-    it("asas", () => {
+    it("Revert Local annotate and remove with intersecting remote annotate", () => {
         const clients = createClientsAtInitialState(
             { initialState: "1234-----", options: { mergeTreeUseNewLengthCalculations: true } },
             "A", "B", "C");
@@ -331,10 +255,12 @@ op         | client A  | op             | client B   | op             | client C
         // the test logger uses these callbacks, so preserve it
         const old = clients.B.mergeTreeDeltaCallback;
         const clientBDriver = createRevertDriver(clients.B);
-        clientBDriver.opCreated = (op) => ops.push(clients.B.makeOpMessage(op, ++seq));
+        clientBDriver.submitOpCallback = (op) => ops.push(clients.B.makeOpMessage(op, ++seq));
         clients.B.mergeTreeDeltaCallback = (op, delta) => {
             old?.(op, delta);
-            appendToRevertibles(clientB_Revertibles, clientBDriver, delta);
+            if (op.sequencedMessage === undefined) {
+                appendToRevertibles(clientB_Revertibles, clientBDriver, delta);
+            }
         };
         ops.push(clients.B.makeOpMessage(clients.B.annotateRangeLocal(0, 4, { test: "B" }, undefined), ++seq));
         ops.push(clients.B.makeOpMessage(clients.B.removeRangeLocal(1, 2), ++seq));

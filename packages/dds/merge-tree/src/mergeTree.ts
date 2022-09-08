@@ -905,7 +905,7 @@ export class MergeTree {
                 localRefs.addBeforeTombstones(refsToSlide);
             }
         } else {
-            for (const ref of refsToSlide.reverse()) {
+            for (const ref of refsToSlide) {
                 ref.callbacks?.beforeSlide?.(ref);
                 segment.localRefs?.removeLocalRef(ref);
                 ref.callbacks?.afterSlide?.(ref);

@@ -1,4 +1,4 @@
-import { assert } from "@fluidframework/common-utils";
+import { assert, unreachableCase } from "@fluidframework/common-utils";
 import { UsageError } from "@fluidframework/container-utils";
 import { List } from "./collections";
 import { EndOfTreeSegment } from "./endOfTreeSegment";
@@ -79,8 +79,12 @@ export interface RevertDriver{
 
     localReferencePositionToPosition(lref: LocalReferencePosition): number;
 
-    detachedReferences?: ISegment & IRemovalInfo;
 }
+type InternalRevertDriver = RevertDriver & {
+    __mergeTreeRevertible?: {
+        detachedReferences?: ISegment & IRemovalInfo;
+        refCallbacks?: LocalReferencePosition["callbacks"]; };
+};
 
 function appendLocalInsertToRevertible(
     revertibles: MergeTreeDeltaRevertible[], deltaSegments: IMergeTreeSegmentDelta[],
@@ -118,13 +122,15 @@ function appendLocalRemoveToRevertible(
             0,
             ReferenceType.SlideOnRemove,
             props);
-
-        ref.callbacks = {
+        const internalDriver: InternalRevertDriver = driver;
+        const driverRevertibleProps = internalDriver.__mergeTreeRevertible ??= {};
+        ref.callbacks = driverRevertibleProps.refCallbacks ??= {
             afterSlide: (r: LocalReferencePosition) => {
-                if (driver.localReferencePositionToPosition(ref) === DetachedReferencePosition) {
-                    const detached = driver.detachedReferences ??= new EndOfTreeSegment(t.segment);
+                if (driver.localReferencePositionToPosition(r) === DetachedReferencePosition) {
+                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                    const detached = driverRevertibleProps.detachedReferences ??= new EndOfTreeSegment(r.getSegment()!);
                     const refs = detached.localRefs ??= new LocalReferenceCollection(detached);
-                    refs.addBeforeTombstones([r]);
+                    refs.addAfterTombstones([r]);
                 }
             },
         };
@@ -195,12 +201,10 @@ export function discardRevertibles(... revertibles: MergeTreeDeltaRevertible[]) 
 export function revertLocalInsert(driver: RevertDriver, revertible: InsertRevertible) {
     while (revertible.trackingGroup.size > 0) {
         const tracked = revertible.trackingGroup.tracked[0];
-        assert(tracked.trackingCollection.trackingGroups.has(revertible.trackingGroup), "insert tracked should exist");
-        tracked.trackingCollection.unlink(revertible.trackingGroup);
-        assert(!tracked.trackingCollection.trackingGroups.has(revertible.trackingGroup), "tracked should be removed");
-        if (!tracked.isLeaf()) {
-            assert(tracked.isLeaf(), "inserts must track segments");
-        }
+        assert(
+            tracked.trackingCollection.unlink(revertible.trackingGroup),
+        "tracking group removed");
+        assert(tracked.isLeaf(), "inserts must track segments");
         if (toRemovalInfo(tracked) === undefined) {
             const start = driver.getPosition(tracked);
             driver.removeRange(start, start + tracked.cachedLength);
@@ -235,10 +239,6 @@ export function revertLocalRemove(driver: RevertDriver, revertible: RemoveRevert
             realPos,
             props.segSpec);
 
-        tracked.trackingCollection.trackingGroups.forEach((tg) => {
-            tg.link(insertSegment);
-            tg.unlink(tracked);
-        });
         const localSlideFilter = (lref: LocalReferencePosition) =>
             (lref.properties as Partial<RemoveSegmentRefProperties>)?.referenceSpace === "revertible";
 
@@ -274,10 +274,10 @@ export function revertLocalRemove(driver: RevertDriver, revertible: RemoveRevert
             },
             undefined,
             forward);
-
-        if (driver.detachedReferences?.localRefs?.has(tracked)) {
+        const internalDriver: InternalRevertDriver = driver;
+        if (internalDriver.__mergeTreeRevertible?.detachedReferences?.localRefs?.has(tracked)) {
             assert(forward, "forward should always be true when detached");
-            driver.detachedReferences.localRefs.walkReferences(refHandler);
+            internalDriver.__mergeTreeRevertible.detachedReferences.localRefs.walkReferences(refHandler);
         }
 
         if (insertRef !== undefined) {
@@ -291,6 +291,10 @@ export function revertLocalRemove(driver: RevertDriver, revertible: RemoveRevert
             }
         }
 
+        tracked.trackingCollection.trackingGroups.forEach((tg) => {
+            tg.link(insertSegment);
+            tg.unlink(tracked);
+        });
         tracked.getSegment()?.localRefs?.removeLocalRef(tracked);
     }
 }
@@ -314,7 +318,8 @@ export function revert(driver: RevertDriver, ... revertibles: MergeTreeDeltaReve
     while (revertibles.length > 0) {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const r = revertibles.pop()!;
-        switch (r.operation) {
+        const operation = r.operation;
+        switch (operation) {
             case MergeTreeDeltaType.INSERT:
                 revertLocalInsert(driver, r);
                 break;
@@ -325,6 +330,7 @@ export function revert(driver: RevertDriver, ... revertibles: MergeTreeDeltaReve
                 revertLocalAnnotate(driver, r);
                 break;
             default:
+                unreachableCase(operation, "");
         }
     }
 }

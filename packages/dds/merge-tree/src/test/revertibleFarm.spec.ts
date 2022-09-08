@@ -14,14 +14,14 @@ import {
     applyMessages,
     annotateRange,
 } from "./mergeTreeOperationRunner";
-import { createRevertDriver } from "./revertibles.spec";
+import { createRevertDriver } from "./testClient";
 import { createClientsAtInitialState, TestClientLogger } from "./testClientLogger";
 
  const defaultOptions = {
     initialOps: 5,
-    minLength: { min: 1, max: 16 },
+    minLength: { min: 1, max: 256, growthFunc: (input: number) => input * Math.max(2, input) },
     concurrentOpsWithRevert: { min: 0, max: 8 },
-    revertOps: { min: 1, max: 32 },
+    revertOps: { min: 1, max: 16 },
     ackBeforeRevert: [
         "None",
         "Some",
@@ -33,7 +33,7 @@ import { createClientsAtInitialState, TestClientLogger } from "./testClientLogge
 };
 
 describe("MergeTree.Client", () => {
-    doOverRange(defaultOptions.minLength, defaultOptions.growthFunc, (minLen) => {
+    doOverRange(defaultOptions.minLength, defaultOptions.minLength.growthFunc, (minLen) => {
         doOverRange(defaultOptions.concurrentOpsWithRevert, defaultOptions.growthFunc, (opsWithRevert) => {
             doOverRange(defaultOptions.revertOps, defaultOptions.growthFunc, (revertOps) => {
                 for (const ackBeforeRevert of defaultOptions.ackBeforeRevert) {
@@ -75,7 +75,7 @@ describe("MergeTree.Client", () => {
                             }
 
                             // cache the base text to ensure we get back to it after revert
-                            const baseText = logger.validate({ clear: true, errorPrefix: "After Initial Ops" });
+                            const undoBaseText = logger.validate({ clear: true, errorPrefix: "After Initial Ops" });
 
                             const clientB_Revertibles: MergeTreeDeltaRevertible[] = [];
                             const clientBDriver = createRevertDriver(clients.B);
@@ -83,7 +83,7 @@ describe("MergeTree.Client", () => {
                             const msgs: [ISequencedDocumentMessage, SegmentGroup | SegmentGroup[]][] = [];
                             {
                                 const old = clients.B.mergeTreeDeltaCallback;
-                                clientBDriver.opCreated = (op) => msgs.push(
+                                clientBDriver.submitOpCallback = (op) => msgs.push(
                                     [
                                         clients.B.makeOpMessage(op, undefined, undefined, undefined, seq),
                                         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -91,7 +91,9 @@ describe("MergeTree.Client", () => {
                                     ]);
                                 clients.B.mergeTreeDeltaCallback = (op, delta) => {
                                     old?.(op, delta);
-                                    appendToRevertibles(clientB_Revertibles, clientBDriver, delta);
+                                    if (op.sequencedMessage === undefined) {
+                                        appendToRevertibles(clientB_Revertibles, clientBDriver, delta);
+                                    }
                                 };
                                 msgs.push(...generateOperationMessagesForClients(
                                     mt,
@@ -101,8 +103,6 @@ describe("MergeTree.Client", () => {
                                     revertOps,
                                     minLen,
                                     defaultOptions.operations));
-
-                                clients.B.mergeTreeDeltaCallback = old;
                             }
 
                             if (opsWithRevert > 0) {
@@ -117,6 +117,7 @@ describe("MergeTree.Client", () => {
                                     defaultOptions.operations));
                             }
 
+                            let redoBaseText: string | undefined;
                             if (ackBeforeRevert !== "None") {
                                 const ackAll = ackBeforeRevert === "All";
                                 seq = applyMessages(
@@ -129,20 +130,31 @@ describe("MergeTree.Client", () => {
                                     clients.all,
                                     logger);
                                 if (ackAll) {
-                                    logger.validate({ errorPrefix: "Before Revert Ack" });
+                                    redoBaseText = logger.validate({ errorPrefix: "Before Revert Ack" });
                                 }
                             }
 
                             try {
-                                revert(clientBDriver, ... clientB_Revertibles);
+                                revert(clientBDriver, ... clientB_Revertibles.splice(0));
                                 seq = applyMessages(seq, msgs.splice(0), clients.all, logger);
                             } catch (e) {
                                 throw logger.addLogsToError(e);
                             }
                             logger.validate({
                                 clear: true,
-                                baseText: opsWithRevert === 0 ? baseText : undefined,
-                                errorPrefix: "After Revert",
+                                baseText: opsWithRevert === 0 ? undoBaseText : undefined,
+                                errorPrefix: "After Revert (undo)",
+                            });
+
+                            try {
+                                revert(clientBDriver, ... clientB_Revertibles.splice(0));
+                                seq = applyMessages(seq, msgs.splice(0), clients.all, logger);
+                            } catch (e) {
+                                throw logger.addLogsToError(e);
+                            }
+                            logger.validate({
+                                errorPrefix: "After Re-Revert (redo)",
+                                baseText: redoBaseText,
                             });
                         }
                     });

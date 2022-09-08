@@ -242,10 +242,8 @@ export abstract class SharedSegmentSequence<T extends ISegment>
         return removeOp;
     }
 
-    public groupOperation(groupOp: IMergeTreeGroupMsg, submitOnly?: true) {
-        if (submitOnly !== true) {
-            this.client.localTransaction(groupOp);
-        }
+    public groupOperation(groupOp: IMergeTreeGroupMsg) {
+        this.client.localTransaction(groupOp);
         this.submitSequenceMessage(groupOp);
     }
 
@@ -429,26 +427,11 @@ export abstract class SharedSegmentSequence<T extends ISegment>
      * @param refPos - The reference position to insert the segment at
      * @param segment - The segment to insert
      */
-    public insertAtReferencePosition(
-        pos: LocalReferencePosition, segment: T, localSlideFilter?: (lref: LocalReferencePosition) => boolean,
-    ) {
-        const insertOp = this.client.insertAtReferencePositionLocal(pos, segment, localSlideFilter);
+    public insertAtReferencePosition(pos: ReferencePosition, segment: T) {
+        const insertOp = this.client.insertAtReferencePositionLocal(pos, segment);
         if (insertOp) {
             this.submitSequenceMessage(insertOp);
         }
-        return insertOp;
-    }
-
-    public insertFromSpec(pos: number, spec: IJSONSegment): ISegment {
-        const segment = this.segmentFromSpec(spec);
-        const op = this.client.insertSegmentLocal(
-            pos,
-            this.segmentFromSpec(spec),
-        );
-        if (op) {
-            this.submitSequenceMessage(op);
-        }
-        return segment;
     }
 
     /**

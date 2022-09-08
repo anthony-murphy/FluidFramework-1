@@ -5,7 +5,6 @@ import { IMergeTreeDeltaOpArgs } from "./mergeTreeDeltaCallback";
 import { ISegment, SegmentGroup, MaxNodesInBlock, IRemovalInfo, IMergeNode, IMergeBlock } from "./mergeTreeNodes";
 import { depthFirstNodeWalk } from "./mergeTreeNodeWalk";
 import { TrackingGroupCollection } from "./mergeTreeTracking";
-import { computeHierarchicalOrdinal } from "./ordinal";
 import { PropertySet } from "./properties";
 import { SegmentGroupCollection } from "./segmentGroupCollection";
 
@@ -54,11 +53,10 @@ export class EndOfTreeSegment implements ISegment, IRemovalInfo {
             false,
         );
         const parent = lastSegment?.parent ?? this.root;
-        const index = parent.childCount ?? 0;
+        const index = parent.childCount;
         return {
             parent,
             index,
-            previousOrdinal: lastSegment?.ordinal,
         };
     }
 
@@ -70,13 +68,8 @@ export class EndOfTreeSegment implements ISegment, IRemovalInfo {
         return this.getSegmentProperties().index;
     }
     get ordinal() {
-        const props = this.getSegmentProperties();
-        return computeHierarchicalOrdinal(
-            MaxNodesInBlock,
-            props.index + 1,
-            props.parent.ordinal,
-            props.previousOrdinal,
-        );
+        // just compute and arbitrarily big ordinal
+        return String.fromCharCode(0xFFFF).repeat(MaxNodesInBlock);
     }
     isLeaf(): this is ISegment {
         return true;
