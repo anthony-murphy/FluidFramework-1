@@ -42,6 +42,7 @@ export class SortedSegmentSet<
             this.ordinalSortedItems.splice(position.index, 0, newItem);
         }
     }
+
     public remove(item: T): boolean {
         const position = this.findItemPosition(item);
         if (position.exists) {
@@ -72,6 +73,7 @@ export class SortedSegmentSet<
         const maybeSegment = item as ISegment;
         return maybeSegment.ordinal;
     }
+
     private findItemPosition(item: T): { exists: boolean; index: number; } {
         if (this.ordinalSortedItems.length === 0) {
             return { exists: false, index: 0 };

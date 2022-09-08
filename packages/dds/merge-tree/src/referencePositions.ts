@@ -59,6 +59,7 @@ export function refHasRangeLabels(refPos: ReferencePosition): boolean {
 export interface ReferencePosition {
     properties?: PropertySet;
     refType: ReferenceType;
+
     getSegment(): ISegment | undefined;
     getOffset(): number;
     addProperties(newProps: PropertySet, op?: ICombiningOp): void;

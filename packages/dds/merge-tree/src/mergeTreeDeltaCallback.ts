@@ -63,7 +63,7 @@ export interface IMergeTreeSegmentDelta {
     propertyDeltas?: PropertySet;
 }
 
-export interface IMergeTreeDeltaOpArgs<O extends IMergeTreeOp = IMergeTreeOp> {
+export interface IMergeTreeDeltaOpArgs {
     /**
      * The group op which contains the operation
      * if there operation is part of a group op.
@@ -72,7 +72,7 @@ export interface IMergeTreeDeltaOpArgs<O extends IMergeTreeOp = IMergeTreeOp> {
     /**
      * The merge tree operation
      */
-    readonly op: O;
+    readonly op: IMergeTreeOp;
     /**
      * Get the sequence message, should only be null if the
      * Delta op args are for an unacked local change
