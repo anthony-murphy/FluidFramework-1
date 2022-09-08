@@ -36,6 +36,7 @@ import { Marker } from '@fluidframework/merge-tree';
 import { MergeTreeDeltaOperationType } from '@fluidframework/merge-tree';
 import { MergeTreeDeltaOperationTypes } from '@fluidframework/merge-tree';
 import { MergeTreeMaintenanceType } from '@fluidframework/merge-tree';
+import { MergeTreeRevertibleDriver } from '@fluidframework/merge-tree';
 import { PropertiesManager } from '@fluidframework/merge-tree';
 import { PropertySet } from '@fluidframework/merge-tree';
 import { RangeStackMap } from '@fluidframework/merge-tree';
@@ -412,7 +413,7 @@ export class SharedIntervalCollectionFactory implements IChannelFactory {
 }
 
 // @public (undocumented)
-export abstract class SharedSegmentSequence<T extends ISegment> extends SharedObject<ISharedSegmentSequenceEvents> implements ISharedIntervalCollection<SequenceInterval> {
+export abstract class SharedSegmentSequence<T extends ISegment> extends SharedObject<ISharedSegmentSequenceEvents> implements ISharedIntervalCollection<SequenceInterval>, MergeTreeRevertibleDriver {
     constructor(dataStoreRuntime: IFluidDataStoreRuntime, id: string, attributes: IChannelAttributes, segmentFromSpec: (spec: IJSONSegment) => ISegment);
     annotateRange(start: number, end: number, props: PropertySet, combiningOp?: ICombiningOp): void;
     // (undocumented)
@@ -443,14 +444,13 @@ export abstract class SharedSegmentSequence<T extends ISegment> extends SharedOb
     // (undocumented)
     getStackContext(startPos: number, rangeLabels: string[]): RangeStackMap;
     // (undocumented)
-    groupOperation(groupOp: IMergeTreeGroupMsg, submitOnly?: true): void;
+    groupOperation(groupOp: IMergeTreeGroupMsg): void;
     // (undocumented)
     id: string;
     // (undocumented)
     protected initializeLocalCore(): void;
-    insertAtReferencePosition(pos: LocalReferencePosition, segment: T, localSlideFilter?: (lref: LocalReferencePosition) => boolean): void;
-    // (undocumented)
-    insertSegmentFromSpec?: (segmentSpec: IJSONSegment, position: number) => ISegment;
+    insertAtReferencePosition(pos: ReferencePosition, segment: T): void;
+    insertFromSpec(pos: number, spec: IJSONSegment): void;
     // (undocumented)
     protected loadCore(storage: IChannelStorageService): Promise<void>;
     // (undocumented)
