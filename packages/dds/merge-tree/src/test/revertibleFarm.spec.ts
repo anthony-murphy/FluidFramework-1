@@ -3,6 +3,7 @@
  * Licensed under the MIT License.
  */
 
+import assert from "assert";
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
 import random from "random-js";
 import { SegmentGroup } from "../mergeTreeNodes";
@@ -79,10 +80,10 @@ describe("MergeTree.Client", () => {
 
                             const clientB_Revertibles: MergeTreeDeltaRevertible[] = [];
                             const clientBDriver = createRevertDriver(clients.B);
+                            const oldCallback = clients.B.mergeTreeDeltaCallback;
 
                             const msgs: [ISequencedDocumentMessage, SegmentGroup | SegmentGroup[]][] = [];
                             {
-                                const old = clients.B.mergeTreeDeltaCallback;
                                 clientBDriver.submitOpCallback = (op) => msgs.push(
                                     [
                                         clients.B.makeOpMessage(op, undefined, undefined, undefined, seq),
@@ -90,7 +91,7 @@ describe("MergeTree.Client", () => {
                                         clients.B.peekPendingSegmentGroups()!,
                                     ]);
                                 clients.B.mergeTreeDeltaCallback = (op, delta) => {
-                                    old?.(op, delta);
+                                    oldCallback?.(op, delta);
                                     if (op.sequencedMessage === undefined) {
                                         appendToRevertibles(clientB_Revertibles, clientBDriver, delta);
                                     }
@@ -147,8 +148,16 @@ describe("MergeTree.Client", () => {
                             });
 
                             try {
+                                // reset the callback before the final revert
+                                clients.B.mergeTreeDeltaCallback = oldCallback;
                                 revert(clientBDriver, ... clientB_Revertibles.splice(0));
                                 seq = applyMessages(seq, msgs.splice(0), clients.all, logger);
+
+                                // validate that there are no lingering/leaked references in detached references
+                                assert.notStrictEqual(
+                                    (clientBDriver as any)?.__mergeTreeRevertible?.detachedReferences?.localRefs?.empty,
+                                    false,
+                                    "detachedReferences not empty");
                             } catch (e) {
                                 throw logger.addLogsToError(e);
                             }
