@@ -40,47 +40,20 @@ interface RemoveSegmentRefProperties extends PropertySet{
 }
 
 export interface MergeTreeRevertibleDriver{
-    /**
-     * Creates a `LocalReferencePosition` on this SharedString. If the refType does not include
-     * ReferenceType.Transient, the returned reference will be added to the localRefs on the provided segment.
-     * @param segment - Segment to add the local reference on
-     * @param offset - Offset on the segment at which to place the local reference
-     * @param refType - ReferenceType for the created local reference
-     * @param properties - PropertySet to place on the created local reference
-     */
+    insertFromSpec(pos: number, spec: IJSONSegment);
+    removeRange(start: number, end: number);
+    annotateRange(
+        start: number,
+        end: number,
+        props: PropertySet);
     createLocalReferencePosition(
         segment: ISegment,
         offset: number,
         refType: ReferenceType,
         properties: PropertySet | undefined): LocalReferencePosition;
-
-    removeRange(start: number, end: number);
-    /**
-     * Returns the current position of a segment, and -1 if the segment
-     * does not exist in this sequence
-     * @param segment - The segment to get the position of
-     */
-    getPosition(segment: ISegment): number;
-
-    /**
-     * Annotates the range with the provided properties
-     *
-     * @param start - The inclusive start position of the range to annotate
-     * @param end - The exclusive end position of the range to annotate
-     * @param props - The properties to annotate the range with
-     *
-     */
-    annotateRange(
-        start: number,
-        end: number,
-        props: PropertySet);
-
-    insertFromSpec(pos: number, spec: IJSONSegment);
-
     localReferencePositionToPosition(lref: LocalReferencePosition): number;
-
+    getPosition(segment: ISegment): number;
     getContainingSegment(pos: number): { segment: ISegment | undefined; offset: number | undefined; };
-
 }
 
 type InternalRevertDriver = MergeTreeRevertibleDriver & {
@@ -211,7 +184,7 @@ export function discardMergeTreeDeltaRevertible(revertibles: MergeTreeDeltaRever
     });
 }
 
-export function revertLocalInsert(driver: MergeTreeRevertibleDriver, revertible: InsertRevertible) {
+function revertLocalInsert(driver: MergeTreeRevertibleDriver, revertible: InsertRevertible) {
     while (revertible.trackingGroup.size > 0) {
         const tracked = revertible.trackingGroup.tracked[0];
         assert(
@@ -225,7 +198,7 @@ export function revertLocalInsert(driver: MergeTreeRevertibleDriver, revertible:
     }
 }
 
-export function revertLocalRemove(driver: MergeTreeRevertibleDriver, revertible: RemoveRevertible) {
+function revertLocalRemove(driver: MergeTreeRevertibleDriver, revertible: RemoveRevertible) {
     while (revertible.trackingGroup.size > 0) {
         const tracked = revertible.trackingGroup.tracked[0];
 
@@ -314,7 +287,7 @@ export function revertLocalRemove(driver: MergeTreeRevertibleDriver, revertible:
     }
 }
 
-export function revertLocalAnnotate(driver: MergeTreeRevertibleDriver, revertible: AnnotateRevertible) {
+function revertLocalAnnotate(driver: MergeTreeRevertibleDriver, revertible: AnnotateRevertible) {
     while (revertible.trackingGroup.size > 0) {
         const tracked = revertible.trackingGroup.tracked[0];
         const unlinked = tracked.trackingCollection.unlink(revertible.trackingGroup);

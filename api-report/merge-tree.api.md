@@ -871,13 +871,16 @@ export type MergeTreeMaintenanceType = typeof MergeTreeMaintenanceType[keyof typ
 
 // @public (undocumented)
 export interface MergeTreeRevertibleDriver {
+    // (undocumented)
     annotateRange(start: number, end: number, props: PropertySet): any;
+    // (undocumented)
     createLocalReferencePosition(segment: ISegment, offset: number, refType: ReferenceType, properties: PropertySet | undefined): LocalReferencePosition;
     // (undocumented)
     getContainingSegment(pos: number): {
         segment: ISegment | undefined;
         offset: number | undefined;
     };
+    // (undocumented)
     getPosition(segment: ISegment): number;
     // (undocumented)
     insertFromSpec(pos: number, spec: IJSONSegment): any;
@@ -1147,15 +1150,6 @@ export const reservedRangeLabelsKey = "referenceRangeLabels";
 
 // @public (undocumented)
 export const reservedTileLabelsKey = "referenceTileLabels";
-
-// @public (undocumented)
-export function revertLocalAnnotate(driver: MergeTreeRevertibleDriver, revertible: AnnotateRevertible): void;
-
-// @public (undocumented)
-export function revertLocalInsert(driver: MergeTreeRevertibleDriver, revertible: InsertRevertible): void;
-
-// @public (undocumented)
-export function revertLocalRemove(driver: MergeTreeRevertibleDriver, revertible: RemoveRevertible): void;
 
 // @public (undocumented)
 export function revertMergeTreeDeltaRevertibles(driver: MergeTreeRevertibleDriver, revertibles: MergeTreeDeltaRevertible[]): void;
