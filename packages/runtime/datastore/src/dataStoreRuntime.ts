@@ -57,7 +57,6 @@ import {
 	RequestParser,
 	SummaryTreeBuilder,
 	create404Response,
-	createResponseError,
 	exceptionToResponse,
 	requestFluidObject,
 } from "@fluidframework/runtime-utils";
@@ -391,20 +390,12 @@ export class FluidDataStoreRuntime
 
 			// Check for a data type reference first
 			if (this.contextsDeferred.has(id) && parser.isLeaf(1)) {
-				try {
-					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-					const value = await this.contextsDeferred.get(id)!.promise;
-					const channel = await value.getChannel();
+				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+				const value = await this.contextsDeferred.get(id)!.promise;
+				const channel = await value.getChannel();
 
-					return { mimeType: "fluid/object", status: 200, value: channel };
-				} catch (error) {
-					this.logger.sendErrorEvent({ eventName: "GetChannelFailedInRequest" }, error);
-
-					return createResponseError(500, `Failed to get Channel: ${error}`, request);
-				}
+				return { mimeType: "fluid/object", status: 200, value: channel };
 			}
-
-			// Otherwise defer to an attached request handler
 			return create404Response(request);
 		} catch (error) {
 			return exceptionToResponse(error);
