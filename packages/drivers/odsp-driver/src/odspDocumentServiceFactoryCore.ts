@@ -11,7 +11,10 @@ import {
 } from "@fluidframework/driver-definitions";
 import { ISummaryTree } from "@fluidframework/protocol-definitions";
 import { TelemetryLogger, PerformanceEvent } from "@fluidframework/telemetry-utils";
-import { getDocAttributesFromProtocolSummary } from "@fluidframework/driver-utils";
+import {
+	getDocAttributesFromProtocolSummary,
+	ensureFluidResolvedUrl,
+} from "@fluidframework/driver-utils";
 import {
 	TokenFetchOptions,
 	OdspResourceTokenFetchOptions,
@@ -59,6 +62,8 @@ export class OdspDocumentServiceFactoryCore implements IDocumentServiceFactory {
 		logger?: ITelemetryBaseLogger,
 		clientIsSummarizer?: boolean,
 	): Promise<IDocumentService> {
+		ensureFluidResolvedUrl(createNewResolvedUrl);
+
 		let odspResolvedUrl = getOdspResolvedUrl(createNewResolvedUrl);
 		const resolvedUrlData: IOdspUrlParts = {
 			siteUrl: odspResolvedUrl.siteUrl,

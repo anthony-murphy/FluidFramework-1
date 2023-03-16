@@ -953,14 +953,26 @@ use_old_VariableDeclaration_getRetryDelaySecondsFromError(
 /*
 * Validate forward compat by using old type in place of current type
 * If breaking change required, add in package.json under typeValidation.broken:
-* "RemovedVariableDeclaration_isFluidResolvedUrl": {"forwardCompat": false}
+* "VariableDeclaration_isFluidResolvedUrl": {"forwardCompat": false}
 */
+declare function get_old_VariableDeclaration_isFluidResolvedUrl():
+    TypeOnly<typeof old.isFluidResolvedUrl>;
+declare function use_current_VariableDeclaration_isFluidResolvedUrl(
+    use: TypeOnly<typeof current.isFluidResolvedUrl>);
+use_current_VariableDeclaration_isFluidResolvedUrl(
+    get_old_VariableDeclaration_isFluidResolvedUrl());
 
 /*
 * Validate back compat by using current type in place of old type
 * If breaking change required, add in package.json under typeValidation.broken:
-* "RemovedVariableDeclaration_isFluidResolvedUrl": {"backCompat": false}
+* "VariableDeclaration_isFluidResolvedUrl": {"backCompat": false}
 */
+declare function get_current_VariableDeclaration_isFluidResolvedUrl():
+    TypeOnly<typeof current.isFluidResolvedUrl>;
+declare function use_old_VariableDeclaration_isFluidResolvedUrl(
+    use: TypeOnly<typeof old.isFluidResolvedUrl>);
+use_old_VariableDeclaration_isFluidResolvedUrl(
+    get_current_VariableDeclaration_isFluidResolvedUrl());
 
 /*
 * Validate forward compat by using old type in place of current type

@@ -158,10 +158,6 @@
 			},
 			"ClassDeclaration_LocationRedirectionError": {
 				"forwardCompat": false
-			},
-			"RemovedVariableDeclaration_isFluidResolvedUrl": {
-				"forwardCompat": false,
-				"backCompat": false
 			}
 		}
 	}
