@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 /*!
  * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
@@ -84,14 +85,9 @@ import { ContainerContext } from "./containerContext";
 import { ReconnectMode, IConnectionManagerFactoryArgs, getPackageName } from "./contracts";
 import { DeltaManager, IConnectionArgs } from "./deltaManager";
 import { DeltaManagerProxy } from "./deltaManagerProxy";
-import { ILoaderOptions, Loader, RelativeLoader } from "./loader";
+import { ILoaderOptions, Loader, LocalBlobStorage, RelativeLoader } from "./loader";
 import { pkgVersion } from "./packageVersion";
-import {
-	ContainerStorageAdapter,
-	getBlobContentsFromTree,
-	getBlobContentsFromTreeWithBlobContents,
-	ISerializableBlobContents,
-} from "./containerStorageAdapter";
+import { ContainerStorageAdapter } from "./containerStorageAdapter";
 import { IConnectionStateHandler, createConnectionStateHandler } from "./connectionStateHandler";
 import { getProtocolSnapshotTree, getSnapshotTreeFromSerializedContainer } from "./utils";
 import {
@@ -148,6 +144,9 @@ export interface IContainerConfig {
 	 * Serialized state from a previous instance of this container
 	 */
 	serializedContainerState?: IPendingContainerState;
+
+	localBlobStorage: LocalBlobStorage;
+	detachedId?: string;
 }
 
 /**
@@ -276,11 +275,7 @@ export interface IPendingContainerState {
 	 * Snapshot from which container initially loaded.
 	 */
 	baseSnapshot: ISnapshotTree;
-	/**
-	 * Serializable blobs from the base snapshot. Used to load offline since
-	 * storage is not available.
-	 */
-	snapshotBlobs: ISerializableBlobContents;
+
 	/**
 	 * All ops since base snapshot sequence number up to the latest op
 	 * seen when the container was closed. Used to apply stashed (saved pending)
@@ -313,6 +308,9 @@ export class Container
 		pendingLocalState?: IPendingContainerState,
 		protocolHandlerBuilder?: ProtocolHandlerBuilder,
 	): Promise<Container> {
+		const localBlobStorage: LocalBlobStorage =
+			await loader.services.localBlobStorageFactory!.createAttached(loadOptions.resolvedUrl);
+
 		const container = new Container(
 			loader,
 			{
@@ -320,6 +318,7 @@ export class Container
 				resolvedUrl: loadOptions.resolvedUrl,
 				canReconnect: loadOptions.canReconnect,
 				serializedContainerState: pendingLocalState,
+				localBlobStorage,
 			},
 			protocolHandlerBuilder,
 		);
@@ -378,7 +377,15 @@ export class Container
 		codeDetails: IFluidCodeDetails,
 		protocolHandlerBuilder?: ProtocolHandlerBuilder,
 	): Promise<Container> {
-		const container = new Container(loader, {}, protocolHandlerBuilder);
+		const detachedId = uuid();
+		const localBlobStorage: LocalBlobStorage =
+			await loader.services.localBlobStorageFactory!.createDetached(detachedId);
+
+		const container = new Container(
+			loader,
+			{ localBlobStorage, detachedId },
+			protocolHandlerBuilder,
+		);
 
 		return PerformanceEvent.timedExecAsync(
 			container.mc.logger,
@@ -400,13 +407,27 @@ export class Container
 		snapshot: string,
 		protocolHandlerBuilder?: ProtocolHandlerBuilder,
 	): Promise<Container> {
-		const container = new Container(loader, {}, protocolHandlerBuilder);
+		const deserializedSummary = JSON.parse(snapshot) as ISummaryTree;
+
+		const detachedIdTree = deserializedSummary.tree[".detachedId"];
+		assert(detachedIdTree.type === SummaryType.Blob, "detachedTree must be tree");
+		const detachedId = (detachedIdTree.content as string) ?? uuid();
+
+		const localBlobStorage: LocalBlobStorage =
+			await loader.services.localBlobStorageFactory!.createDetached(detachedId);
+
+		delete deserializedSummary.tree[".detachedId"];
+
+		const container = new Container(
+			loader,
+			{ localBlobStorage, detachedId },
+			protocolHandlerBuilder,
+		);
 
 		return PerformanceEvent.timedExecAsync(
 			container.mc.logger,
 			{ eventName: "RehydrateDetachedFromSnapshot" },
 			async (_event) => {
-				const deserializedSummary = JSON.parse(snapshot) as ISummaryTree;
 				await container.rehydrateDetachedFromSnapshot(deserializedSummary);
 				return container;
 			},
@@ -501,7 +522,6 @@ export class Container
 	private _dirtyContainer = false;
 	private readonly savedOps: ISequencedDocumentMessage[] = [];
 	private baseSnapshot?: ISnapshotTree;
-	private baseSnapshotBlobs?: ISerializableBlobContents;
 
 	private lastVisible: number | undefined;
 	private readonly visibilityEventHandler: (() => void) | undefined;
@@ -679,7 +699,7 @@ export class Container
 	 */
 	constructor(
 		private readonly loader: Loader,
-		config: IContainerConfig,
+		private readonly config: IContainerConfig,
 		private readonly protocolHandlerBuilder?: ProtocolHandlerBuilder,
 	) {
 		super((name, error) => {
@@ -823,9 +843,9 @@ export class Container
 			this.loader.services.options.summarizeProtocolTree;
 
 		this.storageAdapter = new ContainerStorageAdapter(
-			this.loader.services.detachedBlobStorage,
+			config.localBlobStorage,
 			this.mc.logger,
-			config.serializedContainerState?.snapshotBlobs,
+			{},
 			addProtocolSummaryIfMissing,
 			forceEnableSummarizeProtocolTree,
 		);
@@ -1008,11 +1028,9 @@ export class Container
 			0x37e /* Must have a valid protocol handler instance */,
 		);
 		assert(!!this.baseSnapshot, "no base snapshot");
-		assert(!!this.baseSnapshotBlobs, "no snapshot blobs");
 		const pendingState: IPendingContainerState = {
 			pendingRuntimeState: this.context.getPendingLocalState(),
 			baseSnapshot: this.baseSnapshot,
-			snapshotBlobs: this.baseSnapshotBlobs,
 			savedOps: this.savedOps,
 			url: this.resolvedUrl.url,
 			term: this._protocolHandler.attributes.term,
@@ -1041,15 +1059,11 @@ export class Container
 		const protocolSummary = this.captureProtocolSummary();
 		const combinedSummary = combineAppAndProtocolSummary(appSummary, protocolSummary);
 
-		if (
-			this.loader.services.detachedBlobStorage &&
-			this.loader.services.detachedBlobStorage.size > 0
-		) {
-			combinedSummary.tree[".hasAttachmentBlobs"] = {
-				type: SummaryType.Blob,
-				content: "true",
-			};
-		}
+		combinedSummary.tree[".detachedId"] = {
+			type: SummaryType.Blob,
+			content: this.config.detachedId,
+		};
+
 		return JSON.stringify(combinedSummary);
 	}
 
@@ -1072,10 +1086,10 @@ export class Container
 				);
 				this.attachStarted = true;
 
+				const blobs = await this.config.localBlobStorage.getBlobIds();
+				const localBlobs = blobs.filter((b) => b.remoteId === undefined);
 				// If attachment blobs were uploaded in detached state we will go through a different attach flow
-				const hasAttachmentBlobs =
-					this.loader.services.detachedBlobStorage !== undefined &&
-					this.loader.services.detachedBlobStorage.size > 0;
+				const hasAttachmentBlobs = localBlobs.length > 0;
 
 				try {
 					assert(
@@ -1100,8 +1114,6 @@ export class Container
 						if (this.offlineLoadEnabled) {
 							const snapshot = getSnapshotTreeFromSerializedContainer(summary);
 							this.baseSnapshot = snapshot;
-							this.baseSnapshotBlobs =
-								getBlobContentsFromTreeWithBlobContents(snapshot);
 						}
 					}
 
@@ -1132,30 +1144,20 @@ export class Container
 					ensureFluidResolvedUrl(resolvedUrl);
 					this._resolvedUrl = resolvedUrl;
 					await this.storageAdapter.connectToService(this.service);
-
+					this.config.localBlobStorage.attach!(this.service.resolvedUrl);
 					if (hasAttachmentBlobs) {
-						// upload blobs to storage
-						assert(
-							!!this.loader.services.detachedBlobStorage,
-							0x24e /* "assertion for type narrowing" */,
-						);
-
-						// build a table mapping IDs assigned locally to IDs assigned by storage and pass it to runtime to
-						// support blob handles that only know about the local IDs
-						const redirectTable = new Map<string, string>();
-						// if new blobs are added while uploading, upload them too
-						while (redirectTable.size < this.loader.services.detachedBlobStorage.size) {
-							const newIds = this.loader.services.detachedBlobStorage
-								.getBlobIds()
-								.filter((id) => !redirectTable.has(id));
-							for (const id of newIds) {
-								const blob =
-									await this.loader.services.detachedBlobStorage.readBlob(id);
-								const response = await this.storageAdapter.createBlob(blob);
-								redirectTable.set(id, response.id);
-							}
+						for (const blobIds of localBlobs) {
+							const blob = await this.config.localBlobStorage.getBlob(
+								blobIds.localId,
+							);
+							await this.storageAdapter.createBlob(blob, blobIds.localId);
 						}
-
+						const redirectTable = (
+							await this.config.localBlobStorage.getBlobIds()
+						).reduce((pv, cv) => {
+							pv.set(cv.localId, cv.remoteId!);
+							return pv;
+						}, new Map<string, string>());
 						// take summary and upload
 						const appSummary: ISummaryTree = this.context.createSummary(redirectTable);
 						const protocolSummary = this.captureProtocolSummary();
@@ -1166,8 +1168,6 @@ export class Container
 						if (this.offlineLoadEnabled) {
 							const snapshot = getSnapshotTreeFromSerializedContainer(summary);
 							this.baseSnapshot = snapshot;
-							this.baseSnapshotBlobs =
-								getBlobContentsFromTreeWithBlobContents(snapshot);
 						}
 
 						await this.storageAdapter.uploadSummaryWithContext(summary, {
@@ -1426,13 +1426,10 @@ export class Container
 
 		if (pendingLocalState) {
 			this.baseSnapshot = pendingLocalState.baseSnapshot;
-			this.baseSnapshotBlobs = pendingLocalState.snapshotBlobs;
 		} else {
 			assert(snapshot !== undefined, 0x237 /* "Snapshot should exist" */);
 			if (this.offlineLoadEnabled) {
 				this.baseSnapshot = snapshot;
-				// Save contents of snapshot now, otherwise closeAndGetPendingLocalState() must be async
-				this.baseSnapshotBlobs = await getBlobContentsFromTree(snapshot, this.storage);
 			}
 		}
 
@@ -1593,15 +1590,6 @@ export class Container
 	}
 
 	private async rehydrateDetachedFromSnapshot(detachedContainerSnapshot: ISummaryTree) {
-		if (detachedContainerSnapshot.tree[".hasAttachmentBlobs"] !== undefined) {
-			assert(
-				!!this.loader.services.detachedBlobStorage &&
-					this.loader.services.detachedBlobStorage.size > 0,
-				0x250 /* "serialized container with attachment blobs must be rehydrated with detached blob storage" */,
-			);
-			delete detachedContainerSnapshot.tree[".hasAttachmentBlobs"];
-		}
-
 		const snapshotTree = getSnapshotTreeFromSerializedContainer(detachedContainerSnapshot);
 		this.storageAdapter.loadSnapshotForRehydratingContainer(snapshotTree);
 		const attributes = await this.getDocumentAttributes(this.storageAdapter, snapshotTree);

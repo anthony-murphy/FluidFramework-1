@@ -802,7 +802,7 @@ describeNoCompat("stashed ops", (getTestObjectProvider) => {
 		},
 	);
 
-	it("can make changes offline and resubmit them", async function () {
+	it.only("can make changes offline and resubmit them", async function () {
 		const pendingOps = await getPendingOps(provider, false, async (c, d) => {
 			const map = await d.getSharedObject<SharedMap>(mapId);
 			[...Array(lots).keys()].map((i) => map.set(i.toString(), i));

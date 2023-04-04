@@ -10,7 +10,6 @@ export {
 	IPendingContainerState,
 	waitContainerToCatchUp,
 } from "./container";
-export { ISerializableBlobContents } from "./containerStorageAdapter";
 export {
 	ICodeDetailsLoader,
 	IDetachedBlobStorage,

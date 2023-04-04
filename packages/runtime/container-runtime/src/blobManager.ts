@@ -355,17 +355,21 @@ export class BlobManager extends TypedEventEmitter<IBlobManagerEvents> {
 
 	private async createBlobDetached(
 		blob: ArrayBufferLike,
+		localId: string,
 	): Promise<IFluidHandle<ArrayBufferLike>> {
 		// Blobs created while the container is detached are stored in IDetachedBlobStorage.
 		// The 'IDocumentStorageService.createBlob()' call below will respond with a localId.
-		const response = await this.getStorage().createBlob(blob);
+		const response = await this.getStorage().createBlob(blob, localId);
 		this.setRedirection(response.id, undefined);
 		return this.getBlobHandle(response.id);
 	}
 
 	public async createBlob(blob: ArrayBufferLike): Promise<IFluidHandle<ArrayBufferLike>> {
+		// Create a local ID for the blob. After uploading it to storage and before returning it, a local ID to
+		// storage ID mapping is created.
+		const localId = uuid();
 		if (this.runtime.attachState === AttachState.Detached) {
-			return this.createBlobDetached(blob);
+			return this.createBlobDetached(blob, localId);
 		}
 		if (this.runtime.attachState === AttachState.Attaching) {
 			// blob upload is not supported in "Attaching" state
@@ -377,9 +381,6 @@ export class BlobManager extends TypedEventEmitter<IBlobManagerEvents> {
 			0x385 /* For clarity and paranoid defense against adding future attachment states */,
 		);
 
-		// Create a local ID for the blob. After uploading it to storage and before returning it, a local ID to
-		// storage ID mapping is created.
-		const localId = uuid();
 		const pendingEntry: PendingBlob = {
 			blob,
 			status: PendingBlobStatus.OnlinePendingUpload,
@@ -395,7 +396,7 @@ export class BlobManager extends TypedEventEmitter<IBlobManagerEvents> {
 		return PerformanceEvent.timedExecAsync(
 			this.mc.logger,
 			{ eventName: "createBlob" },
-			async () => this.getStorage().createBlob(blob),
+			async () => this.getStorage().createBlob(blob, localId),
 			{ end: true, cancel: this.runtime.connected ? "error" : "generic" },
 		).then(
 			(response) => this.onUploadResolve(localId, response),

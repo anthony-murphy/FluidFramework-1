@@ -112,9 +112,12 @@ export class RetriableDocumentStorageService implements IDocumentStorageService,
 		);
 	}
 
-	public async createBlob(file: ArrayBufferLike): Promise<ICreateBlobResponse> {
+	public async createBlob(
+		file: ArrayBufferLike,
+		operationId: string,
+	): Promise<ICreateBlobResponse> {
 		return this.runWithRetry(
-			async () => this.internalStorageService.createBlob(file),
+			async () => this.internalStorageService.createBlob(file, operationId),
 			"storage_createBlob",
 		);
 	}
