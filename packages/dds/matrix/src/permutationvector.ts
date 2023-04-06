@@ -19,7 +19,7 @@ import {
 	MergeTreeDeltaType,
 	IMergeTreeMaintenanceCallbackArgs,
 	MergeTreeMaintenanceType,
-	ReferenceType,
+	LocalReferencePosition,
 } from "@fluidframework/merge-tree";
 import { IFluidHandle } from "@fluidframework/core-interfaces";
 import { IFluidSerializer } from "@fluidframework/shared-object-base";
@@ -181,14 +181,11 @@ export class PermutationVector extends Client {
 		return this.insertSegmentLocal(start, new PermutationSegment(length));
 	}
 
-	public insertRelative(segment: ISegment, length: number) {
+	public insertRelative(segment: LocalReferencePosition, length: number) {
 		const inserted = new PermutationSegment(length);
 
 		return {
-			op: this.insertAtReferencePositionLocal(
-				this.createLocalReferencePosition(segment, 0, ReferenceType.Transient, undefined),
-				inserted,
-			),
+			op: this.insertAtReferencePositionLocal(segment, inserted),
 			inserted,
 		};
 	}
@@ -346,24 +343,24 @@ export class PermutationVector extends Client {
 
 	private readonly onDelta = (
 		opArgs: IMergeTreeDeltaOpArgs,
-		{ operation, deltaSegments }: IMergeTreeDeltaCallbackArgs,
+		deltaArgs: IMergeTreeDeltaCallbackArgs,
 	) => {
+		const isLocal = opArgs.sequencedMessage === undefined;
+
+		// Notify the undo provider, if any is attached.
+		if (this.undo !== undefined && isLocal) {
+			this.undo.record(deltaArgs);
+		}
+
 		// Apply deltas in descending order to prevent positions from shifting.
-		const ranges = deltaSegments
+		const ranges = deltaArgs.deltaSegments
 			.map(({ segment }) => ({
 				segment: segment as PermutationSegment,
 				position: this.getPosition(segment),
 			}))
 			.sort((left, right) => left.position - right.position);
 
-		const isLocal = opArgs.sequencedMessage === undefined;
-
-		// Notify the undo provider, if any is attached.
-		if (this.undo !== undefined && isLocal) {
-			this.undo.record(operation, ranges);
-		}
-
-		switch (operation) {
+		switch (deltaArgs.operation) {
 			case MergeTreeDeltaType.INSERT:
 				// Pass 1: Perform any internal maintenance first to avoid reentrancy.
 				for (const { segment, position } of ranges) {
