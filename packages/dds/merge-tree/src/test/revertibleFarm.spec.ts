@@ -190,19 +190,12 @@ describe("MergeTree.Client", () => {
 								);
 							}
 						});
-						const revertRoot = clients.B.mergeTree
-							.root as Partial<RevertRootMergeBlock>;
-						if (
-							revertRoot.__mergeTreeRevertible?.detachedReferences?.localRefs
-								?.empty === false
-						) {
-							assert.notDeepStrictEqual(
-								revertRoot.__mergeTreeRevertible?.detachedReferences?.localRefs
-									?.empty,
-								false,
-								"there should be no left over local references in detached references",
-							);
-						}
+						const revertRoot: Partial<RevertRootMergeBlock> = clients.B.mergeTree.root;
+						assert.notDeepStrictEqual(
+							revertRoot.__mergeTreeRevertible?.detachedReferences?.localRefs?.empty,
+							false,
+							"there should be no left over local references in detached references",
+						);
 					} catch (e) {
 						throw logger.addLogsToError(e);
 					}
