@@ -12,7 +12,7 @@ import {
 	discardMergeTreeDeltaRevertible,
 	Trackable,
 } from "@fluidframework/merge-tree";
-import { Internal, MatrixItem, SharedMatrix } from "./matrix";
+import { MatrixItem, SharedMatrix } from "./matrix";
 import { Handle, isHandleValid } from "./handletable";
 import { PermutationVector } from "./permutationvector";
 import { IUndoConsumer } from "./types";
@@ -47,7 +47,7 @@ export class VectorUndoProvider {
 			// ops between the undo <-> redo stacks.f
 			const revertibles: MergeTreeDeltaRevertible[] =
 				this.currentGroup === undefined ? [] : [this.currentGroup];
-			appendToMergeTreeDeltaRevertibles(undefined, deltaArgs, revertibles);
+			appendToMergeTreeDeltaRevertibles(deltaArgs, revertibles);
 
 			// For SharedMatrix, each IRevertibles always holds a single row/col operation.
 			// Therefore, 'currentOp' must either be undefined or equal to the current op.
