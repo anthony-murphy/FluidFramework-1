@@ -102,6 +102,8 @@ export interface ContainerSchema {
  * to dynamically create further objects during usage.
  */
 export interface IRootDataObject {
+	readonly IRootDataObject: IRootDataObject;
+
 	/**
 	 * Provides a record of the initial objects defined on creation.
 	 */

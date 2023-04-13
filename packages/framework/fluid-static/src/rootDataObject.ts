@@ -105,6 +105,10 @@ export class RootDataObject
 		return this._initialObjects;
 	}
 
+	public get IRootDataObject() {
+		return this;
+	}
+
 	/**
 	 * {@inheritDoc IRootDataObject.create}
 	 */
@@ -172,6 +176,9 @@ export class DOProviderContainerRuntimeFactory extends BaseContainerRuntimeFacto
 			// temporary workaround to disable message batching until the message batch size issue is resolved
 			// resolution progress is tracked by the Feature 465 work item in AzDO
 			{ flushMode: FlushMode.Immediate },
+			async (runtime) => {
+				return runtime.getRootDataStore(rootDataStoreId);
+			},
 		);
 		this.rootDataObjectFactory = rootDataObjectFactory;
 		this.initialObjects = schema.initialObjects;

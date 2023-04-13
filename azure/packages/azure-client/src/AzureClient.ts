@@ -15,13 +15,14 @@ import {
 	DOProviderContainerRuntimeFactory,
 	FluidContainer,
 	IFluidContainer,
-	RootDataObject,
+	IRootDataObject,
 } from "@fluidframework/fluid-static";
 import { IClient, SummaryType } from "@fluidframework/protocol-definitions";
 import { RouterliciousDocumentServiceFactory } from "@fluidframework/routerlicious-driver";
-import { requestFluidObject } from "@fluidframework/runtime-utils";
 
 import { IConfigProviderBase } from "@fluidframework/telemetry-utils";
+import { FluidObject } from "@fluidframework/core-interfaces";
+import { assert } from "@fluidframework/common-utils";
 import { AzureAudience } from "./AzureAudience";
 import { AzureUrlResolver, createAzureCreateNewRequest } from "./AzureUrlResolver";
 import {
@@ -157,7 +158,7 @@ export class AzureClient {
 		url.searchParams.append("tenantId", encodeURIComponent(getTenantId(this.props.connection)));
 		url.searchParams.append("containerId", encodeURIComponent(id));
 		const container = await loader.resolve({ url: url.href });
-		const rootDataObject = await requestFluidObject<RootDataObject>(container, "/");
+		const rootDataObject = await getRootObject(container);
 		const fluidContainer = new FluidContainer(container, rootDataObject);
 		const services = this.getContainerServices(container);
 		return { container: fluidContainer, services };
@@ -242,7 +243,7 @@ export class AzureClient {
 			getTenantId(connection),
 		);
 
-		const rootDataObject = await requestFluidObject<RootDataObject>(container, "/");
+		const rootDataObject = await getRootObject(container);
 
 		/**
 		 * See {@link FluidContainer.attach}
@@ -261,4 +262,11 @@ export class AzureClient {
 		return fluidContainer;
 	}
 	// #endregion
+}
+
+async function getRootObject(container: IContainer): Promise<IRootDataObject> {
+	const maybeRoot: FluidObject<IRootDataObject> | undefined = await container.getEntryPoint?.();
+	const rootDataObject = maybeRoot?.IRootDataObject;
+	assert(rootDataObject !== undefined, "must exist");
+	return rootDataObject;
 }
