@@ -35,6 +35,7 @@ import {
 	ReferenceType,
 	MergeTreeRevertibleDriver,
 	SegmentGroup,
+	IMergeTreeOptions,
 } from "@fluidframework/merge-tree";
 import { ObjectStoragePartition, SummaryTreeBuilder } from "@fluidframework/runtime-utils";
 import {
@@ -199,7 +200,7 @@ export abstract class SharedSegmentSequence<T extends ISegment>
 		this.client = new Client(
 			segmentFromSpec,
 			ChildLogger.create(this.logger, "SharedSegmentSequence.MergeTreeClient"),
-			dataStoreRuntime.options,
+			dataStoreRuntime.options as IMergeTreeOptions,
 		);
 
 		this.client.on("delta", (opArgs, deltaArgs) => {
