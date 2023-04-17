@@ -26,10 +26,10 @@ import {
 	IMergeTreeOp,
 	SegmentGroup,
 	Client,
-	Trackable,
+	IJSONSegment,
 } from "@fluidframework/merge-tree";
 import { MatrixOp } from "./ops";
-import { PermutationVector } from "./permutationvector";
+import { PermutationSegment, PermutationVector } from "./permutationvector";
 import { SparseArray2D } from "./sparsearray2d";
 import { SharedMatrixFactory } from "./runtime";
 import { Handle, isHandleValid } from "./handletable";
@@ -368,11 +368,11 @@ export class SharedMatrix<T = any>
 		this.submitRowMessage(this.rows.remove(rowStart, count));
 	}
 
-	/** @internal */ public _undoRemoveRows(segment: Trackable) {
-		assert(!segment.isLeaf(), "goo");
+	/** @internal */ public _undoRemoveRows(pos: number, spec: IJSONSegment) {
+		const inserted = PermutationSegment.fromJSONObject(spec);
 
 		// (Re)insert the removed number of rows at the original position.
-		const { op, inserted } = this.rows.insertRelative(segment, 1); // original.cachedLength);
+		const op = this.rows.insertSegmentLocal(pos, inserted);
 		this.submitRowMessage(op);
 
 		// Transfer handles and undo/redo tracking groups from the original segment to the
@@ -407,12 +407,12 @@ export class SharedMatrix<T = any>
 		}
 	}
 
-	/** @internal */ public _undoRemoveCols(segment: Trackable) {
-		assert(!segment.isLeaf(), "");
+	/** @internal */ public _undoRemoveCols(pos: number, spec: IJSONSegment) {
+		const inserted = PermutationSegment.fromJSONObject(spec);
 
-		// (Re)insert the removed number of columns at the original position.
-		const { op, inserted } = this.cols.insertRelative(segment, 1); // original.cachedLength);
-		this.submitColMessage(op);
+		// (Re)insert the removed number of rows at the original position.
+		const op = this.cols.insertSegmentLocal(pos, inserted);
+		this.submitRowMessage(op);
 
 		// Transfer handles and undo/redo tracking groups from the original segment to the
 		// newly inserted segment.
