@@ -1492,7 +1492,10 @@ export class MergeTree {
 	) {
 		const continueFrom = (node: IMergeBlock) => {
 			let siblingExists = false;
-			forwardExcursion(node, () => (siblingExists = true));
+			forwardExcursion(node, () => {
+				siblingExists = true;
+				return false;
+			});
 			return siblingExists;
 		};
 
