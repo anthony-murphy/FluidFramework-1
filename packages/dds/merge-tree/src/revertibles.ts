@@ -17,13 +17,6 @@ import { matchProperties, PropertySet } from "./properties";
 import { DetachedReferencePosition } from "./referencePositions";
 import { MergeTree, findRootMergeBlock } from "./mergeTree";
 
-/**
- * Revertibles are new and require the option
- * mergeTreeUseNewLengthCalculations to be set as true on the underlying merge tree
- * in order to function correctly.
- *
- * @alpha
- */
 export type MergeTreeDeltaRevertible =
 	| {
 			operation: typeof MergeTreeDeltaType.INSERT;
@@ -54,13 +47,6 @@ interface RemoveSegmentRefProperties {
 	referenceSpace: "mergeTreeDeltaRevertible";
 }
 
-/**
- * Revertibles are new and require the option
- * mergeTreeUseNewLengthCalculations to be set as true on the underlying merge tree
- * in order to function correctly.
- *
- * @alpha
- */
 export interface MergeTreeRevertibleDriver {
 	insertFromSpec(pos: number, spec: IJSONSegment);
 	removeRange(start: number, end: number);
@@ -188,12 +174,6 @@ function appendLocalAnnotateToRevertibles(
 	return revertibles;
 }
 
-/**
- * Revertibles are new and require the option
- * mergeTreeUseNewLengthCalculations to be set as true on the underlying merge tree
- * in order to function correctly.
- * @alpha
- */
 export function appendToMergeTreeDeltaRevertibles(
 	deltaArgs: IMergeTreeDeltaCallbackArgs,
 	revertibles: MergeTreeDeltaRevertible[],
@@ -219,12 +199,6 @@ export function appendToMergeTreeDeltaRevertibles(
 	}
 }
 
-/**
- * Revertibles are new and require the option
- * mergeTreeUseNewLengthCalculations to be set as true on the underlying merge tree
- * in order to function correctly.
- * @alpha
- */
 export function discardMergeTreeDeltaRevertible(revertibles: MergeTreeDeltaRevertible[]) {
 	revertibles.forEach((r) => {
 		r.trackingGroup.tracked.forEach((t) => {
@@ -384,12 +358,6 @@ function getPosition(mergeTreeWithRevert: MergeTreeWithRevert, segment: ISegment
 	);
 }
 
-/**
- * Revertibles are new and require the option
- * mergeTreeUseNewLengthCalculations to be set as true on the underlying merge tree
- * in order to function correctly.
- * @alpha
- */
 export function revertMergeTreeDeltaRevertibles(
 	driver: MergeTreeRevertibleDriver,
 	revertibles: MergeTreeDeltaRevertible[],

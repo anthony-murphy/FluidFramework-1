@@ -13,6 +13,7 @@ import { IMergeTreeDeltaOpArgs, MergeTreeMaintenanceType } from "../mergeTreeDel
 import { matchProperties, PropertySet } from "../properties";
 import { depthFirstNodeWalk } from "../mergeTreeNodeWalk";
 import { Marker, toRemovalInfo } from "../mergeTreeNodes";
+import { removalOutsideCollabWindow } from "../zamboni";
 import { TestClient } from "./testClient";
 
 function getOpString(msg: ISequencedDocumentMessage | undefined) {
@@ -278,7 +279,7 @@ export class TestClientLogger {
 		if (!excludeHeader) {
 			str +=
 				`_: Local State\n` +
-				`-: Deleted\n` +
+				`-: Deleted    ~:Deleted <= MinSeq\n` +
 				`*: Unacked Insert and Delete\n` +
 				`${this.clients[0].getCollabWindow().minSeq}: msn/offset\n` +
 				`Op format <seq>:<ref>:<client><type>@<pos1>,<pos2>\n` +
@@ -327,15 +328,22 @@ export class TestClientLogger {
 						? "¶"
 						: undefined;
 					if (text !== undefined) {
-						if (node.removedSeq) {
-							if (node.removedSeq === UnassignedSequenceNumber) {
+						const removedNode = toRemovalInfo(node);
+						if (removedNode !== undefined) {
+							if (removedNode.removedSeq === UnassignedSequenceNumber) {
 								acked += "_".repeat(text.length);
 								local +=
 									node.seq === UnassignedSequenceNumber
 										? "*".repeat(text.length)
 										: "-".repeat(text.length);
 							} else {
-								acked += "-".repeat(text.length);
+								const removedSymbol = removalOutsideCollabWindow(
+									removedNode,
+									client.getCollabWindow().minSeq,
+								)
+									? "~"
+									: "-";
+								acked += removedSymbol.repeat(text.length);
 								local += " ".repeat(text.length);
 							}
 						} else {

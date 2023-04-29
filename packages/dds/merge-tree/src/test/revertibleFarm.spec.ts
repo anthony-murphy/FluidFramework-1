@@ -49,7 +49,6 @@ describe("MergeTree.Client", () => {
 				const clients = createClientsAtInitialState(
 					{
 						initialState: "",
-						options: { mergeTreeUseNewLengthCalculations: true },
 					},
 					"A",
 					"B",

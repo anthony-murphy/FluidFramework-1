@@ -8,7 +8,14 @@
 import { UnassignedSequenceNumber } from "./constants";
 import { MergeTree } from "./mergeTree";
 import { MergeTreeMaintenanceType } from "./mergeTreeDeltaCallback";
-import { IMergeBlock, IMergeNode, ISegment, MaxNodesInBlock } from "./mergeTreeNodes";
+import {
+	IMergeBlock,
+	IMergeNode,
+	IRemovalInfo,
+	ISegment,
+	MaxNodesInBlock,
+	toRemovalInfo,
+} from "./mergeTreeNodes";
 import { matchProperties } from "./properties";
 
 export const zamboniSegmentsMax = 2;
@@ -57,6 +64,17 @@ export function zamboniSegments(
 			}
 		}
 	}
+}
+
+export function removalOutsideCollabWindow(removalInfo: IRemovalInfo, minSeq: number): boolean {
+	const removedSeq =
+		removalInfo.removedSeq === UnassignedSequenceNumber
+			? Number.MAX_SAFE_INTEGER
+			: removalInfo.removedSeq;
+	if (removedSeq > minSeq) {
+		return false;
+	}
+	return true;
 }
 
 // Interior node with all node children
@@ -126,8 +144,9 @@ function scourNode(node: IMergeBlock, holdNodes: IMergeNode[], mergeTree: MergeT
 		if (childNode.isLeaf()) {
 			const segment = childNode;
 			if (segment.segmentGroups.empty) {
-				if (segment.removedSeq !== undefined) {
-					if (segment.removedSeq > mergeTree.collabWindow.minSeq) {
+				const removalInfo = toRemovalInfo(segment);
+				if (removalInfo !== undefined) {
+					if (!removalOutsideCollabWindow(removalInfo, mergeTree.collabWindow.minSeq)) {
 						holdNodes.push(segment);
 					} else if (!segment.trackingCollection.empty) {
 						holdNodes.push(segment);

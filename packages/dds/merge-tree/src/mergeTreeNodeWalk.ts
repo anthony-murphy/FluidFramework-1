@@ -122,7 +122,7 @@ export function forwardExcursion(
 	startNode: IMergeNode,
 	leafAction: (seg: ISegment) => boolean | undefined,
 ): boolean {
-	if (startNode.parent === undefined) {
+	if (startNode?.parent === undefined) {
 		return true;
 	}
 
