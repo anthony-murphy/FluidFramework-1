@@ -1628,6 +1628,7 @@ export class MergeTree {
 		clientId: number,
 		seq: number,
 		context: InsertContext,
+		isLastChildBlock: boolean = true,
 	): IMergeBlock | undefined {
 		let _pos = pos;
 		const children = block.children;
@@ -1637,14 +1638,16 @@ export class MergeTree {
 		let fromSplit: IMergeBlock | undefined;
 		for (childIndex = 0; childIndex < block.childCount; childIndex++) {
 			child = children[childIndex];
-			const len = this.nodeLength(child, refSeq, clientId);
-			if (len === undefined) {
+			const rawLen = this.nodeLength(child, refSeq, clientId);
+			const isLastNonLeafBlock =
+				isLastChildBlock && !child.isLeaf() && childIndex === block.childCount - 1;
+			if (rawLen === undefined && !isLastNonLeafBlock) {
 				// if the seg len in undefined, the segment
 				// will be removed, so should just be skipped for now
 				continue;
-			} else {
-				assert(len >= 0, 0x4bc /* Length should not be negative */);
 			}
+			const len = rawLen ?? 0;
+			assert(len >= 0, 0x4bc /* Length should not be negative */);
 
 			if (_pos < len || (_pos === len && this.breakTie(_pos, child, seq))) {
 				// Found entry containing pos
@@ -1658,6 +1661,7 @@ export class MergeTree {
 						clientId,
 						seq,
 						context,
+						isLastNonLeafBlock,
 					);
 					if (splitNode === undefined) {
 						if (context.structureChange) {

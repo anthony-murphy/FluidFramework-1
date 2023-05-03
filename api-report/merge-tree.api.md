@@ -18,7 +18,7 @@ import { TypedEventEmitter } from '@fluidframework/common-utils';
 // @public (undocumented)
 export function addProperties(oldProps: PropertySet | undefined, newProps: PropertySet, op?: ICombiningOp, seq?: number): PropertySet;
 
-// @alpha
+// @public (undocumented)
 export function appendToMergeTreeDeltaRevertibles(deltaArgs: IMergeTreeDeltaCallbackArgs, revertibles: MergeTreeDeltaRevertible[]): void;
 
 // @alpha @sealed
@@ -288,7 +288,7 @@ export interface Dictionary<TKey, TData> {
     remove(key: TKey): void;
 }
 
-// @alpha
+// @public (undocumented)
 export function discardMergeTreeDeltaRevertible(revertibles: MergeTreeDeltaRevertible[]): void;
 
 // @public (undocumented)
@@ -548,7 +548,6 @@ export interface IMergeTreeOptions {
     catchUpBlobName?: string;
     // (undocumented)
     mergeTreeSnapshotChunkSize?: number;
-    mergeTreeUseNewLengthCalculations?: boolean;
     newMergeTreeSnapshotFormat?: boolean;
 }
 
@@ -893,7 +892,7 @@ export type MergeTreeDeltaOperationType = typeof MergeTreeDeltaType.ANNOTATE | t
 // @public (undocumented)
 export type MergeTreeDeltaOperationTypes = MergeTreeDeltaOperationType | MergeTreeMaintenanceType;
 
-// @alpha
+// @public (undocumented)
 export type MergeTreeDeltaRevertible = {
     operation: typeof MergeTreeDeltaType.INSERT;
     trackingGroup: ITrackingGroup;
@@ -931,7 +930,7 @@ export const MergeTreeMaintenanceType: {
 // @public (undocumented)
 export type MergeTreeMaintenanceType = typeof MergeTreeMaintenanceType[keyof typeof MergeTreeMaintenanceType];
 
-// @alpha
+// @public (undocumented)
 export interface MergeTreeRevertibleDriver {
     // (undocumented)
     annotateRange(start: number, end: number, props: PropertySet): any;
@@ -1156,7 +1155,7 @@ export const reservedRangeLabelsKey = "referenceRangeLabels";
 // @public (undocumented)
 export const reservedTileLabelsKey = "referenceTileLabels";
 
-// @alpha
+// @public (undocumented)
 export function revertMergeTreeDeltaRevertibles(driver: MergeTreeRevertibleDriver, revertibles: MergeTreeDeltaRevertible[]): void;
 
 // @public (undocumented)
