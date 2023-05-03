@@ -695,14 +695,19 @@ export class PartialSequenceLengths {
 	 * Note: the local case (where `localSeq !== undefined`) is only supported on a PartialSequenceLength object
 	 * constructed with `computeLocalPartials` set to true and not subsequently updated with `update`.
 	 */
-	public getPartialLength(refSeq: number, clientId: number, minSeq: number, localSeq?: number) {
+	public getPartialLength(
+		refSeq: number,
+		clientId: number,
+		globalMinSeq: number,
+		localSeq?: number,
+	) {
 		if (
 			this.minLength === 0 &&
 			this.clientSeqNumbers.length === 0 &&
 			this.partialLengths.size === 0 &&
 			(this.unsequencedRecords === undefined ||
 				this.unsequencedRecords.partialLengths.size === 0) &&
-			this.minSeq === minSeq
+			this.minSeq === globalMinSeq
 		) {
 			// the length is 0, and there is no outstanding data, and the minSeq is the collab windows minSeq
 			// that means all segments are removed and zamboni eligible
