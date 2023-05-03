@@ -173,7 +173,12 @@ function getPartialLengths(
 	localSeq?: number,
 	mergeBlock: IMergeBlock = mergeTree.root,
 ) {
-	const partialLen = mergeBlock.partialLengths?.getPartialLength(seq, clientId, localSeq);
+	const partialLen = mergeBlock.partialLengths?.getPartialLength(
+		seq,
+		clientId,
+		mergeTree.collabWindow.minSeq,
+		localSeq,
+	);
 
 	let actualLen = 0;
 

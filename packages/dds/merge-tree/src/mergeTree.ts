@@ -936,7 +936,7 @@ export class MergeTree {
 
 	private blockLength(node: IMergeBlock, refSeq: number, clientId: number) {
 		return this.collabWindow.collaborating && clientId !== this.collabWindow.clientId
-			? node.partialLengths!.getPartialLength(refSeq, clientId)
+			? node.partialLengths!.getPartialLength(refSeq, clientId, this.collabWindow.minSeq) ?? 0
 			: node.cachedLength;
 	}
 
@@ -976,12 +976,21 @@ export class MergeTree {
 			} else {
 				this.computeLocalPartials(refSeq);
 				// Local client should see all segments except those after localSeq.
-				return node.partialLengths!.getPartialLength(refSeq, clientId, localSeq);
+				return node.partialLengths!.getPartialLength(
+					refSeq,
+					clientId,
+					this.collabWindow.minSeq,
+					localSeq,
+				);
 			}
 		} else {
 			// Sequence number within window
 			if (!node.isLeaf()) {
-				return node.partialLengths!.getPartialLength(refSeq, clientId);
+				return node.partialLengths!.getPartialLength(
+					refSeq,
+					clientId,
+					this.collabWindow.minSeq,
+				);
 			} else {
 				const segment = node;
 				const removalInfo = toRemovalInfo(segment);
@@ -1638,16 +1647,18 @@ export class MergeTree {
 		let fromSplit: IMergeBlock | undefined;
 		for (childIndex = 0; childIndex < block.childCount; childIndex++) {
 			child = children[childIndex];
-			const rawLen = this.nodeLength(child, refSeq, clientId);
+			// ensure we walk down the far edge of the tree, even if all sub-tree is eligible for zamboni
 			const isLastNonLeafBlock =
 				isLastChildBlock && !child.isLeaf() && childIndex === block.childCount - 1;
-			if (rawLen === undefined && !isLastNonLeafBlock) {
+			const len =
+				this.nodeLength(child, refSeq, clientId) ?? (isLastChildBlock ? 0 : undefined);
+			if (len === undefined) {
 				// if the seg len in undefined, the segment
 				// will be removed, so should just be skipped for now
 				continue;
+			} else {
+				assert(len >= 0, 0x4bc /* Length should not be negative */);
 			}
-			const len = rawLen ?? 0;
-			assert(len >= 0, 0x4bc /* Length should not be negative */);
 
 			if (_pos < len || (_pos === len && this.breakTie(_pos, child, seq))) {
 				// Found entry containing pos
