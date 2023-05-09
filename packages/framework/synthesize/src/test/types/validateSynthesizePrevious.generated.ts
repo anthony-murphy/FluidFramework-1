@@ -35,6 +35,7 @@ declare function get_current_TypeAliasDeclaration_AsyncFluidObjectProvider():
 declare function use_old_TypeAliasDeclaration_AsyncFluidObjectProvider(
     use: TypeOnly<old.AsyncFluidObjectProvider<any,any>>);
 use_old_TypeAliasDeclaration_AsyncFluidObjectProvider(
+    // @ts-expect-error compatibility expected to be broken
     get_current_TypeAliasDeclaration_AsyncFluidObjectProvider());
 
 /*

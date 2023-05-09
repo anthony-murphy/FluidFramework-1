@@ -20,7 +20,7 @@ export type FluidObjectSymbolProvider<T> = {
  * the property.
  */
 export type AsyncRequiredFluidObjectProvider<T> = T extends undefined
-	? Record<string, never>
+	? Record<never, never>
 	: {
 			[P in keyof T]: Promise<NonNullable<Exclude<T[P], undefined | null>>>;
 	  };
@@ -31,7 +31,7 @@ export type AsyncRequiredFluidObjectProvider<T> = T extends undefined
  * the property or undefined.
  */
 export type AsyncOptionalFluidObjectProvider<T> = T extends undefined
-	? Record<string, never>
+	? Record<never, never>
 	: {
 			[P in keyof T]?: Promise<T[P] | undefined>;
 	  };

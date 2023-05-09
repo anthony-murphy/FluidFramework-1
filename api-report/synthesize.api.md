@@ -8,12 +8,12 @@
 export type AsyncFluidObjectProvider<O, R = undefined> = AsyncOptionalFluidObjectProvider<O> & AsyncRequiredFluidObjectProvider<R>;
 
 // @public
-export type AsyncOptionalFluidObjectProvider<T> = T extends undefined ? Record<string, never> : {
+export type AsyncOptionalFluidObjectProvider<T> = T extends undefined ? Record<never, never> : {
     [P in keyof T]?: Promise<T[P] | undefined>;
 };
 
 // @public
-export type AsyncRequiredFluidObjectProvider<T> = T extends undefined ? Record<string, never> : {
+export type AsyncRequiredFluidObjectProvider<T> = T extends undefined ? Record<never, never> : {
     [P in keyof T]: Promise<NonNullable<Exclude<T[P], undefined | null>>>;
 };
 
@@ -42,7 +42,7 @@ export const IFluidDependencySynthesizer: keyof IProvideFluidDependencySynthesiz
 // @public
 export interface IFluidDependencySynthesizer extends IProvideFluidDependencySynthesizer {
     has(type: string): boolean;
-    synthesize<O, R = undefined | Record<string, never>>(optionalTypes: FluidObjectSymbolProvider<O>, requiredTypes: Required<FluidObjectSymbolProvider<R>>): AsyncFluidObjectProvider<O, R>;
+    synthesize<O, R = undefined | Record<never, never>>(optionalTypes: FluidObjectSymbolProvider<O>, requiredTypes: Required<FluidObjectSymbolProvider<R>>): AsyncFluidObjectProvider<O, R>;
 }
 
 // @public (undocumented)
@@ -50,7 +50,6 @@ export interface IProvideFluidDependencySynthesizer {
     // (undocumented)
     IFluidDependencySynthesizer: IFluidDependencySynthesizer;
 }
-
 
 // (No @packageDocumentation comment for this package)
 
