@@ -118,7 +118,10 @@ export const DiceRollerView: React.FC<IDiceRollerViewProps> = (props: IDiceRolle
 							<button onClick={() => props.model.appMergeEven(b.id)}>
 								AppMergeEvenValues
 							</button>
-							<button onClick={() => props.model.rebaseMerge(b.id)}>
+							<button
+								onClick={() => props.model.rebaseMerge(b.id)}
+								hidden={b.type === "static"}
+							>
 								RebaseMerge
 							</button>
 						</div>
