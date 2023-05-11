@@ -24,18 +24,20 @@ export interface IDiceRoller extends EventEmitter {
 	 */
 	roll: (i?: number) => void;
 	snakeEyes: (i?: number) => void;
-	branch: (process?: "remote" | "remote&Local") => Promise<void>;
 
 	paused: boolean;
 	pause: () => void;
 
+	branch: (process?: "remote" | "remote&Local") => Promise<void>;
 	appMergeEven: (i: number) => void;
+	rebaseMerge: (i: number) => void;
+	closeBranch: (i: number) => void;
 
 	/**
 	 * The diceRolled event will fire whenever someone rolls the device, either locally or remotely.
 	 */
 	on(event: "diceRolled", listener: () => void): this;
-	on(event: "branched", listener: () => void): this;
+	on(event: "branchChanges", listener: () => void): this;
 }
 
 export interface IDiceRollerViewProps {
@@ -60,9 +62,9 @@ export const DiceRollerView: React.FC<IDiceRollerViewProps> = (props: IDiceRolle
 		const onBranched = () => {
 			setBranchValue(props.model.branches);
 		};
-		props.model.on("branched", onBranched);
+		props.model.on("branchChanges", onBranched);
 		return () => {
-			props.model.off("branched", onBranched);
+			props.model.off("branchChanges", onBranched);
 		};
 	}, [props.model]);
 
@@ -112,8 +114,12 @@ export const DiceRollerView: React.FC<IDiceRollerViewProps> = (props: IDiceRolle
 							<span>Branch: {b.type}</span>
 						</div>
 						<div>
+							<button onClick={() => props.model.closeBranch(b.id)}>Close</button>
 							<button onClick={() => props.model.appMergeEven(b.id)}>
 								AppMergeEvenValues
+							</button>
+							<button onClick={() => props.model.rebaseMerge(b.id)}>
+								RebaseMerge
 							</button>
 						</div>
 					</div>
@@ -210,25 +216,39 @@ export class DiceRoller extends DataObject implements IDiceRoller {
 		this._branches.set(branch.id, branch);
 		branch.dir.on("valueChanged", (changed: IValueChanged) => {
 			if (diceValueKeys.includes(changed.key)) {
-				this.emit("branched");
+				this.emit("branchChanges");
 			}
 		});
-		this.emit("branched");
+		this.emit("branchChanges");
 	};
 
 	public readonly appMergeEven = (id: number) => {
 		const branch = this._branches.get(id);
 		if (branch !== undefined) {
-			this._branches.delete(id);
-
 			diceValueKeys.forEach((k) => {
 				const val = branch.dir.get(k);
 				if (val % 2 === 0) {
 					this.root.set(k, val);
 				}
 			});
-			this.emit("branched");
 		}
+	};
+
+	public readonly rebaseMerge = (id: number) => {
+		const branch = this._branches.get(id);
+		if (branch !== undefined) {
+			diceValueKeys.forEach((k) => {
+				const val = branch.dir.get(k);
+				if (val % 2 === 0) {
+					this.root.set(k, val);
+				}
+			});
+		}
+	};
+
+	public readonly closeBranch = (i: number) => {
+		this._branches.delete(i);
+		this.emit("branchChanges");
 	};
 }
 

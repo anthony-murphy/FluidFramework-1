@@ -239,7 +239,6 @@ export async function branchChannel(
 		return {
 			channel: await factory.branch(options, services, channel),
 			services,
-			branchOps,
 		};
 	}
 
@@ -253,7 +252,6 @@ export async function branchChannel(
 			channel.id,
 		),
 		services,
-		branchOps,
 	};
 
 	switch (options.process) {
@@ -264,14 +262,19 @@ export async function branchChannel(
 			break;
 		}
 		case "remote&Local": {
-			const skipMd = { msg: "SKIP", md: "SKIP" };
-			const channelToBranchPending = new Map<unknown, { msg: unknown; md: unknown }>();
+			const skipMd = { content: "SKIP", localOpMetadata: "SKIP" };
+			const channelToBranchPending = new Map<
+				unknown,
+				{ content: unknown; localOpMetadata: unknown }
+			>();
 
 			let resbumitting = false;
 			channelServices.deltaConnection.on("submit", (msg, imd) => {
 				if (!resbumitting) {
 					const md = services.deltaConnection.applyStashedOp(msg);
-					channelToBranchPending.set(imd, { msg, md });
+					const branchData = { content: msg, localOpMetadata: md };
+					channelToBranchPending.set(imd, branchData);
+					branchOps.push(branchData);
 				}
 			});
 			channelServices.deltaConnection.on("pre-resubmit", () => {
@@ -281,7 +284,7 @@ export async function branchChannel(
 				const onResbumitSubmit = (_, newMd) => newMds.push(newMd);
 				channelServices.deltaConnection.on("submit", onResbumitSubmit);
 
-				channelServices.deltaConnection.once("post-resubmit", (originalMsg, originalMd) => {
+				channelServices.deltaConnection.once("post-resubmit", (_, originalMd) => {
 					// stop capturing resubmit metadatas
 					channelServices.deltaConnection.off("submit", onResbumitSubmit);
 					resbumitting = false;
@@ -310,9 +313,9 @@ export async function branchChannel(
 					assert(branchData !== undefined, "all local changes need branch data");
 					if (branchData !== skipMd) {
 						services.deltaConnection.process(
-							{ ...msg, contents: branchData.msg },
+							{ ...msg, contents: branchData.content },
 							true,
-							branchData.md,
+							branchData.localOpMetadata,
 						);
 					}
 				} else {
@@ -324,5 +327,14 @@ export async function branchChannel(
 		default:
 	}
 
-	return branch;
+	return {
+		...branch,
+		rebase() {
+			const outstanding = branchOps.splice(0);
+			outstanding.forEach((b) =>
+				services.deltaConnection.reSubmit(b.content, b.localOpMetadata),
+			);
+			return [...branchOps];
+		},
+	};
 }
