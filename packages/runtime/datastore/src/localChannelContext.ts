@@ -73,7 +73,7 @@ export abstract class LocalChannelContextBase implements IChannelContext {
 			factory,
 			this.runtime.logger,
 		);
-		return branch.channel;
+		return { channel: branch.channel };
 	}
 
 	public setConnectionState(connected: boolean, clientId?: string) {

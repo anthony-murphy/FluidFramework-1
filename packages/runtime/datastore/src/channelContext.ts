@@ -66,7 +66,7 @@ export interface IChannelContext {
 	 */
 	updateUsedRoutes(usedRoutes: string[]): void;
 
-	branchChannel(options: { process?: "remote" | "remote&Local" }): Promise<IChannel>;
+	branchChannel(options: { process?: "remote" | "remote&Local" }): Promise<{ channel: IChannel }>;
 }
 
 export interface ChannelServiceEndpoints {

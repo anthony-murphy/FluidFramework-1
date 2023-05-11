@@ -162,7 +162,7 @@ export class RemoteChannelContext implements IChannelContext {
 			branch.services.deltaConnection.process(msg, false, undefined);
 		}
 
-		return branch.channel;
+		return { channel: branch.channel };
 	}
 
 	public setConnectionState(connected: boolean, clientId?: string) {
