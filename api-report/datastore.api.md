@@ -56,6 +56,10 @@ export class FluidDataStoreRuntime extends TypedEventEmitter<IFluidDataStoreRunt
     // @deprecated (undocumented)
     bindToContext(): void;
     // (undocumented)
+    branchChannel(channelId: string, options: {
+        process?: "remote" | "remote&Local";
+    }): Promise<IChannel>;
+    // (undocumented)
     get channelsRoutingContext(): this;
     // (undocumented)
     get clientDetails(): IClientDetails;

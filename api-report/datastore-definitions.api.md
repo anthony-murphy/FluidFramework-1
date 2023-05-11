@@ -52,6 +52,10 @@ export interface IChannelAttributes {
 // @public
 export interface IChannelFactory {
     readonly attributes: IChannelAttributes;
+    // (undocumented)
+    branch?: (options: {
+        process?: "remote" | "remote&Local";
+    }, services: IChannelServices, baseChannel: IChannel) => Promise<IChannel>;
     create(runtime: IFluidDataStoreRuntime, id: string): IChannel;
     load(runtime: IFluidDataStoreRuntime, id: string, services: IChannelServices, channelAttributes: Readonly<IChannelAttributes>): Promise<IChannel>;
     readonly type: string;
@@ -95,6 +99,10 @@ export interface IDeltaHandler {
 export interface IFluidDataStoreRuntime extends IFluidRouter, IEventProvider<IFluidDataStoreRuntimeEvents>, IDisposable, Partial<IProvideFluidDataStoreRegistry> {
     readonly attachState: AttachState;
     bindChannel(channel: IChannel): void;
+    // (undocumented)
+    branchChannel?(channelId: string, options: {
+        process?: "remote" | "remote&Local";
+    }): Promise<IChannel>;
     // (undocumented)
     readonly channelsRoutingContext: IFluidHandleContext;
     // (undocumented)

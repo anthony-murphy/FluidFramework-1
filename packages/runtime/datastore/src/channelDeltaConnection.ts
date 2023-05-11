@@ -3,13 +3,30 @@
  * Licensed under the MIT License.
  */
 
-import { assert } from "@fluidframework/common-utils";
+import { TypedEventEmitter, assert } from "@fluidframework/common-utils";
 import { IDocumentMessage, ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
 import { IDeltaConnection, IDeltaHandler } from "@fluidframework/datastore-definitions";
 import { DataProcessingError } from "@fluidframework/container-utils";
 import { IFluidHandle } from "@fluidframework/core-interfaces";
+import { ITelemetryLogger } from "@fluidframework/common-definitions";
 
-export class ChannelDeltaConnection implements IDeltaConnection {
+export class ChannelDeltaConnection
+	extends TypedEventEmitter<{
+		(
+			event: "submit" | "pre-resubmit" | "post-resubmit" | "rollback",
+			listener: (message: IDocumentMessage, localOpMetadata: unknown) => void,
+		);
+		(
+			event: "process",
+			listener: (
+				message: ISequencedDocumentMessage,
+				local: boolean,
+				localOpMetadata: unknown,
+			) => void,
+		);
+	}>
+	implements IDeltaConnection
+{
 	private _handler: IDeltaHandler | undefined;
 
 	private get handler(): IDeltaHandler {
@@ -20,15 +37,42 @@ export class ChannelDeltaConnection implements IDeltaConnection {
 		return this._connected;
 	}
 
+	public static clone(
+		original: ChannelDeltaConnection,
+		overrides: {
+			_connected?: boolean;
+			submit?: (message: unknown, localOpMetadata: unknown) => void;
+			dirty?: () => void;
+			addedGCOutboundReference?: (
+				srcHandle: IFluidHandle,
+				outboundHandle: IFluidHandle,
+			) => void;
+			logger?: ITelemetryLogger;
+		},
+	) {
+		return new ChannelDeltaConnection(
+			overrides._connected ?? original._connected,
+			overrides.submit ?? original.submit,
+			overrides.dirty ?? original.dirty,
+			overrides.addedGCOutboundReference ?? original.addedGCOutboundReference,
+		);
+	}
+	public readonly submit: (message: unknown, localOpMetadata: unknown) => void;
 	constructor(
 		private _connected: boolean,
-		public readonly submit: (message: IDocumentMessage, localOpMetadata: unknown) => void,
+		submit: (message: unknown, localOpMetadata: unknown) => void,
 		public readonly dirty: () => void,
 		public readonly addedGCOutboundReference: (
 			srcHandle: IFluidHandle,
 			outboundHandle: IFluidHandle,
 		) => void,
-	) {}
+	) {
+		super();
+		this.submit = (msg, md) => {
+			submit(msg, md);
+			this.emit("submit", msg, md);
+		};
+	}
 
 	public attach(handler: IDeltaHandler) {
 		assert(this._handler === undefined, 0x178 /* "Missing delta handler on attach" */);
@@ -51,10 +95,13 @@ export class ChannelDeltaConnection implements IDeltaConnection {
 				message,
 			);
 		}
+		this.emit("process", message, local, localOpMetadata);
 	}
 
 	public reSubmit(content: any, localOpMetadata: unknown) {
+		this.emit("pre-resubmit", content, localOpMetadata);
 		this.handler.reSubmit(content, localOpMetadata);
+		this.emit("post-resubmit", content, localOpMetadata);
 	}
 
 	public rollback(content: any, localOpMetadata: unknown) {
@@ -62,9 +109,10 @@ export class ChannelDeltaConnection implements IDeltaConnection {
 			throw new Error("Handler doesn't support rollback");
 		}
 		this.handler.rollback(content, localOpMetadata);
+		this.emit("rollback", content, localOpMetadata);
 	}
 
-	public applyStashedOp(message: ISequencedDocumentMessage): unknown {
+	public applyStashedOp(message: unknown): unknown {
 		return this.handler.applyStashedOp(message);
 	}
 }

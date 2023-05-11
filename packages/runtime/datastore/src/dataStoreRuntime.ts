@@ -478,6 +478,15 @@ export class FluidDataStoreRuntime
 		return context.channel;
 	}
 
+	public async branchChannel(
+		channelId: string,
+		options: { process?: "remote" | "remote&Local" },
+	): Promise<IChannel> {
+		const channelContext = this.contexts.get(channelId);
+		assert(channelContext !== undefined, "foo");
+		return channelContext.branchChannel(options);
+	}
+
 	/**
 	 * Binds a channel with the runtime. If the runtime is attached we will attach the channel right away.
 	 * If the runtime is not attached we will defer the attach until the runtime attaches.

@@ -6,7 +6,11 @@
 import { ITelemetryLogger } from "@fluidframework/common-definitions";
 import { LazyPromise, assert } from "@fluidframework/common-utils";
 import { IFluidHandle } from "@fluidframework/core-interfaces";
-import { IChannel, IFluidDataStoreRuntime } from "@fluidframework/datastore-definitions";
+import {
+	IChannel,
+	IChannelFactory,
+	IFluidDataStoreRuntime,
+} from "@fluidframework/datastore-definitions";
 import { IDocumentStorageService } from "@fluidframework/driver-definitions";
 import { ISequencedDocumentMessage, ISnapshotTree } from "@fluidframework/protocol-definitions";
 import {
@@ -21,6 +25,7 @@ import {
 } from "@fluidframework/runtime-definitions";
 import { ChildLogger, ThresholdCounter } from "@fluidframework/telemetry-utils";
 import {
+	branchChannel,
 	ChannelServiceEndpoints,
 	createChannelServiceEndpoints,
 	IChannelContext,
@@ -31,18 +36,26 @@ import {
 import { ISharedObjectRegistry } from "./dataStoreRuntime";
 
 export class RemoteChannelContext implements IChannelContext {
-	private isLoaded = false;
-	private pending: ISequencedDocumentMessage[] | undefined = [];
-	private readonly channelP: Promise<IChannel>;
-	private channel: IChannel | undefined;
-	private readonly services: ChannelServiceEndpoints;
+	private readonly pending: ISequencedDocumentMessage[] = [];
+	private readonly channelP: Promise<{
+		channel: IChannel;
+		factory: IChannelFactory;
+		services: ChannelServiceEndpoints;
+	}>;
+	private channel:
+		| {
+				channel: IChannel;
+				factory: IChannelFactory;
+				services: ChannelServiceEndpoints;
+		  }
+		| undefined;
 	private readonly summarizerNode: ISummarizerNodeWithGC;
 	private readonly subLogger: ITelemetryLogger;
 	private readonly thresholdOpsCounter: ThresholdCounter;
 	private static readonly pendingOpsCountThreshold = 1000;
 
 	constructor(
-		runtime: IFluidDataStoreRuntime,
+		private readonly runtime: IFluidDataStoreRuntime,
 		dataStoreContext: IFluidDataStoreContext,
 		storageService: IDocumentStorageService,
 		submitFn: (content: any, localOpMetadata: unknown) => void,
@@ -59,21 +72,21 @@ export class RemoteChannelContext implements IChannelContext {
 
 		this.subLogger = ChildLogger.create(runtime.logger, "RemoteChannelContext");
 
-		this.services = createChannelServiceEndpoints(
-			dataStoreContext.connected,
-			submitFn,
-			() => dirtyFn(this.id),
-			addedGCOutboundReferenceFn,
-			storageService,
-			this.subLogger,
-			baseSnapshot,
-			extraBlobs,
-		);
+		this.channelP = new LazyPromise(async () => {
+			const services = createChannelServiceEndpoints(
+				dataStoreContext.connected,
+				submitFn,
+				() => dirtyFn(this.id),
+				addedGCOutboundReferenceFn,
+				storageService,
+				this.subLogger,
+				baseSnapshot,
+				extraBlobs,
+			);
 
-		this.channelP = new LazyPromise<IChannel>(async () => {
 			const { attributes, factory } = await loadChannelFactoryAndAttributes(
 				dataStoreContext,
-				this.services,
+				services,
 				this.id,
 				registry,
 				attachMessageType,
@@ -83,7 +96,7 @@ export class RemoteChannelContext implements IChannelContext {
 				runtime,
 				attributes,
 				factory,
-				this.services,
+				services,
 				this.subLogger,
 				this.id,
 			);
@@ -91,22 +104,16 @@ export class RemoteChannelContext implements IChannelContext {
 			// Send all pending messages to the channel
 			assert(this.pending !== undefined, 0x23f /* "pending undefined" */);
 			for (const message of this.pending) {
-				this.services.deltaConnection.process(
-					message,
-					false,
-					undefined /* localOpMetadata */,
-				);
+				services.deltaConnection.process(message, false, undefined /* localOpMetadata */);
 			}
 			this.thresholdOpsCounter.send("ProcessPendingOps", this.pending.length);
 
 			// Commit changes.
-			this.channel = channel;
-			this.pending = undefined;
-			this.isLoaded = true;
+			this.channel = { channel, factory, services };
 
 			// Because have some await between we created the service and here, the connection state might have changed
 			// and we don't propagate the connection state when we are not loaded.  So we have to set it again here.
-			this.services.deltaConnection.setConnectionState(dataStoreContext.connected);
+			services.deltaConnection.setConnectionState(dataStoreContext.connected);
 			return this.channel;
 		});
 
@@ -136,21 +143,43 @@ export class RemoteChannelContext implements IChannelContext {
 
 	// eslint-disable-next-line @typescript-eslint/promise-function-async
 	public getChannel(): Promise<IChannel> {
-		return this.channelP;
+		return this.channelP.then((c) => c.channel);
+	}
+
+	public async branchChannel(options: { process?: "remote" | "remote&Local" }) {
+		const mainChannel = await this.channelP;
+
+		const branch = await branchChannel(
+			options,
+			mainChannel.channel,
+			mainChannel.services,
+			this.runtime,
+			mainChannel.factory,
+			this.subLogger,
+		);
+
+		for (const msg of this.pending) {
+			branch.services.deltaConnection.process(msg, false, undefined);
+		}
+
+		return branch.channel;
 	}
 
 	public setConnectionState(connected: boolean, clientId?: string) {
 		// Connection events are ignored if the data store is not yet loaded
-		if (!this.isLoaded) {
+		if (this.channel === undefined) {
 			return;
 		}
 
-		this.services.deltaConnection.setConnectionState(connected);
+		this.channel.services.deltaConnection.setConnectionState(connected);
 	}
 
 	public applyStashedOp(message: ISequencedDocumentMessage): unknown {
-		assert(this.isLoaded, 0x194 /* "Remote channel must be loaded when rebasing op" */);
-		return this.services.deltaConnection.applyStashedOp(message);
+		assert(
+			this.channel !== undefined,
+			0x194 /* "Remote channel must be loaded when rebasing op" */,
+		);
+		return this.channel.services.deltaConnection.applyStashedOp(message);
 	}
 
 	public processOp(
@@ -159,27 +188,33 @@ export class RemoteChannelContext implements IChannelContext {
 		localOpMetadata: unknown,
 	): void {
 		this.summarizerNode.invalidate(message.sequenceNumber);
+		this.pending.push(message);
 
-		if (this.isLoaded) {
-			this.services.deltaConnection.process(message, local, localOpMetadata);
+		if (this.channel !== undefined) {
+			this.channel.services.deltaConnection.process(message, local, localOpMetadata);
 		} else {
 			assert(!local, 0x195 /* "Remote channel must not be local when processing op" */);
 			assert(this.pending !== undefined, 0x23e /* "pending is undefined" */);
-			this.pending.push(message);
 			this.thresholdOpsCounter.sendIfMultiple("StorePendingOps", this.pending.length);
 		}
 	}
 
 	public reSubmit(content: any, localOpMetadata: unknown) {
-		assert(this.isLoaded, 0x196 /* "Remote channel must be loaded when resubmitting op" */);
+		assert(
+			this.channel !== undefined,
+			0x196 /* "Remote channel must be loaded when resubmitting op" */,
+		);
 
-		this.services.deltaConnection.reSubmit(content, localOpMetadata);
+		this.channel.services.deltaConnection.reSubmit(content, localOpMetadata);
 	}
 
 	public rollback(content: any, localOpMetadata: unknown) {
-		assert(this.isLoaded, 0x2f0 /* "Remote channel must be loaded when rolling back op" */);
+		assert(
+			this.channel !== undefined,
+			0x2f0 /* "Remote channel must be loaded when rolling back op" */,
+		);
 
-		this.services.deltaConnection.rollback(content, localOpMetadata);
+		this.channel.services.deltaConnection.rollback(content, localOpMetadata);
 	}
 
 	/**

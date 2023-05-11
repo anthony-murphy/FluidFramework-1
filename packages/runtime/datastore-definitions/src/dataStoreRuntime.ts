@@ -95,6 +95,11 @@ export interface IFluidDataStoreRuntime
 	 */
 	createChannel(id: string | undefined, type: string): IChannel;
 
+	branchChannel?(
+		channelId: string,
+		options: { process?: "remote" | "remote&Local" },
+	): Promise<IChannel>;
+
 	/**
 	 * Bind the channel with the data store runtime. If the runtime
 	 * is attached then we attach the channel to make it live.
