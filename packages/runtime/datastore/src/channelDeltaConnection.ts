@@ -4,7 +4,7 @@
  */
 
 import { TypedEventEmitter, assert } from "@fluidframework/common-utils";
-import { IDocumentMessage, ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
+import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
 import { IDeltaConnection, IDeltaHandler } from "@fluidframework/datastore-definitions";
 import { DataProcessingError } from "@fluidframework/container-utils";
 import { IFluidHandle } from "@fluidframework/core-interfaces";
@@ -14,7 +14,7 @@ export class ChannelDeltaConnection
 	extends TypedEventEmitter<{
 		(
 			event: "submit" | "pre-resubmit" | "post-resubmit" | "rollback",
-			listener: (message: IDocumentMessage, localOpMetadata: unknown) => void,
+			listener: (content: any, localOpMetadata: unknown) => void,
 		);
 		(
 			event: "process",
