@@ -235,18 +235,23 @@ export async function branchChannel(
 		objectStorage: channelServices.objectStorage,
 	};
 
+	if (factory.branch) {
+		return {
+			channel: await factory.branch(options, services, channel),
+			services,
+			branchOps,
+		};
+	}
+
 	const branch = {
-		channel:
-			factory.branch !== undefined
-				? await factory.branch(options, services, channel)
-				: await loadChannel(
-						dataStoreRuntime,
-						channel.attributes,
-						factory,
-						services,
-						logger,
-						channel.id,
-				  ),
+		channel: await loadChannel(
+			dataStoreRuntime,
+			channel.attributes,
+			factory,
+			services,
+			logger,
+			channel.id,
+		),
 		services,
 		branchOps,
 	};
