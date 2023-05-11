@@ -58,7 +58,9 @@ export class FluidDataStoreRuntime extends TypedEventEmitter<IFluidDataStoreRunt
     // (undocumented)
     branchChannel(channelId: string, options: {
         process?: "remote" | "remote&Local";
-    }): Promise<IChannel>;
+    }): Promise<{
+        channel: IChannel;
+    }>;
     // (undocumented)
     get channelsRoutingContext(): this;
     // (undocumented)

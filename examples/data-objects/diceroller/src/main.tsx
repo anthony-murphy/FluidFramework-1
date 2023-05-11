@@ -209,9 +209,11 @@ export class DiceRoller extends DataObject implements IDiceRoller {
 	}
 
 	public readonly branch = async (process?: "remote" | "remote&Local") => {
-		const dir = (await this.runtime.branchChannel?.("root", {
-			process,
-		})) as ISharedDirectory;
+		const dir = (
+			await this.runtime.branchChannel?.("root", {
+				process,
+			})
+		)?.channel as ISharedDirectory;
 		const branch = { dir, id: Date.now(), type: process ?? "static" };
 		this._branches.set(branch.id, branch);
 		branch.dir.on("valueChanged", (changed: IValueChanged) => {

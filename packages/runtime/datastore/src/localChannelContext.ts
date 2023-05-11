@@ -63,7 +63,7 @@ export abstract class LocalChannelContextBase implements IChannelContext {
 
 	public async branchChannel(options: {
 		process?: "remote" | "remote&Local";
-	}): Promise<IChannel> {
+	}): Promise<{ channel: IChannel }> {
 		const { channel, factory } = await this.channelP;
 		const branch = await branchChannel(
 			options,

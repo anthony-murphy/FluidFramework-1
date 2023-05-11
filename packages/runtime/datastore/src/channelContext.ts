@@ -327,14 +327,5 @@ export async function branchChannel(
 		default:
 	}
 
-	return {
-		...branch,
-		rebase() {
-			const outstanding = branchOps.splice(0);
-			outstanding.forEach((b) =>
-				services.deltaConnection.reSubmit(b.content, b.localOpMetadata),
-			);
-			return [...branchOps];
-		},
-	};
+	return branch;
 }
