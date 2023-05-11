@@ -66,7 +66,9 @@ export interface IChannelContext {
 	 */
 	updateUsedRoutes(usedRoutes: string[]): void;
 
-	branchChannel(options: { process?: "remote" | "remote&Local" }): Promise<{ channel: IChannel }>;
+	branchChannel(options: {
+		process?: "remote" | "remote&Local";
+	}): Promise<{ channel: IChannel; context?: { merge() } }>;
 }
 
 export interface ChannelServiceEndpoints {
@@ -224,11 +226,9 @@ export async function branchChannel(
 	factory: IChannelFactory,
 	logger: ITelemetryLogger,
 ) {
-	const branchOps: { content: unknown; localOpMetadata: unknown }[] = [];
 	const services: ChannelServiceEndpoints = {
 		deltaConnection: ChannelDeltaConnection.clone(channelServices.deltaConnection, {
-			submit: (content: unknown, localOpMetadata: unknown) =>
-				branchOps.push({ content, localOpMetadata }),
+			submit: () => {},
 			dirty: () => {},
 			addedGCOutboundReference: () => {},
 		}),
@@ -239,9 +239,17 @@ export async function branchChannel(
 		return {
 			channel: await factory.branch(options, services, channel),
 			services,
+			merge: undefined,
 		};
 	}
 
+	const branchPending: {
+		content: unknown;
+		branchMetadata: unknown;
+		channelMetadata?: unknown;
+	}[] = [];
+
+	let ignoreChannelSubmits = false;
 	const branch = {
 		channel: await loadChannel(
 			dataStoreRuntime,
@@ -252,75 +260,106 @@ export async function branchChannel(
 			channel.id,
 		),
 		services,
+		merge: () => {
+			const pending = branchPending.splice(0);
+			pending.forEach((p) => {
+				assert(p.channelMetadata === undefined, "cannot rebase with remote changes");
+				branch.services.deltaConnection.reSubmit(p.content, p.branchMetadata);
+			});
+			const rebased = branchPending.splice(0);
+			ignoreChannelSubmits = true;
+			rebased.forEach((p) => {
+				const channelMetadata = channelServices.deltaConnection.applyStashedOp(p.content);
+				channelServices.deltaConnection.submit(p.content, channelMetadata);
+				branchPending.push({ ...p, channelMetadata });
+			});
+			ignoreChannelSubmits = false;
+		},
 	};
 
 	switch (options.process) {
 		case "remote": {
-			channelServices.deltaConnection.on("process", (msg) => {
+			channelServices.deltaConnection.on("process", (msg, local, md) => {
+				if (local) {
+					const pendingIndex = branchPending.findIndex((b) => b.channelMetadata === md);
+					// -1 means DNE and skip, sometimes happens during reconnect remapping or merge
+					if (pendingIndex !== -1) {
+						assert(pendingIndex === 0, "must be first element");
+						// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+						const branchData = branchPending.shift()!;
+						services.deltaConnection.process(
+							{ ...msg, contents: branchData.content },
+							true,
+							branchData.branchMetadata,
+						);
+						return;
+					}
+				}
 				services.deltaConnection.process(msg, false, undefined);
+			});
+			branch.services.deltaConnection.on("submit", (content, branchMetadata) => {
+				branchPending.push({ content, branchMetadata });
 			});
 			break;
 		}
 		case "remote&Local": {
-			const skipMd = { content: "SKIP", localOpMetadata: "SKIP" };
-			const channelToBranchPending = new Map<
-				unknown,
-				{ content: unknown; localOpMetadata: unknown }
-			>();
+			branch.services.deltaConnection.on("submit", (content, branchMetadata) =>
+				branchPending.push({ content, branchMetadata }),
+			);
 
-			let resbumitting = false;
 			channelServices.deltaConnection.on("submit", (msg, imd) => {
-				if (!resbumitting) {
+				if (!ignoreChannelSubmits) {
+					// pretend the channel's op in the branches op
 					const md = services.deltaConnection.applyStashedOp(msg);
-					const branchData = { content: msg, localOpMetadata: md };
-					channelToBranchPending.set(imd, branchData);
-					branchOps.push(branchData);
+					branchPending.push({ content: msg, branchMetadata: md, channelMetadata: imd });
 				}
-			});
-			channelServices.deltaConnection.on("pre-resubmit", () => {
-				resbumitting = true;
-				const newMds: unknown[] = [];
-				// capture the new branch metadata if submitted
-				const onResbumitSubmit = (_, newMd) => newMds.push(newMd);
-				channelServices.deltaConnection.on("submit", onResbumitSubmit);
-
-				channelServices.deltaConnection.once("post-resubmit", (_, originalMd) => {
-					// stop capturing resubmit metadatas
-					channelServices.deltaConnection.off("submit", onResbumitSubmit);
-					resbumitting = false;
-					// get the original branch data from original submit metadata
-					const branchData = channelToBranchPending.get(originalMd);
-					assert(branchData !== undefined, "all local changes need branch data");
-					// delete the original metadata, as its no longer applies
-					channelToBranchPending.delete(originalMd);
-					if (newMds.length > 0) {
-						// mark all resubmit ops as skip
-						newMds.forEach((nm) => channelToBranchPending.set(nm, skipMd));
-						// map the last resubmit op to the branches data
-						channelToBranchPending.set(newMds[newMds.length - 1], branchData);
-					}
-				});
-			});
-
-			channelServices.deltaConnection.on("rollback", (msg, md) => {
-				services.deltaConnection.rollback(msg, channelToBranchPending.get(md));
-				channelToBranchPending.delete(md);
 			});
 
 			channelServices.deltaConnection.on("process", (msg, local, md) => {
 				if (local) {
-					const branchData = channelToBranchPending.get(md);
-					assert(branchData !== undefined, "all local changes need branch data");
-					if (branchData !== skipMd) {
+					const pendingIndex = branchPending.findIndex((b) => b.channelMetadata === md);
+					// -1 means DNE and skip, sometimes happens during reconnect remapping or merge
+					if (pendingIndex !== -1) {
+						assert(pendingIndex === 0, "must be first element");
+						// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+						const branchData = branchPending.shift()!;
 						services.deltaConnection.process(
 							{ ...msg, contents: branchData.content },
 							true,
-							branchData.localOpMetadata,
+							branchData.branchMetadata,
 						);
 					}
 				} else {
 					services.deltaConnection.process(msg, false, undefined);
 				}
+			});
+
+			channelServices.deltaConnection.on("pre-resubmit", () => {
+				ignoreChannelSubmits = true;
+				let lastNewMd: unknown | undefined;
+				// capture the new branch metadata if submitted
+				{
+					const onResubmitSubmit = (_, newMd) => void (lastNewMd = newMd);
+					channelServices.deltaConnection.on("submit", onResubmitSubmit);
+					channelServices.deltaConnection.once("post-resubmit", () => {
+						// stop capturing resubmit metadatas
+						channelServices.deltaConnection.off("submit", onResubmitSubmit);
+						ignoreChannelSubmits = false;
+					});
+				}
+
+				channelServices.deltaConnection.once("post-resubmit", (_, originalMd) => {
+					// get the original branch data from original submit metadata
+					const pendingIndex = branchPending.findIndex(
+						(b) => b.channelMetadata === originalMd,
+					);
+					assert(pendingIndex !== -1, "all local changes need branch data");
+					branchPending[pendingIndex].channelMetadata = lastNewMd;
+				});
+			});
+
+			channelServices.deltaConnection.on("rollback", (msg, md) => {
+				throw new Error("not implemented");
 			});
 			break;
 		}

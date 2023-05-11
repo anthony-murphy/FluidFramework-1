@@ -162,7 +162,10 @@ export class RemoteChannelContext implements IChannelContext {
 			branch.services.deltaConnection.process(msg, false, undefined);
 		}
 
-		return { channel: branch.channel };
+		return {
+			channel: branch.channel,
+			context: branch.merge !== undefined ? { merge: branch.merge } : undefined,
+		};
 	}
 
 	public setConnectionState(connected: boolean, clientId?: string) {
@@ -174,12 +177,12 @@ export class RemoteChannelContext implements IChannelContext {
 		this.channel.services.deltaConnection.setConnectionState(connected);
 	}
 
-	public applyStashedOp(message: ISequencedDocumentMessage): unknown {
+	public applyStashedOp(content: unknown): unknown {
 		assert(
 			this.channel !== undefined,
 			0x194 /* "Remote channel must be loaded when rebasing op" */,
 		);
-		return this.channel.services.deltaConnection.applyStashedOp(message);
+		return this.channel.services.deltaConnection.applyStashedOp(content);
 	}
 
 	public processOp(

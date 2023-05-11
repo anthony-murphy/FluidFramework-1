@@ -104,6 +104,9 @@ export interface IFluidDataStoreRuntime extends IFluidRouter, IEventProvider<IFl
         process?: "remote" | "remote&Local";
     }): Promise<{
         channel: IChannel;
+        context?: {
+            merge: () => void;
+        };
     }>;
     // (undocumented)
     readonly channelsRoutingContext: IFluidHandleContext;

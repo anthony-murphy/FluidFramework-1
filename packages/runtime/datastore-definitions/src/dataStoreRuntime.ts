@@ -98,7 +98,7 @@ export interface IFluidDataStoreRuntime
 	branchChannel?(
 		channelId: string,
 		options: { process?: "remote" | "remote&Local" },
-	): Promise<{ channel: IChannel }>;
+	): Promise<{ channel: IChannel; context?: { merge: () => void } }>;
 
 	/**
 	 * Bind the channel with the data store runtime. If the runtime

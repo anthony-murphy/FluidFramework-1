@@ -197,7 +197,7 @@ export class DiceRoller extends DataObject implements IDiceRoller {
 
 	private readonly _branches = new Map<
 		number,
-		{ dir: ISharedDirectory; id: number; type: string }
+		{ dir: ISharedDirectory; id: number; type: string; merge?: () => void }
 	>();
 	public get branches() {
 		return Array.from(this._branches.values()).map((v) => ({
@@ -209,12 +209,14 @@ export class DiceRoller extends DataObject implements IDiceRoller {
 	}
 
 	public readonly branch = async (process?: "remote" | "remote&Local") => {
-		const dir = (
-			await this.runtime.branchChannel?.("root", {
-				process,
-			})
-		)?.channel as ISharedDirectory;
-		const branch = { dir, id: Date.now(), type: process ?? "static" };
+		const details = await this.runtime.branchChannel?.("root", { process });
+
+		const branch = {
+			dir: details?.channel as ISharedDirectory,
+			merge: details?.context?.merge,
+			id: Date.now(),
+			type: process ?? "static",
+		};
 		this._branches.set(branch.id, branch);
 		branch.dir.on("valueChanged", (changed: IValueChanged) => {
 			if (diceValueKeys.includes(changed.key)) {
@@ -238,14 +240,8 @@ export class DiceRoller extends DataObject implements IDiceRoller {
 
 	public readonly rebaseMerge = (id: number) => {
 		const branch = this._branches.get(id);
-		if (branch !== undefined) {
-			diceValueKeys.forEach((k) => {
-				const val = branch.dir.get(k);
-				if (val % 2 === 0) {
-					this.root.set(k, val);
-				}
-			});
-		}
+		branch?.merge?.();
+		this.emit("branchChanges");
 	};
 
 	public readonly closeBranch = (i: number) => {
