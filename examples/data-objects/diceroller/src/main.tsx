@@ -90,9 +90,22 @@ export const DiceRollerView: React.FC<IDiceRollerViewProps> = (props: IDiceRolle
 				</div>
 				<div>
 					<span>Branch: </span>
-					<button onClick={() => void props.model.branch()}>Static</button>
-					<button onClick={() => void props.model.branch("remote")}>ProcessRemote</button>
-					<button onClick={() => void props.model.branch("remote&Local")}>
+					<button
+						onClick={() => void props.model.branch()}
+						title="Create a branch on the current state of the channel, not additional ops will flow"
+					>
+						Static
+					</button>
+					<button
+						onClick={() => void props.model.branch("remote")}
+						title="Create a branch on the current state of the channel and process remote ops"
+					>
+						ProcessRemote
+					</button>
+					<button
+						onClick={() => void props.model.branch("remote&Local")}
+						title="Create a branch on the current state of the channel, process remote ops, and optimistically apply local ops"
+					>
 						ProcessRemoteAndLocal
 					</button>
 				</div>
@@ -114,7 +127,6 @@ export const DiceRollerView: React.FC<IDiceRollerViewProps> = (props: IDiceRolle
 							<span>Branch: {b.type}</span>
 						</div>
 						<div>
-							<button onClick={() => props.model.closeBranch(b.id)}>Close</button>
 							<button onClick={() => props.model.appMergeEven(b.id)}>
 								AppMergeEvenValues
 							</button>
@@ -241,12 +253,14 @@ export class DiceRoller extends DataObject implements IDiceRoller {
 					this.root.set(k, val);
 				}
 			});
+			this.closeBranch(id);
 		}
 	};
 
 	public readonly rebaseMerge = (id: number) => {
 		const branch = this._branches.get(id);
 		branch?.merge?.();
+		this.closeBranch(id);
 		this.emit("branchChanges");
 	};
 

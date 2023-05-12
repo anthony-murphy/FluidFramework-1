@@ -239,17 +239,11 @@ export async function branchChannel(
 		return {
 			channel: await factory.branch(options, services, channel),
 			services,
+			// merge would probably come from the channel itself
 			merge: undefined,
 		};
 	}
 
-	const branchPending: {
-		content: unknown;
-		branchMetadata: unknown;
-		channelMetadata?: unknown;
-	}[] = [];
-
-	let ignoreChannelSubmits = false;
 	const branch = {
 		channel: await loadChannel(
 			dataStoreRuntime,
@@ -260,110 +254,145 @@ export async function branchChannel(
 			channel.id,
 		),
 		services,
-		merge: () => {
-			const pending = branchPending.splice(0);
-			pending.forEach((p) => {
-				assert(p.channelMetadata === undefined, "cannot rebase with remote changes");
-				branch.services.deltaConnection.reSubmit(p.content, p.branchMetadata);
-			});
-			const rebased = branchPending.splice(0);
-			ignoreChannelSubmits = true;
-			rebased.forEach((p) => {
-				const channelMetadata = channelServices.deltaConnection.applyStashedOp(p.content);
-				branchPending.push({ ...p, channelMetadata });
-				channelServices.deltaConnection.submit(p.content, channelMetadata);
-			});
-			ignoreChannelSubmits = false;
-		},
+		merge:
+			options.process === undefined
+				? undefined
+				: options.process === "remote"
+				? createRemoteProcessingMerge(
+						services.deltaConnection,
+						channelServices.deltaConnection,
+				  )
+				: createRemoteAndLocalProcessingMerge(
+						services.deltaConnection,
+						channelServices.deltaConnection,
+				  ),
 	};
 
-	channelServices.deltaConnection.on("pre-resubmit", () => {
+	return branch;
+}
+
+function createRemoteProcessingMerge(
+	branchDelta: ChannelDeltaConnection,
+	channelDelta: ChannelDeltaConnection,
+) {
+	const branchPending: {
+		content: unknown;
+		branchMetadata: unknown;
+		channelMetadata?: unknown;
+	}[] = [];
+	let ignoreChannelSubmits = false;
+
+	channelDelta.on("process", (msg, local, md) => {
+		if (!ignoreChannelSubmits) {
+			branchDelta.process(msg, false, undefined);
+		}
+	});
+	branchDelta.on("submit", (content, branchMetadata) => {
+		branchPending.push({ content, branchMetadata });
+	});
+
+	return () => {
+		const pending = branchPending.splice(0);
+		pending.forEach((p) => {
+			assert(p.channelMetadata === undefined, "cannot rebase with remote changes");
+			branchDelta.reSubmit(p.content, p.branchMetadata);
+		});
+		const rebased = branchPending.splice(0);
 		ignoreChannelSubmits = true;
-		let lastNewMd: unknown | undefined;
-		// capture the new branch metadata if submitted
-		{
-			const onResubmitSubmit = (_, newMd) => void (lastNewMd = newMd);
-			channelServices.deltaConnection.on("submit", onResubmitSubmit);
-			channelServices.deltaConnection.once("post-resubmit", () => {
-				// stop capturing resubmit metadatas
-				channelServices.deltaConnection.off("submit", onResubmitSubmit);
-				ignoreChannelSubmits = false;
+		rebased.forEach((p) => {
+			const channelMetadata = channelDelta.applyStashedOp(p.content);
+			branchPending.push({ ...p, channelMetadata });
+			channelDelta.submit(p.content, channelMetadata);
+		});
+		ignoreChannelSubmits = false;
+	};
+}
+
+function createRemoteAndLocalProcessingMerge(
+	branchDelta: ChannelDeltaConnection,
+	channelDelta: ChannelDeltaConnection,
+) {
+	const branchPending: {
+		content: unknown;
+		branchMetadata: unknown;
+		channelMetadata?: Set<unknown>;
+	}[] = [];
+	let ignoreChannelSubmits = false;
+
+	branchDelta.on("submit", (content, branchMetadata) =>
+		branchPending.push({ content, branchMetadata }),
+	);
+
+	channelDelta.on("submit", (content, channelMetadata) => {
+		if (!ignoreChannelSubmits) {
+			// pretend the channel's op in the branches op
+			const branchMetadata = branchDelta.applyStashedOp(content);
+			branchPending.push({
+				content,
+				branchMetadata,
+				channelMetadata: new Set([channelMetadata]),
 			});
 		}
+	});
 
-		channelServices.deltaConnection.once("post-resubmit", (_, originalMd) => {
-			// get the original branch data from original submit metadata
-			const pendingIndex = branchPending.findIndex((b) => b.channelMetadata === originalMd);
-			assert(pendingIndex !== -1, "all local changes need branch data");
-			branchPending[pendingIndex].channelMetadata = lastNewMd;
+	channelDelta.on("process", (message, local, channelMetadata) => {
+		if (local) {
+			const pendingIndex = branchPending.findIndex(
+				(b) => b.channelMetadata?.has(channelMetadata) === true,
+			);
+			assert(pendingIndex === 0, "must be first element");
+
+			branchPending[0].channelMetadata?.delete(channelMetadata);
+			if (branchPending[0].channelMetadata?.size === 0) {
+				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+				const branchData = branchPending.shift()!;
+				branchDelta.process(
+					{ ...message, contents: branchData.content },
+					true,
+					branchData.branchMetadata,
+				);
+			}
+		} else {
+			branchDelta.process(message, false, undefined);
+		}
+	});
+
+	channelDelta.on("pre-resubmit", (_, originalChannelMetadata) => {
+		// get the original branch data from original submit metadata
+		const pendingIndex = branchPending.findIndex(
+			(b) => b.channelMetadata?.has(originalChannelMetadata) === true,
+		);
+		assert(pendingIndex !== -1, "should exist if tracking");
+
+		const newChannelMetadata = new Set<unknown>();
+		// capture the new branch metadata if submitted
+
+		const onResubmitSubmit = (c, channelMetadata) => newChannelMetadata.add(channelMetadata);
+
+		ignoreChannelSubmits = true;
+		channelDelta.on("submit", onResubmitSubmit);
+		channelDelta.once("post-resubmit", () => {
+			// stop capturing resubmit metadatas
+			channelDelta.off("submit", onResubmitSubmit);
+			ignoreChannelSubmits = false;
+
+			branchPending[pendingIndex].channelMetadata = newChannelMetadata;
 		});
 	});
 
-	switch (options.process) {
-		case "remote": {
-			channelServices.deltaConnection.on("process", (msg, local, md) => {
-				if (local) {
-					const pendingIndex = branchPending.findIndex((b) => b.channelMetadata === md);
-					// -1 means DNE and skip, sometimes happens during reconnect remapping or merge
-					if (pendingIndex !== -1) {
-						assert(pendingIndex === 0, "must be first element");
-						// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-						const branchData = branchPending.shift()!;
-						services.deltaConnection.process(
-							{ ...msg, contents: branchData.content },
-							true,
-							branchData.branchMetadata,
-						);
-						return;
-					}
-				}
-				services.deltaConnection.process(msg, false, undefined);
-			});
-			branch.services.deltaConnection.on("submit", (content, branchMetadata) => {
-				branchPending.push({ content, branchMetadata });
-			});
-
-			break;
-		}
-		case "remote&Local": {
-			branch.services.deltaConnection.on("submit", (content, branchMetadata) =>
-				branchPending.push({ content, branchMetadata }),
-			);
-
-			channelServices.deltaConnection.on("submit", (msg, imd) => {
-				if (!ignoreChannelSubmits) {
-					// pretend the channel's op in the branches op
-					const md = services.deltaConnection.applyStashedOp(msg);
-					branchPending.push({ content: msg, branchMetadata: md, channelMetadata: imd });
-				}
-			});
-
-			channelServices.deltaConnection.on("process", (msg, local, md) => {
-				if (local) {
-					const pendingIndex = branchPending.findIndex((b) => b.channelMetadata === md);
-					// -1 means DNE and skip, sometimes happens during reconnect remapping or merge
-					if (pendingIndex !== -1) {
-						assert(pendingIndex === 0, "must be first element");
-						// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-						const branchData = branchPending.shift()!;
-						services.deltaConnection.process(
-							{ ...msg, contents: branchData.content },
-							true,
-							branchData.branchMetadata,
-						);
-					}
-				} else {
-					services.deltaConnection.process(msg, false, undefined);
-				}
-			});
-
-			channelServices.deltaConnection.on("rollback", (msg, md) => {
-				throw new Error("not implemented");
-			});
-			break;
-		}
-		default:
-	}
-
-	return branch;
+	return () => {
+		const pending = branchPending.splice(0);
+		pending.forEach((p) => {
+			assert(p.channelMetadata === undefined, "cannot rebase with remote changes");
+			branchDelta.reSubmit(p.content, p.branchMetadata);
+		});
+		const rebased = branchPending.splice(0);
+		ignoreChannelSubmits = true;
+		rebased.forEach((p) => {
+			const channelMetadata = channelDelta.applyStashedOp(p.content);
+			branchPending.push({ ...p, channelMetadata: new Set([channelMetadata]) });
+			channelDelta.submit(p.content, channelMetadata);
+		});
+		ignoreChannelSubmits = false;
+	};
 }

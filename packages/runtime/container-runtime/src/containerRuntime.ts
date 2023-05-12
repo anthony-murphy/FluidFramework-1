@@ -2171,7 +2171,13 @@ export class ContainerRuntime
 				}
 			} else {
 				// pre-0.58 error message: orderSequentiallyCallbackException
-				this.closeFn(new GenericError("orderSequentially callback exception", error));
+				this.closeFn(
+					wrapError(
+						error,
+						(msg) =>
+							new GenericError(`orderSequentially callback exception${msg}`, error),
+					),
+				);
 			}
 			throw error; // throw the original error for the consumer of the runtime
 		} finally {
