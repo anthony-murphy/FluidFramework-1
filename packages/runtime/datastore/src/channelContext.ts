@@ -337,10 +337,16 @@ function createRemoteAndLocalProcessingMerge(
 
 	channelDelta.on("process", (message, local, channelMetadata) => {
 		if (local) {
-			const pendingIndex = branchPending.findIndex(
+			let pendingIndex = branchPending.findIndex(
 				(b) => b.channelMetadata?.has(channelMetadata) === true,
 			);
-			assert(pendingIndex === 0, "must be first element");
+			assert(pendingIndex !== -1, "must have pending change mapped to remote");
+			while (pendingIndex > 0) {
+				assert(branchPending[0].channelMetadata === undefined, "can;t move shared changes");
+				branchDelta.reSubmit(branchPending[0].content, branchPending[0].branchMetadata);
+				branchPending.shift();
+				pendingIndex--;
+			}
 
 			branchPending[0].channelMetadata?.delete(channelMetadata);
 			if (branchPending[0].channelMetadata?.size === 0) {
@@ -375,7 +381,7 @@ function createRemoteAndLocalProcessingMerge(
 			// stop capturing resubmit metadatas
 			channelDelta.off("submit", onResubmitSubmit);
 			ignoreChannelSubmits = false;
-
+			assert(newChannelMetadata.size > 0, "must have at least one outstanding op");
 			branchPending[pendingIndex].channelMetadata = newChannelMetadata;
 		});
 	});

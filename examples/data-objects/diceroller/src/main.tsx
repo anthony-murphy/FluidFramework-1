@@ -23,13 +23,13 @@ export interface IDiceRoller extends EventEmitter {
 	 * Roll the dice.  Will cause a "diceRolled" event to be emitted.
 	 */
 	roll: (i?: number) => void;
-	snakeEyes: (i?: number) => void;
+	setAll: (value: 1 | 2 | 3 | 4, i?: number) => void;
 
 	paused: boolean;
 	pause: () => void;
 
 	branch: (process?: "remote" | "remote&Local") => Promise<void>;
-	appMergeEven: (i: number) => void;
+	appMergeOdd: (i: number) => void;
 	rebaseMerge: (i: number) => void;
 	closeBranch: (i: number) => void;
 
@@ -82,7 +82,10 @@ export const DiceRollerView: React.FC<IDiceRollerViewProps> = (props: IDiceRolle
 				<div>
 					<span>Actions: </span>
 					<button onClick={() => props.model.roll()}>Roll</button>
-					<button onClick={() => props.model.snakeEyes()}>SnakeEyes</button>
+					<button onClick={() => props.model.setAll(1)}>1</button>
+					<button onClick={() => props.model.setAll(2)}>2</button>
+					<button onClick={() => props.model.setAll(3)}>3</button>
+					<button onClick={() => props.model.setAll(4)}>4</button>
 				</div>
 				<div>
 					<span>Connection: </span>
@@ -121,14 +124,17 @@ export const DiceRollerView: React.FC<IDiceRollerViewProps> = (props: IDiceRolle
 						<div>
 							<span>Actions: </span>
 							<button onClick={() => props.model.roll(b.id)}>Roll</button>
-							<button onClick={() => props.model.snakeEyes(b.id)}>SnakeEyes</button>
+							<button onClick={() => props.model.setAll(1, b.id)}>1</button>
+							<button onClick={() => props.model.setAll(2, b.id)}>2</button>
+							<button onClick={() => props.model.setAll(3, b.id)}>3</button>
+							<button onClick={() => props.model.setAll(4, b.id)}>4</button>
 						</div>
 						<div>
 							<span>Branch: {b.type}</span>
 						</div>
 						<div>
-							<button onClick={() => props.model.appMergeEven(b.id)}>
-								AppMergeEvenValues
+							<button onClick={() => props.model.appMergeOdd(b.id)}>
+								AppMergeOddValues
 							</button>
 							<button
 								onClick={() => props.model.rebaseMerge(b.id)}
@@ -162,13 +168,13 @@ export class DiceRoller extends DataObject implements IDiceRoller {
 	 * This method is used to perform Fluid object setup, which can include setting an initial schema or initial values.
 	 */
 	protected async initializingFirstTime() {
-		this.snakeEyes();
+		this.setAll(1);
 	}
 
-	public snakeEyes = (id?: number) => {
+	public setAll = (value: 1 | 2 | 3 | 4 | 5, id?: number) => {
 		const dir = id === undefined ? this.root : this._branches.get(id)?.dir;
 		if (dir !== undefined) {
-			diceValueKeys.forEach((k) => dir.set(k, 1));
+			diceValueKeys.forEach((k) => dir.set(k, value));
 		}
 	};
 
@@ -244,12 +250,12 @@ export class DiceRoller extends DataObject implements IDiceRoller {
 		this.emit("branchChanges");
 	};
 
-	public readonly appMergeEven = (id: number) => {
+	public readonly appMergeOdd = (id: number) => {
 		const branch = this._branches.get(id);
 		if (branch !== undefined) {
 			diceValueKeys.forEach((k) => {
 				const val = branch.dir.get(k);
-				if (val % 2 === 0) {
+				if (val % 2 === 1) {
 					this.root.set(k, val);
 				}
 			});
