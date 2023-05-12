@@ -121,6 +121,7 @@ export const DiceRollerView: React.FC<IDiceRollerViewProps> = (props: IDiceRolle
 							<button
 								onClick={() => props.model.rebaseMerge(b.id)}
 								hidden={b.type === "static"}
+								disabled={props.model.paused}
 							>
 								RebaseMerge
 							</button>
@@ -160,7 +161,9 @@ export class DiceRoller extends DataObject implements IDiceRoller {
 	};
 
 	public get paused() {
-		return this.runtime.deltaManager.outbound.paused;
+		return (
+			this.runtime.deltaManager.outbound.paused || this.runtime.deltaManager.inbound.paused
+		);
 	}
 	public pause = async () => {
 		if (this.runtime.deltaManager.outbound.paused) {

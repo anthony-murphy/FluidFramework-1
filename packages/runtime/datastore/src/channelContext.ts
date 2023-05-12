@@ -270,12 +270,34 @@ export async function branchChannel(
 			ignoreChannelSubmits = true;
 			rebased.forEach((p) => {
 				const channelMetadata = channelServices.deltaConnection.applyStashedOp(p.content);
-				channelServices.deltaConnection.submit(p.content, channelMetadata);
 				branchPending.push({ ...p, channelMetadata });
+				channelServices.deltaConnection.submit(p.content, channelMetadata);
 			});
 			ignoreChannelSubmits = false;
 		},
 	};
+
+	channelServices.deltaConnection.on("pre-resubmit", () => {
+		ignoreChannelSubmits = true;
+		let lastNewMd: unknown | undefined;
+		// capture the new branch metadata if submitted
+		{
+			const onResubmitSubmit = (_, newMd) => void (lastNewMd = newMd);
+			channelServices.deltaConnection.on("submit", onResubmitSubmit);
+			channelServices.deltaConnection.once("post-resubmit", () => {
+				// stop capturing resubmit metadatas
+				channelServices.deltaConnection.off("submit", onResubmitSubmit);
+				ignoreChannelSubmits = false;
+			});
+		}
+
+		channelServices.deltaConnection.once("post-resubmit", (_, originalMd) => {
+			// get the original branch data from original submit metadata
+			const pendingIndex = branchPending.findIndex((b) => b.channelMetadata === originalMd);
+			assert(pendingIndex !== -1, "all local changes need branch data");
+			branchPending[pendingIndex].channelMetadata = lastNewMd;
+		});
+	});
 
 	switch (options.process) {
 		case "remote": {
@@ -300,6 +322,7 @@ export async function branchChannel(
 			branch.services.deltaConnection.on("submit", (content, branchMetadata) => {
 				branchPending.push({ content, branchMetadata });
 			});
+
 			break;
 		}
 		case "remote&Local": {
@@ -332,30 +355,6 @@ export async function branchChannel(
 				} else {
 					services.deltaConnection.process(msg, false, undefined);
 				}
-			});
-
-			channelServices.deltaConnection.on("pre-resubmit", () => {
-				ignoreChannelSubmits = true;
-				let lastNewMd: unknown | undefined;
-				// capture the new branch metadata if submitted
-				{
-					const onResubmitSubmit = (_, newMd) => void (lastNewMd = newMd);
-					channelServices.deltaConnection.on("submit", onResubmitSubmit);
-					channelServices.deltaConnection.once("post-resubmit", () => {
-						// stop capturing resubmit metadatas
-						channelServices.deltaConnection.off("submit", onResubmitSubmit);
-						ignoreChannelSubmits = false;
-					});
-				}
-
-				channelServices.deltaConnection.once("post-resubmit", (_, originalMd) => {
-					// get the original branch data from original submit metadata
-					const pendingIndex = branchPending.findIndex(
-						(b) => b.channelMetadata === originalMd,
-					);
-					assert(pendingIndex !== -1, "all local changes need branch data");
-					branchPending[pendingIndex].channelMetadata = lastNewMd;
-				});
 			});
 
 			channelServices.deltaConnection.on("rollback", (msg, md) => {
