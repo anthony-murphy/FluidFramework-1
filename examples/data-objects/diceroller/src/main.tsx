@@ -32,7 +32,7 @@ export interface IDiceRoller extends EventEmitter {
 	appMergeOdd: (i: number) => void;
 	rebaseMerge: (i: number) => void;
 	closeBranch: (i: number) => void;
-
+	auto: () => void;
 	/**
 	 * The diceRolled event will fire whenever someone rolls the device, either locally or remotely.
 	 */
@@ -86,6 +86,7 @@ export const DiceRollerView: React.FC<IDiceRollerViewProps> = (props: IDiceRolle
 					<button onClick={() => props.model.setAll(2)}>2</button>
 					<button onClick={() => props.model.setAll(3)}>3</button>
 					<button onClick={() => props.model.setAll(4)}>4</button>
+					<button onClick={props.model.auto}>Auto</button>
 				</div>
 				<div>
 					<span>Connection: </span>
@@ -217,6 +218,40 @@ export class DiceRoller extends DataObject implements IDiceRoller {
 		if (dir !== undefined) {
 			dir.set(diceValueKeys[this.dieIndex], rollValue);
 		}
+	};
+
+	public readonly auto = () => {
+		const run = async () => {
+			const branch = this.branches[Date.now() % this.branches.length];
+			switch (Date.now() % 20) {
+				case 0:
+					await this.pause();
+					break;
+				case 1:
+					await this.branch(
+						Date.now() % 3 === 0
+							? undefined
+							: Date.now() % 1 === 0
+							? "remote"
+							: "remote&Local",
+					);
+					break;
+				case 2:
+					if (branch !== undefined) {
+						this.appMergeOdd(branch.id);
+						break;
+					}
+				case 3:
+					if (!this.paused && branch !== undefined && branch.type !== "static") {
+						this.rebaseMerge(branch.id);
+						break;
+					}
+				default:
+					this.roll(this.branches[Date.now() % (this.branches.length + 1)]?.id);
+			}
+			setTimeout(() => void run(), (Date.now() % 300) + 100);
+		};
+		void run();
 	};
 
 	private readonly _branches = new Map<
