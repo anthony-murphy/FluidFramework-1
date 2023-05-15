@@ -60,7 +60,7 @@ export class ChannelDeltaConnection
 	public readonly submit: (message: unknown, localOpMetadata: unknown) => void;
 	constructor(
 		private _connected: boolean,
-		public readonly submit: (content: any, localOpMetadata: unknown) => void,
+		submit: (content: any, localOpMetadata: unknown) => void,
 		public readonly dirty: () => void,
 		public readonly addedGCOutboundReference: (
 			srcHandle: IFluidHandle,
