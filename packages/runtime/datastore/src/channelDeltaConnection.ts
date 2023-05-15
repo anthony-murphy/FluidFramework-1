@@ -60,7 +60,7 @@ export class ChannelDeltaConnection
 	public readonly submit: (message: unknown, localOpMetadata: unknown) => void;
 	constructor(
 		private _connected: boolean,
-		submit: (message: unknown, localOpMetadata: unknown) => void,
+		public readonly submit: (content: any, localOpMetadata: unknown) => void,
 		public readonly dirty: () => void,
 		public readonly addedGCOutboundReference: (
 			srcHandle: IFluidHandle,
@@ -112,7 +112,7 @@ export class ChannelDeltaConnection
 		this.emit("rollback", content, localOpMetadata);
 	}
 
-	public applyStashedOp(message: unknown): unknown {
-		return this.handler.applyStashedOp(message);
+	public applyStashedOp(content: any): unknown {
+		return this.handler.applyStashedOp(content);
 	}
 }
