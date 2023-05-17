@@ -6,6 +6,7 @@
 
 // eslint-disable-next-line import/no-internal-modules
 import merge from "lodash/merge";
+
 import { v4 as uuid } from "uuid";
 import {
 	ITelemetryLogger,
@@ -98,7 +99,12 @@ import {
 import { CollabWindowTracker } from "./collabWindowTracker";
 import { ConnectionManager } from "./connectionManager";
 import { ConnectionState } from "./connectionState";
-import { IProtocolHandler, ProtocolHandler, ProtocolHandlerBuilder } from "./protocol";
+import {
+	OnlyValidTermValue,
+	IProtocolHandler,
+	ProtocolHandler,
+	ProtocolHandlerBuilder,
+} from "./protocol";
 
 const detachedContainerRefSeqNumber = 0;
 
@@ -294,7 +300,7 @@ const summarizerClientType = "summarizer";
  */
 export class Container
 	extends EventEmitterWithErrorHandling<IContainerEvents>
-	implements IContainer
+	implements IContainer, IContainerExperimental
 {
 	public static version = "^0.1.0";
 
@@ -605,11 +611,11 @@ export class Container
 	}
 
 	private get offlineLoadEnabled(): boolean {
+		const enabled =
+			this.mc.config.getBoolean("Fluid.Container.enableOfflineLoad") ??
+			this.options?.enableOfflineLoad === true;
 		// summarizer will not have any pending state we want to save
-		return (
-			(this.mc.config.getBoolean("Fluid.Container.enableOfflineLoad") ?? false) &&
-			this.clientDetails.capabilities.interactive
-		);
+		return enabled && this.clientDetails.capabilities.interactive;
 	}
 
 	/**
@@ -760,6 +766,9 @@ export class Container
 		// Prefix all events in this file with container-loader
 		this.mc = loggerToMonitoringContext(ChildLogger.create(this.subLogger, "Container"));
 
+		// Warning: this is only a shallow clone. Mutation of any individual loader option will mutate it for
+		// all clients that were loaded from the same loader (including summarizer clients).
+		// Tracking alternative ways to handle this in AB#4129.
 		this.options = {
 			...this.loader.services.options,
 		};
@@ -1011,6 +1020,12 @@ export class Container
 		// runtime matches pending ops to successful ones by clientId and client seq num, so we need to close the
 		// container at the same time we get pending state, otherwise this container could reconnect and resubmit with
 		// a new clientId and a future container using stale pending state without the new clientId would resubmit them
+		const pendingState = this.getPendingLocalState();
+		this.close();
+		return pendingState;
+	}
+
+	public getPendingLocalState(): string {
 		if (!this.offlineLoadEnabled) {
 			throw new UsageError("Can't get pending local state unless offline load is enabled");
 		}
@@ -1022,25 +1037,17 @@ export class Container
 			this.resolvedUrl !== undefined && this.resolvedUrl.type === "fluid",
 			0x0d2 /* "resolved url should be valid Fluid url" */,
 		);
-		assert(!!this._protocolHandler, 0x2e3 /* "Must have a valid protocol handler instance" */);
-		assert(
-			this._protocolHandler.attributes.term !== undefined,
-			0x37e /* Must have a valid protocol handler instance */,
-		);
-		assert(!!this.baseSnapshot, "no base snapshot");
+		assert(!!this.baseSnapshot, 0x5d4 /* no base snapshot */);
 		const pendingState: IPendingContainerState = {
 			pendingRuntimeState: this.context.getPendingLocalState(),
 			baseSnapshot: this.baseSnapshot,
 			savedOps: this.savedOps,
 			url: this.resolvedUrl.url,
-			term: this._protocolHandler.attributes.term,
+			term: OnlyValidTermValue,
 			clientId: this.clientId,
 		};
 
-		this.mc.logger.sendTelemetryEvent({ eventName: "CloseAndGetPendingLocalState" });
-
-		// Only close here as method name suggests
-		this.close();
+		this.mc.logger.sendTelemetryEvent({ eventName: "GetPendingLocalState" });
 
 		return JSON.stringify(pendingState);
 	}
@@ -1492,7 +1499,7 @@ export class Container
 			// now set clientId to stashed clientId so live ops are correctly processed as local
 			assert(
 				this.clientId === undefined,
-				"Unexpected clientId when setting stashed clientId",
+				0x5d6 /* Unexpected clientId when setting stashed clientId */,
 			);
 			this._clientId = pendingLocalState?.clientId;
 		}
@@ -1564,7 +1571,7 @@ export class Container
 	private async createDetached(source: IFluidCodeDetails) {
 		const attributes: IDocumentAttributes = {
 			sequenceNumber: detachedContainerRefSeqNumber,
-			term: 1,
+			term: OnlyValidTermValue,
 			minimumSequenceNumber: 0,
 		};
 
@@ -1629,7 +1636,7 @@ export class Container
 			return {
 				minimumSequenceNumber: 0,
 				sequenceNumber: 0,
-				term: 1,
+				term: OnlyValidTermValue,
 			};
 		}
 
@@ -1640,11 +1647,6 @@ export class Container
 				: tree.blobs[".attributes"];
 
 		const attributes = await readAndParse<IDocumentAttributes>(storage, attributesHash);
-
-		// Backward compatibility for older summaries with no term
-		if (attributes.term === undefined) {
-			attributes.term = 1;
-		}
 
 		return attributes;
 	}
@@ -1810,6 +1812,7 @@ export class Container
 			(props: IConnectionManagerFactoryArgs) =>
 				new ConnectionManager(
 					serviceProvider,
+					() => this.isDirty,
 					this.client,
 					this._canReconnect,
 					ChildLogger.create(this.subLogger, "ConnectionManager"),
@@ -1871,7 +1874,6 @@ export class Container
 		return this._deltaManager.attachOpHandler(
 			attributes.minimumSequenceNumber,
 			attributes.sequenceNumber,
-			attributes.term ?? 1,
 			{
 				process: (message) => this.processRemoteMessage(message),
 				processSignal: (message) => {
@@ -1961,10 +1963,7 @@ export class Container
 
 		// Both protocol and context should not be undefined if we got so far.
 
-		this.setContextConnectedState(
-			state,
-			this._deltaManager.connectionManager.readOnlyInfo.readonly ?? false,
-		);
+		this.setContextConnectedState(state, this.readOnlyInfo.readonly ?? false);
 		this.protocolHandler.setConnectionState(state, this.clientId);
 		raiseConnectedEvent(this.mc.logger, this, state, this.clientId, disconnectedReason);
 
@@ -2218,4 +2217,20 @@ export class Container
 			this.context.setConnectionState(state && !readonly, this.clientId);
 		}
 	}
+}
+
+/**
+ * IContainer interface that includes experimental features still under development.
+ * @internal
+ */
+export interface IContainerExperimental extends IContainer {
+	/**
+	 * Get pending state from container. WARNING: misuse of this API can result in duplicate op
+	 * submission and potential document corruption. The blob returned MUST be deleted if and when this
+	 * container emits a "connected" event.
+	 * @returns serialized blob that can be passed to Loader.resolve()
+	 * @experimental misuse of this API can result in duplicate op submission and potential document corruption
+	 * {@link https://github.com/microsoft/FluidFramework/blob/main/packages/loader/container-loader/closeAndGetPendingLocalState.md}
+	 */
+	getPendingLocalState(): string;
 }

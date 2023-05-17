@@ -10,12 +10,11 @@ import {
 } from "@fluidframework/common-definitions";
 import { assert, Timer } from "@fluidframework/common-utils";
 import { IConnectionDetailsInternal, IDeltaManager } from "@fluidframework/container-definitions";
-import { ILocalSequencedClient } from "@fluidframework/protocol-base";
 import { ISequencedClient, IClient } from "@fluidframework/protocol-definitions";
 import { PerformanceEvent, loggerToMonitoringContext } from "@fluidframework/telemetry-utils";
 import { ConnectionState } from "./connectionState";
 import { CatchUpMonitor, ICatchUpMonitor } from "./catchUpMonitor";
-import { IProtocolHandler } from "./protocol";
+import { ILocalSequencedClient, IProtocolHandler } from "./protocol";
 
 // Based on recent data, it looks like majority of cases where we get stuck are due to really slow or
 // timing out ops fetches. So attempt recovery infrequently. Also fetch uses 30 second timeout, so
@@ -403,11 +402,11 @@ class ConnectionStateHandler implements IConnectionStateHandler {
 			// being replayed, so start the timer in case our previous client is still in quorum
 			assert(
 				!this.waitingForLeaveOp,
-				"Unexpected join op with current clientId while waiting",
+				0x5d2 /* Unexpected join op with current clientId while waiting */,
 			);
 			assert(
 				this.connectionState !== ConnectionState.Connected,
-				"Unexpected join op with current clientId while connected",
+				0x5d3 /* Unexpected join op with current clientId while connected */,
 			);
 			this.prevClientLeftTimer.restart();
 		}

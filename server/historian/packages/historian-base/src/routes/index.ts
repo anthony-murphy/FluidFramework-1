@@ -4,7 +4,11 @@
  */
 
 import { AsyncLocalStorage } from "async_hooks";
-import { IThrottler } from "@fluidframework/server-services-core";
+import {
+	IStorageNameRetriever,
+	IThrottler,
+	ITokenRevocationManager,
+} from "@fluidframework/server-services-core";
 import { Router } from "express";
 import * as nconf from "nconf";
 import { ICache, ITenantService } from "../services";
@@ -39,79 +43,99 @@ export interface IRoutes {
 export function create(
 	config: nconf.Provider,
 	tenantService: ITenantService,
+	storageNameRetriever: IStorageNameRetriever,
 	restTenantThrottlers: Map<string, IThrottler>,
 	restClusterThrottlers: Map<string, IThrottler>,
 	cache?: ICache,
 	asyncLocalStorage?: AsyncLocalStorage<string>,
+	tokenRevocationManager?: ITokenRevocationManager,
 ): IRoutes {
 	return {
 		git: {
 			blobs: blobs.create(
 				config,
 				tenantService,
+				storageNameRetriever,
 				restTenantThrottlers,
 				cache,
 				asyncLocalStorage,
+				tokenRevocationManager,
 			),
 			commits: commits.create(
 				config,
 				tenantService,
+				storageNameRetriever,
 				restTenantThrottlers,
 				cache,
 				asyncLocalStorage,
+				tokenRevocationManager,
 			),
 			refs: refs.create(
 				config,
 				tenantService,
+				storageNameRetriever,
 				restTenantThrottlers,
 				cache,
 				asyncLocalStorage,
+				tokenRevocationManager,
 			),
 			tags: tags.create(
 				config,
 				tenantService,
+				storageNameRetriever,
 				restTenantThrottlers,
 				cache,
 				asyncLocalStorage,
+				tokenRevocationManager,
 			),
 			trees: trees.create(
 				config,
 				tenantService,
+				storageNameRetriever,
 				restTenantThrottlers,
 				cache,
 				asyncLocalStorage,
+				tokenRevocationManager,
 			),
 		},
 		repository: {
 			commits: repositoryCommits.create(
 				config,
 				tenantService,
+				storageNameRetriever,
 				restTenantThrottlers,
 				cache,
 				asyncLocalStorage,
+				tokenRevocationManager,
 			),
 			contents: contents.create(
 				config,
 				tenantService,
+				storageNameRetriever,
 				restTenantThrottlers,
 				cache,
 				asyncLocalStorage,
+				tokenRevocationManager,
 			),
 			headers: headers.create(
 				config,
 				tenantService,
+				storageNameRetriever,
 				restTenantThrottlers,
 				cache,
 				asyncLocalStorage,
+				tokenRevocationManager,
 			),
 		},
 		summaries: summaries.create(
 			config,
 			tenantService,
+			storageNameRetriever,
 			restTenantThrottlers,
 			restClusterThrottlers,
 			cache,
 			asyncLocalStorage,
+			tokenRevocationManager,
 		),
 	};
 }

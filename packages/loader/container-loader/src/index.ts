@@ -6,6 +6,7 @@
 export { ConnectionState } from "./connectionState";
 export {
 	IContainerConfig,
+	IContainerExperimental,
 	IContainerLoadOptions,
 	IPendingContainerState,
 	waitContainerToCatchUp,
@@ -18,5 +19,6 @@ export {
 	ILoaderProps,
 	ILoaderServices,
 	Loader,
+	requestResolvedObjectFromContainer,
 } from "./loader";
 export { IProtocolHandler, ProtocolHandlerBuilder } from "./protocol";
