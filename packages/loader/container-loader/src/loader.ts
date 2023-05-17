@@ -243,12 +243,12 @@ export interface ILoaderServices {
 	/**
 	 * Blobs storage for detached containers.
 	 */
-	readonly localBlobStorageFactory?: LocalBlobStorageFactory;
+	readonly localBlobStorageFactory?: LocalContentStorageFactory;
 }
 
-class InMemLocalBlobStorageFactory implements LocalBlobStorageFactory {
-	public static readonly stores = new Map<string, LocalBlobStorage>();
-	async createDetached(detachedId: string): Promise<LocalBlobStorage> {
+class InMemLocalBlobStorageFactory implements LocalContentStorageFactory {
+	public static readonly stores = new Map<string, LocalContentStorage>();
+	async createDetached(detachedId: string): Promise<LocalContentStorage> {
 		let store = InMemLocalBlobStorageFactory.stores.get(detachedId);
 
 		if (store === undefined) {
@@ -257,7 +257,7 @@ class InMemLocalBlobStorageFactory implements LocalBlobStorageFactory {
 		}
 		return store;
 	}
-	async createAttached(resolvedUrl: IResolvedUrl): Promise<LocalBlobStorage> {
+	async createAttached(resolvedUrl: IResolvedUrl): Promise<LocalContentStorage> {
 		ensureFluidResolvedUrl(resolvedUrl);
 		let store = InMemLocalBlobStorageFactory.stores.get(resolvedUrl.url);
 
@@ -269,7 +269,7 @@ class InMemLocalBlobStorageFactory implements LocalBlobStorageFactory {
 	}
 }
 
-class InMemLocalBlobStorage implements LocalBlobStorage {
+class InMemLocalBlobStorage implements LocalContentStorage {
 	private readonly blobs = new Map<
 		string,
 		{
@@ -309,12 +309,12 @@ class InMemLocalBlobStorage implements LocalBlobStorage {
 	}
 }
 
-export interface LocalBlobStorageFactory {
-	createDetached(detachedId: string): Promise<LocalBlobStorage>;
-	createAttached(resolvedUrl: IResolvedUrl): Promise<LocalBlobStorage>;
+export interface LocalContentStorageFactory {
+	createDetached(detachedId: string): Promise<LocalContentStorage>;
+	createAttached(resolvedUrl: IResolvedUrl): Promise<LocalContentStorage>;
 }
 
-export interface LocalBlobStorage {
+export interface LocalContentStorage {
 	storeBlob(file: ArrayBufferLike, localId: string): Promise<void>;
 
 	hasBlob(localId: string): Promise<boolean>;

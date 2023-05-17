@@ -85,7 +85,7 @@ import { ContainerContext } from "./containerContext";
 import { ReconnectMode, IConnectionManagerFactoryArgs, getPackageName } from "./contracts";
 import { DeltaManager, IConnectionArgs } from "./deltaManager";
 import { DeltaManagerProxy } from "./deltaManagerProxy";
-import { ILoaderOptions, Loader, LocalBlobStorage, RelativeLoader } from "./loader";
+import { ILoaderOptions, Loader, LocalContentStorage, RelativeLoader } from "./loader";
 import { pkgVersion } from "./packageVersion";
 import { ContainerStorageAdapter } from "./containerStorageAdapter";
 import { IConnectionStateHandler, createConnectionStateHandler } from "./connectionStateHandler";
@@ -145,7 +145,7 @@ export interface IContainerConfig {
 	 */
 	serializedContainerState?: IPendingContainerState;
 
-	localBlobStorage: LocalBlobStorage;
+	localBlobStorage: LocalContentStorage;
 	detachedId?: string;
 }
 
@@ -308,7 +308,7 @@ export class Container
 		pendingLocalState?: IPendingContainerState,
 		protocolHandlerBuilder?: ProtocolHandlerBuilder,
 	): Promise<Container> {
-		const localBlobStorage: LocalBlobStorage =
+		const localBlobStorage: LocalContentStorage =
 			await loader.services.localBlobStorageFactory!.createAttached(loadOptions.resolvedUrl);
 
 		const container = new Container(
@@ -378,7 +378,7 @@ export class Container
 		protocolHandlerBuilder?: ProtocolHandlerBuilder,
 	): Promise<Container> {
 		const detachedId = uuid();
-		const localBlobStorage: LocalBlobStorage =
+		const localBlobStorage: LocalContentStorage =
 			await loader.services.localBlobStorageFactory!.createDetached(detachedId);
 
 		const container = new Container(
@@ -413,7 +413,7 @@ export class Container
 		assert(detachedIdTree.type === SummaryType.Blob, "detachedTree must be tree");
 		const detachedId = (detachedIdTree.content as string) ?? uuid();
 
-		const localBlobStorage: LocalBlobStorage =
+		const localBlobStorage: LocalContentStorage =
 			await loader.services.localBlobStorageFactory!.createDetached(detachedId);
 
 		delete deserializedSummary.tree[".detachedId"];

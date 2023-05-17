@@ -21,7 +21,7 @@ import {
 	ISummaryTree,
 	IVersion,
 } from "@fluidframework/protocol-definitions";
-import { LocalBlobStorage } from "./loader";
+import { LocalContentStorage } from "./loader";
 import { ProtocolTreeStorageService } from "./protocolTreeDocumentStorageService";
 import { RetriableDocumentStorageService } from "./retriableDocumentStorageService";
 
@@ -50,7 +50,7 @@ export class ContainerStorageAdapter implements IDocumentStorageService, IDispos
 	 * @param forceEnableSummarizeProtocolTree - Enforce uploading a protocol summary regardless of the service's policy
 	 */
 	public constructor(
-		private readonly localBlobStorage: LocalBlobStorage,
+		private readonly localBlobStorage: LocalContentStorage,
 		private readonly logger: ITelemetryLogger,
 		/**
 		 * ArrayBufferLikes or utf8 encoded strings, containing blobs from a snapshot
