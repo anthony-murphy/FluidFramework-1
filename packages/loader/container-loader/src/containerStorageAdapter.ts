@@ -164,16 +164,20 @@ export class ContainerStorageAdapter implements IDocumentStorageService, IDispos
 		return this._storageService!.downloadSummary(handle);
 	}
 
-	public async createBlob(file: ArrayBufferLike, localId: string): Promise<ICreateBlobResponse> {
+	public async createBlob(
+		file: ArrayBufferLike,
+		context: { localId: string },
+	): Promise<ICreateBlobResponse> {
+		const localId = context.localId;
 		const storeP = this.localBlobStorage.hasBlob(localId).then(async (hasBlob) => {
 			if (!hasBlob) {
 				await this.localBlobStorage.storeBlob(file, localId);
 			}
 		});
 		if (this._storageService) {
-			const resp = await this._storageService.createBlob(file, localId);
+			const resp = await this._storageService.createBlob(file, context);
 			await storeP;
-			await this.localBlobStorage.markBlob(localId, resp.id);
+			await this.localBlobStorage.updateBlob(localId, resp.id);
 			return resp;
 		} else {
 			await storeP;

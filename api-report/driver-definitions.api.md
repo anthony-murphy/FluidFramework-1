@@ -171,7 +171,9 @@ export interface IDocumentServicePolicies {
 
 // @public
 export interface IDocumentStorageService extends Partial<IDisposable> {
-    createBlob(file: ArrayBufferLike): Promise<ICreateBlobResponse>;
+    createBlob(file: ArrayBufferLike, contents?: {
+        localId?: string;
+    }): Promise<ICreateBlobResponse>;
     downloadSummary(handle: ISummaryHandle): Promise<ISummaryTree>;
     getSnapshotTree(version?: IVersion, scenarioName?: string): Promise<ISnapshotTree | null>;
     getVersions(versionId: string | null, count: number, scenarioName?: string, fetchSource?: FetchSource): Promise<IVersion[]>;

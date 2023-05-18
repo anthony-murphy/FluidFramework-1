@@ -407,7 +407,7 @@ export class BlobManager extends TypedEventEmitter<IBlobManagerEvents> {
 	): Promise<IFluidHandle<ArrayBufferLike>> {
 		// Blobs created while the container is detached are stored in IDetachedBlobStorage.
 		// The 'IDocumentStorageService.createBlob()' call below will respond with a localId.
-		const response = await this.getStorage().createBlob(blob, localId);
+		const response = await this.getStorage().createBlob(blob, { localId });
 		this.setRedirection(response.id, undefined);
 		return this.getBlobHandle(response.id);
 	}
@@ -444,7 +444,7 @@ export class BlobManager extends TypedEventEmitter<IBlobManagerEvents> {
 		return PerformanceEvent.timedExecAsync(
 			this.mc.logger,
 			{ eventName: "createBlob" },
-			async () => this.getStorage().createBlob(blob, localId),
+			async () => this.getStorage().createBlob(blob, { localId }),
 			{ end: true, cancel: this.runtime.connected ? "error" : "generic" },
 		).then(
 			(response) => this.onUploadResolve(localId, response),

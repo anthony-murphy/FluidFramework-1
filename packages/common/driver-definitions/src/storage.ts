@@ -175,7 +175,7 @@ export interface IDocumentStorageService extends Partial<IDisposable> {
 	/**
 	 * Creates a blob out of the given buffer
 	 */
-	createBlob(file: ArrayBufferLike, operationId?: string): Promise<ICreateBlobResponse>;
+	createBlob(file: ArrayBufferLike, context?: { localId?: string }): Promise<ICreateBlobResponse>;
 
 	/**
 	 * Reads the object with the given ID, returns content in arrayBufferLike

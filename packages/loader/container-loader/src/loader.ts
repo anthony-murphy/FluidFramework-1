@@ -288,10 +288,10 @@ class InMemLocalBlobStorage implements LocalContentStorage {
 	async getBlobIds(): Promise<{ localId: string; remoteId?: string | undefined }[]> {
 		return [...this.blobs.values()];
 	}
-	async markBlob(localId: string, remoteId: string): Promise<void> {
+	async updateBlob(localId: string, remoteId: string): Promise<void> {
 		const blobInfo = this.blobs.get(localId);
 		if (blobInfo === undefined) {
-			throw new Error("blob must exist to be marked");
+			throw new Error("blob must exist to be updated");
 		}
 		blobInfo.remoteId = remoteId;
 	}
@@ -321,7 +321,7 @@ export interface LocalContentStorage {
 
 	getBlobIds(): Promise<{ localId: string; remoteId?: string }[]>;
 
-	markBlob(localId: string, remoteId: string): Promise<void>;
+	updateBlob(localId: string, remoteId: string): Promise<void>;
 
 	getBlob(localId: string): Promise<ArrayBufferLike>;
 

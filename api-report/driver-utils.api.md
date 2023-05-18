@@ -99,7 +99,9 @@ export class DeltaStreamConnectionForbiddenError extends LoggingError implements
 export class DocumentStorageServiceProxy implements IDocumentStorageService {
     constructor(internalStorageService: IDocumentStorageService);
     // (undocumented)
-    createBlob(file: ArrayBufferLike): Promise<ICreateBlobResponse>;
+    createBlob(file: ArrayBufferLike, context?: {
+        localId?: string;
+    }): Promise<ICreateBlobResponse>;
     // (undocumented)
     downloadSummary(handle: ISummaryHandle): Promise<ISummaryTree>;
     // (undocumented)

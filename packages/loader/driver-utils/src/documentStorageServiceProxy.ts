@@ -63,9 +63,9 @@ export class DocumentStorageServiceProxy implements IDocumentStorageService {
 
 	public async createBlob(
 		file: ArrayBufferLike,
-		operationId: string,
+		context?: { localId?: string },
 	): Promise<ICreateBlobResponse> {
-		return this.internalStorageService.createBlob(file, operationId);
+		return this.internalStorageService.createBlob(file, context);
 	}
 
 	public async readBlob(blobId: string): Promise<ArrayBufferLike> {

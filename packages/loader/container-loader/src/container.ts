@@ -1157,7 +1157,9 @@ export class Container
 							const blob = await this.config.localBlobStorage.getBlob(
 								blobIds.localId,
 							);
-							await this.storageAdapter.createBlob(blob, blobIds.localId);
+							await this.storageAdapter.createBlob(blob, {
+								localId: blobIds.localId,
+							});
 						}
 						const redirectTable = (
 							await this.config.localBlobStorage.getBlobIds()
