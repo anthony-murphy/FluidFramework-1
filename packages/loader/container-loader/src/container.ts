@@ -33,6 +33,7 @@ import {
 } from "@fluidframework/container-definitions";
 import { GenericError, UsageError } from "@fluidframework/container-utils";
 import {
+	IAnyDriverError,
 	IDocumentService,
 	IDocumentStorageService,
 	IFluidResolvedUrl,
@@ -778,11 +779,11 @@ export class Container
 		this.connectionStateHandler = createConnectionStateHandler(
 			{
 				logger: this.mc.logger,
-				connectionStateChanged: (value, oldState, reason) => {
+				connectionStateChanged: (value, oldState, reason, error) => {
 					if (value === ConnectionState.Connected) {
 						this._clientId = this.connectionStateHandler.pendingClientId;
 					}
-					this.logConnectionStateChangeTelemetry(value, oldState, reason);
+					this.logConnectionStateChangeTelemetry(value, oldState, reason, error);
 					if (this._lifecycleState === "loaded") {
 						this.propagateConnectionState(
 							false /* initial transition */,
@@ -1833,10 +1834,10 @@ export class Container
 			this.connectionStateHandler.receivedConnectEvent(details);
 		});
 
-		deltaManager.on("disconnect", (reason: string) => {
+		deltaManager.on("disconnect", (reason: string, error?: IAnyDriverError) => {
 			this.collabWindowTracker?.stopSequenceNumberUpdate();
 			if (!this.closed) {
-				this.connectionStateHandler.receivedDisconnectEvent(reason);
+				this.connectionStateHandler.receivedDisconnectEvent(reason, error);
 			}
 		});
 
@@ -1890,6 +1891,7 @@ export class Container
 		value: ConnectionState,
 		oldState: ConnectionState,
 		reason?: string,
+		error?: IAnyDriverError,
 	) {
 		// Log actual event
 		const time = performance.now();
@@ -1918,24 +1920,29 @@ export class Container
 			connectionInitiationReason = this.firstConnection ? "InitialConnect" : "AutoReconnect";
 		}
 
-		this.mc.logger.sendPerformanceEvent({
-			eventName: `ConnectionStateChange_${ConnectionState[value]}`,
-			from: ConnectionState[oldState],
-			duration,
-			durationFromDisconnected,
-			reason,
-			connectionInitiationReason,
-			pendingClientId: this.connectionStateHandler.pendingClientId,
-			clientId: this.clientId,
-			autoReconnect,
-			opsBehind,
-			online: OnlineStatus[isOnline()],
-			lastVisible:
-				this.lastVisible !== undefined ? performance.now() - this.lastVisible : undefined,
-			checkpointSequenceNumber,
-			quorumSize: this._protocolHandler?.quorum.getMembers().size,
-			...this._deltaManager.connectionProps,
-		});
+		this.mc.logger.sendPerformanceEvent(
+			{
+				eventName: `ConnectionStateChange_${ConnectionState[value]}`,
+				from: ConnectionState[oldState],
+				duration,
+				durationFromDisconnected,
+				reason,
+				connectionInitiationReason,
+				pendingClientId: this.connectionStateHandler.pendingClientId,
+				clientId: this.clientId,
+				autoReconnect,
+				opsBehind,
+				online: OnlineStatus[isOnline()],
+				lastVisible:
+					this.lastVisible !== undefined
+						? performance.now() - this.lastVisible
+						: undefined,
+				checkpointSequenceNumber,
+				quorumSize: this._protocolHandler?.quorum.getMembers().size,
+				...this._deltaManager.connectionProps,
+			},
+			error,
+		);
 
 		if (value === ConnectionState.Connected) {
 			this.firstConnection = false;
