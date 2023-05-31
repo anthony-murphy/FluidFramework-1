@@ -69,7 +69,6 @@ import {
 	IVersion,
 	MessageType,
 	SummaryType,
-	TreeEntry,
 } from "@fluidframework/protocol-definitions";
 import {
 	ChildLogger,
@@ -292,7 +291,6 @@ export interface IPendingContainerState {
 	 */
 	savedOps: ISequencedDocumentMessage[];
 	url: string;
-	term: number;
 	clientId?: string;
 }
 
@@ -532,7 +530,6 @@ export class Container
 	private attachStarted = false;
 	private _dirtyContainer = false;
 	private readonly savedOps: ISequencedDocumentMessage[] = [];
-	private baseSnapshot?: ISnapshotTree;
 
 	private lastVisible: number | undefined;
 	private readonly visibilityEventHandler: (() => void) | undefined;
@@ -1048,7 +1045,6 @@ export class Container
 			baseSnapshot: this.baseSnapshot,
 			savedOps: this.savedOps,
 			url: this.resolvedUrl.url,
-			term: OnlyValidTermValue,
 			clientId: this.clientId,
 		};
 
@@ -1098,10 +1094,10 @@ export class Container
 				);
 				this.attachStarted = true;
 
-				const blobs = await this.config.localContentStorage.getEntries({
-					types: [TreeEntry.Attachment],
+				const localBlobs = await this.config.localContentStorage.getEntries({
+					type: "blob",
+					remoteId: undefined,
 				});
-				const localBlobs = blobs.filter((b) => b.remoteId === undefined);
 				// If attachment blobs were uploaded in detached state we will go through a different attach flow
 				const hasAttachmentBlobs = localBlobs.length > 0;
 
@@ -1127,7 +1123,22 @@ export class Container
 						this.emit("attaching");
 						if (this.offlineLoadEnabled) {
 							const snapshot = getSnapshotTreeFromSerializedContainer(summary);
-							this.baseSnapshot = snapshot;
+							this.config.localContentStorage
+								.store({
+									data: snapshot,
+									remoteId: "0",
+									type: "baseSnapshot",
+								})
+								.then(async (e) => {
+									await this.config.localContentStorage.remove(
+										{
+											type: "baseSnapshot",
+											iidRange: { end: e.iid - 1 },
+										},
+										{ type: "op" },
+									);
+								})
+								.catch((r) => this.close(r));
 						}
 					}
 
@@ -1161,14 +1172,16 @@ export class Container
 					this.config.localContentStorage.attach!(this.service.resolvedUrl);
 					if (hasAttachmentBlobs) {
 						for (const localBlob of localBlobs) {
-							const blob = await this.config.localContentStorage.getData(localBlob);
+							const blob = (await this.config.localContentStorage.getData(
+								localBlob,
+							)) as ArrayBufferLike;
 							await this.storageAdapter.createBlob(blob, {
 								localId: localBlob.localId!,
 							});
 						}
 						const redirectTable = (
 							await this.config.localContentStorage.getEntries({
-								types: [TreeEntry.Attachment],
+								type: "blob",
 							})
 						).reduce((pv, cv) => {
 							pv.set(cv.localId!, cv.remoteId!);
@@ -1183,7 +1196,13 @@ export class Container
 						this.emit("attaching");
 						if (this.offlineLoadEnabled) {
 							const snapshot = getSnapshotTreeFromSerializedContainer(summary);
-							this.baseSnapshot = snapshot;
+							this.config.localContentStorage
+								.store({
+									data: snapshot,
+									sequenceNumber: 0,
+									type: "baseSnapshot",
+								})
+								.catch((r) => this.close(r));
 						}
 
 						await this.storageAdapter.uploadSummaryWithContext(summary, {
@@ -1440,19 +1459,30 @@ export class Container
 				? await this.fetchSnapshotTree(specifiedVersion)
 				: { snapshot: pendingLocalState.baseSnapshot, versionId: undefined };
 
-		if (pendingLocalState) {
-			this.baseSnapshot = pendingLocalState.baseSnapshot;
-		} else {
-			assert(snapshot !== undefined, 0x237 /* "Snapshot should exist" */);
-			if (this.offlineLoadEnabled) {
-				this.baseSnapshot = snapshot;
-			}
-		}
+		assert(snapshot !== undefined, 0x237 /* "Snapshot should exist" */);
 
 		const attributes: IDocumentAttributes = await this.getDocumentAttributes(
 			this.storageAdapter,
 			snapshot,
 		);
+
+		if (this.offlineLoadEnabled) {
+			this.config.localContentStorage
+				.store({
+					data: snapshot,
+					sequenceNumber: attributes.sequenceNumber,
+					type: "baseSnapshot",
+				})
+				.then(async (e) => {
+					await this.config.localContentStorage.remove(
+						{
+							type: "baseSnapshot",
+						},
+						{ type: "op", sequenceNumberRange: { end: attributes.sequenceNumber } },
+					);
+				})
+				.catch((r) => this.close(r));
+		}
 
 		// If we saved ops, we will replay them and don't need DeltaManager to fetch them
 		const sequenceNumber =
@@ -2066,7 +2096,7 @@ export class Container
 
 		this.messageCountAfterDisconnection += 1;
 		this.collabWindowTracker?.stopSequenceNumberUpdate();
-		return this._deltaManager.submit(
+		const clientSeq = this._deltaManager.submit(
 			type,
 			contents,
 			batch,
@@ -2074,6 +2104,23 @@ export class Container
 			compression,
 			referenceSequenceNumber,
 		);
+		this.config.localContentStorage
+			.store({
+				data: {
+					type,
+					contents,
+					batch,
+					metadata,
+					compression,
+					referenceSequenceNumber,
+					clientId: this.clientId,
+				},
+				localId: clientSeq.toString(),
+				type: "op",
+			})
+			.catch((r) => this.close(r));
+
+		return clientSeq;
 	}
 
 	private processRemoteMessage(message: ISequencedDocumentMessage) {
@@ -2081,6 +2128,34 @@ export class Container
 			this.savedOps.push(message);
 		}
 		const local = this.clientId === message.clientId;
+
+		if (local) {
+			this.config.localContentStorage
+				.update({
+					type: "op",
+					localId: message.clientSequenceNumber.toString(),
+					sequenceNumber: message.sequenceNumber,
+					data: message,
+				})
+				.then(async (e) => {
+					if (e !== undefined) {
+						await this.config.localContentStorage.remove({
+							type: "op",
+							sequenceNumber: undefined,
+							iidRange: { end: e.iid - 1 },
+						});
+					}
+				})
+				.catch((r) => this.close(r));
+		} else {
+			this.config.localContentStorage
+				.store({
+					type: "op",
+					data: message,
+					sequenceNumber: message.sequenceNumber,
+				})
+				.catch((r) => this.close(r));
+		}
 
 		// Allow the protocol handler to process the message
 		const result = this.protocolHandler.processMessage(message, local);

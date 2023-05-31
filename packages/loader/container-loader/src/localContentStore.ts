@@ -5,7 +5,6 @@
 
 import { IResolvedUrl } from "@fluidframework/driver-definitions";
 import { ensureFluidResolvedUrl } from "@fluidframework/driver-utils";
-import { TreeEntry } from "@fluidframework/protocol-definitions";
 
 export class InMemLocalBlobStorageFactory implements LocalContentStorageFactory {
 	public static readonly stores = new Map<string, LocalContentStorage>();
@@ -13,7 +12,7 @@ export class InMemLocalBlobStorageFactory implements LocalContentStorageFactory 
 		let store = InMemLocalBlobStorageFactory.stores.get(detachedId);
 
 		if (store === undefined) {
-			store = new InMemLocalBlobStorage();
+			store = new InMemLocalContentStorage();
 			InMemLocalBlobStorageFactory.stores.set(detachedId, store);
 		}
 		return store;
@@ -23,41 +22,43 @@ export class InMemLocalBlobStorageFactory implements LocalContentStorageFactory 
 		let store = InMemLocalBlobStorageFactory.stores.get(resolvedUrl.url);
 
 		if (store === undefined) {
-			store = new InMemLocalBlobStorage();
+			store = new InMemLocalContentStorage();
 			InMemLocalBlobStorageFactory.stores.set(resolvedUrl.url, store);
 		}
 		return store;
 	}
 }
 
-class InMemLocalBlobStorage implements LocalContentStorage {
-	async getData(entry: ContentEntry<ContentSpec>): Promise<any> {
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+class InMemLocalContentStorage implements LocalContentStorage {
+	async update<S extends RemoteContentSpec | SequencedContentSpec>(
+		entry: LocalContentSpec & S,
+	): Promise<ContentEntry | undefined> {
+		const existing = this.blobs.findIndex((e) => matches(e, { localId: entry.localId }));
+		if (existing > 0) {
+			this.blobs[existing] = { ...this.blobs[existing], ...entry };
+		}
+		return { ...this.blobs[existing] };
+	}
+
+	async getData(entry: ContentEntry<ContentSpec>): Promise<unknown> {
 		return this.blobs.find((e) => e.iid === entry.iid)?.data;
 	}
-	async store<S extends ContentSpec>(spec: S): Promise<ContentEntry<S>> {
+	async store<S extends ContentSpec>(spec: ContentData<S>): Promise<ContentEntry<S>> {
 		const entry = {
 			...spec,
 			iid: ++this.iid,
 		};
 		this.blobs.push(entry);
-		return entry;
+		return { ...entry };
 	}
-	async update(entry: ContentEntry<LocalContentSpec & RemoteContentSpec>): Promise<void> {
-		const existing = this.blobs.find((e) => e.iid === entry.iid);
-		if (existing !== undefined) {
-			existing.remoteId = entry.remoteId;
-		}
+
+	async getEntries(...queries: ContentQuery[]): Promise<ContentEntry[]> {
+		return this.blobs.filter((e) => matches(e, ...queries)).map((e) => ({ ...e }));
 	}
-	async getEntries(
-		query: ContentQuery,
-	): Promise<ContentEntry<LocalContentSpec | RemoteContentSpec>[]> {
-		return this.blobs.filter((e) => matches(query, e));
-	}
-	async release(query: ContentQuery): Promise<void> {
+	async remove(query: ContentQuery): Promise<void> {
 		let i = 0;
 		while (i < this.blobs.length) {
-			if (matches(query, this.blobs[i])) {
+			if (matches(this.blobs[i], query)) {
 				this.blobs.splice(i, 1);
 			} else {
 				i++;
@@ -65,7 +66,7 @@ class InMemLocalBlobStorage implements LocalContentStorage {
 		}
 	}
 	private iid = 0;
-	private readonly blobs: ContentData[] = [];
+	private readonly blobs: (ContentData & ContentEntry)[] = [];
 
 	async attach?(resolvedUrl: IResolvedUrl) {
 		ensureFluidResolvedUrl(resolvedUrl);
@@ -74,14 +75,19 @@ class InMemLocalBlobStorage implements LocalContentStorage {
 	}
 }
 
-function matches(query: ContentQuery, e: ContentEntry) {
-	return (
-		(query.iid?.start === undefined || e.iid >= query.iid.start) &&
-		(query.iid?.end === undefined || e.iid >= query.iid.end) &&
-		(query.localOrRemoteIds === undefined ||
-			(e.localId !== undefined && query.localOrRemoteIds.includes(e.localId)) ||
-			(e.remoteId !== undefined && query.localOrRemoteIds.includes(e.remoteId))) &&
-		(query.types === undefined || query.types.includes(e.type))
+function matches(e: ContentEntry, ...queries: ContentQuery[]) {
+	return queries.some(
+		(query) =>
+			(!("type" in query) || e.type === query.type) &&
+			(!("localId" in query) || e.localId === query.localId) &&
+			(!("sequenceNumber" in query) || e.sequenceNumber === query.sequenceNumber) &&
+			(!("iid" in query) || e.iid === query.iid) &&
+			(query.iidRange?.start === undefined || e.iid >= query.iidRange.start) &&
+			(query.iidRange?.end === undefined || e.iid >= query.iidRange.end) &&
+			(query.sequenceNumberRange?.start === undefined ||
+				e.iid >= query.sequenceNumberRange.start) &&
+			(query.sequenceNumberRange?.end === undefined ||
+				e.iid >= query.sequenceNumberRange.end),
 	);
 }
 
@@ -91,25 +97,28 @@ export interface LocalContentStorageFactory {
 }
 
 export interface ContentSpec {
-	type: "op" | TreeEntry.Attachment | TreeEntry.Blob | TreeEntry.Tree;
-	data: any;
+	type: "op" | "baseSnapshot" | "blob";
 }
 export type LocalContentSpec = ContentSpec & { localId: string };
 export type RemoteContentSpec = ContentSpec & { remoteId: string };
-export type AnyContentSpec = ContentSpec & Partial<LocalContentSpec & RemoteContentSpec>;
-export type ContentData<S extends ContentSpec = AnyContentSpec> = S & { iid: number };
-export type ContentEntry<S extends ContentSpec = AnyContentSpec> = Omit<ContentData<S>, "data">;
-export interface ContentQuery {
-	types?: ContentSpec["type"][];
-	localOrRemoteIds?: string[];
-	iid?: { start?: number; end?: number };
-}
+export type SequencedContentSpec = ContentSpec & { sequenceNumber: number };
+export type AnyContentSpec = ContentSpec &
+	Partial<LocalContentSpec & RemoteContentSpec & SequencedContentSpec>;
+export type ContentData<S extends ContentSpec = AnyContentSpec> = S & { data: unknown };
+export type ContentEntry<S extends ContentSpec = AnyContentSpec> = S & { iid: number };
+export type ContentQuery = Partial<
+	ContentEntry & Record<"sequenceNumberRange" | "iidRange", { start?: number; end?: number }>
+>;
 
 export interface LocalContentStorage {
-	store<S extends LocalContentSpec | RemoteContentSpec>(spec: S): Promise<ContentEntry<S>>;
-	update(entry: ContentEntry): Promise<void>;
-	getEntries(query: ContentQuery): Promise<ContentEntry[]>;
-	getData(entry: ContentEntry): Promise<any>;
-	release(query: ContentQuery): Promise<void>;
+	store<S extends LocalContentSpec | RemoteContentSpec | SequencedContentSpec>(
+		spec: ContentData<S>,
+	): Promise<ContentEntry<S>>;
+	update<S extends RemoteContentSpec | SequencedContentSpec>(
+		entry: LocalContentSpec & S,
+	): Promise<ContentEntry | undefined>;
+	getEntries(...queries: ContentQuery[]): Promise<ContentEntry[]>;
+	getData(entry: ContentEntry): Promise<unknown>;
+	remove(...queries: ContentQuery[]): Promise<void>;
 	attach?(resolvedUrl: IResolvedUrl);
 }

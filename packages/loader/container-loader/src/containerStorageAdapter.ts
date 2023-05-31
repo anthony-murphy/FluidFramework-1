@@ -20,11 +20,10 @@ import {
 	ISummaryHandle,
 	ISummaryTree,
 	IVersion,
-	TreeEntry,
 } from "@fluidframework/protocol-definitions";
 import { ProtocolTreeStorageService } from "./protocolTreeDocumentStorageService";
 import { RetriableDocumentStorageService } from "./retriableDocumentStorageService";
-import { ContentEntry, LocalContentStorage } from "./localContentStore";
+import { LocalContentStorage } from "./localContentStore";
 
 /**
  * This class wraps the actual storage and make sure no wrong apis are called according to
@@ -139,7 +138,10 @@ export class ContainerStorageAdapter implements IDocumentStorageService, IDispos
 			}
 			return maybeBlob;
 		}
-		const maybeEntries = await this.localBlobStorage.getEntries({ localOrRemoteIds: [id] });
+		const maybeEntries = await this.localBlobStorage.getEntries(
+			{ localId: id },
+			{ remoteId: id },
+		);
 		if (maybeEntries.length === 1) {
 			return this.localBlobStorage.getData(maybeEntries[0]) as Promise<ArrayBufferLike>;
 		}
@@ -174,13 +176,11 @@ export class ContainerStorageAdapter implements IDocumentStorageService, IDispos
 		const localEntryP = this.localBlobStorage.store({
 			data,
 			localId: context.localId,
-			type: TreeEntry.Attachment,
+			type: "blob",
 		});
 		if (this._storageService) {
 			const resp = await this._storageService.createBlob(data, context);
-			const entry: ContentEntry = await localEntryP;
-			entry.remoteId = resp.id;
-			await this.localBlobStorage.update(entry);
+			await this.localBlobStorage.update({ ...(await localEntryP), remoteId: resp.id });
 			return resp;
 		} else {
 			await localEntryP;
