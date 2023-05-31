@@ -69,6 +69,7 @@ import {
 	IVersion,
 	MessageType,
 	SummaryType,
+	TreeEntry,
 } from "@fluidframework/protocol-definitions";
 import {
 	ChildLogger,
@@ -87,7 +88,7 @@ import { ContainerContext } from "./containerContext";
 import { ReconnectMode, IConnectionManagerFactoryArgs, getPackageName } from "./contracts";
 import { DeltaManager, IConnectionArgs } from "./deltaManager";
 import { DeltaManagerProxy } from "./deltaManagerProxy";
-import { ILoaderOptions, Loader, LocalContentStorage, RelativeLoader } from "./loader";
+import { ILoaderOptions, Loader, RelativeLoader } from "./loader";
 import { pkgVersion } from "./packageVersion";
 import { ContainerStorageAdapter } from "./containerStorageAdapter";
 import { IConnectionStateHandler, createConnectionStateHandler } from "./connectionStateHandler";
@@ -106,6 +107,7 @@ import {
 	ProtocolHandler,
 	ProtocolHandlerBuilder,
 } from "./protocol";
+import { LocalContentStorage } from "./localContentStore";
 
 const detachedContainerRefSeqNumber = 0;
 
@@ -152,7 +154,7 @@ export interface IContainerConfig {
 	 */
 	serializedContainerState?: IPendingContainerState;
 
-	localBlobStorage: LocalContentStorage;
+	localContentStorage: LocalContentStorage;
 	detachedId?: string;
 }
 
@@ -316,7 +318,9 @@ export class Container
 		protocolHandlerBuilder?: ProtocolHandlerBuilder,
 	): Promise<Container> {
 		const localBlobStorage: LocalContentStorage =
-			await loader.services.localBlobStorageFactory!.createAttached(loadOptions.resolvedUrl);
+			await loader.services.localContentStorageFactory!.createAttached(
+				loadOptions.resolvedUrl,
+			);
 
 		const container = new Container(
 			loader,
@@ -325,7 +329,7 @@ export class Container
 				resolvedUrl: loadOptions.resolvedUrl,
 				canReconnect: loadOptions.canReconnect,
 				serializedContainerState: pendingLocalState,
-				localBlobStorage,
+				localContentStorage: localBlobStorage,
 			},
 			protocolHandlerBuilder,
 		);
@@ -386,11 +390,11 @@ export class Container
 	): Promise<Container> {
 		const detachedId = uuid();
 		const localBlobStorage: LocalContentStorage =
-			await loader.services.localBlobStorageFactory!.createDetached(detachedId);
+			await loader.services.localContentStorageFactory!.createDetached(detachedId);
 
 		const container = new Container(
 			loader,
-			{ localBlobStorage, detachedId },
+			{ localContentStorage: localBlobStorage, detachedId },
 			protocolHandlerBuilder,
 		);
 
@@ -421,13 +425,13 @@ export class Container
 		const detachedId = (detachedIdTree.content as string) ?? uuid();
 
 		const localBlobStorage: LocalContentStorage =
-			await loader.services.localBlobStorageFactory!.createDetached(detachedId);
+			await loader.services.localContentStorageFactory!.createDetached(detachedId);
 
 		delete deserializedSummary.tree[".detachedId"];
 
 		const container = new Container(
 			loader,
-			{ localBlobStorage, detachedId },
+			{ localContentStorage: localBlobStorage, detachedId },
 			protocolHandlerBuilder,
 		);
 
@@ -853,7 +857,7 @@ export class Container
 			this.loader.services.options.summarizeProtocolTree;
 
 		this.storageAdapter = new ContainerStorageAdapter(
-			config.localBlobStorage,
+			config.localContentStorage,
 			this.mc.logger,
 			{},
 			addProtocolSummaryIfMissing,
@@ -1094,7 +1098,9 @@ export class Container
 				);
 				this.attachStarted = true;
 
-				const blobs = await this.config.localBlobStorage.getBlobIds();
+				const blobs = await this.config.localContentStorage.getEntries({
+					types: [TreeEntry.Attachment],
+				});
 				const localBlobs = blobs.filter((b) => b.remoteId === undefined);
 				// If attachment blobs were uploaded in detached state we will go through a different attach flow
 				const hasAttachmentBlobs = localBlobs.length > 0;
@@ -1152,20 +1158,20 @@ export class Container
 					ensureFluidResolvedUrl(resolvedUrl);
 					this._resolvedUrl = resolvedUrl;
 					await this.storageAdapter.connectToService(this.service);
-					this.config.localBlobStorage.attach!(this.service.resolvedUrl);
+					this.config.localContentStorage.attach!(this.service.resolvedUrl);
 					if (hasAttachmentBlobs) {
-						for (const blobIds of localBlobs) {
-							const blob = await this.config.localBlobStorage.getBlob(
-								blobIds.localId,
-							);
+						for (const localBlob of localBlobs) {
+							const blob = await this.config.localContentStorage.getData(localBlob);
 							await this.storageAdapter.createBlob(blob, {
-								localId: blobIds.localId,
+								localId: localBlob.localId!,
 							});
 						}
 						const redirectTable = (
-							await this.config.localBlobStorage.getBlobIds()
+							await this.config.localContentStorage.getEntries({
+								types: [TreeEntry.Attachment],
+							})
 						).reduce((pv, cv) => {
-							pv.set(cv.localId, cv.remoteId!);
+							pv.set(cv.localId!, cv.remoteId!);
 							return pv;
 						}, new Map<string, string>());
 						// take summary and upload

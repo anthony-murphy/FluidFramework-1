@@ -79,7 +79,7 @@ export const FileSnapshotWriterClassFactory: <TBase extends ReaderConstructor>(B
         buildTree(snapshotTree: api.ISnapshotTree): Promise<api.ITree>;
         repositoryUrl: string;
         readonly policies?: IDocumentStorageServicePolicies | undefined;
-        createBlob(file: ArrayBufferLike, contents?: {
+        createBlob(file: ArrayBufferLike, context?: {
             localId?: string | undefined;
         } | undefined): Promise<api.ICreateBlobResponse>;
         downloadSummary(handle: api.ISummaryHandle): Promise<api.ISummaryTree>;
@@ -117,7 +117,7 @@ export const FluidFetchReaderFileSnapshotWriter: {
         buildTree(snapshotTree: api.ISnapshotTree): Promise<api.ITree>;
         repositoryUrl: string;
         readonly policies?: IDocumentStorageServicePolicies | undefined;
-        createBlob(file: ArrayBufferLike, contents?: {
+        createBlob(file: ArrayBufferLike, context?: {
             localId?: string | undefined;
         } | undefined): Promise<api.ICreateBlobResponse>;
         downloadSummary(handle: api.ISummaryHandle): Promise<api.ISummaryTree>;

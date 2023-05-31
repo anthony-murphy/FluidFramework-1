@@ -20,10 +20,11 @@ import {
 	ISummaryHandle,
 	ISummaryTree,
 	IVersion,
+	TreeEntry,
 } from "@fluidframework/protocol-definitions";
-import { LocalContentStorage } from "./loader";
 import { ProtocolTreeStorageService } from "./protocolTreeDocumentStorageService";
 import { RetriableDocumentStorageService } from "./retriableDocumentStorageService";
+import { ContentEntry, LocalContentStorage } from "./localContentStore";
 
 /**
  * This class wraps the actual storage and make sure no wrong apis are called according to
@@ -138,8 +139,9 @@ export class ContainerStorageAdapter implements IDocumentStorageService, IDispos
 			}
 			return maybeBlob;
 		}
-		if (await this.localBlobStorage.hasBlob(id)) {
-			return this.localBlobStorage.getBlob(id);
+		const maybeEntries = await this.localBlobStorage.getEntries({ localOrRemoteIds: [id] });
+		if (maybeEntries.length === 1) {
+			return this.localBlobStorage.getData(maybeEntries[0]) as Promise<ArrayBufferLike>;
 		}
 		return this._storageService!.readBlob(id);
 	}
@@ -165,22 +167,23 @@ export class ContainerStorageAdapter implements IDocumentStorageService, IDispos
 	}
 
 	public async createBlob(
-		file: ArrayBufferLike,
+		data: ArrayBufferLike,
 		context: { localId: string },
 	): Promise<ICreateBlobResponse> {
 		const localId = context.localId;
-		const storeP = this.localBlobStorage.hasBlob(localId).then(async (hasBlob) => {
-			if (!hasBlob) {
-				await this.localBlobStorage.storeBlob(file, localId);
-			}
+		const localEntryP = this.localBlobStorage.store({
+			data,
+			localId: context.localId,
+			type: TreeEntry.Attachment,
 		});
 		if (this._storageService) {
-			const resp = await this._storageService.createBlob(file, context);
-			await storeP;
-			await this.localBlobStorage.updateBlob(localId, resp.id);
+			const resp = await this._storageService.createBlob(data, context);
+			const entry: ContentEntry = await localEntryP;
+			entry.remoteId = resp.id;
+			await this.localBlobStorage.update(entry);
 			return resp;
 		} else {
-			await storeP;
+			await localEntryP;
 			return { id: localId };
 		}
 	}

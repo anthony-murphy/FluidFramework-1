@@ -280,26 +280,26 @@ use_old_InterfaceDeclaration_IProtocolHandler(
 /*
 * Validate forward compat by using old type in place of current type
 * If breaking change required, add in package.json under typeValidation.broken:
-* "InterfaceDeclaration_ISerializableBlobContents": {"forwardCompat": false}
+* "RemovedInterfaceDeclaration_ISerializableBlobContents": {"forwardCompat": false}
 */
 declare function get_old_InterfaceDeclaration_ISerializableBlobContents():
     TypeOnly<old.ISerializableBlobContents>;
-declare function use_current_InterfaceDeclaration_ISerializableBlobContents(
+declare function use_current_RemovedInterfaceDeclaration_ISerializableBlobContents(
     use: TypeOnly<current.ISerializableBlobContents>);
-use_current_InterfaceDeclaration_ISerializableBlobContents(
+use_current_RemovedInterfaceDeclaration_ISerializableBlobContents(
     get_old_InterfaceDeclaration_ISerializableBlobContents());
 
 /*
 * Validate back compat by using current type in place of old type
 * If breaking change required, add in package.json under typeValidation.broken:
-* "InterfaceDeclaration_ISerializableBlobContents": {"backCompat": false}
+* "RemovedInterfaceDeclaration_ISerializableBlobContents": {"backCompat": false}
 */
-declare function get_current_InterfaceDeclaration_ISerializableBlobContents():
+declare function get_current_RemovedInterfaceDeclaration_ISerializableBlobContents():
     TypeOnly<current.ISerializableBlobContents>;
 declare function use_old_InterfaceDeclaration_ISerializableBlobContents(
     use: TypeOnly<old.ISerializableBlobContents>);
 use_old_InterfaceDeclaration_ISerializableBlobContents(
-    get_current_InterfaceDeclaration_ISerializableBlobContents());
+    get_current_RemovedInterfaceDeclaration_ISerializableBlobContents());
 
 /*
 * Validate forward compat by using old type in place of current type

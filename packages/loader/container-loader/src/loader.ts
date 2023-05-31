@@ -36,7 +36,6 @@ import {
 	IDocumentServiceFactory,
 	IDocumentStorageService,
 	IFluidResolvedUrl,
-	IResolvedUrl,
 	IUrlResolver,
 } from "@fluidframework/driver-definitions";
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
@@ -45,6 +44,7 @@ import { Container, IPendingContainerState } from "./container";
 import { IParsedUrl, parseUrl } from "./utils";
 import { pkgVersion } from "./packageVersion";
 import { ProtocolHandlerBuilder } from "./protocol";
+import { InMemLocalBlobStorageFactory, LocalContentStorageFactory } from "./localContentStore";
 
 function canUseCache(request: IRequest): boolean {
 	if (request.headers === undefined) {
@@ -243,89 +243,7 @@ export interface ILoaderServices {
 	/**
 	 * Blobs storage for detached containers.
 	 */
-	readonly localBlobStorageFactory?: LocalContentStorageFactory;
-}
-
-class InMemLocalBlobStorageFactory implements LocalContentStorageFactory {
-	public static readonly stores = new Map<string, LocalContentStorage>();
-	async createDetached(detachedId: string): Promise<LocalContentStorage> {
-		let store = InMemLocalBlobStorageFactory.stores.get(detachedId);
-
-		if (store === undefined) {
-			store = new InMemLocalBlobStorage();
-			InMemLocalBlobStorageFactory.stores.set(detachedId, store);
-		}
-		return store;
-	}
-	async createAttached(resolvedUrl: IResolvedUrl): Promise<LocalContentStorage> {
-		ensureFluidResolvedUrl(resolvedUrl);
-		let store = InMemLocalBlobStorageFactory.stores.get(resolvedUrl.url);
-
-		if (store === undefined) {
-			store = new InMemLocalBlobStorage();
-			InMemLocalBlobStorageFactory.stores.set(resolvedUrl.url, store);
-		}
-		return store;
-	}
-}
-
-class InMemLocalBlobStorage implements LocalContentStorage {
-	private readonly blobs = new Map<
-		string,
-		{
-			blob: ArrayBufferLike;
-			localId: string;
-			remoteId?: string;
-		}
-	>();
-
-	async storeBlob(blob: ArrayBufferLike, localId: string): Promise<void> {
-		this.blobs.set(localId, { blob, localId });
-	}
-	async hasBlob(localId: string): Promise<boolean> {
-		return this.blobs.has(localId);
-	}
-	async getBlobIds(): Promise<{ localId: string; remoteId?: string | undefined }[]> {
-		return [...this.blobs.values()];
-	}
-	async updateBlob(localId: string, remoteId: string): Promise<void> {
-		const blobInfo = this.blobs.get(localId);
-		if (blobInfo === undefined) {
-			throw new Error("blob must exist to be updated");
-		}
-		blobInfo.remoteId = remoteId;
-	}
-	async getBlob(localId: string): Promise<ArrayBufferLike> {
-		const blobInfo = this.blobs.get(localId);
-		if (blobInfo === undefined) {
-			throw new Error("blob must exist to be marked");
-		}
-		return blobInfo.blob;
-	}
-	async attach?(resolvedUrl: IResolvedUrl) {
-		ensureFluidResolvedUrl(resolvedUrl);
-
-		InMemLocalBlobStorageFactory.stores.set(resolvedUrl.url, this);
-	}
-}
-
-export interface LocalContentStorageFactory {
-	createDetached(detachedId: string): Promise<LocalContentStorage>;
-	createAttached(resolvedUrl: IResolvedUrl): Promise<LocalContentStorage>;
-}
-
-export interface LocalContentStorage {
-	storeBlob(file: ArrayBufferLike, localId: string): Promise<void>;
-
-	hasBlob(localId: string): Promise<boolean>;
-
-	getBlobIds(): Promise<{ localId: string; remoteId?: string }[]>;
-
-	updateBlob(localId: string, remoteId: string): Promise<void>;
-
-	getBlob(localId: string): Promise<ArrayBufferLike>;
-
-	attach?(resolvedUrl: IResolvedUrl);
+	readonly localContentStorageFactory?: LocalContentStorageFactory;
 }
 
 /**
@@ -399,7 +317,7 @@ export class Loader implements IHostLoader {
 			options: loaderProps.options ?? {},
 			scope,
 			subLogger: subMc.logger,
-			localBlobStorageFactory: new InMemLocalBlobStorageFactory(),
+			localContentStorageFactory: new InMemLocalBlobStorageFactory(),
 		};
 		this.mc = loggerToMonitoringContext(ChildLogger.create(this.services.subLogger, "Loader"));
 		this.protocolHandlerBuilder = loaderProps.protocolHandlerBuilder;
