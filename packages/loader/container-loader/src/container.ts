@@ -1406,7 +1406,10 @@ export class Container
 		}
 
 		const localContentSequencedOps = loadFromLocalContent
-			? await this.config.localContentStorage.getSequenceMessages(attributes.sequenceNumber)
+			? await this.config.localContentStorage.getSequenceMessages(
+					attributes.sequenceNumber,
+					true,
+			  )
 			: [];
 
 		// If we saved ops, we will replay them and don't need DeltaManager to fetch them

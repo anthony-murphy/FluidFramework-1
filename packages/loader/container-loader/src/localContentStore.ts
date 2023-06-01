@@ -31,7 +31,7 @@ export class InMemLocalBlobStorageFactory implements LocalContentStorageFactory 
 }
 
 class InMemLocalContentStorage implements LocalContentStorage {
-	async update<S extends RemoteContentSpec | SequencedContentSpec>(
+	async update<S extends RemoteIdContentSpec | SequencedContentSpec>(
 		entry: LocalContentSpec & S,
 	): Promise<ContentEntry | undefined> {
 		const existing = this.localContents.findIndex((e) =>
@@ -44,8 +44,8 @@ class InMemLocalContentStorage implements LocalContentStorage {
 		return undefined;
 	}
 
-	async getData(...entries: ContentQuery[]): Promise<ContentData<ContentEntry>[]> {
-		return this.localContents.filter((e) => matches(e, ...entries));
+	async getData(...disjunctiveQueries: ContentQuery[]): Promise<ContentData<ContentEntry>[]> {
+		return this.localContents.filter((e) => matches(e, ...disjunctiveQueries));
 	}
 	async store<S extends ContentSpec>(spec: ContentData<S>): Promise<ContentEntry<S>> {
 		const entry = {
@@ -56,21 +56,20 @@ class InMemLocalContentStorage implements LocalContentStorage {
 		return { ...entry };
 	}
 
-	async getEntries(...queries: ContentQuery[]): Promise<ContentEntry[]> {
-		return this.localContents.filter((e) => matches(e, ...queries)).map((e) => ({ ...e }));
+	async getEntries(...disjunctiveQueries: ContentQuery[]): Promise<ContentEntry[]> {
+		return this.localContents
+			.filter((e) => matches(e, ...disjunctiveQueries))
+			.map((e) => ({ ...e }));
 	}
-	async remove(query: ContentQuery): Promise<void> {
-		let i = 0;
-		while (i < this.localContents.length) {
-			if (matches(this.localContents[i], query)) {
-				this.localContents.splice(i, 1);
-			} else {
-				i++;
+	async remove(...disjunctiveQueries: ContentQuery[]): Promise<void> {
+		this.localContents.splice(0, this.localContents.length).forEach((e) => {
+			if (!matches(e, ...disjunctiveQueries)) {
+				this.localContents.push(e);
 			}
-		}
+		});
 	}
 	private iid = 0;
-	private readonly localContents: (ContentData & ContentEntry)[] = [];
+	private readonly localContents: ContentEntry<ContentData>[] = [];
 
 	async attach?(resolvedUrl: IResolvedUrl) {
 		ensureFluidResolvedUrl(resolvedUrl);
@@ -79,8 +78,8 @@ class InMemLocalContentStorage implements LocalContentStorage {
 	}
 }
 
-function matches(e: ContentEntry, ...queries: ContentQuery[]) {
-	return queries.some(
+function matches(e: ContentEntry, ...disjunctiveQueries: ContentQuery[]) {
+	return disjunctiveQueries.some(
 		(query) =>
 			(!("type" in query) || e.type === query.type) &&
 			(!("localId" in query) || e.localId === query.localId) &&
@@ -104,10 +103,10 @@ export interface ContentSpec {
 	type: "op" | "baseSnapshot" | "blob";
 }
 export type LocalContentSpec = ContentSpec & { localId: string };
-export type RemoteContentSpec = ContentSpec & { remoteId: string };
+export type RemoteIdContentSpec = ContentSpec & { remoteId: string };
 export type SequencedContentSpec = ContentSpec & { sequenceNumber: number };
 export type AnyContentSpec = ContentSpec &
-	Partial<LocalContentSpec & RemoteContentSpec & SequencedContentSpec>;
+	Partial<LocalContentSpec & RemoteIdContentSpec & SequencedContentSpec>;
 export type ContentData<S extends ContentSpec = AnyContentSpec> = S & { data: unknown };
 export type ContentEntry<S extends ContentSpec = AnyContentSpec> = S & { iid: number };
 export type ContentQuery = Partial<
@@ -115,15 +114,15 @@ export type ContentQuery = Partial<
 >;
 
 export interface LocalContentStorage {
-	store<S extends LocalContentSpec | RemoteContentSpec | SequencedContentSpec>(
+	store<S extends LocalContentSpec | RemoteIdContentSpec | SequencedContentSpec>(
 		spec: ContentData<S>,
 	): Promise<ContentEntry<S>>;
-	update<S extends RemoteContentSpec | SequencedContentSpec>(
+	update<S extends RemoteIdContentSpec | SequencedContentSpec>(
 		entry: LocalContentSpec & S,
 	): Promise<ContentEntry | undefined>;
-	getEntries(...queries: ContentQuery[]): Promise<ContentEntry[]>;
-	getData(...queries: ContentQuery[]): Promise<ContentEntry<ContentData>[]>;
-	remove(...queries: ContentQuery[]): Promise<void>;
+	getEntries(...disjunctiveQueries: ContentQuery[]): Promise<ContentEntry[]>;
+	getData(...disjunctiveQueries: ContentQuery[]): Promise<ContentEntry<ContentData>[]>;
+	remove(...disjunctiveQueries: ContentQuery[]): Promise<void>;
 	attach?(resolvedUrl: IResolvedUrl): Promise<void>;
 }
 
@@ -141,7 +140,7 @@ export class LocalContentStorageAdapter {
 				await this.localContentStorage.remove(
 					{
 						type: "baseSnapshot",
-						iidRange: { end: e.iid - 1 },
+						sequenceNumberRange: { end: sequenceNumber - 1 },
 					},
 					{ type: "op", sequenceNumberRange: { end: sequenceNumber } },
 				);
@@ -195,9 +194,9 @@ export class LocalContentStorageAdapter {
 	}
 
 	private async getLatestData(
-		...queries: ContentQuery[]
+		...disjunctiveQueries: ContentQuery[]
 	): Promise<ContentData<ContentData> | undefined> {
-		return this.localContentStorage.getData(...queries).then(async (entries) => {
+		return this.localContentStorage.getData(...disjunctiveQueries).then(async (entries) => {
 			if (entries.length > 1) {
 				entries.sort((a, b) => a.iid - b.iid);
 				await this.localContentStorage.remove({
@@ -208,11 +207,20 @@ export class LocalContentStorageAdapter {
 		});
 	}
 
-	async getSequenceMessages(sequenceStart: number) {
+	async getSequenceMessages(sequenceStart: number, trimBelowStart: boolean) {
 		return this.localContentStorage
 			.getEntries({
 				type: "op",
 				sequenceNumberRange: { start: sequenceStart + 1 },
+			})
+			.then(async (e) => {
+				if (trimBelowStart) {
+					await this.localContentStorage.remove({
+						type: "op",
+						sequenceNumberRange: { end: sequenceStart - 1 },
+					});
+				}
+				return e;
 			})
 			.then(async (e) => {
 				const datas = await this.localContentStorage.getData(...e);
