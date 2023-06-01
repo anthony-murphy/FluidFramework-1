@@ -143,7 +143,7 @@ export class ContainerStorageAdapter implements IDocumentStorageService, IDispos
 			{ remoteId: id },
 		);
 		if (maybeEntries.length === 1) {
-			return this.localBlobStorage.getData(maybeEntries[0]) as Promise<ArrayBufferLike>;
+			return this.localBlobStorage.getDatas(maybeEntries[0])[0] as Promise<ArrayBufferLike>;
 		}
 		return this._storageService!.readBlob(id);
 	}

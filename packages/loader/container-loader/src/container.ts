@@ -301,7 +301,7 @@ const summarizerClientType = "summarizer";
  */
 export class Container
 	extends EventEmitterWithErrorHandling<IContainerEvents>
-	implements IContainer, IContainerExperimental
+	implements IContainer
 {
 	public static version = "^0.1.0";
 
@@ -312,7 +312,6 @@ export class Container
 	public static async load(
 		loader: Loader,
 		loadOptions: IContainerLoadOptions,
-		pendingLocalState?: IPendingContainerState,
 		protocolHandlerBuilder?: ProtocolHandlerBuilder,
 	): Promise<Container> {
 		const localBlobStorage: LocalContentStorage =
@@ -326,7 +325,6 @@ export class Container
 				clientDetailsOverride: loadOptions.clientDetailsOverride,
 				resolvedUrl: loadOptions.resolvedUrl,
 				canReconnect: loadOptions.canReconnect,
-				serializedContainerState: pendingLocalState,
 				localContentStorage: localBlobStorage,
 			},
 			protocolHandlerBuilder,
@@ -340,11 +338,7 @@ export class Container
 					const version = loadOptions.version;
 
 					const defaultMode: IContainerLoadMode = { opsBeforeReturn: "cached" };
-					// if we have pendingLocalState, anything we cached is not useful and we shouldn't wait for connection
-					// to return container, so ignore this value and use undefined for opsBeforeReturn
-					const mode: IContainerLoadMode = pendingLocalState
-						? { ...(loadOptions.loadMode ?? defaultMode), opsBeforeReturn: undefined }
-						: loadOptions.loadMode ?? defaultMode;
+					const mode: IContainerLoadMode = loadOptions.loadMode ?? defaultMode;
 
 					const onClosed = (err?: ICriticalContainerError) => {
 						// pre-0.58 error message: containerClosedWithoutErrorDuringLoad
@@ -355,7 +349,7 @@ export class Container
 					container.on("closed", onClosed);
 
 					container
-						.load(version, mode, pendingLocalState)
+						.load(version, mode)
 						.finally(() => {
 							container.removeListener("closed", onClosed);
 						})
@@ -1018,41 +1012,6 @@ export class Container
 		}
 	}
 
-	public closeAndGetPendingLocalState(): string {
-		// runtime matches pending ops to successful ones by clientId and client seq num, so we need to close the
-		// container at the same time we get pending state, otherwise this container could reconnect and resubmit with
-		// a new clientId and a future container using stale pending state without the new clientId would resubmit them
-		const pendingState = this.getPendingLocalState();
-		this.close();
-		return pendingState;
-	}
-
-	public getPendingLocalState(): string {
-		if (!this.offlineLoadEnabled) {
-			throw new UsageError("Can't get pending local state unless offline load is enabled");
-		}
-		assert(
-			this.attachState === AttachState.Attached,
-			0x0d1 /* "Container should be attached before close" */,
-		);
-		assert(
-			this.resolvedUrl !== undefined && this.resolvedUrl.type === "fluid",
-			0x0d2 /* "resolved url should be valid Fluid url" */,
-		);
-		assert(!!this.baseSnapshot, 0x5d4 /* no base snapshot */);
-		const pendingState: IPendingContainerState = {
-			pendingRuntimeState: this.context.getPendingLocalState(),
-			baseSnapshot: this.baseSnapshot,
-			savedOps: this.savedOps,
-			url: this.resolvedUrl.url,
-			clientId: this.clientId,
-		};
-
-		this.mc.logger.sendTelemetryEvent({ eventName: "GetPendingLocalState" });
-
-		return JSON.stringify(pendingState);
-	}
-
 	public get attachState(): AttachState {
 		return this._attachState;
 	}
@@ -1172,9 +1131,9 @@ export class Container
 					this.config.localContentStorage.attach!(this.service.resolvedUrl);
 					if (hasAttachmentBlobs) {
 						for (const localBlob of localBlobs) {
-							const blob = (await this.config.localContentStorage.getData(
-								localBlob,
-							)) as ArrayBufferLike;
+							const blob = (
+								await this.config.localContentStorage.getDatas(localBlob)
+							)[0] as ArrayBufferLike;
 							await this.storageAdapter.createBlob(blob, {
 								localId: localBlob.localId!,
 							});
@@ -1406,11 +1365,7 @@ export class Container
 	 *
 	 * @param specifiedVersion - Version SHA to load snapshot. If not specified, will fetch the latest snapshot.
 	 */
-	private async load(
-		specifiedVersion: string | undefined,
-		loadMode: IContainerLoadMode,
-		pendingLocalState?: IPendingContainerState,
-	) {
+	private async load(specifiedVersion: string | undefined, loadMode: IContainerLoadMode) {
 		if (this._resolvedUrl === undefined) {
 			throw new Error("Attempting to load without a resolved url");
 		}
@@ -1419,6 +1374,53 @@ export class Container
 			this.subLogger,
 			this.client.details.type === summarizerClientType,
 		);
+
+		const localSnapshots = await this.config.localContentStorage.getEntries({
+			type: "baseSnapshot",
+		});
+		const loadFromLocalContent = localSnapshots.length === 1;
+
+		let snapshot: ISnapshotTree | undefined;
+		let versionId: string | undefined;
+		if (loadFromLocalContent) {
+			snapshot = (
+				await this.config.localContentStorage.getDatas(localSnapshots[0])
+			)[0] as ISnapshotTree;
+			// if we have pendingLocalState we can load without storage; don't wait for connection
+			this.storageAdapter.connectToService(this.service).catch((error) => {
+				this.dispose?.(error);
+			});
+		} else {
+			// Fetch specified snapshot.
+			[{ snapshot, versionId }] = await Promise.all([
+				this.fetchSnapshotTree(specifiedVersion),
+				this.storageAdapter.connectToService(this.service),
+			]);
+		}
+		assert(snapshot !== undefined, 0x237 /* "Snapshot should exist" */);
+
+		this._attachState = AttachState.Attached;
+
+		const attributes = await this.getDocumentAttributes(this.storageAdapter, snapshot);
+
+		if (this.offlineLoadEnabled && !loadFromLocalContent) {
+			this.config.localContentStorage
+				.store({
+					data: snapshot,
+					sequenceNumber: attributes.sequenceNumber,
+					type: "baseSnapshot",
+				})
+				.then(async (e) => {
+					await this.config.localContentStorage.remove(
+						{
+							type: "baseSnapshot",
+							iidRange: { end: e.iid - 1 },
+						},
+						{ type: "op", sequenceNumberRange: { end: e.sequenceNumber } },
+					);
+				})
+				.catch((r) => this.close(r));
+		}
 
 		// Ideally we always connect as "read" by default.
 		// Currently that works with SPO & r11s, because we get "write" connection when connecting to non-existing file.
@@ -1437,56 +1439,20 @@ export class Container
 
 		// Start websocket connection as soon as possible. Note that there is no op handler attached yet, but the
 		// DeltaManager is resilient to this and will wait to start processing ops until after it is attached.
-		if (loadMode.deltaConnection === undefined && !pendingLocalState) {
+		if (loadMode.deltaConnection === undefined && !loadFromLocalContent) {
 			this.connectToDeltaStream(connectionArgs);
 		}
 
-		if (!pendingLocalState) {
-			await this.storageAdapter.connectToService(this.service);
-		} else {
-			// if we have pendingLocalState we can load without storage; don't wait for connection
-			this.storageAdapter.connectToService(this.service).catch((error) => {
-				this.close(error);
-				this.dispose?.(error);
-			});
-		}
-
-		this._attachState = AttachState.Attached;
-
-		// Fetch specified snapshot.
-		const { snapshot, versionId } =
-			pendingLocalState === undefined
-				? await this.fetchSnapshotTree(specifiedVersion)
-				: { snapshot: pendingLocalState.baseSnapshot, versionId: undefined };
-
-		assert(snapshot !== undefined, 0x237 /* "Snapshot should exist" */);
-
-		const attributes: IDocumentAttributes = await this.getDocumentAttributes(
-			this.storageAdapter,
-			snapshot,
-		);
-
-		if (this.offlineLoadEnabled) {
-			this.config.localContentStorage
-				.store({
-					data: snapshot,
-					sequenceNumber: attributes.sequenceNumber,
-					type: "baseSnapshot",
-				})
-				.then(async (e) => {
-					await this.config.localContentStorage.remove(
-						{
-							type: "baseSnapshot",
-						},
-						{ type: "op", sequenceNumberRange: { end: attributes.sequenceNumber } },
-					);
-				})
-				.catch((r) => this.close(r));
-		}
+		const localContentSequencedOps = loadFromLocalContent
+			? await this.config.localContentStorage.getEntries({
+					type: "op",
+					sequenceNumberRange: { start: attributes.sequenceNumber },
+			  })
+			: [];
 
 		// If we saved ops, we will replay them and don't need DeltaManager to fetch them
 		const sequenceNumber =
-			pendingLocalState?.savedOps[pendingLocalState.savedOps.length - 1]?.sequenceNumber;
+			localContentSequencedOps[localContentSequencedOps.length - 1]?.sequenceNumber;
 		const dmAttributes =
 			sequenceNumber !== undefined ? { ...attributes, sequenceNumber } : attributes;
 
@@ -1518,29 +1484,39 @@ export class Container
 		await this.initializeProtocolStateFromSnapshot(attributes, this.storageAdapter, snapshot);
 
 		const codeDetails = this.getCodeDetailsFromQuorum();
+
+		const pendingRuntimeState = loadFromLocalContent
+			? ((await this.config.localContentStorage.getDatas(
+					...(await this.config.localContentStorage.getEntries({
+						type: "op",
+						sequenceNumber: undefined,
+					})),
+			  )) as Omit<ISequencedDocumentMessage, "sequenceNumber">[] | undefined)
+			: undefined;
 		await this.instantiateContext(
 			true, // existing
 			codeDetails,
 			snapshot,
-			pendingLocalState?.pendingRuntimeState,
+			pendingRuntimeState,
 		);
 
 		// replay saved ops
-		if (pendingLocalState) {
-			for (const message of pendingLocalState.savedOps) {
+		if (loadFromLocalContent) {
+			for (const message of (await this.config.localContentStorage.getDatas(
+				...localContentSequencedOps,
+			)) as ISequencedDocumentMessage[]) {
 				this.processRemoteMessage(message);
 
 				// allow runtime to apply stashed ops at this op's sequence number
 				await this.context.notifyOpReplay(message);
 			}
-			pendingLocalState.savedOps = [];
 
 			// now set clientId to stashed clientId so live ops are correctly processed as local
 			assert(
 				this.clientId === undefined,
 				0x5d6 /* Unexpected clientId when setting stashed clientId */,
 			);
-			this._clientId = pendingLocalState?.clientId;
+			this._clientId = pendingRuntimeState?.[0].clientId;
 		}
 
 		// We might have hit some failure that did not manifest itself in exception in this flow,
@@ -1566,7 +1542,7 @@ export class Container
 
 			switch (loadMode.deltaConnection) {
 				case undefined:
-					if (pendingLocalState) {
+					if (loadFromLocalContent) {
 						// connect to delta stream now since we did not before
 						this.connectToDeltaStream(connectionArgs);
 					}
@@ -2307,20 +2283,4 @@ export class Container
 			this.context.setConnectionState(state && !readonly, this.clientId);
 		}
 	}
-}
-
-/**
- * IContainer interface that includes experimental features still under development.
- * @internal
- */
-export interface IContainerExperimental extends IContainer {
-	/**
-	 * Get pending state from container. WARNING: misuse of this API can result in duplicate op
-	 * submission and potential document corruption. The blob returned MUST be deleted if and when this
-	 * container emits a "connected" event.
-	 * @returns serialized blob that can be passed to Loader.resolve()
-	 * @experimental misuse of this API can result in duplicate op submission and potential document corruption
-	 * {@link https://github.com/microsoft/FluidFramework/blob/main/packages/loader/container-loader/closeAndGetPendingLocalState.md}
-	 */
-	getPendingLocalState(): string;
 }

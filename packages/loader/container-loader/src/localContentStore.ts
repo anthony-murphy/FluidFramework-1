@@ -33,40 +33,42 @@ class InMemLocalContentStorage implements LocalContentStorage {
 	async update<S extends RemoteContentSpec | SequencedContentSpec>(
 		entry: LocalContentSpec & S,
 	): Promise<ContentEntry | undefined> {
-		const existing = this.blobs.findIndex((e) => matches(e, { localId: entry.localId }));
+		const existing = this.localContents.findIndex((e) =>
+			matches(e, { localId: entry.localId }),
+		);
 		if (existing > 0) {
-			this.blobs[existing] = { ...this.blobs[existing], ...entry };
+			this.localContents[existing] = { ...this.localContents[existing], ...entry };
 		}
-		return { ...this.blobs[existing] };
+		return { ...this.localContents[existing] };
 	}
 
-	async getData(entry: ContentEntry<ContentSpec>): Promise<unknown> {
-		return this.blobs.find((e) => e.iid === entry.iid)?.data;
+	async getDatas(...entries: ContentQuery[]): Promise<unknown[]> {
+		return this.localContents.filter((e) => matches(e, ...entries)).map((e) => e.data);
 	}
 	async store<S extends ContentSpec>(spec: ContentData<S>): Promise<ContentEntry<S>> {
 		const entry = {
 			...spec,
 			iid: ++this.iid,
 		};
-		this.blobs.push(entry);
+		this.localContents.push(entry);
 		return { ...entry };
 	}
 
 	async getEntries(...queries: ContentQuery[]): Promise<ContentEntry[]> {
-		return this.blobs.filter((e) => matches(e, ...queries)).map((e) => ({ ...e }));
+		return this.localContents.filter((e) => matches(e, ...queries)).map((e) => ({ ...e }));
 	}
 	async remove(query: ContentQuery): Promise<void> {
 		let i = 0;
-		while (i < this.blobs.length) {
-			if (matches(this.blobs[i], query)) {
-				this.blobs.splice(i, 1);
+		while (i < this.localContents.length) {
+			if (matches(this.localContents[i], query)) {
+				this.localContents.splice(i, 1);
 			} else {
 				i++;
 			}
 		}
 	}
 	private iid = 0;
-	private readonly blobs: (ContentData & ContentEntry)[] = [];
+	private readonly localContents: (ContentData & ContentEntry)[] = [];
 
 	async attach?(resolvedUrl: IResolvedUrl) {
 		ensureFluidResolvedUrl(resolvedUrl);
@@ -118,7 +120,7 @@ export interface LocalContentStorage {
 		entry: LocalContentSpec & S,
 	): Promise<ContentEntry | undefined>;
 	getEntries(...queries: ContentQuery[]): Promise<ContentEntry[]>;
-	getData(entry: ContentEntry): Promise<unknown>;
+	getDatas(...queries: ContentQuery[]): Promise<unknown[]>;
 	remove(...queries: ContentQuery[]): Promise<void>;
 	attach?(resolvedUrl: IResolvedUrl);
 }
