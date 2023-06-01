@@ -106,7 +106,7 @@ import {
 	ProtocolHandler,
 	ProtocolHandlerBuilder,
 } from "./protocol";
-import { LocalContentStorage } from "./localContentStore";
+import { LocalContentStorage, LocalContentStorageAdapter } from "./localContentStore";
 
 const detachedContainerRefSeqNumber = 0;
 
@@ -153,7 +153,7 @@ export interface IContainerConfig {
 	 */
 	serializedContainerState?: IPendingContainerState;
 
-	localContentStorage: LocalContentStorage;
+	localContentStorage: LocalContentStorageAdapter;
 	detachedId?: string;
 }
 
@@ -325,7 +325,7 @@ export class Container
 				clientDetailsOverride: loadOptions.clientDetailsOverride,
 				resolvedUrl: loadOptions.resolvedUrl,
 				canReconnect: loadOptions.canReconnect,
-				localContentStorage: localBlobStorage,
+				localContentStorage: new LocalContentStorageAdapter(localBlobStorage),
 			},
 			protocolHandlerBuilder,
 		);
@@ -386,7 +386,7 @@ export class Container
 
 		const container = new Container(
 			loader,
-			{ localContentStorage: localBlobStorage, detachedId },
+			{ localContentStorage: new LocalContentStorageAdapter(localBlobStorage), detachedId },
 			protocolHandlerBuilder,
 		);
 
@@ -423,7 +423,7 @@ export class Container
 
 		const container = new Container(
 			loader,
-			{ localContentStorage: localBlobStorage, detachedId },
+			{ localContentStorage: new LocalContentStorageAdapter(localBlobStorage), detachedId },
 			protocolHandlerBuilder,
 		);
 
@@ -1053,10 +1053,7 @@ export class Container
 				);
 				this.attachStarted = true;
 
-				const localBlobs = await this.config.localContentStorage.getEntries({
-					type: "blob",
-					remoteId: undefined,
-				});
+				const localBlobs = await this.config.localContentStorage.getLocalBlobEntries();
 				// If attachment blobs were uploaded in detached state we will go through a different attach flow
 				const hasAttachmentBlobs = localBlobs.length > 0;
 
@@ -1083,20 +1080,7 @@ export class Container
 						if (this.offlineLoadEnabled) {
 							const snapshot = getSnapshotTreeFromSerializedContainer(summary);
 							this.config.localContentStorage
-								.store({
-									data: snapshot,
-									remoteId: "0",
-									type: "baseSnapshot",
-								})
-								.then(async (e) => {
-									await this.config.localContentStorage.remove(
-										{
-											type: "baseSnapshot",
-											iidRange: { end: e.iid - 1 },
-										},
-										{ type: "op" },
-									);
-								})
+								.storeBaseSnapshot(snapshot, 0)
 								.catch((r) => this.close(r));
 						}
 					}
@@ -1128,20 +1112,20 @@ export class Container
 					ensureFluidResolvedUrl(resolvedUrl);
 					this._resolvedUrl = resolvedUrl;
 					await this.storageAdapter.connectToService(this.service);
-					this.config.localContentStorage.attach!(this.service.resolvedUrl);
+					this.config.localContentStorage
+						.attach(this.service.resolvedUrl)
+						?.catch((r) => this.close(r));
 					if (hasAttachmentBlobs) {
 						for (const localBlob of localBlobs) {
-							const blob = (
-								await this.config.localContentStorage.getDatas(localBlob)
-							)[0] as ArrayBufferLike;
-							await this.storageAdapter.createBlob(blob, {
-								localId: localBlob.localId!,
+							const blob = await this.config.localContentStorage.getBlobData(
+								localBlob.localId,
+							);
+							await this.storageAdapter.createBlob(blob!, {
+								localId: localBlob.localId,
 							});
 						}
 						const redirectTable = (
-							await this.config.localContentStorage.getEntries({
-								type: "blob",
-							})
+							await this.config.localContentStorage.getAllBlobEntries()
 						).reduce((pv, cv) => {
 							pv.set(cv.localId!, cv.remoteId!);
 							return pv;
@@ -1156,11 +1140,7 @@ export class Container
 						if (this.offlineLoadEnabled) {
 							const snapshot = getSnapshotTreeFromSerializedContainer(summary);
 							this.config.localContentStorage
-								.store({
-									data: snapshot,
-									sequenceNumber: 0,
-									type: "baseSnapshot",
-								})
+								.storeBaseSnapshot(snapshot, 0)
 								.catch((r) => this.close(r));
 						}
 
@@ -1375,17 +1355,11 @@ export class Container
 			this.client.details.type === summarizerClientType,
 		);
 
-		const localSnapshots = await this.config.localContentStorage.getEntries({
-			type: "baseSnapshot",
-		});
-		const loadFromLocalContent = localSnapshots.length === 1;
+		let snapshot = await this.config.localContentStorage.getBaseSnapshotData();
+		const loadFromLocalContent = snapshot !== undefined;
 
-		let snapshot: ISnapshotTree | undefined;
 		let versionId: string | undefined;
 		if (loadFromLocalContent) {
-			snapshot = (
-				await this.config.localContentStorage.getDatas(localSnapshots[0])
-			)[0] as ISnapshotTree;
 			// if we have pendingLocalState we can load without storage; don't wait for connection
 			this.storageAdapter.connectToService(this.service).catch((error) => {
 				this.dispose?.(error);
@@ -1404,22 +1378,10 @@ export class Container
 		const attributes = await this.getDocumentAttributes(this.storageAdapter, snapshot);
 
 		if (this.offlineLoadEnabled && !loadFromLocalContent) {
-			this.config.localContentStorage
-				.store({
-					data: snapshot,
-					sequenceNumber: attributes.sequenceNumber,
-					type: "baseSnapshot",
-				})
-				.then(async (e) => {
-					await this.config.localContentStorage.remove(
-						{
-							type: "baseSnapshot",
-							iidRange: { end: e.iid - 1 },
-						},
-						{ type: "op", sequenceNumberRange: { end: e.sequenceNumber } },
-					);
-				})
-				.catch((r) => this.close(r));
+			await this.config.localContentStorage.storeBaseSnapshot(
+				snapshot,
+				attributes.sequenceNumber,
+			);
 		}
 
 		// Ideally we always connect as "read" by default.
@@ -1444,10 +1406,7 @@ export class Container
 		}
 
 		const localContentSequencedOps = loadFromLocalContent
-			? await this.config.localContentStorage.getEntries({
-					type: "op",
-					sequenceNumberRange: { start: attributes.sequenceNumber },
-			  })
+			? await this.config.localContentStorage.getSequenceMessages(attributes.sequenceNumber)
 			: [];
 
 		// If we saved ops, we will replay them and don't need DeltaManager to fetch them
@@ -1486,12 +1445,7 @@ export class Container
 		const codeDetails = this.getCodeDetailsFromQuorum();
 
 		const pendingRuntimeState = loadFromLocalContent
-			? ((await this.config.localContentStorage.getDatas(
-					...(await this.config.localContentStorage.getEntries({
-						type: "op",
-						sequenceNumber: undefined,
-					})),
-			  )) as Omit<ISequencedDocumentMessage, "sequenceNumber">[] | undefined)
+			? await this.config.localContentStorage.getLocalMessages()
 			: undefined;
 		await this.instantiateContext(
 			true, // existing
@@ -1502,9 +1456,7 @@ export class Container
 
 		// replay saved ops
 		if (loadFromLocalContent) {
-			for (const message of (await this.config.localContentStorage.getDatas(
-				...localContentSequencedOps,
-			)) as ISequencedDocumentMessage[]) {
+			for (const message of localContentSequencedOps) {
 				this.processRemoteMessage(message);
 
 				// allow runtime to apply stashed ops at this op's sequence number
@@ -2072,7 +2024,7 @@ export class Container
 
 		this.messageCountAfterDisconnection += 1;
 		this.collabWindowTracker?.stopSequenceNumberUpdate();
-		const clientSeq = this._deltaManager.submit(
+		const clientSequenceNumber = this._deltaManager.submit(
 			type,
 			contents,
 			batch,
@@ -2081,22 +2033,19 @@ export class Container
 			referenceSequenceNumber,
 		);
 		this.config.localContentStorage
-			.store({
-				data: {
-					type,
-					contents,
-					batch,
-					metadata,
-					compression,
-					referenceSequenceNumber,
-					clientId: this.clientId,
-				},
-				localId: clientSeq.toString(),
-				type: "op",
+			.storeLocalMessage({
+				type,
+				contents,
+				metadata,
+				compression,
+				referenceSequenceNumber:
+					referenceSequenceNumber ?? this.deltaManager.lastSequenceNumber,
+				clientSequenceNumber,
+				clientId: this.clientId ?? "",
 			})
 			.catch((r) => this.close(r));
 
-		return clientSeq;
+		return clientSequenceNumber;
 	}
 
 	private processRemoteMessage(message: ISequencedDocumentMessage) {
@@ -2105,39 +2054,15 @@ export class Container
 		}
 		const local = this.clientId === message.clientId;
 
-		if (local) {
-			this.config.localContentStorage
-				.update({
-					type: "op",
-					localId: message.clientSequenceNumber.toString(),
-					sequenceNumber: message.sequenceNumber,
-					data: message,
-				})
-				.then(async (e) => {
-					if (e !== undefined) {
-						await this.config.localContentStorage.remove({
-							type: "op",
-							sequenceNumber: undefined,
-							iidRange: { end: e.iid - 1 },
-						});
-					}
-				})
-				.catch((r) => this.close(r));
-		} else {
-			this.config.localContentStorage
-				.store({
-					type: "op",
-					data: message,
-					sequenceNumber: message.sequenceNumber,
-				})
-				.catch((r) => this.close(r));
-		}
-
 		// Allow the protocol handler to process the message
 		const result = this.protocolHandler.processMessage(message, local);
 
 		// Forward messages to the loaded runtime for processing
 		this.context.process(message, local);
+
+		this.config.localContentStorage
+			.storeSequencedMessage(message, local)
+			.catch((r) => this.close(r));
 
 		// Inactive (not in quorum or not writers) clients don't take part in the minimum sequence number calculation.
 		if (this.activeConnection()) {

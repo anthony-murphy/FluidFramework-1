@@ -5,6 +5,7 @@
 
 import { IResolvedUrl } from "@fluidframework/driver-definitions";
 import { ensureFluidResolvedUrl } from "@fluidframework/driver-utils";
+import { ISequencedDocumentMessage, ISnapshotTree } from "@fluidframework/protocol-definitions";
 
 export class InMemLocalBlobStorageFactory implements LocalContentStorageFactory {
 	public static readonly stores = new Map<string, LocalContentStorage>();
@@ -38,12 +39,13 @@ class InMemLocalContentStorage implements LocalContentStorage {
 		);
 		if (existing > 0) {
 			this.localContents[existing] = { ...this.localContents[existing], ...entry };
+			return { ...this.localContents[existing] };
 		}
-		return { ...this.localContents[existing] };
+		return undefined;
 	}
 
-	async getDatas(...entries: ContentQuery[]): Promise<unknown[]> {
-		return this.localContents.filter((e) => matches(e, ...entries)).map((e) => e.data);
+	async getData(...entries: ContentQuery[]): Promise<ContentData<ContentEntry>[]> {
+		return this.localContents.filter((e) => matches(e, ...entries));
 	}
 	async store<S extends ContentSpec>(spec: ContentData<S>): Promise<ContentEntry<S>> {
 		const entry = {
@@ -120,7 +122,161 @@ export interface LocalContentStorage {
 		entry: LocalContentSpec & S,
 	): Promise<ContentEntry | undefined>;
 	getEntries(...queries: ContentQuery[]): Promise<ContentEntry[]>;
-	getDatas(...queries: ContentQuery[]): Promise<unknown[]>;
+	getData(...queries: ContentQuery[]): Promise<ContentEntry<ContentData>[]>;
 	remove(...queries: ContentQuery[]): Promise<void>;
-	attach?(resolvedUrl: IResolvedUrl);
+	attach?(resolvedUrl: IResolvedUrl): Promise<void>;
+}
+
+export class LocalContentStorageAdapter {
+	constructor(private readonly localContentStorage: LocalContentStorage) {}
+
+	async storeBaseSnapshot(data: ISnapshotTree, sequenceNumber: number) {
+		return this.localContentStorage
+			.store({
+				type: "baseSnapshot",
+				sequenceNumber,
+				data,
+			})
+			.then(async (e) => {
+				await this.localContentStorage.remove(
+					{
+						type: "baseSnapshot",
+						iidRange: { end: e.iid - 1 },
+					},
+					{ type: "op", sequenceNumberRange: { end: sequenceNumber } },
+				);
+			});
+	}
+
+	async getBaseSnapshotData() {
+		return this.getLatestData({
+			type: "baseSnapshot",
+		}).then((e) => e?.data as ISnapshotTree | undefined);
+	}
+
+	async getLocalBlobEntries(): Promise<ContentEntry<LocalContentSpec>[]> {
+		return this.localContentStorage.getEntries({
+			type: "blob",
+			remoteId: undefined,
+		}) as Promise<ContentEntry<LocalContentSpec>[]>;
+	}
+
+	async getAllBlobEntries(): Promise<ContentEntry[]> {
+		return this.localContentStorage.getEntries({
+			type: "blob",
+		});
+	}
+	async getBlobData(localOrRemoteId: string): Promise<ArrayBufferLike | undefined> {
+		return this.getLatestData(
+			{
+				type: "blob",
+				localId: localOrRemoteId,
+			},
+			{
+				type: "blob",
+				remoteId: localOrRemoteId,
+			},
+		).then((e) => e?.data as ArrayBufferLike | undefined);
+	}
+
+	async storeLocalBlob(data: ArrayBufferLike, localId: string) {
+		return this.localContentStorage.store({
+			data,
+			localId,
+			type: "blob",
+		});
+	}
+	async updateLocalBlob(localId: string, remoteId: string) {
+		return this.localContentStorage.update({
+			remoteId,
+			localId,
+			type: "blob",
+		});
+	}
+
+	private async getLatestData(
+		...queries: ContentQuery[]
+	): Promise<ContentData<ContentData> | undefined> {
+		return this.localContentStorage.getData(...queries).then(async (entries) => {
+			if (entries.length > 1) {
+				entries.sort((a, b) => a.iid - b.iid);
+				await this.localContentStorage.remove({
+					iidRange: { end: entries[0].iid - 1 },
+				});
+			}
+			return entries[0];
+		});
+	}
+
+	async getSequenceMessages(sequenceStart: number) {
+		return this.localContentStorage
+			.getEntries({
+				type: "op",
+				sequenceNumberRange: { start: sequenceStart + 1 },
+			})
+			.then(async (e) => {
+				const datas = await this.localContentStorage.getData(...e);
+				return datas.map((d) => d.data as ISequencedDocumentMessage);
+			});
+	}
+	async getLocalMessages() {
+		return this.localContentStorage
+			.getEntries({
+				type: "op",
+				sequenceNumber: undefined,
+			})
+			.then(async (e) => {
+				const datas = await this.localContentStorage.getData(...e);
+				return datas.map(
+					(d) =>
+						d.data as Omit<
+							ISequencedDocumentMessage,
+							"sequenceNumber" | "term" | "minimumSequenceNumber" | "timestamp"
+						>,
+				);
+			});
+	}
+
+	async storeLocalMessage(
+		data: Omit<
+			ISequencedDocumentMessage,
+			"sequenceNumber" | "term" | "minimumSequenceNumber" | "timestamp"
+		>,
+	) {
+		return this.localContentStorage.store({
+			type: "op",
+			data,
+			localId: `${data.clientId}-${data.clientSequenceNumber.toString()}`,
+		});
+	}
+
+	async storeSequencedMessage(data: ISequencedDocumentMessage, local: boolean) {
+		return local
+			? this.localContentStorage
+					.update({
+						type: "op",
+						localId: `${data.clientId}-${data.clientSequenceNumber.toString()}`,
+						sequenceNumber: data.sequenceNumber,
+						data,
+					})
+					.then(async (e) => {
+						if (e !== undefined) {
+							await this.localContentStorage.remove({
+								type: "op",
+								sequenceNumber: undefined,
+								iidRange: { end: e.iid - 1 },
+							});
+						}
+						return e;
+					})
+			: this.localContentStorage.store({
+					type: "op",
+					data,
+					sequenceNumber: data.sequenceNumber,
+			  });
+	}
+
+	attach(resolveUrl: IResolvedUrl) {
+		return this.localContentStorage.attach?.(resolveUrl);
+	}
 }

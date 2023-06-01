@@ -23,7 +23,7 @@ import {
 } from "@fluidframework/protocol-definitions";
 import { ProtocolTreeStorageService } from "./protocolTreeDocumentStorageService";
 import { RetriableDocumentStorageService } from "./retriableDocumentStorageService";
-import { LocalContentStorage } from "./localContentStore";
+import { LocalContentStorageAdapter } from "./localContentStore";
 
 /**
  * This class wraps the actual storage and make sure no wrong apis are called according to
@@ -50,7 +50,7 @@ export class ContainerStorageAdapter implements IDocumentStorageService, IDispos
 	 * @param forceEnableSummarizeProtocolTree - Enforce uploading a protocol summary regardless of the service's policy
 	 */
 	public constructor(
-		private readonly localBlobStorage: LocalContentStorage,
+		private readonly localBlobStorage: LocalContentStorageAdapter,
 		private readonly logger: ITelemetryLogger,
 		/**
 		 * ArrayBufferLikes or utf8 encoded strings, containing blobs from a snapshot
@@ -138,12 +138,9 @@ export class ContainerStorageAdapter implements IDocumentStorageService, IDispos
 			}
 			return maybeBlob;
 		}
-		const maybeEntries = await this.localBlobStorage.getEntries(
-			{ localId: id },
-			{ remoteId: id },
-		);
-		if (maybeEntries.length === 1) {
-			return this.localBlobStorage.getDatas(maybeEntries[0])[0] as Promise<ArrayBufferLike>;
+		const maybeEntries = await this.localBlobStorage.getBlobData(id);
+		if (maybeEntries !== undefined) {
+			return maybeEntries;
 		}
 		return this._storageService!.readBlob(id);
 	}
@@ -173,14 +170,10 @@ export class ContainerStorageAdapter implements IDocumentStorageService, IDispos
 		context: { localId: string },
 	): Promise<ICreateBlobResponse> {
 		const localId = context.localId;
-		const localEntryP = this.localBlobStorage.store({
-			data,
-			localId: context.localId,
-			type: "blob",
-		});
+		const localEntryP = this.localBlobStorage.storeLocalBlob(data, localId);
 		if (this._storageService) {
 			const resp = await this._storageService.createBlob(data, context);
-			await this.localBlobStorage.update({ ...(await localEntryP), remoteId: resp.id });
+			await this.localBlobStorage.updateLocalBlob(localId, resp.id);
 			return resp;
 		} else {
 			await localEntryP;

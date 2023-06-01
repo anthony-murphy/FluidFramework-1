@@ -6,7 +6,6 @@
 export { ConnectionState } from "./connectionState";
 export {
 	IContainerConfig,
-	IContainerExperimental,
 	IContainerLoadOptions,
 	IPendingContainerState,
 	waitContainerToCatchUp,
