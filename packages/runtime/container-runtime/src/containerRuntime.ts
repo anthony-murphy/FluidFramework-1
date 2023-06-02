@@ -116,9 +116,9 @@ import { v4 as uuid } from "uuid";
 import { ContainerFluidHandleContext } from "./containerHandleContext";
 import { FluidDataStoreRegistry } from "./dataStoreRegistry";
 import { ReportOpPerfTelemetry, IPerfSignalReport } from "./connectionTelemetry";
-import { IPendingLocalState, PendingStateManager } from "./pendingStateManager";
+import { PendingStateManager } from "./pendingStateManager";
 import { pkgVersion } from "./packageVersion";
-import { BlobManager, IBlobManagerLoadInfo, IPendingBlobs } from "./blobManager";
+import { BlobManager, IBlobManagerLoadInfo } from "./blobManager";
 import { DataStores, getSummaryForDatastores } from "./dataStores";
 import {
 	aliasBlobName,
@@ -493,22 +493,6 @@ export enum CompressionAlgorithms {
 interface OldContainerContextWithLogger extends Omit<IContainerContext, "taggedLogger"> {
 	logger: ITelemetryBaseLogger;
 	taggedLogger: undefined;
-}
-
-/**
- * State saved when the container closes, to be given back to a newly
- * instantiated runtime in a new instance of the container, so it can load to the
- * same state
- */
-interface IPendingRuntimeState {
-	/**
-	 * Pending ops from PendingStateManager
-	 */
-	pending?: IPendingLocalState;
-	/**
-	 * Pending blobs from BlobManager
-	 */
-	pendingAttachmentBlobs?: IPendingBlobs;
 }
 
 const maxConsecutiveReconnectsKey = "Fluid.ContainerRuntime.MaxConsecutiveReconnects";
@@ -1187,7 +1171,7 @@ export class ContainerRuntime
 			this._flushMode = runtimeOptions.flushMode;
 		}
 
-		const pendingRuntimeState = context.pendingLocalState as IPendingRuntimeState | undefined;
+		const pendingRuntimeState = context.pendingLocalState;
 
 		const maxSnapshotCacheDurationMs = this._storage?.policies?.maximumCacheDurationMs;
 		if (
@@ -1287,7 +1271,6 @@ export class ContainerRuntime
 			(blobPath: string) => this.garbageCollector.nodeUpdated(blobPath, "Loaded"),
 			(blobPath: string) => this.garbageCollector.isNodeDeleted(blobPath),
 			this,
-			pendingRuntimeState?.pendingAttachmentBlobs,
 			(error?: ICriticalContainerError) => this.closeFn(error),
 		);
 
@@ -1308,7 +1291,7 @@ export class ContainerRuntime
 				rollback: this.rollback.bind(this),
 				orderSequentially: this.orderSequentially.bind(this),
 			},
-			pendingRuntimeState?.pending,
+			pendingRuntimeState ?? [],
 		);
 
 		const disableCompression = this.mc.config.getBoolean(

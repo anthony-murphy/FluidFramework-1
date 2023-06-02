@@ -5,11 +5,14 @@
 
 import { IDisposable } from "@fluidframework/common-definitions";
 import { assert, Lazy } from "@fluidframework/common-utils";
-import { ICriticalContainerError } from "@fluidframework/container-definitions";
+import {
+	ICriticalContainerError,
+	ISubmittedDocumentMessage,
+} from "@fluidframework/container-definitions";
 import { DataProcessingError } from "@fluidframework/container-utils";
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
 import Deque from "double-ended-queue";
-import { ContainerMessageType } from "./containerRuntime";
+import { ContainerMessageType, ContainerRuntimeMessage } from "./containerRuntime";
 import { pkgVersion } from "./packageVersion";
 
 /**
@@ -71,9 +74,8 @@ export interface IRuntimeStateHandler {
  */
 export class PendingStateManager implements IDisposable {
 	private readonly pendingMessages = new Deque<IPendingMessage>();
-	private readonly initialMessages = new Deque<IPendingMessage>();
 	private readonly disposeOnce = new Lazy<void>(() => {
-		this.initialMessages.clear();
+		this.initialMessages?.splice(0);
 		this.pendingMessages.clear();
 	});
 
@@ -95,12 +97,12 @@ export class PendingStateManager implements IDisposable {
 	 * @returns A boolean indicating whether there are messages or not.
 	 */
 	public hasPendingMessages(): boolean {
-		return !this.pendingMessages.isEmpty() || !this.initialMessages.isEmpty();
+		return !this.pendingMessages.isEmpty() || this.initialMessages.length > 0;
 	}
 
 	public getLocalState(): IPendingLocalState | undefined {
 		assert(
-			this.initialMessages.isEmpty(),
+			this.initialMessages.length > 0,
 			0x2e9 /* "Must call getLocalState() after applying initial states" */,
 		);
 		if (!this.pendingMessages.isEmpty()) {
@@ -127,40 +129,8 @@ export class PendingStateManager implements IDisposable {
 
 	constructor(
 		private readonly stateHandler: IRuntimeStateHandler,
-		initialLocalState: IPendingLocalState | undefined,
-	) {
-		/**
-		 * Convert old local state format to the new format
-		 * The old format contained "flush" messages as the indicator of batch ends
-		 * The new format instead uses batch metadata on the last message to indicate batch ends
-		 * ! TODO: Remove this conversion in "2.0.0-internal.5.0.0" as version from "2.0.0-internal.4.0.0" will be new format
-		 * AB#2496 tracks removal
-		 */
-		if (initialLocalState?.pendingStates) {
-			const pendingStates = initialLocalState?.pendingStates;
-			let currentlyBatching = false;
-			for (let i = 0; i < pendingStates.length; i++) {
-				const initialState = pendingStates[i];
-
-				// Skip over "flush" messages
-				if (initialState.type === "message") {
-					if (initialState.opMetadata?.batch) {
-						currentlyBatching = true;
-					} else if (initialState.opMetadata?.batch === false) {
-						currentlyBatching = false;
-					} else if (
-						// End of batch if we are currently batching and this is last message or next message is flush
-						currentlyBatching &&
-						(i === pendingStates.length - 1 || pendingStates[i + 1].type === "flush")
-					) {
-						currentlyBatching = false;
-						initialState.opMetadata = { ...initialState.opMetadata, batch: false };
-					}
-					this.initialMessages.push(initialState);
-				}
-			}
-		}
-	}
+		private readonly initialMessages: ISubmittedDocumentMessage[],
+	) {}
 
 	public get disposed() {
 		return this.disposeOnce.evaluated;
@@ -200,9 +170,9 @@ export class PendingStateManager implements IDisposable {
 	 */
 	public async applyStashedOpsAt(seqNum?: number) {
 		// apply stashed ops at sequence number
-		while (!this.initialMessages.isEmpty()) {
+		while (this.initialMessages.length !== 0) {
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			const nextMessage = this.initialMessages.peekFront()!;
+			const nextMessage = this.initialMessages.shift()!;
 			if (seqNum !== undefined) {
 				if (nextMessage.referenceSequenceNumber > seqNum) {
 					break; // nothing left to do at this sequence number
@@ -212,22 +182,30 @@ export class PendingStateManager implements IDisposable {
 				}
 			}
 
+			const runtimeMessage: ContainerRuntimeMessage = nextMessage.contents;
+
 			// applyStashedOp will cause the DDS to behave as if it has sent the op but not actually send it
 			const localOpMetadata = await this.stateHandler.applyStashedOp(
-				nextMessage.messageType,
-				nextMessage.content,
+				runtimeMessage.type,
+				runtimeMessage.contents,
 			);
-			nextMessage.localOpMetadata = localOpMetadata;
 
-			if (nextMessage.messageType === ContainerMessageType.IdAllocation) {
+			if (runtimeMessage.type === ContainerMessageType.IdAllocation) {
 				// Remove the stashed state from the op
 				// so that it doesn't go over the wire
-				delete nextMessage.content.stashedState;
+				delete runtimeMessage.contents.stashedState;
 			}
 
 			// then we push onto pendingMessages which will cause PendingStateManager to resubmit when we connect
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			this.pendingMessages.push(this.initialMessages.shift()!);
+			this.pendingMessages.push({
+				...nextMessage,
+				...runtimeMessage,
+				content: runtimeMessage.contents,
+				opMetadata: nextMessage.metadata,
+				localOpMetadata,
+				messageType: runtimeMessage.type,
+				type: "message",
+			});
 		}
 	}
 
@@ -376,7 +354,7 @@ export class PendingStateManager implements IDisposable {
 		this.clientId = this.stateHandler.clientId();
 
 		assert(
-			this.initialMessages.isEmpty(),
+			this.initialMessages.length === 0,
 			0x174 /* "initial states should be empty before replaying pending" */,
 		);
 

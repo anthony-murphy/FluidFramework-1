@@ -72,4 +72,5 @@ export {
 	IProvideRuntimeFactory,
 	IRuntime,
 	IRuntimeFactory,
+	ISubmittedDocumentMessage,
 } from "./runtime";

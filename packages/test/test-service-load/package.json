@@ -43,7 +43,7 @@
 		"start:odspdf": "node ./dist/nodeStressTest.js --driver odsp --driverEndpoint odsp-df",
 		"start:reauth": "node ./dist/nodeStressTest.js --profile mini --browserAuth",
 		"start:t9s": "start-server-and-test start:tinylicious:test 7070 start:t9s:run",
-		"start:t9s:run": "node ./dist/nodeStressTest.js --driver tinylicious ",
+		"start:t9s:run": "node ./dist/nodeStressTest.js --driver tinylicious -v",
 		"start:tinylicious:test": "tinylicious > tinylicious.log 2>&1",
 		"test": "npm run test:stress:run",
 		"test:stress": "npm run test:stress:tinylicious",

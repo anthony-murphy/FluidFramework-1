@@ -129,6 +129,11 @@ export interface IBatchMessage {
 	referenceSequenceNumber?: number;
 }
 
+export type ISubmittedDocumentMessage = Omit<
+	ISequencedDocumentMessage,
+	"sequenceNumber" | "term" | "minimumSequenceNumber" | "timestamp"
+>;
+
 /**
  * The ContainerContext is a proxy standing between the Container and the Container's IRuntime.
  * This allows the Container to terminate the connection to the IRuntime.
@@ -172,7 +177,7 @@ export interface IContainerContext extends IDisposable {
 	// The logger implementation, which would support tagged events, should be provided by the loader.
 	readonly taggedLogger: ITelemetryBaseLogger;
 	readonly serviceConfiguration: IClientConfiguration | undefined;
-	pendingLocalState?: unknown;
+	pendingLocalState?: ISubmittedDocumentMessage[];
 
 	/**
 	 * Ambient services provided with the context

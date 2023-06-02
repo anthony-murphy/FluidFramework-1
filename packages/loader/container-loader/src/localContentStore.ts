@@ -3,6 +3,7 @@
  * Licensed under the MIT License.
  */
 
+import { ISubmittedDocumentMessage } from "@fluidframework/container-definitions";
 import { IResolvedUrl } from "@fluidframework/driver-definitions";
 import { ensureFluidResolvedUrl } from "@fluidframework/driver-utils";
 import { ISequencedDocumentMessage, ISnapshotTree } from "@fluidframework/protocol-definitions";
@@ -235,22 +236,11 @@ export class LocalContentStorageAdapter {
 			})
 			.then(async (e) => {
 				const datas = await this.localContentStorage.getData(...e);
-				return datas.map(
-					(d) =>
-						d.data as Omit<
-							ISequencedDocumentMessage,
-							"sequenceNumber" | "term" | "minimumSequenceNumber" | "timestamp"
-						>,
-				);
+				return datas.map((d) => d.data as ISubmittedDocumentMessage);
 			});
 	}
 
-	async storeLocalMessage(
-		data: Omit<
-			ISequencedDocumentMessage,
-			"sequenceNumber" | "term" | "minimumSequenceNumber" | "timestamp"
-		>,
-	) {
+	async storeLocalMessage(data: ISubmittedDocumentMessage) {
 		return this.localContentStorage.store({
 			type: "op",
 			data,

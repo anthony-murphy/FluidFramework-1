@@ -30,6 +30,7 @@ import {
 	IFluidCodeDetails,
 	isFluidCodeDetails,
 	IBatchMessage,
+	ISubmittedDocumentMessage,
 } from "@fluidframework/container-definitions";
 import { GenericError, UsageError } from "@fluidframework/container-utils";
 import {
@@ -315,7 +316,7 @@ export class Container
 		protocolHandlerBuilder?: ProtocolHandlerBuilder,
 	): Promise<Container> {
 		const localBlobStorage: LocalContentStorage =
-			await loader.services.localContentStorageFactory!.createAttached(
+			await loader.services.localContentStorageFactory.createAttached(
 				loadOptions.resolvedUrl,
 			);
 
@@ -382,7 +383,7 @@ export class Container
 	): Promise<Container> {
 		const detachedId = uuid();
 		const localBlobStorage: LocalContentStorage =
-			await loader.services.localContentStorageFactory!.createDetached(detachedId);
+			await loader.services.localContentStorageFactory.createDetached(detachedId);
 
 		const container = new Container(
 			loader,
@@ -417,7 +418,7 @@ export class Container
 		const detachedId = (detachedIdTree.content as string) ?? uuid();
 
 		const localBlobStorage: LocalContentStorage =
-			await loader.services.localContentStorageFactory!.createDetached(detachedId);
+			await loader.services.localContentStorageFactory.createDetached(detachedId);
 
 		delete deserializedSummary.tree[".detachedId"];
 
@@ -523,7 +524,6 @@ export class Container
 	private _resolvedUrl: IFluidResolvedUrl | undefined;
 	private attachStarted = false;
 	private _dirtyContainer = false;
-	private readonly savedOps: ISequencedDocumentMessage[] = [];
 
 	private lastVisible: number | undefined;
 	private readonly visibilityEventHandler: (() => void) | undefined;
@@ -605,7 +605,7 @@ export class Container
 	public get clientDetails(): IClientDetails {
 		return this._deltaManager.clientDetails;
 	}
-
+	/* 
 	private get offlineLoadEnabled(): boolean {
 		const enabled =
 			this.mc.config.getBoolean("Fluid.Container.enableOfflineLoad") ??
@@ -613,7 +613,7 @@ export class Container
 		// summarizer will not have any pending state we want to save
 		return enabled && this.clientDetails.capabilities.interactive;
 	}
-
+*/
 	/**
 	 * Get the code details that are currently specified for the container.
 	 * @returns The current code details if any are specified, undefined if none are specified.
@@ -1077,12 +1077,10 @@ export class Container
 						// Also, this should only be fired in detached container.
 						this._attachState = AttachState.Attaching;
 						this.emit("attaching");
-						if (this.offlineLoadEnabled) {
-							const snapshot = getSnapshotTreeFromSerializedContainer(summary);
-							this.config.localContentStorage
-								.storeBaseSnapshot(snapshot, 0)
-								.catch((r) => this.close(r));
-						}
+						const snapshot = getSnapshotTreeFromSerializedContainer(summary);
+						this.config.localContentStorage
+							.storeBaseSnapshot(snapshot, 0)
+							.catch((r) => this.close(r));
 					}
 
 					// Actually go and create the resolved document
@@ -1137,12 +1135,10 @@ export class Container
 
 						this._attachState = AttachState.Attaching;
 						this.emit("attaching");
-						if (this.offlineLoadEnabled) {
-							const snapshot = getSnapshotTreeFromSerializedContainer(summary);
-							this.config.localContentStorage
-								.storeBaseSnapshot(snapshot, 0)
-								.catch((r) => this.close(r));
-						}
+						const snapshot = getSnapshotTreeFromSerializedContainer(summary);
+						this.config.localContentStorage
+							.storeBaseSnapshot(snapshot, 0)
+							.catch((r) => this.close(r));
 
 						await this.storageAdapter.uploadSummaryWithContext(summary, {
 							referenceSequenceNumber: 0,
@@ -1357,19 +1353,12 @@ export class Container
 
 		let snapshot = await this.config.localContentStorage.getBaseSnapshotData();
 		const loadFromLocalContent = snapshot !== undefined;
+		await this.storageAdapter.connectToService(this.service);
 
 		let versionId: string | undefined;
-		if (loadFromLocalContent) {
-			// if we have pendingLocalState we can load without storage; don't wait for connection
-			this.storageAdapter.connectToService(this.service).catch((error) => {
-				this.dispose?.(error);
-			});
-		} else {
+		if (!loadFromLocalContent) {
 			// Fetch specified snapshot.
-			[{ snapshot, versionId }] = await Promise.all([
-				this.fetchSnapshotTree(specifiedVersion),
-				this.storageAdapter.connectToService(this.service),
-			]);
+			({ snapshot, versionId } = await this.fetchSnapshotTree(specifiedVersion));
 		}
 		assert(snapshot !== undefined, 0x237 /* "Snapshot should exist" */);
 
@@ -1377,7 +1366,7 @@ export class Container
 
 		const attributes = await this.getDocumentAttributes(this.storageAdapter, snapshot);
 
-		if (this.offlineLoadEnabled && !loadFromLocalContent) {
+		if (!loadFromLocalContent) {
 			await this.config.localContentStorage.storeBaseSnapshot(
 				snapshot,
 				attributes.sequenceNumber,
@@ -2052,9 +2041,6 @@ export class Container
 	}
 
 	private processRemoteMessage(message: ISequencedDocumentMessage) {
-		if (this.offlineLoadEnabled) {
-			this.savedOps.push(message);
-		}
 		const local = this.clientId === message.clientId;
 
 		// Allow the protocol handler to process the message
@@ -2152,7 +2138,7 @@ export class Container
 		existing: boolean,
 		codeDetails: IFluidCodeDetails,
 		snapshot?: ISnapshotTree,
-		pendingLocalState?: unknown,
+		pendingLocalState?: ISubmittedDocumentMessage[],
 	) {
 		assert(this._context?.disposed !== false, 0x0dd /* "Existing context not disposed" */);
 

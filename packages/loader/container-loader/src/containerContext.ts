@@ -22,6 +22,7 @@ import {
 	ICodeDetailsLoader,
 	IFluidModuleWithDetails,
 	IBatchMessage,
+	ISubmittedDocumentMessage,
 } from "@fluidframework/container-definitions";
 import { IRequest, IResponse, FluidObject } from "@fluidframework/core-interfaces";
 import { IDocumentStorageService } from "@fluidframework/driver-definitions";
@@ -75,7 +76,7 @@ export class ContainerContext implements IContainerContext {
 		version: string,
 		updateDirtyContainerState: (dirty: boolean) => void,
 		existing: boolean,
-		pendingLocalState?: unknown,
+		pendingLocalState?: ISubmittedDocumentMessage[],
 	): Promise<ContainerContext> {
 		const context = new ContainerContext(
 			container,
@@ -245,7 +246,7 @@ export class ContainerContext implements IContainerContext {
 		public readonly version: string,
 		public readonly updateDirtyContainerState: (dirty: boolean) => void,
 		public readonly existing: boolean,
-		public readonly pendingLocalState?: unknown,
+		public readonly pendingLocalState?: ISubmittedDocumentMessage[],
 	) {
 		this._connected = this.container.connected;
 		this._quorum = quorum;

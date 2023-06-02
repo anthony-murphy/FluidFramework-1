@@ -10,7 +10,12 @@ import {
 	TestDriverTypes,
 	DriverEndpoint,
 } from "@fluidframework/test-driver-definitions";
-import { Loader, ConnectionState } from "@fluidframework/container-loader";
+import {
+	Loader,
+	ConnectionState,
+	InMemLocalBlobStorageFactory,
+	LocalContentStorageFactory,
+} from "@fluidframework/container-loader";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { IRequestHeader } from "@fluidframework/core-interfaces";
 import { IContainer, LoaderHeader } from "@fluidframework/container-definitions";
@@ -203,7 +208,7 @@ async function runnerProcess(
 	let done = false;
 	// Reset the workload once, on the first iteration
 	let reset = true;
-	let stashedOpP: Promise<string | undefined> | undefined;
+	let localContentStorageFactory: LocalContentStorageFactory = new InMemLocalBlobStorageFactory();
 	while (!done) {
 		let container: IContainer | undefined;
 		try {
@@ -228,24 +233,10 @@ async function runnerProcess(
 						return configurations[runConfig.runId % configurations.length][name];
 					},
 				},
+				localContentStorageFactory,
 			});
 
-			let stashedOps = stashedOpP ? await stashedOpP : undefined;
-			stashedOpP = undefined; // delete to avoid reuse
-
-			// temp fix for #15538: remove clientId from empty stash blobs
-			if (stashedOps !== undefined) {
-				const parsed = JSON.parse(stashedOps);
-				if (
-					parsed.pendingRuntimeState.pending === undefined &&
-					Object.keys(parsed.pendingRuntimeState.pendingAttachmentBlobs).length === 0
-				) {
-					parsed.clientId = undefined;
-					stashedOps = JSON.stringify(parsed);
-				}
-			}
-
-			container = await loader.resolve({ url, headers }, stashedOps);
+			container = await loader.resolve({ url, headers });
 
 			container.connect();
 			const test = await requestFluidObject<ILoadTest>(container, "/");
@@ -280,7 +271,7 @@ async function runnerProcess(
 			}
 			const offline = runConfig.testConfig.offline;
 			if (offline) {
-				stashedOpP = scheduleOffline(
+				scheduleOffline(
 					documentServiceFactory,
 					container,
 					runConfig,
@@ -297,6 +288,7 @@ async function runnerProcess(
 			reset = false;
 			printStatus(runConfig, done ? `finished` : "closed");
 		} catch (error) {
+			localContentStorageFactory = new InMemLocalBlobStorageFactory();
 			runConfig.logger.sendErrorEvent(
 				{
 					eventName: "RunnerFailed",
@@ -436,7 +428,7 @@ function scheduleContainerClose(
 		);
 }
 
-async function scheduleOffline(
+function scheduleOffline(
 	dsf: FaultInjectionDocumentServiceFactory,
 	container: IContainer,
 	runConfig: IRunConfig,
@@ -445,8 +437,8 @@ async function scheduleOffline(
 	offlineDurationMinMs: number,
 	offlineDurationMaxMs: number,
 	stashPercent = 0.5,
-): Promise<string | undefined> {
-	return new Promise<void>((resolve) => {
+) {
+	void new Promise<void>((resolve) => {
 		if (container.connectionState !== ConnectionState.Connected && !container.closed) {
 			container.once("connected", () => resolve());
 			container.once("closed", () => resolve());
@@ -456,7 +448,7 @@ async function scheduleOffline(
 		}
 	})
 		.then(async () => {
-			const schedule = async (): Promise<undefined | string> => {
+			const schedule = async (): Promise<void> => {
 				if (container.closed) {
 					return undefined;
 				}
@@ -465,7 +457,7 @@ async function scheduleOffline(
 				await new Promise<void>((resolve) => setTimeout(resolve, injectionTime));
 
 				if (container.closed) {
-					return undefined;
+					return;
 				}
 				assert(container.resolvedUrl !== undefined, "no url");
 				const ds = dsf.documentServices.get(container.resolvedUrl);
@@ -476,14 +468,14 @@ async function scheduleOffline(
 
 				await new Promise<void>((resolve) => setTimeout(resolve, offlineTime));
 				if (container.closed) {
-					return undefined;
+					return;
 				}
 				if (
 					runConfig.loaderConfig?.enableOfflineLoad === true &&
 					random.real() < stashPercent
 				) {
-					printStatus(runConfig, "closing offline container!");
-					return container.closeAndGetPendingLocalState();
+					container.close();
+					return;
 				}
 				printStatus(runConfig, "going online!");
 				ds.goOnline();

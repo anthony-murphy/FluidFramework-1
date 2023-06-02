@@ -187,7 +187,7 @@ export interface ILoaderProps {
 	/**
 	 * Blobs storage for detached containers.
 	 */
-	readonly detachedBlobStorage?: IDetachedBlobStorage;
+	readonly localContentStorageFactory?: LocalContentStorageFactory;
 
 	/**
 	 * The configuration provider which may be used to control features.
@@ -243,7 +243,7 @@ export interface ILoaderServices {
 	/**
 	 * Blobs storage for detached containers.
 	 */
-	readonly localContentStorageFactory?: LocalContentStorageFactory;
+	readonly localContentStorageFactory: LocalContentStorageFactory;
 }
 
 /**
@@ -317,7 +317,8 @@ export class Loader implements IHostLoader {
 			options: loaderProps.options ?? {},
 			scope,
 			subLogger: subMc.logger,
-			localContentStorageFactory: new InMemLocalBlobStorageFactory(),
+			localContentStorageFactory:
+				loaderProps.localContentStorageFactory ?? new InMemLocalBlobStorageFactory(),
 		};
 		this.mc = loggerToMonitoringContext(ChildLogger.create(this.services.subLogger, "Loader"));
 		this.protocolHandlerBuilder = loaderProps.protocolHandlerBuilder;

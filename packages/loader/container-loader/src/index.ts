@@ -21,3 +21,16 @@ export {
 	requestResolvedObjectFromContainer,
 } from "./loader";
 export { IProtocolHandler, ProtocolHandlerBuilder } from "./protocol";
+export {
+	InMemLocalBlobStorageFactory,
+	LocalContentStorageFactory,
+	LocalContentStorage,
+	ContentData,
+	ContentEntry,
+	ContentQuery,
+	ContentSpec,
+	AnyContentSpec,
+	LocalContentSpec,
+	RemoteIdContentSpec,
+	SequencedContentSpec,
+} from "./localContentStore";

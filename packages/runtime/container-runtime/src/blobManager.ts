@@ -17,13 +17,7 @@ import {
 	responseToException,
 	SummaryTreeBuilder,
 } from "@fluidframework/runtime-utils";
-import {
-	assert,
-	bufferToString,
-	Deferred,
-	stringToBuffer,
-	TypedEventEmitter,
-} from "@fluidframework/common-utils";
+import { assert, bufferToString, Deferred, TypedEventEmitter } from "@fluidframework/common-utils";
 import {
 	IContainerRuntime,
 	IContainerRuntimeEvents,
@@ -215,7 +209,6 @@ export class BlobManager extends TypedEventEmitter<IBlobManagerEvents> {
 		// blobPath's format - `/<BlobManager.basePath>/<blobId>`.
 		private readonly isBlobDeleted: (blobPath: string) => boolean,
 		private readonly runtime: IBlobManagerRuntime,
-		stashedBlobs: IPendingBlobs = {},
 		private readonly closeContainer: (error?: ICriticalContainerError) => void,
 	) {
 		super();
@@ -228,32 +221,6 @@ export class BlobManager extends TypedEventEmitter<IBlobManagerEvents> {
 
 		this.runtime.on("disconnected", () => this.onDisconnected());
 		this.redirectTable = this.load(snapshot);
-
-		// Begin uploading stashed blobs from previous container instance
-		Object.entries(stashedBlobs).forEach(([localId, entry]) => {
-			const blob = stringToBuffer(entry.blob, "base64");
-			if (entry.minTTLInSeconds && entry.uploadTime) {
-				const timeLapseSinceLocalUpload = (Date.now() - entry.uploadTime) / 1000;
-				// stashed entries with more than half-life in storage will not be reuploaded
-				if (entry.minTTLInSeconds - timeLapseSinceLocalUpload > entry.minTTLInSeconds / 2) {
-					this.pendingBlobs.set(localId, {
-						blob,
-						status: PendingBlobStatus.OfflinePendingOp,
-						handleP: new Deferred(),
-						uploadP: undefined,
-						uploadTime: entry.uploadTime,
-						minTTLInSeconds: entry.minTTLInSeconds,
-					});
-					return;
-				}
-			}
-			this.pendingBlobs.set(localId, {
-				blob,
-				status: PendingBlobStatus.OfflinePendingUpload,
-				handleP: new Deferred(),
-				uploadP: this.uploadBlob(localId, blob),
-			});
-		});
 
 		this.sendBlobAttachOp = (localId: string, blobId?: string) => {
 			const pendingEntry = this.pendingBlobs.get(localId);

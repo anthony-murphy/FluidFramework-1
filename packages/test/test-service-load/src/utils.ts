@@ -14,9 +14,7 @@ import { makeRandom } from "@fluid-internal/stochastic-test-utils";
 import { ITelemetryBaseEvent } from "@fluidframework/common-definitions";
 import { assert, LazyPromise } from "@fluidframework/common-utils";
 import { IContainer, IFluidCodeDetails } from "@fluidframework/container-definitions";
-import { IDetachedBlobStorage, Loader } from "@fluidframework/container-loader";
 import { IContainerRuntimeOptions } from "@fluidframework/container-runtime";
-import { ICreateBlobResponse } from "@fluidframework/protocol-definitions";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { ChildLogger, TelemetryLogger } from "@fluidframework/telemetry-utils";
 import {
@@ -26,6 +24,7 @@ import {
 	DriverEndpoint,
 } from "@fluidframework/test-driver-definitions";
 import { LocalCodeLoader } from "@fluidframework/test-utils";
+import { Loader } from "@fluidframework/container-loader";
 import { createFluidExport, ILoadTest } from "./loadTestDataStore";
 import {
 	generateConfigurations,
@@ -131,30 +130,6 @@ const codeDetails: IFluidCodeDetails = {
 export const createCodeLoader = (options: IContainerRuntimeOptions) =>
 	new LocalCodeLoader([[codeDetails, createFluidExport(options)]]);
 
-class MockDetachedBlobStorage implements IDetachedBlobStorage {
-	public readonly blobs = new Map<string, ArrayBufferLike>();
-
-	public get size() {
-		return this.blobs.size;
-	}
-
-	public getBlobIds(): string[] {
-		return Array.from(this.blobs.keys());
-	}
-
-	public async createBlob(content: ArrayBufferLike): Promise<ICreateBlobResponse> {
-		const id = this.size.toString();
-		this.blobs.set(id, content);
-		return { id };
-	}
-
-	public async readBlob(blobId: string): Promise<ArrayBufferLike> {
-		const blob = this.blobs.get(blobId);
-		assert(!!blob, "blob not found");
-		return blob;
-	}
-}
-
 export async function initialize(
 	testDriver: ITestDriver,
 	seed: number,
@@ -186,7 +161,6 @@ export async function initialize(
 		codeLoader: createCodeLoader(containerOptions),
 		logger,
 		options: loaderOptions,
-		detachedBlobStorage: new MockDetachedBlobStorage(),
 		configProvider: {
 			getRawConfig(name) {
 				return configurations[name];
