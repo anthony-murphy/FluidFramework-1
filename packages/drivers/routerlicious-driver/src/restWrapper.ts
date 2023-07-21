@@ -139,6 +139,9 @@ export class RouterliciousRestWrapper extends RestWrapper {
 				const isNetworkError = ["TypeError", "FetchError"].includes(error?.name);
 				throwR11sNetworkError(
 					isNetworkError ? `NetworkError: ${error.message}` : safeStringify(error),
+					undefined,
+					undefined,
+					canRetry,
 				);
 			});
 			return {

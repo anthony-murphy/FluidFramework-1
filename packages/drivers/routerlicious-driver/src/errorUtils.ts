@@ -67,6 +67,7 @@ export function createR11sNetworkError(
 	errorMessage: string,
 	statusCode?: number,
 	retryAfterMs?: number,
+	canRetry?: boolean,
 ): R11sError {
 	const props = { statusCode, driverVersion };
 	switch (statusCode) {
@@ -102,7 +103,10 @@ export function createR11sNetworkError(
 		case 502:
 			return new GenericNetworkError(errorMessage, true, props);
 		default:
-			const retryInfo = { canRetry: retryAfterMs !== undefined, retryAfterMs };
+			const retryInfo = {
+				canRetry: canRetry === true || retryAfterMs !== undefined,
+				retryAfterMs,
+			};
 			return createGenericNetworkError(errorMessage, retryInfo, props);
 	}
 }
@@ -111,8 +115,9 @@ export function throwR11sNetworkError(
 	errorMessage: string,
 	statusCode?: number,
 	retryAfterMs?: number,
+	canRetry?: boolean,
 ): never {
-	const networkError = createR11sNetworkError(errorMessage, statusCode, retryAfterMs);
+	const networkError = createR11sNetworkError(errorMessage, statusCode, retryAfterMs, canRetry);
 
 	// eslint-disable-next-line @typescript-eslint/no-throw-literal
 	throw networkError;
