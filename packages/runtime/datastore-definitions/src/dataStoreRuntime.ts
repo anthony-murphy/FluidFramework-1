@@ -32,7 +32,8 @@ import {
 import { IChannel } from ".";
 
 /**
- * @internal
+ * Events emitted by {@link IFluidDataStoreRuntime}.
+ * @alpha
  */
 export interface IFluidDataStoreRuntimeEvents extends IEvent {
 	(event: "disconnected" | "dispose" | "attaching" | "attached", listener: () => void);
@@ -42,7 +43,7 @@ export interface IFluidDataStoreRuntimeEvents extends IEvent {
 }
 
 /**
- * @internal
+ * @alpha
  */
 export interface IFluidDataStoreRuntimeBase extends IDisposable, IProvideFluidHandleContext {
 	readonly id: string;
@@ -106,7 +107,7 @@ export interface IFluidDataStoreRuntimeBase extends IDisposable, IProvideFluidHa
 
 /**
  * Represents the runtime for the data store. Contains helper functions/state of the data store.
- * @internal
+ * @alpha
  */
 export interface IFluidDataStoreRuntime
 	extends Omit<IFluidDataStoreRuntimeBase, keyof IEventProvider<IEvent>>,
