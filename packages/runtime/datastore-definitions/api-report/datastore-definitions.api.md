@@ -90,7 +90,22 @@ export interface IDeltaHandler {
 }
 
 // @alpha
-export interface IFluidDataStoreRuntime extends IEventProvider<IFluidDataStoreRuntimeEvents>, IDisposable, Partial<IProvideFluidDataStoreRegistry> {
+export interface IFluidDataStoreRuntime extends Omit<IFluidDataStoreRuntimeBase, keyof IEventProvider<IEvent>>, IEventProvider<IFluidDataStoreRuntimeEvents>, Partial<IProvideFluidDataStoreRegistry> {
+    // (undocumented)
+    readonly connected: boolean;
+    readonly entryPoint: IFluidHandle<FluidObject>;
+    getAudience(): IAudience;
+    getChannel(id: string): Promise<IChannel>;
+    // (undocumented)
+    readonly objectsRoutingContext: IFluidHandleContext;
+    // (undocumented)
+    readonly rootRoutingContext: IFluidHandleContext;
+    submitSignal(type: string, content: any, targetClientId?: string): void;
+    waitAttached(): Promise<void>;
+}
+
+// @alpha (undocumented)
+export interface IFluidDataStoreRuntimeBase extends IDisposable, IProvideFluidHandleContext {
     readonly attachState: AttachState;
     bindChannel(channel: IChannel): void;
     // (undocumented)
