@@ -4,7 +4,7 @@
  */
 
 import {
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelAttributes,
 	IChannelFactory,
 } from "@fluidframework/datastore-definitions";
@@ -43,7 +43,7 @@ export class ConsensusQueue<T = any> extends ConsensusOrderedCollection<T> {
 	 * @param id - optional name of theconsensus queue
 	 * @returns newly create consensus queue (but not attached yet)
 	 */
-	public static create<T = any>(runtime: IFluidDataStoreRuntime, id?: string) {
+	public static create<T = any>(runtime: IFluidDataStoreRuntimeBase, id?: string) {
 		return runtime.createChannel(id, ConsensusQueueFactory.Type) as ConsensusQueue<T>;
 	}
 
@@ -62,7 +62,7 @@ export class ConsensusQueue<T = any> extends ConsensusOrderedCollection<T> {
 	 */
 	public constructor(
 		id: string,
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		attributes: IChannelAttributes,
 	) {
 		super(id, runtime, attributes, new SnapshotableQueue<T>());

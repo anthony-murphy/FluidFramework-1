@@ -7,7 +7,7 @@ import { assert } from "@fluidframework/core-utils";
 import { type ISequencedDocumentMessage, MessageType } from "@fluidframework/protocol-definitions";
 import {
 	type IChannelAttributes,
-	type IFluidDataStoreRuntime,
+	type IFluidDataStoreRuntimeBase,
 	type IChannelStorageService,
 	type IChannelFactory,
 	type Serializable,
@@ -76,7 +76,7 @@ export class SharedCell<T = any>
 	 *
 	 * @returns The newly create `SharedCell`. Note that it will not yet be attached.
 	 */
-	public static create(runtime: IFluidDataStoreRuntime, id?: string): SharedCell {
+	public static create(runtime: IFluidDataStoreRuntimeBase, id?: string): SharedCell {
 		return runtime.createChannel(id, CellFactory.Type) as SharedCell;
 	}
 
@@ -120,7 +120,7 @@ export class SharedCell<T = any>
 	 * @param id - Unique identifier for the `SharedCell`.
 	 */
 	// eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
-	constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes) {
+	constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes) {
 		super(id, runtime, attributes, "fluid_cell_");
 
 		this.options = runtime.options as ICellOptions;

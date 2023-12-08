@@ -4,7 +4,7 @@
  */
 
 import { strict as assert, fail } from "assert";
-import { IFluidDataStoreRuntime } from "@fluidframework/datastore-definitions";
+import { IFluidDataStoreRuntimeBase } from "@fluidframework/datastore-definitions";
 import { IIdCompressor } from "@fluidframework/runtime-definitions";
 import {
 	LocalNodeKey,
@@ -25,7 +25,7 @@ import { ISharedTree } from "../../../shared-tree";
 async function getIIDCompressor(tree?: ISharedTree): Promise<IIdCompressor> {
 	const runtime = (
 		(tree ?? (await TestTreeProvider.create(1)).trees[0]) as unknown as {
-			runtime: IFluidDataStoreRuntime;
+			runtime: IFluidDataStoreRuntimeBase;
 		}
 	).runtime;
 	return runtime.idCompressor ?? fail("Expected IIdCompressor to be present in runtime");

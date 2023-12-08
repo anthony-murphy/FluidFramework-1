@@ -10,7 +10,7 @@ import { IChannelFactory } from '@fluidframework/datastore-definitions';
 import { IChannelServices } from '@fluidframework/datastore-definitions';
 import { IChannelStorageService } from '@fluidframework/datastore-definitions';
 import { IEventThisPlaceHolder } from '@fluidframework/core-interfaces';
-import { IFluidDataStoreRuntime } from '@fluidframework/datastore-definitions';
+import { IFluidDataStoreRuntimeBase } from '@fluidframework/datastore-definitions';
 import { IFluidHandle } from '@fluidframework/core-interfaces';
 import { IFluidSerializer } from '@fluidframework/shared-object-base';
 import { ISequencedDocumentMessage } from '@fluidframework/protocol-definitions';
@@ -24,11 +24,11 @@ import { SharedObject } from '@fluidframework/shared-object-base';
 export class AttributableMap extends SharedObject<ISharedMapEvents> implements ISharedMap {
     [Symbol.iterator](): IterableIterator<[string, any]>;
     readonly [Symbol.toStringTag]: string;
-    constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes);
+    constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes);
     // (undocumented)
     protected applyStashedOp(content: unknown): unknown;
     clear(): void;
-    static create(runtime: IFluidDataStoreRuntime, id?: string): AttributableMap;
+    static create(runtime: IFluidDataStoreRuntimeBase, id?: string): AttributableMap;
     delete(key: string): boolean;
     entries(): IterableIterator<[string, any]>;
     forEach(callbackFn: (value: any, key: string, map: Map<string, any>) => void): void;
@@ -108,9 +108,9 @@ export class MapFactory implements IChannelFactory {
     // (undocumented)
     get attributes(): IChannelAttributes;
     // (undocumented)
-    create(runtime: IFluidDataStoreRuntime, id: string): ISharedMap;
+    create(runtime: IFluidDataStoreRuntimeBase, id: string): ISharedMap;
     // (undocumented)
-    load(runtime: IFluidDataStoreRuntime, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<ISharedMap>;
+    load(runtime: IFluidDataStoreRuntimeBase, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<ISharedMap>;
     // (undocumented)
     static readonly Type = "https://graph.microsoft.com/types/map";
     // (undocumented)

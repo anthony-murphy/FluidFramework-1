@@ -2,7 +2,10 @@
  * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
-import { IChannelAttributes, IFluidDataStoreRuntime } from "@fluidframework/datastore-definitions";
+import {
+	IChannelAttributes,
+	IFluidDataStoreRuntimeBase,
+} from "@fluidframework/datastore-definitions";
 import { MockFluidDataStoreRuntime } from "@fluidframework/test-runtime-utils";
 import { SharedTreeBranch, SharedTreeCore, Summarizable } from "../../shared-tree-core";
 import { typeboxValidator } from "../../external-utilities";
@@ -21,7 +24,7 @@ export class TestSharedTreeCore extends SharedTreeCore<DefaultEditBuilder, Defau
 	};
 
 	public constructor(
-		runtime: IFluidDataStoreRuntime = new MockFluidDataStoreRuntime(),
+		runtime: IFluidDataStoreRuntimeBase = new MockFluidDataStoreRuntime(),
 		id = "TestSharedTreeCore",
 		summarizables: readonly Summarizable[] = [],
 	) {

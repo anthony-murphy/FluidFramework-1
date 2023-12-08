@@ -13,7 +13,7 @@ import { assert } from "@fluidframework/core-utils";
 import { type ISequencedDocumentMessage, MessageType } from "@fluidframework/protocol-definitions";
 import {
 	type IChannelAttributes,
-	type IFluidDataStoreRuntime,
+	type IFluidDataStoreRuntimeBase,
 	type IChannelStorageService,
 	type IChannelFactory,
 } from "@fluidframework/datastore-definitions";
@@ -165,7 +165,7 @@ export class PactMap<T = unknown> extends SharedObject<IPactMapEvents> implement
 	 * @param id - optional name of the PactMap
 	 * @returns newly created PactMap (but not attached yet)
 	 */
-	public static create(runtime: IFluidDataStoreRuntime, id?: string): PactMap {
+	public static create(runtime: IFluidDataStoreRuntimeBase, id?: string): PactMap {
 		return runtime.createChannel(id, PactMapFactory.Type) as PactMap;
 	}
 
@@ -191,7 +191,7 @@ export class PactMap<T = unknown> extends SharedObject<IPactMapEvents> implement
 	 */
 	public constructor(
 		id: string,
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		attributes: IChannelAttributes,
 	) {
 		super(id, runtime, attributes, "fluid_pactMap_");

@@ -5,7 +5,7 @@
 
 import {
 	type IChannelAttributes,
-	type IFluidDataStoreRuntime,
+	type IFluidDataStoreRuntimeBase,
 	type IChannelServices,
 	type IChannelFactory,
 } from "@fluidframework/datastore-definitions";
@@ -51,7 +51,7 @@ export class CounterFactory implements IChannelFactory {
 	 * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.load}
 	 */
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		attributes: IChannelAttributes,
@@ -64,7 +64,7 @@ export class CounterFactory implements IChannelFactory {
 	/**
 	 * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.create}
 	 */
-	public create(document: IFluidDataStoreRuntime, id: string): ISharedCounter {
+	public create(document: IFluidDataStoreRuntimeBase, id: string): ISharedCounter {
 		const counter = new SharedCounter(id, document, this.attributes);
 		counter.initializeLocal();
 		return counter;

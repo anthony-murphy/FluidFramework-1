@@ -6,7 +6,7 @@
 
 import { IChannelAttributes } from '@fluidframework/datastore-definitions';
 import { IChannelStorageService } from '@fluidframework/datastore-definitions';
-import { IFluidDataStoreRuntime } from '@fluidframework/datastore-definitions';
+import { IFluidDataStoreRuntimeBase } from '@fluidframework/datastore-definitions';
 import { IFluidSerializer } from '@fluidframework/shared-object-base';
 import { ISequencedDocumentMessage } from '@fluidframework/protocol-definitions';
 import { ISummaryTreeWithStats } from '@fluidframework/runtime-definitions';
@@ -14,7 +14,7 @@ import { SharedObject } from '@fluidframework/shared-object-base';
 
 // @internal (undocumented)
 export abstract class SharedOT<TState, TOp> extends SharedObject {
-    constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes, initialValue: TState);
+    constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes, initialValue: TState);
     // (undocumented)
     protected apply(op: TOp): void;
     protected abstract applyCore(state: TState, op: TOp): TState;

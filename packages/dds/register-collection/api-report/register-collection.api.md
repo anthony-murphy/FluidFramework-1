@@ -8,7 +8,7 @@ import { IChannelAttributes } from '@fluidframework/datastore-definitions';
 import { IChannelFactory } from '@fluidframework/datastore-definitions';
 import { IChannelServices } from '@fluidframework/datastore-definitions';
 import { IChannelStorageService } from '@fluidframework/datastore-definitions';
-import { IFluidDataStoreRuntime } from '@fluidframework/datastore-definitions';
+import { IFluidDataStoreRuntimeBase } from '@fluidframework/datastore-definitions';
 import { IFluidSerializer } from '@fluidframework/shared-object-base';
 import { ISequencedDocumentMessage } from '@fluidframework/protocol-definitions';
 import { ISharedObject } from '@fluidframework/shared-object-base';
@@ -18,10 +18,10 @@ import { SharedObject } from '@fluidframework/shared-object-base';
 
 // @internal
 export class ConsensusRegisterCollection<T> extends SharedObject<IConsensusRegisterCollectionEvents> implements IConsensusRegisterCollection<T> {
-    constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes);
+    constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes);
     // (undocumented)
     protected applyStashedOp(): () => void;
-    static create<T>(runtime: IFluidDataStoreRuntime, id?: string): ConsensusRegisterCollection<T>;
+    static create<T>(runtime: IFluidDataStoreRuntimeBase, id?: string): ConsensusRegisterCollection<T>;
     static getFactory(): ConsensusRegisterCollectionFactory;
     // (undocumented)
     keys(): string[];
@@ -46,9 +46,9 @@ export class ConsensusRegisterCollectionFactory implements IConsensusRegisterCol
     // (undocumented)
     get attributes(): IChannelAttributes;
     // (undocumented)
-    create(document: IFluidDataStoreRuntime, id: string): IConsensusRegisterCollection;
+    create(document: IFluidDataStoreRuntimeBase, id: string): IConsensusRegisterCollection;
     // (undocumented)
-    load(runtime: IFluidDataStoreRuntime, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<IConsensusRegisterCollection>;
+    load(runtime: IFluidDataStoreRuntimeBase, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<IConsensusRegisterCollection>;
     // (undocumented)
     static Type: string;
     // (undocumented)
@@ -72,9 +72,9 @@ export interface IConsensusRegisterCollectionEvents extends ISharedObjectEvents 
 // @internal
 export interface IConsensusRegisterCollectionFactory extends IChannelFactory {
     // (undocumented)
-    create(document: IFluidDataStoreRuntime, id: string): IConsensusRegisterCollection;
+    create(document: IFluidDataStoreRuntimeBase, id: string): IConsensusRegisterCollection;
     // (undocumented)
-    load(document: IFluidDataStoreRuntime, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<IConsensusRegisterCollection>;
+    load(document: IFluidDataStoreRuntimeBase, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<IConsensusRegisterCollection>;
 }
 
 // @internal

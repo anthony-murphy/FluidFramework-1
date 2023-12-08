@@ -5,7 +5,7 @@
 
 import {
 	IChannelAttributes,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelServices,
 	IChannelFactory,
 } from "@fluidframework/datastore-definitions";
@@ -78,7 +78,7 @@ export class SharedObjectSequenceFactory implements IChannelFactory {
 	 * For more info, please see [Github issue 8526](https://github.com/microsoft/FluidFramework/issues/8526)
 	 */
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		attributes: IChannelAttributes,
@@ -92,7 +92,7 @@ export class SharedObjectSequenceFactory implements IChannelFactory {
 	 * @deprecated SharedObjectSequence is not recommended for use and will be removed in an upcoming release.
 	 * For more info, please see [Github issue 8526](https://github.com/microsoft/FluidFramework/issues/8526)
 	 */
-	public create(document: IFluidDataStoreRuntime, id: string): ISharedObject {
+	public create(document: IFluidDataStoreRuntimeBase, id: string): ISharedObject {
 		const sharedString = new SharedObjectSequence(document, id, this.attributes);
 		sharedString.initializeLocal();
 		return sharedString;
@@ -161,7 +161,7 @@ export class SharedNumberSequenceFactory implements IChannelFactory {
 	 * For more info, please see [Github issue 8526](https://github.com/microsoft/FluidFramework/issues/8526)
 	 */
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		attributes: IChannelAttributes,
@@ -175,7 +175,7 @@ export class SharedNumberSequenceFactory implements IChannelFactory {
 	 * @deprecated SharedNumberSequence is not recommended for use and will be removed in an upcoming release.
 	 * For more info, please see [Github issue 8526](https://github.com/microsoft/FluidFramework/issues/8526)
 	 */
-	public create(document: IFluidDataStoreRuntime, id: string): ISharedObject {
+	public create(document: IFluidDataStoreRuntimeBase, id: string): ISharedObject {
 		const sharedString = new SharedNumberSequence(document, id, this.attributes);
 		sharedString.initializeLocal();
 		return sharedString;

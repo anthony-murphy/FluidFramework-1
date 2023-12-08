@@ -3,7 +3,10 @@
  * Licensed under the MIT License.
  */
 
-import { IFluidDataStoreRuntime, IChannelAttributes } from "@fluidframework/datastore-definitions";
+import {
+	IFluidDataStoreRuntimeBase,
+	IChannelAttributes,
+} from "@fluidframework/datastore-definitions";
 import { SharedNumberSequenceFactory } from "./sequenceFactory";
 import { SharedSequence } from "./sharedSequence";
 
@@ -28,7 +31,7 @@ export class SharedNumberSequence extends SharedSequence<number> {
 	 * @deprecated SharedNumberSequence is not recommended for use and will be removed in an upcoming release.
 	 * For more info, please see {@link https://github.com/microsoft/FluidFramework/issues/8526 | Github issue 8526}.
 	 */
-	public static create(runtime: IFluidDataStoreRuntime, id?: string) {
+	public static create(runtime: IFluidDataStoreRuntimeBase, id?: string) {
 		return runtime.createChannel(id, SharedNumberSequenceFactory.Type) as SharedNumberSequence;
 	}
 
@@ -49,7 +52,7 @@ export class SharedNumberSequence extends SharedSequence<number> {
 	 * For more info, please see {@link https://github.com/microsoft/FluidFramework/issues/8526 | Github issue 8526}.
 	 */
 	constructor(
-		document: IFluidDataStoreRuntime,
+		document: IFluidDataStoreRuntimeBase,
 		public id: string,
 		attributes: IChannelAttributes,
 	) {

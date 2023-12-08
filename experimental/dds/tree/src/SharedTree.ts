@@ -7,7 +7,7 @@ import { assert } from '@fluidframework/core-utils';
 import { bufferToString } from '@fluid-internal/client-utils';
 import { ISequencedDocumentMessage } from '@fluidframework/protocol-definitions';
 import {
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelStorageService,
 	IChannelFactory,
 	IChannelAttributes,
@@ -242,7 +242,7 @@ export class SharedTreeFactory implements IChannelFactory {
 	 * {@inheritDoc @fluidframework/shared-object-base#ISharedObjectFactory.load}
 	 */
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		_channelAttributes: Readonly<IChannelAttributes>
@@ -257,13 +257,13 @@ export class SharedTreeFactory implements IChannelFactory {
 	 * @param runtime - data store runtime that owns the new SharedTree
 	 * @param id - optional name for the SharedTree
 	 */
-	public create(runtime: IFluidDataStoreRuntime, id: string): SharedTree {
+	public create(runtime: IFluidDataStoreRuntimeBase, id: string): SharedTree {
 		const sharedTree = this.createSharedTree(runtime, id);
 		sharedTree.initializeLocal();
 		return sharedTree;
 	}
 
-	private createSharedTree(runtime: IFluidDataStoreRuntime, id: string): SharedTree {
+	private createSharedTree(runtime: IFluidDataStoreRuntimeBase, id: string): SharedTree {
 		const [writeFormat] = this.args;
 		switch (writeFormat) {
 			case WriteFormat.v0_0_2:
@@ -387,7 +387,7 @@ export class SharedTree extends SharedObject<ISharedTreeEvents> implements NodeI
 	/**
 	 * Create a new SharedTree. It will contain the default value (see initialTree).
 	 */
-	public static create(runtime: IFluidDataStoreRuntime, id?: string): SharedTree {
+	public static create(runtime: IFluidDataStoreRuntimeBase, id?: string): SharedTree {
 		return runtime.createChannel(id, SharedTreeFactory.Type) as SharedTree;
 	}
 
@@ -535,12 +535,12 @@ export class SharedTree extends SharedObject<ISharedTreeEvents> implements NodeI
 	 * documentation](../docs/Write-Format.md) for more information.
 	 * @param options - Configuration options for this tree
 	 */
-	public constructor(runtime: IFluidDataStoreRuntime, id: string, ...args: SharedTreeArgs<WriteFormat.v0_0_2>);
+	public constructor(runtime: IFluidDataStoreRuntimeBase, id: string, ...args: SharedTreeArgs<WriteFormat.v0_0_2>);
 
-	public constructor(runtime: IFluidDataStoreRuntime, id: string, ...args: SharedTreeArgs<WriteFormat.v0_1_1>);
+	public constructor(runtime: IFluidDataStoreRuntimeBase, id: string, ...args: SharedTreeArgs<WriteFormat.v0_1_1>);
 
 	public constructor(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		private writeFormat: WriteFormat,
 		options: SharedTreeOptions<typeof writeFormat> = {}
@@ -1407,7 +1407,7 @@ export class SharedTree extends SharedObject<ISharedTreeEvents> implements NodeI
 		this.submitLocalMessage(content, localOpMetadata);
 	}
 
-	public getRuntime(): IFluidDataStoreRuntime {
+	public getRuntime(): IFluidDataStoreRuntimeBase {
 		return this.runtime;
 	}
 

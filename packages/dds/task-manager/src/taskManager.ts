@@ -9,7 +9,7 @@ import { assert } from "@fluidframework/core-utils";
 import { ISequencedDocumentMessage, MessageType } from "@fluidframework/protocol-definitions";
 import {
 	IChannelAttributes,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelStorageService,
 	IChannelFactory,
 } from "@fluidframework/datastore-definitions";
@@ -73,7 +73,7 @@ export class TaskManager extends SharedObject<ITaskManagerEvents> implements ITa
 	 * @param id - optional name of the task queue
 	 * @returns newly create task queue (but not attached yet)
 	 */
-	public static create(runtime: IFluidDataStoreRuntime, id?: string) {
+	public static create(runtime: IFluidDataStoreRuntimeBase, id?: string) {
 		return runtime.createChannel(id, TaskManagerFactory.Type) as TaskManager;
 	}
 
@@ -140,7 +140,7 @@ export class TaskManager extends SharedObject<ITaskManagerEvents> implements ITa
 	 * @param runtime - data store runtime the task queue belongs to
 	 * @param id - optional name of the task queue
 	 */
-	constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes) {
+	constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes) {
 		super(id, runtime, attributes, "fluid_taskManager_");
 
 		this.opWatcher.on(

@@ -7,7 +7,7 @@
 import { IChannelAttributes } from '@fluidframework/datastore-definitions';
 import { IChannelFactory } from '@fluidframework/datastore-definitions';
 import { IChannelStorageService } from '@fluidframework/datastore-definitions';
-import { IFluidDataStoreRuntime } from '@fluidframework/datastore-definitions';
+import { IFluidDataStoreRuntimeBase } from '@fluidframework/datastore-definitions';
 import { IFluidSerializer } from '@fluidframework/shared-object-base';
 import { ISequencedDocumentMessage } from '@fluidframework/protocol-definitions';
 import { ISharedObject } from '@fluidframework/shared-object-base';
@@ -42,14 +42,14 @@ export type TaskEventListener = (taskId: string) => void;
 
 // @internal @sealed
 export class TaskManager extends SharedObject<ITaskManagerEvents> implements ITaskManager {
-    constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes);
+    constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes);
     abandon(taskId: string): void;
     // (undocumented)
     applyStashedOp(): void;
     assigned(taskId: string): boolean;
     canVolunteer(): boolean;
     complete(taskId: string): void;
-    static create(runtime: IFluidDataStoreRuntime, id?: string): TaskManager;
+    static create(runtime: IFluidDataStoreRuntimeBase, id?: string): TaskManager;
     static getFactory(): IChannelFactory;
     // (undocumented)
     protected initializeLocalCore(): void;

@@ -7,7 +7,7 @@
 import { IChannelAttributes } from '@fluidframework/datastore-definitions';
 import { IChannelFactory } from '@fluidframework/datastore-definitions';
 import { IChannelStorageService } from '@fluidframework/datastore-definitions';
-import { IFluidDataStoreRuntime } from '@fluidframework/datastore-definitions';
+import { IFluidDataStoreRuntimeBase } from '@fluidframework/datastore-definitions';
 import { IFluidSerializer } from '@fluidframework/shared-object-base';
 import { ISequencedDocumentMessage } from '@fluidframework/protocol-definitions';
 import { ISharedObject } from '@fluidframework/shared-object-base';
@@ -29,10 +29,10 @@ export interface ISharedCounterEvents extends ISharedObjectEvents {
 
 // @internal
 export class SharedCounter extends SharedObject<ISharedCounterEvents> implements ISharedCounter {
-    constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes);
+    constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes);
     // (undocumented)
     protected applyStashedOp(op: unknown): void;
-    static create(runtime: IFluidDataStoreRuntime, id?: string): SharedCounter;
+    static create(runtime: IFluidDataStoreRuntimeBase, id?: string): SharedCounter;
     static getFactory(): IChannelFactory;
     increment(incrementAmount: number): void;
     // (undocumented)

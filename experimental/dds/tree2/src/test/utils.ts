@@ -10,7 +10,7 @@ import { Loader } from "@fluidframework/container-loader";
 import {
 	IChannelAttributes,
 	IChannelServices,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 } from "@fluidframework/datastore-definitions";
 import {
 	ITestObjectProvider,
@@ -513,7 +513,7 @@ export class SharedTreeTestFactory extends SharedTreeFactory {
 	}
 
 	public override async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		channelAttributes: Readonly<IChannelAttributes>,
@@ -523,7 +523,7 @@ export class SharedTreeTestFactory extends SharedTreeFactory {
 		return tree;
 	}
 
-	public override create(runtime: IFluidDataStoreRuntime, id: string): ISharedTree {
+	public override create(runtime: IFluidDataStoreRuntimeBase, id: string): ISharedTree {
 		const tree = super.create(runtime, id) as SharedTree;
 		this.onCreate(tree);
 		return tree;

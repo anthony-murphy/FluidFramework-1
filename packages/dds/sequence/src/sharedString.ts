@@ -15,7 +15,10 @@ import {
 	refHasTileLabel,
 	TextSegment,
 } from "@fluidframework/merge-tree";
-import { IFluidDataStoreRuntime, IChannelAttributes } from "@fluidframework/datastore-definitions";
+import {
+	IFluidDataStoreRuntimeBase,
+	IChannelAttributes,
+} from "@fluidframework/datastore-definitions";
 import { SharedSegmentSequence } from "./sequence";
 import { SharedStringFactory } from "./sequenceFactory";
 
@@ -71,7 +74,7 @@ export class SharedString
 	 * @param id - optional name of the shared string
 	 * @returns newly create shared string (but not attached yet)
 	 */
-	public static create(runtime: IFluidDataStoreRuntime, id?: string) {
+	public static create(runtime: IFluidDataStoreRuntimeBase, id?: string) {
 		return runtime.createChannel(id, SharedStringFactory.Type) as SharedString;
 	}
 
@@ -90,7 +93,7 @@ export class SharedString
 	private readonly mergeTreeTextHelper: IMergeTreeTextHelper;
 
 	constructor(
-		document: IFluidDataStoreRuntime,
+		document: IFluidDataStoreRuntimeBase,
 		public id: string,
 		attributes: IChannelAttributes,
 	) {

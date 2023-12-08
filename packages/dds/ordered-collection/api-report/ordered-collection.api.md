@@ -8,7 +8,7 @@ import { IChannelAttributes } from '@fluidframework/datastore-definitions';
 import { IChannelFactory } from '@fluidframework/datastore-definitions';
 import { IChannelServices } from '@fluidframework/datastore-definitions';
 import { IChannelStorageService } from '@fluidframework/datastore-definitions';
-import { IFluidDataStoreRuntime } from '@fluidframework/datastore-definitions';
+import { IFluidDataStoreRuntimeBase } from '@fluidframework/datastore-definitions';
 import { IFluidSerializer } from '@fluidframework/shared-object-base';
 import { ISequencedDocumentMessage } from '@fluidframework/protocol-definitions';
 import { ISharedObject } from '@fluidframework/shared-object-base';
@@ -24,7 +24,7 @@ export type ConsensusCallback<T> = (value: T) => Promise<ConsensusResult>;
 
 // @internal
 export class ConsensusOrderedCollection<T = any> extends SharedObject<IConsensusOrderedCollectionEvents<T>> implements IConsensusOrderedCollection<T> {
-    protected constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes, data: IOrderedCollection<T>);
+    protected constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes, data: IOrderedCollection<T>);
     acquire(callback: ConsensusCallback<T>): Promise<boolean>;
     add(value: T): Promise<void>;
     // (undocumented)
@@ -52,8 +52,8 @@ export class ConsensusOrderedCollection<T = any> extends SharedObject<IConsensus
 
 // @internal
 export class ConsensusQueue<T = any> extends ConsensusOrderedCollection<T> {
-    constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes);
-    static create<T = any>(runtime: IFluidDataStoreRuntime, id?: string): ConsensusQueue<T>;
+    constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes);
+    static create<T = any>(runtime: IFluidDataStoreRuntimeBase, id?: string): ConsensusQueue<T>;
     static getFactory(): IChannelFactory;
 }
 
@@ -83,9 +83,9 @@ export interface IConsensusOrderedCollectionEvents<T> extends ISharedObjectEvent
 // @internal
 export interface IConsensusOrderedCollectionFactory extends IChannelFactory {
     // (undocumented)
-    create(document: IFluidDataStoreRuntime, id: string): IConsensusOrderedCollection;
+    create(document: IFluidDataStoreRuntimeBase, id: string): IConsensusOrderedCollection;
     // (undocumented)
-    load(document: IFluidDataStoreRuntime, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<IConsensusOrderedCollection>;
+    load(document: IFluidDataStoreRuntimeBase, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<IConsensusOrderedCollection>;
 }
 
 // @internal

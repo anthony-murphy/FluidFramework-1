@@ -6,7 +6,7 @@
 import { assert } from '@fluidframework/core-utils';
 import {
 	type IChannelAttributes,
-	type IFluidDataStoreRuntime,
+	type IFluidDataStoreRuntimeBase,
 	type IChannelServices,
 	type IChannelFactory,
 } from '@fluidframework/datastore-definitions';
@@ -59,7 +59,7 @@ export class MigrationShimFactory implements IChannelFactory {
 	 * responsibility simple. Trying to follow the Single Responsibility Principle here.
 	 */
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		attributes: IChannelAttributes
@@ -84,7 +84,7 @@ export class MigrationShimFactory implements IChannelFactory {
 	 * as when this code rolls out, there may be clients on the v1 version of the code, and we may want to have a dark
 	 * rollout capability.
 	 */
-	public create(runtime: IFluidDataStoreRuntime, id: string): MigrationShim {
+	public create(runtime: IFluidDataStoreRuntimeBase, id: string): MigrationShim {
 		// Maybe this should throw an error.
 		const migrationShim = new MigrationShim(
 			id,

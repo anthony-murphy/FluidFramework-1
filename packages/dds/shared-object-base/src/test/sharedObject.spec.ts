@@ -7,7 +7,7 @@ import { strict as assert } from "assert";
 import {
 	IChannelAttributes,
 	IChannelStorageService,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 } from "@fluidframework/datastore-definitions";
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
 import { IGarbageCollectionData, ISummaryTreeWithStats } from "@fluidframework/runtime-definitions";
@@ -19,7 +19,7 @@ class MySharedObject extends SharedObject {
 	constructor(id: string) {
 		super(
 			id,
-			undefined as unknown as IFluidDataStoreRuntime,
+			undefined as unknown as IFluidDataStoreRuntimeBase,
 			undefined as unknown as IChannelAttributes,
 			"",
 		);
@@ -50,7 +50,7 @@ class MySharedObjectCore extends SharedObjectCore {
 	constructor(id: string) {
 		super(
 			id,
-			undefined as unknown as IFluidDataStoreRuntime,
+			undefined as unknown as IFluidDataStoreRuntimeBase,
 			undefined as unknown as IChannelAttributes,
 		);
 	}

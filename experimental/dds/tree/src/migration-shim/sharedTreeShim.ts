@@ -6,7 +6,7 @@ import { type IFluidHandle, type IFluidLoadable } from '@fluidframework/core-int
 import {
 	type IChannelAttributes,
 	type IChannelServices,
-	type IFluidDataStoreRuntime,
+	type IFluidDataStoreRuntimeBase,
 } from '@fluidframework/datastore-definitions';
 import {
 	type IExperimentalIncrementalSummaryContext,
@@ -37,7 +37,7 @@ import { type IShim } from './types.js';
 export class SharedTreeShim implements IShim {
 	public constructor(
 		public readonly id: string,
-		public readonly runtime: IFluidDataStoreRuntime,
+		public readonly runtime: IFluidDataStoreRuntimeBase,
 		public readonly sharedTreeFactory: TreeFactory
 	) {
 		this.newTreeShimDeltaHandler = new SharedTreeShimDeltaHandler(sharedTreeFactory.attributes);

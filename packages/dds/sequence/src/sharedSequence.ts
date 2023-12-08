@@ -7,7 +7,7 @@ import { assert } from "@fluidframework/core-utils";
 import { BaseSegment, IJSONSegment, ISegment, PropertySet } from "@fluidframework/merge-tree";
 import {
 	IChannelAttributes,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	Serializable,
 } from "@fluidframework/datastore-definitions";
 import { SharedSegmentSequence } from "./sequence";
@@ -112,7 +112,7 @@ export class SubSequence<T> extends BaseSegment {
  */
 export class SharedSequence<T> extends SharedSegmentSequence<SubSequence<T>> {
 	constructor(
-		document: IFluidDataStoreRuntime,
+		document: IFluidDataStoreRuntimeBase,
 		public id: string,
 		attributes: IChannelAttributes,
 		specToSegment: (spec: IJSONSegment) => ISegment,

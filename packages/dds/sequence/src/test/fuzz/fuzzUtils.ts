@@ -14,7 +14,7 @@ import { DDSFuzzModel, DDSFuzzSuiteOptions, DDSFuzzTestState } from "@fluid-priv
 import {
 	IChannelAttributes,
 	IChannelServices,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 } from "@fluidframework/datastore-definitions";
 import { PropertySet } from "@fluidframework/merge-tree";
 import { revertSharedStringRevertibles, SharedStringRevertible } from "../../revertibles";
@@ -329,7 +329,7 @@ export function createSharedStringGeneratorOperations(
 
 export class SharedStringFuzzFactory extends SharedStringFactory {
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		attributes: IChannelAttributes,
@@ -339,7 +339,7 @@ export class SharedStringFuzzFactory extends SharedStringFactory {
 		return super.load(runtime, id, services, attributes);
 	}
 
-	public create(document: IFluidDataStoreRuntime, id: string): SharedString {
+	public create(document: IFluidDataStoreRuntimeBase, id: string): SharedString {
 		document.options.intervalStickinessEnabled = true;
 		document.options.mergeTreeEnableObliterate = true;
 		return super.create(document, id);

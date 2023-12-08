@@ -6,11 +6,12 @@
 import {
 	IEvent,
 	IEventProvider,
-	ITelemetryLogger,
 	IDisposable,
 	IFluidHandleContext,
 	IFluidHandle,
 	FluidObject,
+	IProvideFluidHandleContext,
+	ITelemetryLogger,
 } from "@fluidframework/core-interfaces";
 import {
 	IAudience,
@@ -41,21 +42,12 @@ export interface IFluidDataStoreRuntimeEvents extends IEvent {
 }
 
 /**
- * Represents the runtime for the data store. Contains helper functions/state of the data store.
  * @internal
  */
-export interface IFluidDataStoreRuntime
-	extends IEventProvider<IFluidDataStoreRuntimeEvents>,
-		IDisposable,
-		Partial<IProvideFluidDataStoreRegistry> {
+export interface IFluidDataStoreRuntimeBase extends IDisposable, IProvideFluidHandleContext {
 	readonly id: string;
 
-	readonly IFluidHandleContext: IFluidHandleContext;
-
-	readonly rootRoutingContext: IFluidHandleContext;
 	readonly channelsRoutingContext: IFluidHandleContext;
-	readonly objectsRoutingContext: IFluidHandleContext;
-
 	readonly options: ILoaderOptions;
 
 	readonly deltaManager: IDeltaManager<ISequencedDocumentMessage, IDocumentMessage>;
@@ -72,11 +64,6 @@ export interface IFluidDataStoreRuntime
 	readonly attachState: AttachState;
 
 	readonly idCompressor?: IIdCompressor;
-
-	/**
-	 * Returns the channel with the given id
-	 */
-	getChannel(id: string): Promise<IChannel>;
 
 	/**
 	 * Invokes the given callback and expects that no ops are submitted
@@ -100,13 +87,39 @@ export interface IFluidDataStoreRuntime
 	 * is attached then we attach the channel to make it live.
 	 */
 	bindChannel(channel: IChannel): void;
+	/**
+	 * Returns the current quorum.
+	 */
+	getQuorum(): IQuorumClients;
 
-	// Blob related calls
 	/**
 	 * Api to upload a blob of data.
 	 * @param blob - blob to be uploaded.
 	 */
 	uploadBlob(blob: ArrayBufferLike, signal?: AbortSignal): Promise<IFluidHandle<ArrayBufferLike>>;
+
+	on(event: "dispose" | "attaching" | "attached", listener: () => void);
+	on(event: "connected", listener: (clientId: string) => void);
+	once: this["on"];
+	off: this["on"];
+}
+
+/**
+ * Represents the runtime for the data store. Contains helper functions/state of the data store.
+ * @internal
+ */
+export interface IFluidDataStoreRuntime
+	extends Omit<IFluidDataStoreRuntimeBase, keyof IEventProvider<IEvent>>,
+		IEventProvider<IFluidDataStoreRuntimeEvents>,
+		Partial<IProvideFluidDataStoreRegistry> {
+	readonly connected: boolean;
+	readonly objectsRoutingContext: IFluidHandleContext;
+	readonly rootRoutingContext: IFluidHandleContext;
+
+	/**
+	 * Returns the channel with the given id
+	 */
+	getChannel(id: string): Promise<IChannel>;
 
 	/**
 	 * Submits the signal to be sent to other clients.
@@ -115,11 +128,6 @@ export interface IFluidDataStoreRuntime
 	 * @param targetClientId - When specified, the signal is only sent to the provided client id.
 	 */
 	submitSignal(type: string, content: any, targetClientId?: string): void;
-
-	/**
-	 * Returns the current quorum.
-	 */
-	getQuorum(): IQuorumClients;
 
 	/**
 	 * Returns the current audience.

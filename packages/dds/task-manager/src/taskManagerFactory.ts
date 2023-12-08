@@ -5,7 +5,7 @@
 
 import {
 	IChannelAttributes,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelServices,
 	IChannelFactory,
 } from "@fluidframework/datastore-definitions";
@@ -37,7 +37,7 @@ export class TaskManagerFactory implements IChannelFactory {
 	 * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.load}
 	 */
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		attributes: IChannelAttributes,
@@ -47,7 +47,7 @@ export class TaskManagerFactory implements IChannelFactory {
 		return taskQueue;
 	}
 
-	public create(document: IFluidDataStoreRuntime, id: string): ITaskManager {
+	public create(document: IFluidDataStoreRuntimeBase, id: string): ITaskManager {
 		const taskQueue = new TaskManager(id, document, this.attributes);
 		taskQueue.initializeLocal();
 		return taskQueue;

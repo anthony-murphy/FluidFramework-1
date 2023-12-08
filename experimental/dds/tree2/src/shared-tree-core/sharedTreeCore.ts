@@ -7,7 +7,7 @@ import { assert } from "@fluidframework/core-utils";
 import {
 	IChannelAttributes,
 	IChannelStorageService,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 } from "@fluidframework/datastore-definitions";
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
 import {
@@ -76,7 +76,7 @@ export class SharedTreeCore<TEditor extends ChangeFamilyEditor, TChange> extends
 	 * @param changeFamily - The change family
 	 * @param editManager - The edit manager
 	 * @param id - The id of the shared object
-	 * @param runtime - The IFluidDataStoreRuntime which contains the shared object
+	 * @param runtime - The IFluidDataStoreRuntimeBase which contains the shared object
 	 * @param attributes - Attributes of the shared object
 	 * @param telemetryContextPrefix - the context for any telemetry logs/errors emitted
 	 */
@@ -86,7 +86,7 @@ export class SharedTreeCore<TEditor extends ChangeFamilyEditor, TChange> extends
 		options: ICodecOptions,
 		// Base class arguments
 		id: string,
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		attributes: IChannelAttributes,
 		telemetryContextPrefix: string,
 	) {

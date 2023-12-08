@@ -4,7 +4,7 @@
  */
 
 import {
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelServices,
 	IChannelAttributes,
 	IChannelFactory,
@@ -35,13 +35,13 @@ export type ConsensusCallback<T> = (value: T) => Promise<ConsensusResult>;
  */
 export interface IConsensusOrderedCollectionFactory extends IChannelFactory {
 	load(
-		document: IFluidDataStoreRuntime,
+		document: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		attributes: IChannelAttributes,
 	): Promise<IConsensusOrderedCollection>;
 
-	create(document: IFluidDataStoreRuntime, id: string): IConsensusOrderedCollection;
+	create(document: IFluidDataStoreRuntimeBase, id: string): IConsensusOrderedCollection;
 }
 
 /**

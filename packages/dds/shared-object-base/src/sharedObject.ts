@@ -20,7 +20,7 @@ import { EventEmitterEventType } from "@fluid-internal/client-utils";
 import { AttachState } from "@fluidframework/container-definitions";
 import {
 	IChannelAttributes,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelStorageService,
 	IChannelServices,
 } from "@fluidframework/datastore-definitions";
@@ -94,12 +94,12 @@ export abstract class SharedObjectCore<TEvent extends ISharedObjectEvents = ISha
 
 	/**
 	 * @param id - The id of the shared object
-	 * @param runtime - The IFluidDataStoreRuntime which contains the shared object
+	 * @param runtime - The IFluidDataStoreRuntimeBase which contains the shared object
 	 * @param attributes - Attributes of the shared object
 	 */
 	constructor(
 		public id: string,
-		protected runtime: IFluidDataStoreRuntime,
+		protected runtime: IFluidDataStoreRuntimeBase,
 		public readonly attributes: IChannelAttributes,
 	) {
 		super((event: EventEmitterEventType, e: any) => this.eventListenerErrorHandler(event, e));
@@ -613,12 +613,12 @@ export abstract class SharedObject<
 
 	/**
 	 * @param id - The id of the shared object
-	 * @param runtime - The IFluidDataStoreRuntime which contains the shared object
+	 * @param runtime - The IFluidDataStoreRuntimeBase which contains the shared object
 	 * @param attributes - Attributes of the shared object
 	 */
 	constructor(
 		id: string,
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		attributes: IChannelAttributes,
 		private readonly telemetryContextPrefix: string,
 	) {

@@ -8,7 +8,7 @@ import {
 	IChannelFactory,
 	IChannelServices,
 	IChannelStorageService,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 } from "@fluidframework/datastore-definitions";
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
 import { ISharedObject } from "@fluidframework/shared-object-base";
@@ -167,7 +167,7 @@ export class SharedTree
 
 	public constructor(
 		id: string,
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		attributes: IChannelAttributes,
 		optionsParam: SharedTreeOptions,
 		telemetryContextPrefix: string,
@@ -456,7 +456,7 @@ export class SharedTreeFactory implements IChannelFactory {
 	public constructor(private readonly options: SharedTreeOptions = {}) {}
 
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		channelAttributes: Readonly<IChannelAttributes>,
@@ -466,7 +466,7 @@ export class SharedTreeFactory implements IChannelFactory {
 		return tree;
 	}
 
-	public create(runtime: IFluidDataStoreRuntime, id: string): ISharedTree {
+	public create(runtime: IFluidDataStoreRuntimeBase, id: string): ISharedTree {
 		const tree = new SharedTree(id, runtime, this.attributes, this.options, "SharedTree");
 		tree.initializeLocal();
 		return tree;

@@ -8,7 +8,7 @@ import { AttributionKey } from '@fluidframework/runtime-definitions';
 import { IChannelAttributes } from '@fluidframework/datastore-definitions';
 import { IChannelFactory } from '@fluidframework/datastore-definitions';
 import { IChannelStorageService } from '@fluidframework/datastore-definitions';
-import { IFluidDataStoreRuntime } from '@fluidframework/datastore-definitions';
+import { IFluidDataStoreRuntimeBase } from '@fluidframework/datastore-definitions';
 import { IFluidSerializer } from '@fluidframework/shared-object-base';
 import { ISequencedDocumentMessage } from '@fluidframework/protocol-definitions';
 import { ISharedObject } from '@fluidframework/shared-object-base';
@@ -47,10 +47,10 @@ export interface ISharedCellEvents<T> extends ISharedObjectEvents {
 
 // @internal
 export class SharedCell<T = any> extends SharedObject<ISharedCellEvents<T>> implements ISharedCell<T> {
-    constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes);
+    constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes);
     // (undocumented)
     protected applyStashedOp(content: unknown): unknown;
-    static create(runtime: IFluidDataStoreRuntime, id?: string): SharedCell;
+    static create(runtime: IFluidDataStoreRuntimeBase, id?: string): SharedCell;
     delete(): void;
     empty(): boolean;
     get(): Serializable<T> | undefined;

@@ -7,7 +7,7 @@ import { type IEvent, type IFluidHandle, type IFluidLoadable } from '@fluidframe
 import {
 	type IChannelAttributes,
 	type IChannelServices,
-	type IFluidDataStoreRuntime,
+	type IFluidDataStoreRuntimeBase,
 } from '@fluidframework/datastore-definitions';
 import {
 	type IExperimentalIncrementalSummaryContext,
@@ -77,7 +77,7 @@ export interface IMigrationOp {
 export class MigrationShim extends EventEmitterWithErrorHandling<IMigrationEvent> implements IShim {
 	public constructor(
 		public readonly id: string,
-		private readonly runtime: IFluidDataStoreRuntime,
+		private readonly runtime: IFluidDataStoreRuntimeBase,
 		private readonly legacyTreeFactory: LegacySharedTreeFactory,
 		private readonly newTreeFactory: TreeFactory,
 		private readonly populateNewSharedObjectFn: (legacyTree: LegacySharedTree, newTree: ITree) => void

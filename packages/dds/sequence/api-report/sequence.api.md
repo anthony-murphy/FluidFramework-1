@@ -13,7 +13,7 @@ import { IChannelServices } from '@fluidframework/datastore-definitions';
 import { IChannelStorageService } from '@fluidframework/datastore-definitions';
 import { IEvent } from '@fluidframework/core-interfaces';
 import { IEventThisPlaceHolder } from '@fluidframework/core-interfaces';
-import { IFluidDataStoreRuntime } from '@fluidframework/datastore-definitions';
+import { IFluidDataStoreRuntimeBase } from '@fluidframework/datastore-definitions';
 import { IFluidSerializer } from '@fluidframework/shared-object-base';
 import { IJSONSegment } from '@fluidframework/merge-tree';
 import { IMergeTreeDeltaCallbackArgs } from '@fluidframework/merge-tree';
@@ -520,10 +520,10 @@ export type SerializedIntervalDelta = Omit<ISerializedInterval, "start" | "end" 
 export class SharedIntervalCollection extends SharedObject implements ISharedIntervalCollection<Interval> {
     // (undocumented)
     readonly [Symbol.toStringTag]: string;
-    constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes);
+    constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes);
     // (undocumented)
     protected applyStashedOp(): void;
-    static create(runtime: IFluidDataStoreRuntime, id?: string): SharedIntervalCollection;
+    static create(runtime: IFluidDataStoreRuntimeBase, id?: string): SharedIntervalCollection;
     static getFactory(): IChannelFactory;
     // (undocumented)
     getIntervalCollection(label: string): IIntervalCollection<Interval>;
@@ -547,9 +547,9 @@ export class SharedIntervalCollectionFactory implements IChannelFactory {
     // (undocumented)
     get attributes(): IChannelAttributes;
     // (undocumented)
-    create(runtime: IFluidDataStoreRuntime, id: string): SharedIntervalCollection;
+    create(runtime: IFluidDataStoreRuntimeBase, id: string): SharedIntervalCollection;
     // (undocumented)
-    load(runtime: IFluidDataStoreRuntime, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<SharedIntervalCollection>;
+    load(runtime: IFluidDataStoreRuntimeBase, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<SharedIntervalCollection>;
     // (undocumented)
     static readonly Type = "https://graph.microsoft.com/types/sharedIntervalCollection";
     // (undocumented)
@@ -558,7 +558,7 @@ export class SharedIntervalCollectionFactory implements IChannelFactory {
 
 // @internal (undocumented)
 export abstract class SharedSegmentSequence<T extends ISegment> extends SharedObject<ISharedSegmentSequenceEvents> implements ISharedIntervalCollection<SequenceInterval>, MergeTreeRevertibleDriver {
-    constructor(dataStoreRuntime: IFluidDataStoreRuntime, id: string, attributes: IChannelAttributes, segmentFromSpec: (spec: IJSONSegment) => ISegment);
+    constructor(dataStoreRuntime: IFluidDataStoreRuntimeBase, id: string, attributes: IChannelAttributes, segmentFromSpec: (spec: IJSONSegment) => ISegment);
     annotateRange(start: number, end: number, props: PropertySet): void;
     // (undocumented)
     protected applyStashedOp(content: any): unknown;
@@ -625,7 +625,7 @@ export abstract class SharedSegmentSequence<T extends ISegment> extends SharedOb
 
 // @internal @deprecated (undocumented)
 export class SharedSequence<T> extends SharedSegmentSequence<SubSequence<T>> {
-    constructor(document: IFluidDataStoreRuntime, id: string, attributes: IChannelAttributes, specToSegment: (spec: IJSONSegment) => ISegment);
+    constructor(document: IFluidDataStoreRuntimeBase, id: string, attributes: IChannelAttributes, specToSegment: (spec: IJSONSegment) => ISegment);
     getItemCount(): number;
     getItems(start: number, end?: number): Serializable<T>[];
     // (undocumented)
@@ -638,9 +638,9 @@ export class SharedSequence<T> extends SharedSegmentSequence<SubSequence<T>> {
 
 // @internal
 export class SharedString extends SharedSegmentSequence<SharedStringSegment> implements ISharedString {
-    constructor(document: IFluidDataStoreRuntime, id: string, attributes: IChannelAttributes);
+    constructor(document: IFluidDataStoreRuntimeBase, id: string, attributes: IChannelAttributes);
     annotateMarker(marker: Marker, props: PropertySet): void;
-    static create(runtime: IFluidDataStoreRuntime, id?: string): SharedString;
+    static create(runtime: IFluidDataStoreRuntimeBase, id?: string): SharedString;
     // @deprecated
     findTile(startPos: number | undefined, tileLabel: string, preceding?: boolean): {
         tile: ReferencePosition;
@@ -673,9 +673,9 @@ export class SharedStringFactory implements IChannelFactory {
     // (undocumented)
     get attributes(): IChannelAttributes;
     // (undocumented)
-    create(document: IFluidDataStoreRuntime, id: string): SharedString;
+    create(document: IFluidDataStoreRuntimeBase, id: string): SharedString;
     // (undocumented)
-    load(runtime: IFluidDataStoreRuntime, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<SharedString>;
+    load(runtime: IFluidDataStoreRuntimeBase, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<SharedString>;
     // (undocumented)
     static segmentFromSpec(spec: any): SharedStringSegment;
     // (undocumented)

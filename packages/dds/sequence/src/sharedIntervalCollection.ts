@@ -6,7 +6,7 @@
 import { bufferToString } from "@fluid-internal/client-utils";
 import {
 	IChannelAttributes,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelStorageService,
 	IChannelServices,
 	IChannelFactory,
@@ -56,7 +56,7 @@ export class SharedIntervalCollectionFactory implements IChannelFactory {
 	 * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.load}
 	 */
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		attributes: IChannelAttributes,
@@ -67,7 +67,7 @@ export class SharedIntervalCollectionFactory implements IChannelFactory {
 		return map;
 	}
 
-	public create(runtime: IFluidDataStoreRuntime, id: string): SharedIntervalCollection {
+	public create(runtime: IFluidDataStoreRuntimeBase, id: string): SharedIntervalCollection {
 		const map = new SharedIntervalCollection(id, runtime, this.attributes);
 		map.initializeLocal();
 
@@ -97,7 +97,7 @@ export class SharedIntervalCollection
 	 * @param id - optional name of the shared map
 	 * @returns newly create shared map (but not attached yet)
 	 */
-	public static create(runtime: IFluidDataStoreRuntime, id?: string) {
+	public static create(runtime: IFluidDataStoreRuntimeBase, id?: string) {
 		return runtime.createChannel(
 			id,
 			SharedIntervalCollectionFactory.Type,
@@ -120,7 +120,7 @@ export class SharedIntervalCollection
 	 * Constructs a new shared SharedIntervalCollection. If the object is non-local an id and service interfaces will
 	 * be provided
 	 */
-	constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes) {
+	constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes) {
 		super(id, runtime, attributes, "fluid_sharedIntervalCollection_");
 		this.intervalCollections = new DefaultMap(
 			this.serializer,

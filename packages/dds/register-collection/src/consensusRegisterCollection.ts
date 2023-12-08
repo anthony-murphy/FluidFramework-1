@@ -8,7 +8,7 @@ import { assert, unreachableCase } from "@fluidframework/core-utils";
 import { ISequencedDocumentMessage, MessageType } from "@fluidframework/protocol-definitions";
 import {
 	IChannelAttributes,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelStorageService,
 } from "@fluidframework/datastore-definitions";
 import { ISummaryTreeWithStats } from "@fluidframework/runtime-definitions";
@@ -105,7 +105,7 @@ export class ConsensusRegisterCollection<T>
 	 * @param id - optional name of the consensus register collection
 	 * @returns newly create consensus register collection (but not attached yet)
 	 */
-	public static create<T>(runtime: IFluidDataStoreRuntime, id?: string) {
+	public static create<T>(runtime: IFluidDataStoreRuntimeBase, id?: string) {
 		return runtime.createChannel(
 			id,
 			ConsensusRegisterCollectionFactory.Type,
@@ -129,7 +129,7 @@ export class ConsensusRegisterCollection<T>
 	 */
 	public constructor(
 		id: string,
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		attributes: IChannelAttributes,
 	) {
 		super(id, runtime, attributes, "fluid_consensusRegisterCollection_");

@@ -9,7 +9,7 @@ import {
 	IChannelFactory,
 	IChannelServices,
 	IChannelStorageService,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 } from "@fluidframework/datastore-definitions";
 import { ChangeConnectionState, DDSFuzzModel } from "../ddsFuzzHarness";
 
@@ -33,7 +33,7 @@ class SharedNothing extends SharedObject {
 
 	constructor(
 		public readonly id: string,
-		public readonly runtime: IFluidDataStoreRuntime,
+		public readonly runtime: IFluidDataStoreRuntimeBase,
 		public readonly attributes: IChannelAttributes,
 	) {
 		super(id, runtime, attributes, "shared-nothing");
@@ -84,7 +84,7 @@ export class SharedNothingFactory implements IChannelFactory {
 	 * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.load}
 	 */
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		attributes: IChannelAttributes,
@@ -94,7 +94,7 @@ export class SharedNothingFactory implements IChannelFactory {
 		return nothing;
 	}
 
-	public create(runtime: IFluidDataStoreRuntime, id: string): SharedNothing {
+	public create(runtime: IFluidDataStoreRuntimeBase, id: string): SharedNothing {
 		const nothing = new SharedNothing(id, runtime, this.attributes);
 		nothing.initializeLocal();
 		return nothing;

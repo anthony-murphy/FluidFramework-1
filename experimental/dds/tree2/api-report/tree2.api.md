@@ -10,7 +10,7 @@ import { IChannelAttributes } from '@fluidframework/datastore-definitions';
 import { IChannelFactory } from '@fluidframework/datastore-definitions';
 import { IChannelServices } from '@fluidframework/datastore-definitions';
 import { IExperimentalIncrementalSummaryContext } from '@fluidframework/runtime-definitions';
-import { IFluidDataStoreRuntime } from '@fluidframework/datastore-definitions';
+import { IFluidDataStoreRuntimeBase } from '@fluidframework/datastore-definitions';
 import { IFluidHandle } from '@fluidframework/core-interfaces';
 import { IFluidLoadable } from '@fluidframework/core-interfaces';
 import { IGarbageCollectionData } from '@fluidframework/runtime-definitions';
@@ -1634,9 +1634,9 @@ export class SharedTreeFactory implements IChannelFactory {
     // (undocumented)
     readonly attributes: IChannelAttributes;
     // (undocumented)
-    create(runtime: IFluidDataStoreRuntime, id: string): ISharedTree;
+    create(runtime: IFluidDataStoreRuntimeBase, id: string): ISharedTree;
     // (undocumented)
-    load(runtime: IFluidDataStoreRuntime, id: string, services: IChannelServices, channelAttributes: Readonly<IChannelAttributes>): Promise<ISharedTree>;
+    load(runtime: IFluidDataStoreRuntimeBase, id: string, services: IChannelServices, channelAttributes: Readonly<IChannelAttributes>): Promise<ISharedTree>;
     // (undocumented)
     readonly type: string;
 }
@@ -1769,9 +1769,9 @@ export class TreeFactory implements IChannelFactory {
     // (undocumented)
     readonly attributes: IChannelAttributes;
     // (undocumented)
-    create(runtime: IFluidDataStoreRuntime, id: string): ITree;
+    create(runtime: IFluidDataStoreRuntimeBase, id: string): ITree;
     // (undocumented)
-    load(runtime: IFluidDataStoreRuntime, id: string, services: IChannelServices, channelAttributes: Readonly<IChannelAttributes>): Promise<ITree>;
+    load(runtime: IFluidDataStoreRuntimeBase, id: string, services: IChannelServices, channelAttributes: Readonly<IChannelAttributes>): Promise<ITree>;
     // (undocumented)
     readonly type: string;
 }

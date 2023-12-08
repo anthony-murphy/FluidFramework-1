@@ -5,7 +5,7 @@
 
 import {
 	IChannelAttributes,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelServices,
 	IChannelFactory,
 } from "@fluidframework/datastore-definitions";
@@ -13,7 +13,7 @@ import Delta from "quill-delta";
 import { SharedOT } from "../../dist";
 
 export class SharedDelta extends SharedOT<Delta, Delta> {
-	public static create(runtime: IFluidDataStoreRuntime, id?: string): SharedDelta {
+	public static create(runtime: IFluidDataStoreRuntimeBase, id?: string): SharedDelta {
 		return runtime.createChannel(id, DeltaFactory.Type) as SharedDelta;
 	}
 
@@ -21,7 +21,7 @@ export class SharedDelta extends SharedOT<Delta, Delta> {
 		return new DeltaFactory();
 	}
 
-	constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes) {
+	constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes) {
 		super(id, runtime, attributes, /* initialValue: */ new Delta());
 	}
 
@@ -76,7 +76,7 @@ export class DeltaFactory implements IChannelFactory {
 	 * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.load}
 	 */
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		attributes: IChannelAttributes,
@@ -86,7 +86,7 @@ export class DeltaFactory implements IChannelFactory {
 		return instance;
 	}
 
-	public create(runtime: IFluidDataStoreRuntime, id: string) {
+	public create(runtime: IFluidDataStoreRuntimeBase, id: string) {
 		const instance = new SharedDelta(id, runtime, this.attributes);
 		instance.initializeLocal();
 		return instance;

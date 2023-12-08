@@ -8,7 +8,7 @@ import { assert, unreachableCase } from "@fluidframework/core-utils";
 import { ISequencedDocumentMessage, MessageType } from "@fluidframework/protocol-definitions";
 import {
 	IChannelAttributes,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelStorageService,
 } from "@fluidframework/datastore-definitions";
 import { IFluidSerializer, SharedObject } from "@fluidframework/shared-object-base";
@@ -107,7 +107,7 @@ export class ConsensusOrderedCollection<T = any>
 	 */
 	protected constructor(
 		id: string,
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		attributes: IChannelAttributes,
 		private readonly data: IOrderedCollection<T>,
 	) {

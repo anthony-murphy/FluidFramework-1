@@ -8,7 +8,7 @@ import { IChannelAttributes } from '@fluidframework/datastore-definitions';
 import { IChannelFactory } from '@fluidframework/datastore-definitions';
 import { IChannelServices } from '@fluidframework/datastore-definitions';
 import { IChannelStorageService } from '@fluidframework/datastore-definitions';
-import { IFluidDataStoreRuntime } from '@fluidframework/datastore-definitions';
+import { IFluidDataStoreRuntimeBase } from '@fluidframework/datastore-definitions';
 import { IFluidSerializer } from '@fluidframework/shared-object-base';
 import { ISequencedDocumentMessage } from '@fluidframework/protocol-definitions';
 import { ISharedObject } from '@fluidframework/shared-object-base';
@@ -24,10 +24,10 @@ export interface ISharedSummaryBlock extends ISharedObject {
 
 // @internal
 export class SharedSummaryBlock extends SharedObject implements ISharedSummaryBlock {
-    constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes);
+    constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes);
     // (undocumented)
     protected applyStashedOp(): void;
-    static create(runtime: IFluidDataStoreRuntime, id?: string): SharedSummaryBlock;
+    static create(runtime: IFluidDataStoreRuntimeBase, id?: string): SharedSummaryBlock;
     get<T>(key: string): Jsonable<T>;
     static getFactory(): IChannelFactory;
     // (undocumented)
@@ -48,9 +48,9 @@ export class SharedSummaryBlockFactory implements IChannelFactory {
     // (undocumented)
     get attributes(): IChannelAttributes;
     // (undocumented)
-    create(runtime: IFluidDataStoreRuntime, id: string): ISharedObject;
+    create(runtime: IFluidDataStoreRuntimeBase, id: string): ISharedObject;
     // (undocumented)
-    load(runtime: IFluidDataStoreRuntime, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<ISharedObject>;
+    load(runtime: IFluidDataStoreRuntimeBase, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<ISharedObject>;
     // (undocumented)
     static readonly Type = "https://graph.microsoft.com/types/shared-summary-block";
     // (undocumented)

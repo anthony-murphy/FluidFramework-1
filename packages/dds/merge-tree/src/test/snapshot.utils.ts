@@ -7,7 +7,7 @@
 
 import { strict as assert } from "assert";
 import { ISequencedDocumentMessage, ISummaryTree } from "@fluidframework/protocol-definitions";
-import { IFluidDataStoreRuntime } from "@fluidframework/datastore-definitions";
+import { IFluidDataStoreRuntimeBase } from "@fluidframework/datastore-definitions";
 import { MockStorage } from "@fluidframework/test-runtime-utils";
 import { IMergeTreeOp, ReferenceType } from "../ops";
 import { SnapshotV1 } from "../snapshotV1";
@@ -20,13 +20,13 @@ import { ISegment, PropertySet, TestClient } from ".";
 export async function loadSnapshot(summary: ISummaryTree, options?: IMergeTreeOptions) {
 	const services = MockStorage.createFromSummary(summary);
 	const client2 = new TestClient(options);
-	const runtime: Partial<IFluidDataStoreRuntime> = {
+	const runtime: Partial<IFluidDataStoreRuntimeBase> = {
 		logger: client2.logger,
 		clientId: "1",
 	};
 
 	const { catchupOpsP } = await client2.load(
-		runtime as IFluidDataStoreRuntime,
+		runtime as IFluidDataStoreRuntimeBase,
 		services,
 		new TestSerializer(),
 	);

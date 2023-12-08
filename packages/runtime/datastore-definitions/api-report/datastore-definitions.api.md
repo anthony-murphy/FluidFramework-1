@@ -21,6 +21,7 @@ import { IIdCompressor } from '@fluidframework/runtime-definitions';
 import { IInboundSignalMessage } from '@fluidframework/runtime-definitions';
 import { ILoaderOptions } from '@fluidframework/container-definitions';
 import { IProvideFluidDataStoreRegistry } from '@fluidframework/runtime-definitions';
+import { IProvideFluidHandleContext } from '@fluidframework/core-interfaces';
 import { IQuorumClients } from '@fluidframework/protocol-definitions';
 import { ISequencedDocumentMessage } from '@fluidframework/protocol-definitions';
 import { ISummaryTreeWithStats } from '@fluidframework/runtime-definitions';
@@ -89,7 +90,22 @@ export interface IDeltaHandler {
 }
 
 // @internal
-export interface IFluidDataStoreRuntime extends IEventProvider<IFluidDataStoreRuntimeEvents>, IDisposable, Partial<IProvideFluidDataStoreRegistry> {
+export interface IFluidDataStoreRuntime extends Omit<IFluidDataStoreRuntimeBase, keyof IEventProvider<IEvent>>, IEventProvider<IFluidDataStoreRuntimeEvents>, Partial<IProvideFluidDataStoreRegistry> {
+    // (undocumented)
+    readonly connected: boolean;
+    readonly entryPoint: IFluidHandle<FluidObject>;
+    getAudience(): IAudience;
+    getChannel(id: string): Promise<IChannel>;
+    // (undocumented)
+    readonly objectsRoutingContext: IFluidHandleContext;
+    // (undocumented)
+    readonly rootRoutingContext: IFluidHandleContext;
+    submitSignal(type: string, content: any, targetClientId?: string): void;
+    waitAttached(): Promise<void>;
+}
+
+// @internal (undocumented)
+export interface IFluidDataStoreRuntimeBase extends IDisposable, IProvideFluidHandleContext {
     readonly attachState: AttachState;
     bindChannel(channel: IChannel): void;
     // (undocumented)
@@ -102,27 +118,24 @@ export interface IFluidDataStoreRuntime extends IEventProvider<IFluidDataStoreRu
     // (undocumented)
     readonly deltaManager: IDeltaManager<ISequencedDocumentMessage, IDocumentMessage>;
     ensureNoDataModelChanges<T>(callback: () => T): T;
-    readonly entryPoint: IFluidHandle<FluidObject>;
-    getAudience(): IAudience;
-    getChannel(id: string): Promise<IChannel>;
     getQuorum(): IQuorumClients;
     // (undocumented)
     readonly id: string;
     // (undocumented)
     readonly idCompressor?: IIdCompressor;
     // (undocumented)
-    readonly IFluidHandleContext: IFluidHandleContext;
-    // (undocumented)
     readonly logger: ITelemetryLogger;
     // (undocumented)
-    readonly objectsRoutingContext: IFluidHandleContext;
+    off: this["on"];
+    // (undocumented)
+    on(event: "dispose" | "attaching" | "attached", listener: () => void): any;
+    // (undocumented)
+    on(event: "connected", listener: (clientId: string) => void): any;
+    // (undocumented)
+    once: this["on"];
     // (undocumented)
     readonly options: ILoaderOptions;
-    // (undocumented)
-    readonly rootRoutingContext: IFluidHandleContext;
-    submitSignal(type: string, content: any, targetClientId?: string): void;
     uploadBlob(blob: ArrayBufferLike, signal?: AbortSignal): Promise<IFluidHandle<ArrayBufferLike>>;
-    waitAttached(): Promise<void>;
 }
 
 // @internal (undocumented)

@@ -6,7 +6,7 @@
 import { assert } from "@fluidframework/core-utils";
 import { createChildLogger } from "@fluidframework/telemetry-utils";
 import {
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelStorageService,
 } from "@fluidframework/datastore-definitions";
 import {
@@ -128,7 +128,7 @@ export class PermutationVector extends Client {
 	constructor(
 		path: string,
 		logger: ITelemetryBaseLogger,
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		private readonly deltaCallback: (
 			position: number,
 			numRemoved: number,
@@ -268,7 +268,7 @@ export class PermutationVector extends Client {
 
 	// Constructs an ISummaryTreeWithStats for the cell data.
 	public summarize(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		handle: IFluidHandle,
 		serializer: IFluidSerializer,
 	): ISummaryTreeWithStats {
@@ -285,7 +285,7 @@ export class PermutationVector extends Client {
 	}
 
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		storage: IChannelStorageService,
 		serializer: IFluidSerializer,
 	) {

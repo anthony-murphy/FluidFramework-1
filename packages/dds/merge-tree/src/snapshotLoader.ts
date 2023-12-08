@@ -15,7 +15,7 @@ import {
 } from "@fluidframework/telemetry-utils";
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
 import {
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelStorageService,
 } from "@fluidframework/datastore-definitions";
 import { AttachState } from "@fluidframework/container-definitions";
@@ -33,7 +33,7 @@ export class SnapshotLoader {
 	private readonly logger: ITelemetryLoggerExt;
 
 	constructor(
-		private readonly runtime: IFluidDataStoreRuntime,
+		private readonly runtime: IFluidDataStoreRuntimeBase,
 		// eslint-disable-next-line import/no-deprecated
 		private readonly client: Client,
 		private readonly mergeTree: MergeTree,

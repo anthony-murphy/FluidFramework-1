@@ -5,7 +5,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import { strict as assert } from "assert";
-import { IFluidDataStoreRuntime } from "@fluidframework/datastore-definitions";
+import { IFluidDataStoreRuntimeBase } from "@fluidframework/datastore-definitions";
 import { MockStorage } from "@fluidframework/test-runtime-utils";
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
 import { SnapshotLegacy } from "../snapshotlegacy";
@@ -36,11 +36,11 @@ describe("snapshot", () => {
 		const services = MockStorage.createFromSummary(summaryTree.summary);
 
 		const client2 = new TestClient(undefined);
-		const runtime: Partial<IFluidDataStoreRuntime> = {
+		const runtime: Partial<IFluidDataStoreRuntimeBase> = {
 			logger: client2.logger,
 			clientId: "1",
 		};
-		await client2.load(runtime as IFluidDataStoreRuntime, services, serializer);
+		await client2.load(runtime as IFluidDataStoreRuntimeBase, services, serializer);
 
 		assert.equal(client2.getLength(), client1.getLength());
 		assert.equal(client2.getText(), client1.getText());
@@ -66,11 +66,11 @@ describe("snapshot", () => {
 			snapshot.extractSync();
 			const summaryTree = snapshot.emit([], serializer, undefined!);
 			const services = MockStorage.createFromSummary(summaryTree.summary);
-			const runtime: Partial<IFluidDataStoreRuntime> = {
+			const runtime: Partial<IFluidDataStoreRuntimeBase> = {
 				logger: client2.logger,
 				clientId: (i + 1).toString(),
 			};
-			await client2.load(runtime as IFluidDataStoreRuntime, services, serializer);
+			await client2.load(runtime as IFluidDataStoreRuntimeBase, services, serializer);
 
 			const client2Len = client2.getLength();
 			assert.equal(
@@ -119,11 +119,11 @@ describe("snapshot", () => {
 				policyFactory: createInsertOnlyAttributionPolicy,
 			},
 		});
-		const runtime: Partial<IFluidDataStoreRuntime> = {
+		const runtime: Partial<IFluidDataStoreRuntimeBase> = {
 			logger: roundTripClient.logger,
 			clientId: "round-trips summary",
 		};
-		await roundTripClient.load(runtime as IFluidDataStoreRuntime, services, serializer);
+		await roundTripClient.load(runtime as IFluidDataStoreRuntimeBase, services, serializer);
 		assert.deepEqual(
 			roundTripClient.getAllAttributionSeqs(),
 			expected.root,

@@ -9,7 +9,7 @@ import { LoggingError, createChildLogger } from "@fluidframework/telemetry-utils
 import { ISequencedDocumentMessage, MessageType } from "@fluidframework/protocol-definitions";
 import {
 	IChannelAttributes,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelStorageService,
 } from "@fluidframework/datastore-definitions";
 import {
@@ -224,7 +224,7 @@ export abstract class SharedSegmentSequence<T extends ISegment>
 	private messagesSinceMSNChange: ISequencedDocumentMessage[] = [];
 	private readonly intervalCollections: DefaultMap<IntervalCollection<SequenceInterval>>;
 	constructor(
-		private readonly dataStoreRuntime: IFluidDataStoreRuntime,
+		private readonly dataStoreRuntime: IFluidDataStoreRuntimeBase,
 		public id: string,
 		attributes: IChannelAttributes,
 		public readonly segmentFromSpec: (spec: IJSONSegment) => ISegment,

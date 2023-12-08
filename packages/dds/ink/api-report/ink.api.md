@@ -8,7 +8,7 @@ import { IChannelAttributes } from '@fluidframework/datastore-definitions';
 import { IChannelFactory } from '@fluidframework/datastore-definitions';
 import { IChannelServices } from '@fluidframework/datastore-definitions';
 import { IChannelStorageService } from '@fluidframework/datastore-definitions';
-import { IFluidDataStoreRuntime } from '@fluidframework/datastore-definitions';
+import { IFluidDataStoreRuntimeBase } from '@fluidframework/datastore-definitions';
 import { IFluidSerializer } from '@fluidframework/shared-object-base';
 import { ISequencedDocumentMessage } from '@fluidframework/protocol-definitions';
 import { ISharedObject } from '@fluidframework/shared-object-base';
@@ -75,12 +75,12 @@ export interface IInkStroke {
 
 // @internal @sealed
 export class Ink extends SharedObject<IInkEvents> implements IInk {
-    constructor(runtime: IFluidDataStoreRuntime, id: string, attributes: IChannelAttributes);
+    constructor(runtime: IFluidDataStoreRuntimeBase, id: string, attributes: IChannelAttributes);
     appendPointToStroke(point: IInkPoint, id: string): IInkStroke;
     // (undocumented)
     protected applyStashedOp(): void;
     clear(): void;
-    static create(runtime: IFluidDataStoreRuntime, id?: string): Ink;
+    static create(runtime: IFluidDataStoreRuntimeBase, id?: string): Ink;
     createStroke(pen: IPen): IInkStroke;
     static getFactory(): InkFactory;
     getStroke(key: string): IInkStroke;
@@ -115,9 +115,9 @@ export class InkFactory implements IChannelFactory {
     // (undocumented)
     get attributes(): IChannelAttributes;
     // (undocumented)
-    create(runtime: IFluidDataStoreRuntime, id: string): ISharedObject;
+    create(runtime: IFluidDataStoreRuntimeBase, id: string): ISharedObject;
     // (undocumented)
-    load(runtime: IFluidDataStoreRuntime, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<ISharedObject>;
+    load(runtime: IFluidDataStoreRuntimeBase, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<ISharedObject>;
     // (undocumented)
     static Type: string;
     // (undocumented)

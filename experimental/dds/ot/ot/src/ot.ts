@@ -8,7 +8,7 @@ import { bufferToString } from "@fluid-internal/client-utils";
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
 import {
 	IChannelAttributes,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelStorageService,
 } from "@fluidframework/datastore-definitions";
 import { ISummaryTreeWithStats } from "@fluidframework/runtime-definitions";
@@ -54,7 +54,7 @@ export abstract class SharedOT<TState, TOp> extends SharedObject {
 
 	constructor(
 		id: string,
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		attributes: IChannelAttributes,
 		initialValue: TState,
 	) {
@@ -105,7 +105,7 @@ export abstract class SharedOT<TState, TOp> extends SharedObject {
 
 	protected processCore(message: ISequencedDocumentMessage, local: boolean) {
 		// Discard any sequenced ops that are now below the minimum sequence number.
-		const minSeq = this.runtime.deltaManager.minimumSequenceNumber;
+		const minSeq = message.minimumSequenceNumber;
 		while (this.sequencedOps[0]?.seq < minSeq) {
 			this.sequencedOps.shift();
 		}

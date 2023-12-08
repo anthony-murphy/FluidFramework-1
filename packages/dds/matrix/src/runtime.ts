@@ -5,7 +5,7 @@
 
 import {
 	IChannelAttributes,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelServices,
 	IChannel,
 	IChannelFactory,
@@ -38,7 +38,7 @@ export class SharedMatrixFactory implements IChannelFactory {
 	 * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.load}
 	 */
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		attributes: IChannelAttributes,
@@ -48,7 +48,7 @@ export class SharedMatrixFactory implements IChannelFactory {
 		return matrix;
 	}
 
-	public create(document: IFluidDataStoreRuntime, id: string): IChannel {
+	public create(document: IFluidDataStoreRuntimeBase, id: string): IChannel {
 		const matrix = new SharedMatrix(document, id, this.attributes);
 		matrix.initializeLocal();
 		return matrix;

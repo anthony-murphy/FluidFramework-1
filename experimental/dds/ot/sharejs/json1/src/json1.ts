@@ -5,7 +5,7 @@
 
 import {
 	IChannelAttributes,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	Serializable,
 } from "@fluidframework/datastore-definitions";
 import { SharedOT } from "@fluid-experimental/ot";
@@ -25,7 +25,7 @@ import { Json1Factory } from "./factory";
  * @internal
  */
 export class SharedJson1 extends SharedOT<Doc, JSONOp> {
-	public static create(runtime: IFluidDataStoreRuntime, id?: string): SharedJson1 {
+	public static create(runtime: IFluidDataStoreRuntimeBase, id?: string): SharedJson1 {
 		return runtime.createChannel(id, Json1Factory.Type) as SharedJson1;
 	}
 
@@ -33,7 +33,7 @@ export class SharedJson1 extends SharedOT<Doc, JSONOp> {
 		return new Json1Factory();
 	}
 
-	constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes) {
+	constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes) {
 		// RATIONALE: 'undefined' is not preserved by JSON.stringify().
 		super(id, runtime, attributes, /* initialValue: */ null);
 	}

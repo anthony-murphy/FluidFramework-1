@@ -7,7 +7,7 @@
 import { IChannelAttributes } from '@fluidframework/datastore-definitions';
 import { IChannelFactory } from '@fluidframework/datastore-definitions';
 import { IChannelStorageService } from '@fluidframework/datastore-definitions';
-import { IFluidDataStoreRuntime } from '@fluidframework/datastore-definitions';
+import { IFluidDataStoreRuntimeBase } from '@fluidframework/datastore-definitions';
 import { IFluidSerializer } from '@fluidframework/shared-object-base';
 import { ISequencedDocumentMessage } from '@fluidframework/protocol-definitions';
 import { ISharedObject } from '@fluidframework/shared-object-base';
@@ -38,10 +38,10 @@ export interface IPactMapEvents extends ISharedObjectEvents {
 
 // @internal
 export class PactMap<T = unknown> extends SharedObject<IPactMapEvents> implements IPactMap<T> {
-    constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes);
+    constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes);
     // (undocumented)
     applyStashedOp(): void;
-    static create(runtime: IFluidDataStoreRuntime, id?: string): PactMap;
+    static create(runtime: IFluidDataStoreRuntimeBase, id?: string): PactMap;
     delete(key: string): void;
     get(key: string): T | undefined;
     static getFactory(): IChannelFactory;

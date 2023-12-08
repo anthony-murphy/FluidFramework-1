@@ -8,7 +8,7 @@ import {
 	IChannelAttributes,
 	IChannelFactory,
 	IChannelServices,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 } from "@fluidframework/datastore-definitions";
 import { TreeField } from "../simple-tree";
 import { TreeFieldSchema } from "../feature-libraries";
@@ -112,7 +112,7 @@ export class TypedTreeFactory implements IChannelFactory {
 	}
 
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		channelAttributes: Readonly<IChannelAttributes>,
@@ -122,7 +122,7 @@ export class TypedTreeFactory implements IChannelFactory {
 		return tree;
 	}
 
-	public create(runtime: IFluidDataStoreRuntime, id: string): ITree {
+	public create(runtime: IFluidDataStoreRuntimeBase, id: string): ITree {
 		const tree = new SharedTree(id, runtime, this.attributes, this.options, "SharedTree");
 		tree.initializeLocal();
 		return tree;

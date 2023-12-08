@@ -6,7 +6,7 @@
 import { assert } from "@fluidframework/core-utils";
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
 import {
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelStorageService,
 	Serializable,
 	IChannelAttributes,
@@ -101,7 +101,7 @@ export class SharedMatrix<T = any>
 	private pending = new SparseArray2D<number>(); // Tracks pending writes.
 
 	constructor(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		public id: string,
 		attributes: IChannelAttributes,
 	) {
@@ -150,7 +150,7 @@ export class SharedMatrix<T = any>
 	/**
 	 * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.create}
 	 */
-	public static create<T>(runtime: IFluidDataStoreRuntime, id?: string) {
+	public static create<T>(runtime: IFluidDataStoreRuntimeBase, id?: string) {
 		return runtime.createChannel(id, SharedMatrixFactory.Type) as SharedMatrix<T>;
 	}
 

@@ -4,7 +4,7 @@
  */
 
 import {
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelFactory,
 	IChannelServices,
 	IChannelAttributes,
@@ -103,7 +103,7 @@ export class SharedStringWithV1IntervalCollection extends SharedString {
 	 * @param id - optional name of the shared string
 	 * @returns newly create shared string (but not attached yet)
 	 */
-	public static create(runtime: IFluidDataStoreRuntime, id?: string) {
+	public static create(runtime: IFluidDataStoreRuntimeBase, id?: string) {
 		return runtime.createChannel(
 			id,
 			V1IntervalCollectionSharedStringFactory.Type,
@@ -119,7 +119,7 @@ export class SharedStringWithV1IntervalCollection extends SharedString {
 	}
 
 	constructor(
-		document: IFluidDataStoreRuntime,
+		document: IFluidDataStoreRuntimeBase,
 		public id: string,
 		attributes: IChannelAttributes,
 	) {
@@ -157,7 +157,7 @@ export class V1IntervalCollectionSharedStringFactory implements IChannelFactory 
 	 * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.load}
 	 */
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		attributes: IChannelAttributes,
@@ -168,7 +168,7 @@ export class V1IntervalCollectionSharedStringFactory implements IChannelFactory 
 	}
 
 	public create(
-		document: IFluidDataStoreRuntime,
+		document: IFluidDataStoreRuntimeBase,
 		id: string,
 	): SharedStringWithV1IntervalCollection {
 		const sharedString = new SharedStringWithV1IntervalCollection(

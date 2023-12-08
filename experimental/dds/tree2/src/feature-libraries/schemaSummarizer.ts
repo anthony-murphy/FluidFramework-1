@@ -7,7 +7,7 @@ import { bufferToString, IsoBuffer } from "@fluid-internal/client-utils";
 import { assert } from "@fluidframework/core-utils";
 import { IFluidHandle } from "@fluidframework/core-interfaces";
 import {
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelStorageService,
 } from "@fluidframework/datastore-definitions";
 import {
@@ -52,7 +52,7 @@ export class SchemaSummarizer implements Summarizable {
 	private readonly codec: IJsonCodec<TreeStoredSchema, Format>;
 
 	public constructor(
-		private readonly runtime: IFluidDataStoreRuntime,
+		private readonly runtime: IFluidDataStoreRuntimeBase,
 		private readonly schema: StoredSchemaRepository,
 		options: ICodecOptions,
 	) {

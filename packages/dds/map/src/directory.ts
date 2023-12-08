@@ -10,7 +10,7 @@ import { readAndParse } from "@fluidframework/driver-utils";
 import { ISequencedDocumentMessage, MessageType } from "@fluidframework/protocol-definitions";
 import {
 	IChannelAttributes,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelStorageService,
 	IChannelServices,
 	IChannelFactory,
@@ -304,7 +304,7 @@ export class DirectoryFactory implements IChannelFactory {
 	 * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.load}
 	 */
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		attributes: IChannelAttributes,
@@ -318,7 +318,7 @@ export class DirectoryFactory implements IChannelFactory {
 	/**
 	 * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.create}
 	 */
-	public create(runtime: IFluidDataStoreRuntime, id: string): ISharedDirectory {
+	public create(runtime: IFluidDataStoreRuntimeBase, id: string): ISharedDirectory {
 		const directory = new SharedDirectory(id, runtime, DirectoryFactory.Attributes);
 		directory.initializeLocal();
 
@@ -460,7 +460,7 @@ export class SharedDirectory
 	 * @param id - Optional name of the shared directory
 	 * @returns Newly create shared directory (but not attached yet)
 	 */
-	public static create(runtime: IFluidDataStoreRuntime, id?: string): SharedDirectory {
+	public static create(runtime: IFluidDataStoreRuntimeBase, id?: string): SharedDirectory {
 		return runtime.createChannel(id, DirectoryFactory.Type) as SharedDirectory;
 	}
 
@@ -514,7 +514,7 @@ export class SharedDirectory
 	 */
 	public constructor(
 		id: string,
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		attributes: IChannelAttributes,
 	) {
 		super(id, runtime, attributes, "fluid_directory_");
@@ -1302,7 +1302,7 @@ class SubDirectory extends TypedEventEmitter<IDirectoryEvents> implements IDirec
 		private readonly seqData: SequenceData,
 		private readonly clientIds: Set<string>,
 		private readonly directory: SharedDirectory,
-		private readonly runtime: IFluidDataStoreRuntime,
+		private readonly runtime: IFluidDataStoreRuntimeBase,
 		private readonly serializer: IFluidSerializer,
 		public readonly absolutePath: string,
 	) {

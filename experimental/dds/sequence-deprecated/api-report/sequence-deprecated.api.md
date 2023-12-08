@@ -8,7 +8,7 @@ import { BaseSegment } from '@fluidframework/merge-tree';
 import { IChannelAttributes } from '@fluidframework/datastore-definitions';
 import { IChannelFactory } from '@fluidframework/datastore-definitions';
 import { IChannelServices } from '@fluidframework/datastore-definitions';
-import { IFluidDataStoreRuntime } from '@fluidframework/datastore-definitions';
+import { IFluidDataStoreRuntimeBase } from '@fluidframework/datastore-definitions';
 import { IFluidHandle } from '@fluidframework/core-interfaces';
 import { IJSONRunSegment } from '@fluidframework/sequence';
 import { IJSONSegment } from '@fluidframework/merge-tree';
@@ -110,9 +110,9 @@ export class RunSegment extends SubSequence<SparseMatrixItem> {
 // @internal @deprecated
 export class SharedNumberSequence extends SharedSequence<number> {
     // @deprecated
-    constructor(document: IFluidDataStoreRuntime, id: string, attributes: IChannelAttributes);
+    constructor(document: IFluidDataStoreRuntimeBase, id: string, attributes: IChannelAttributes);
     // @deprecated
-    static create(runtime: IFluidDataStoreRuntime, id?: string): SharedNumberSequence;
+    static create(runtime: IFluidDataStoreRuntimeBase, id?: string): SharedNumberSequence;
     // @deprecated
     static getFactory(): SharedNumberSequenceFactory;
     // @deprecated (undocumented)
@@ -128,9 +128,9 @@ export class SharedNumberSequenceFactory implements IChannelFactory {
     // @deprecated (undocumented)
     get attributes(): IChannelAttributes;
     // @deprecated (undocumented)
-    create(document: IFluidDataStoreRuntime, id: string): ISharedObject;
+    create(document: IFluidDataStoreRuntimeBase, id: string): ISharedObject;
     // @deprecated (undocumented)
-    load(runtime: IFluidDataStoreRuntime, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<ISharedObject>;
+    load(runtime: IFluidDataStoreRuntimeBase, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<ISharedObject>;
     // @deprecated (undocumented)
     static segmentFromSpec(segSpec: IJSONSegment): SubSequence<number>;
     // @deprecated (undocumented)
@@ -142,9 +142,9 @@ export class SharedNumberSequenceFactory implements IChannelFactory {
 // @internal @deprecated
 export class SharedObjectSequence<T> extends SharedSequence<T> {
     // @deprecated
-    constructor(document: IFluidDataStoreRuntime, id: string, attributes: IChannelAttributes);
+    constructor(document: IFluidDataStoreRuntimeBase, id: string, attributes: IChannelAttributes);
     // @deprecated
-    static create<T>(runtime: IFluidDataStoreRuntime, id?: string): SharedObjectSequence<T>;
+    static create<T>(runtime: IFluidDataStoreRuntimeBase, id?: string): SharedObjectSequence<T>;
     // @deprecated
     static getFactory(): SharedObjectSequenceFactory;
     // @deprecated (undocumented)
@@ -160,9 +160,9 @@ export class SharedObjectSequenceFactory implements IChannelFactory {
     // @deprecated (undocumented)
     get attributes(): IChannelAttributes;
     // @deprecated (undocumented)
-    create(document: IFluidDataStoreRuntime, id: string): ISharedObject;
+    create(document: IFluidDataStoreRuntimeBase, id: string): ISharedObject;
     // @deprecated (undocumented)
-    load(runtime: IFluidDataStoreRuntime, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<ISharedObject>;
+    load(runtime: IFluidDataStoreRuntimeBase, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<ISharedObject>;
     // @deprecated (undocumented)
     static segmentFromSpec(segSpec: IJSONSegment): SubSequence<object>;
     // @deprecated (undocumented)
@@ -175,10 +175,10 @@ export { SharedSequence }
 
 // @internal @deprecated (undocumented)
 export class SparseMatrix extends SharedSegmentSequence<MatrixSegment> {
-    constructor(document: IFluidDataStoreRuntime, id: string, attributes: IChannelAttributes);
+    constructor(document: IFluidDataStoreRuntimeBase, id: string, attributes: IChannelAttributes);
     // (undocumented)
     annotatePosition(row: number, col: number, props: PropertySet): void;
-    static create(runtime: IFluidDataStoreRuntime, id?: string): SparseMatrix;
+    static create(runtime: IFluidDataStoreRuntimeBase, id?: string): SparseMatrix;
     static getFactory(): IChannelFactory;
     // (undocumented)
     getItem(row: number, col: number): // The return type is defined explicitly here to prevent TypeScript from generating dynamic imports
@@ -212,9 +212,9 @@ export class SparseMatrixFactory implements IChannelFactory {
     // (undocumented)
     get attributes(): IChannelAttributes;
     // (undocumented)
-    create(document: IFluidDataStoreRuntime, id: string): ISharedObject;
+    create(document: IFluidDataStoreRuntimeBase, id: string): ISharedObject;
     // (undocumented)
-    load(runtime: IFluidDataStoreRuntime, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<ISharedObject>;
+    load(runtime: IFluidDataStoreRuntimeBase, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<ISharedObject>;
     // (undocumented)
     static segmentFromSpec(spec: IJSONSegment): ISegment;
     // (undocumented)

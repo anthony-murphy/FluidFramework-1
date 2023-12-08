@@ -6,7 +6,7 @@
 import { assert } from "@fluidframework/core-utils";
 import { type ISequencedDocumentMessage, MessageType } from "@fluidframework/protocol-definitions";
 import {
-	type IFluidDataStoreRuntime,
+	type IFluidDataStoreRuntimeBase,
 	type IChannelStorageService,
 	type IChannelFactory,
 	type IChannelAttributes,
@@ -54,13 +54,13 @@ export class SharedCounter extends SharedObject<ISharedCounterEvents> implements
 	 *
 	 * @returns newly create shared counter (but not attached yet)
 	 */
-	public static create(runtime: IFluidDataStoreRuntime, id?: string): SharedCounter {
+	public static create(runtime: IFluidDataStoreRuntimeBase, id?: string): SharedCounter {
 		return runtime.createChannel(id, CounterFactory.Type) as SharedCounter;
 	}
 
 	public constructor(
 		id: string,
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		attributes: IChannelAttributes,
 	) {
 		super(id, runtime, attributes, "fluid_counter_");

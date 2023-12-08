@@ -6,7 +6,7 @@
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
 import {
 	IChannelAttributes,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelStorageService,
 	Jsonable,
 	IChannelFactory,
@@ -44,7 +44,7 @@ export class SharedSummaryBlock extends SharedObject implements ISharedSummaryBl
 	 * @param id - optional name of the shared summary block.
 	 * @returns newly created shared summary block (but not attached yet).
 	 */
-	public static create(runtime: IFluidDataStoreRuntime, id?: string) {
+	public static create(runtime: IFluidDataStoreRuntimeBase, id?: string) {
 		return runtime.createChannel(id, SharedSummaryBlockFactory.Type) as SharedSummaryBlock;
 	}
 
@@ -70,7 +70,7 @@ export class SharedSummaryBlock extends SharedObject implements ISharedSummaryBl
 	 * @param runtime - data store runtime thee object belongs to.
 	 * @param attributes - The attributes for the object.
 	 */
-	constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes) {
+	constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes) {
 		super(id, runtime, attributes, "fluid_sharedSummaryBlock_");
 	}
 

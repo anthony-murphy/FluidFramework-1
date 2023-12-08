@@ -5,7 +5,7 @@
 
 import {
 	type IChannelAttributes,
-	type IFluidDataStoreRuntime,
+	type IFluidDataStoreRuntimeBase,
 	type IChannelServices,
 	type IChannelFactory,
 } from "@fluidframework/datastore-definitions";
@@ -37,7 +37,7 @@ export class PactMapFactory implements IChannelFactory {
 	 * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.load}
 	 */
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		attributes: IChannelAttributes,
@@ -47,7 +47,7 @@ export class PactMapFactory implements IChannelFactory {
 		return pactMap;
 	}
 
-	public create(document: IFluidDataStoreRuntime, id: string): IPactMap {
+	public create(document: IFluidDataStoreRuntimeBase, id: string): IPactMap {
 		const pactMap = new PactMap(id, document, this.attributes);
 		pactMap.initializeLocal();
 		return pactMap;

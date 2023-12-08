@@ -9,7 +9,7 @@ import { IFluidHandle, type IEventThisPlaceHolder } from "@fluidframework/core-i
 import { IFluidSerializer } from "@fluidframework/shared-object-base";
 import { ISequencedDocumentMessage, MessageType } from "@fluidframework/protocol-definitions";
 import {
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelStorageService,
 } from "@fluidframework/datastore-definitions";
 import { ISummaryTreeWithStats } from "@fluidframework/runtime-definitions";
@@ -1056,7 +1056,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 	}
 
 	public summarize(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		handle: IFluidHandle,
 		serializer: IFluidSerializer,
 		catchUpMsgs: ISequencedDocumentMessage[],
@@ -1097,7 +1097,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 	}
 
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		storage: IChannelStorageService,
 		serializer: IFluidSerializer,
 	): Promise<{ catchupOpsP: Promise<ISequencedDocumentMessage[]> }> {

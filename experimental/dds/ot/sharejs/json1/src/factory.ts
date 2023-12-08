@@ -5,7 +5,7 @@
 
 import {
 	IChannelAttributes,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelServices,
 	IChannel,
 	IChannelFactory,
@@ -36,7 +36,7 @@ export class Json1Factory implements IChannelFactory {
 	 * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.load}
 	 */
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		attributes: IChannelAttributes,
@@ -46,7 +46,7 @@ export class Json1Factory implements IChannelFactory {
 		return instance;
 	}
 
-	public create(runtime: IFluidDataStoreRuntime, id: string): IChannel {
+	public create(runtime: IFluidDataStoreRuntimeBase, id: string): IChannel {
 		const instance = new SharedJson1(id, runtime, this.attributes);
 		instance.initializeLocal();
 		return instance;

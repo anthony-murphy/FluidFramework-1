@@ -12,7 +12,7 @@ import {
 	ITree,
 	MessageType,
 } from "@fluidframework/protocol-definitions";
-import { IFluidDataStoreRuntime } from "@fluidframework/datastore-definitions";
+import { IFluidDataStoreRuntimeBase } from "@fluidframework/datastore-definitions";
 import { MockStorage } from "@fluidframework/test-runtime-utils";
 import { Trace } from "@fluid-internal/client-utils";
 import { AttributionKey } from "@fluidframework/runtime-definitions";
@@ -124,7 +124,7 @@ export class TestClient extends Client {
 			{
 				logger: client2.logger,
 				clientId: newLongClientId,
-			} as any as IFluidDataStoreRuntime,
+			} as any as IFluidDataStoreRuntimeBase,
 			storage,
 			TestClient.serializer,
 		);

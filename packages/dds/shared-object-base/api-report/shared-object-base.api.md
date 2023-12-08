@@ -14,7 +14,7 @@ import { IErrorEvent } from '@fluidframework/core-interfaces';
 import { IEventProvider } from '@fluidframework/core-interfaces';
 import { IEventThisPlaceHolder } from '@fluidframework/core-interfaces';
 import { IExperimentalIncrementalSummaryContext } from '@fluidframework/runtime-definitions';
-import { IFluidDataStoreRuntime } from '@fluidframework/datastore-definitions';
+import { IFluidDataStoreRuntimeBase } from '@fluidframework/datastore-definitions';
 import { IFluidHandle } from '@fluidframework/core-interfaces';
 import { IFluidHandleContext } from '@fluidframework/core-interfaces';
 import { IGarbageCollectionData } from '@fluidframework/runtime-definitions';
@@ -88,7 +88,7 @@ export function serializeHandles(value: any, serializer: IFluidSerializer, bind:
 
 // @internal
 export abstract class SharedObject<TEvent extends ISharedObjectEvents = ISharedObjectEvents> extends SharedObjectCore<TEvent> {
-    constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes, telemetryContextPrefix: string);
+    constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes, telemetryContextPrefix: string);
     // (undocumented)
     getAttachSummary(fullTree?: boolean, trackState?: boolean, telemetryContext?: ITelemetryContext): ISummaryTreeWithStats;
     getGCData(fullGC?: boolean): IGarbageCollectionData;
@@ -102,7 +102,7 @@ export abstract class SharedObject<TEvent extends ISharedObjectEvents = ISharedO
 
 // @internal
 export abstract class SharedObjectCore<TEvent extends ISharedObjectEvents = ISharedObjectEvents> extends EventEmitterWithErrorHandling<TEvent> implements ISharedObject<TEvent> {
-    constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes);
+    constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes);
     protected abstract applyStashedOp(content: any): unknown;
     // (undocumented)
     readonly attributes: IChannelAttributes;
@@ -136,7 +136,7 @@ export abstract class SharedObjectCore<TEvent extends ISharedObjectEvents = ISha
     protected reSubmitCore(content: any, localOpMetadata: unknown): void;
     protected rollback(content: any, localOpMetadata: unknown): void;
     // (undocumented)
-    protected runtime: IFluidDataStoreRuntime;
+    protected runtime: IFluidDataStoreRuntimeBase;
     protected submitLocalMessage(content: any, localOpMetadata?: unknown): void;
     // (undocumented)
     abstract summarize(fullTree?: boolean, trackState?: boolean, telemetryContext?: ITelemetryContext): Promise<ISummaryTreeWithStats>;

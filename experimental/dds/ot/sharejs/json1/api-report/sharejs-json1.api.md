@@ -9,7 +9,7 @@ import { IChannel } from '@fluidframework/datastore-definitions';
 import { IChannelAttributes } from '@fluidframework/datastore-definitions';
 import { IChannelFactory } from '@fluidframework/datastore-definitions';
 import { IChannelServices } from '@fluidframework/datastore-definitions';
-import { IFluidDataStoreRuntime } from '@fluidframework/datastore-definitions';
+import { IFluidDataStoreRuntimeBase } from '@fluidframework/datastore-definitions';
 import { JSONOp } from 'ot-json1';
 import { Path } from 'ot-json1';
 import { Serializable } from '@fluidframework/datastore-definitions';
@@ -22,9 +22,9 @@ export class Json1Factory implements IChannelFactory {
     // (undocumented)
     get attributes(): IChannelAttributes;
     // (undocumented)
-    create(runtime: IFluidDataStoreRuntime, id: string): IChannel;
+    create(runtime: IFluidDataStoreRuntimeBase, id: string): IChannel;
     // (undocumented)
-    load(runtime: IFluidDataStoreRuntime, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<IChannel>;
+    load(runtime: IFluidDataStoreRuntimeBase, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<IChannel>;
     // (undocumented)
     static Type: string;
     // (undocumented)
@@ -33,13 +33,13 @@ export class Json1Factory implements IChannelFactory {
 
 // @internal (undocumented)
 export class SharedJson1 extends SharedOT<Doc, JSONOp> {
-    constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes);
+    constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes);
     // (undocumented)
     apply(op: JSONOp): void;
     // (undocumented)
     protected applyCore(state: Doc, op: JSONOp): Doc;
     // (undocumented)
-    static create(runtime: IFluidDataStoreRuntime, id?: string): SharedJson1;
+    static create(runtime: IFluidDataStoreRuntimeBase, id?: string): SharedJson1;
     // (undocumented)
     get(): Doc;
     // (undocumented)

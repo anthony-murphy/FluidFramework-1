@@ -8,7 +8,7 @@ import { AttributionKey } from '@fluidframework/runtime-definitions';
 import { Heap } from '@fluidframework/core-utils';
 import { IChannelStorageService } from '@fluidframework/datastore-definitions';
 import { IEventThisPlaceHolder } from '@fluidframework/core-interfaces';
-import { IFluidDataStoreRuntime } from '@fluidframework/datastore-definitions';
+import { IFluidDataStoreRuntimeBase } from '@fluidframework/datastore-definitions';
 import { IFluidHandle } from '@fluidframework/core-interfaces';
 import { IFluidSerializer } from '@fluidframework/shared-object-base';
 import { ISequencedDocumentMessage } from '@fluidframework/protocol-definitions';
@@ -153,7 +153,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
     // (undocumented)
     insertSegmentLocal(pos: number, segment: ISegment): IMergeTreeInsertMsg | undefined;
     // (undocumented)
-    load(runtime: IFluidDataStoreRuntime, storage: IChannelStorageService, serializer: IFluidSerializer): Promise<{
+    load(runtime: IFluidDataStoreRuntimeBase, storage: IChannelStorageService, serializer: IFluidSerializer): Promise<{
         catchupOpsP: Promise<ISequencedDocumentMessage[]>;
     }>;
     localReferencePositionToPosition(lref: ReferencePosition): number;
@@ -178,7 +178,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
     // (undocumented)
     startOrUpdateCollaboration(longClientId: string | undefined, minSeq?: number, currentSeq?: number): void;
     // (undocumented)
-    summarize(runtime: IFluidDataStoreRuntime, handle: IFluidHandle, serializer: IFluidSerializer, catchUpMsgs: ISequencedDocumentMessage[]): ISummaryTreeWithStats;
+    summarize(runtime: IFluidDataStoreRuntimeBase, handle: IFluidHandle, serializer: IFluidSerializer, catchUpMsgs: ISequencedDocumentMessage[]): ISummaryTreeWithStats;
     // (undocumented)
     updateMinSeq(minSeq: number): void;
     // (undocumented)

@@ -4,7 +4,7 @@
  */
 
 import {
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelAttributes,
 	Serializable,
 } from "@fluidframework/datastore-definitions";
@@ -33,7 +33,7 @@ export class SharedObjectSequence<T> extends SharedSequence<T> {
 	 * For more info, please see {@link https://github.com/microsoft/FluidFramework/issues/8526 | Github issue 8526}.
 	 */
 
-	public static create<T>(runtime: IFluidDataStoreRuntime, id?: string) {
+	public static create<T>(runtime: IFluidDataStoreRuntimeBase, id?: string) {
 		return runtime.createChannel(
 			id,
 			SharedObjectSequenceFactory.Type,
@@ -57,7 +57,7 @@ export class SharedObjectSequence<T> extends SharedSequence<T> {
 	 * For more info, please see {@link https://github.com/microsoft/FluidFramework/issues/8526 | Github issue 8526}.
 	 */
 	constructor(
-		document: IFluidDataStoreRuntime,
+		document: IFluidDataStoreRuntimeBase,
 		public id: string,
 		attributes: IChannelAttributes,
 	) {

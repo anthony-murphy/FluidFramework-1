@@ -9,7 +9,7 @@ import { IChannelAttributes } from '@fluidframework/datastore-definitions';
 import { IChannelFactory } from '@fluidframework/datastore-definitions';
 import { IChannelServices } from '@fluidframework/datastore-definitions';
 import { IChannelStorageService } from '@fluidframework/datastore-definitions';
-import { IFluidDataStoreRuntime } from '@fluidframework/datastore-definitions';
+import { IFluidDataStoreRuntimeBase } from '@fluidframework/datastore-definitions';
 import { IFluidSerializer } from '@fluidframework/shared-object-base';
 import { IJSONSegment } from '@fluidframework/merge-tree';
 import { IMatrixConsumer } from '@tiny-calc/nano';
@@ -41,7 +41,7 @@ export type MatrixItem<T> = Serializable<Exclude<T, null>> | undefined;
 
 // @internal
 export class SharedMatrix<T = any> extends SharedObject implements IMatrixProducer<MatrixItem<T>>, IMatrixReader<MatrixItem<T>>, IMatrixWriter<MatrixItem<T>> {
-    constructor(runtime: IFluidDataStoreRuntime, id: string, attributes: IChannelAttributes);
+    constructor(runtime: IFluidDataStoreRuntimeBase, id: string, attributes: IChannelAttributes);
     // (undocumented)
     protected applyStashedOp(content: any): unknown;
     // (undocumented)
@@ -49,7 +49,7 @@ export class SharedMatrix<T = any> extends SharedObject implements IMatrixProduc
     // (undocumented)
     get colCount(): number;
     // (undocumented)
-    static create<T>(runtime: IFluidDataStoreRuntime, id?: string): SharedMatrix<T>;
+    static create<T>(runtime: IFluidDataStoreRuntimeBase, id?: string): SharedMatrix<T>;
     // (undocumented)
     protected didAttach(): void;
     // (undocumented)
@@ -107,9 +107,9 @@ export class SharedMatrixFactory implements IChannelFactory {
     // (undocumented)
     get attributes(): IChannelAttributes;
     // (undocumented)
-    create(document: IFluidDataStoreRuntime, id: string): IChannel;
+    create(document: IFluidDataStoreRuntimeBase, id: string): IChannel;
     // (undocumented)
-    load(runtime: IFluidDataStoreRuntime, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<IChannel>;
+    load(runtime: IFluidDataStoreRuntimeBase, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<IChannel>;
     // (undocumented)
     static Type: string;
     // (undocumented)

@@ -4,7 +4,7 @@
  */
 
 import {
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelServices,
 	IChannelAttributes,
 	IChannelFactory,
@@ -23,13 +23,13 @@ export interface IConsensusRegisterCollectionFactory extends IChannelFactory {
 	 * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.load}
 	 */
 	load(
-		document: IFluidDataStoreRuntime,
+		document: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		attributes: IChannelAttributes,
 	): Promise<IConsensusRegisterCollection>;
 
-	create(document: IFluidDataStoreRuntime, id: string): IConsensusRegisterCollection;
+	create(document: IFluidDataStoreRuntimeBase, id: string): IConsensusRegisterCollection;
 }
 
 /**

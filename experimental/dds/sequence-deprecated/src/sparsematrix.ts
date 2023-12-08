@@ -8,7 +8,7 @@ import { IFluidHandle } from "@fluidframework/core-interfaces";
 import { BaseSegment, IJSONSegment, ISegment, PropertySet } from "@fluidframework/merge-tree";
 import {
 	IChannelAttributes,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelServices,
 	IChannelFactory,
 	Serializable,
@@ -249,7 +249,7 @@ export class SparseMatrix extends SharedSegmentSequence<MatrixSegment> {
 	 * @param id - optional name of the sparse matrix
 	 * @returns newly create sparse matrix (but not attached yet)
 	 */
-	public static create(runtime: IFluidDataStoreRuntime, id?: string) {
+	public static create(runtime: IFluidDataStoreRuntimeBase, id?: string) {
 		return runtime.createChannel(id, SparseMatrixFactory.Type) as SparseMatrix;
 	}
 
@@ -263,7 +263,7 @@ export class SparseMatrix extends SharedSegmentSequence<MatrixSegment> {
 	}
 
 	constructor(
-		document: IFluidDataStoreRuntime,
+		document: IFluidDataStoreRuntimeBase,
 		public id: string,
 		attributes: IChannelAttributes,
 	) {
@@ -412,7 +412,7 @@ export class SparseMatrixFactory implements IChannelFactory {
 	 * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.load}
 	 */
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		attributes: IChannelAttributes,
@@ -422,7 +422,7 @@ export class SparseMatrixFactory implements IChannelFactory {
 		return sharedObject;
 	}
 
-	public create(document: IFluidDataStoreRuntime, id: string): ISharedObject {
+	public create(document: IFluidDataStoreRuntimeBase, id: string): ISharedObject {
 		const sharedObject = new SparseMatrix(document, id, this.attributes);
 		sharedObject.initializeLocal();
 		return sharedObject;

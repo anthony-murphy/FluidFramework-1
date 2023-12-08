@@ -6,7 +6,7 @@
 import { assert } from '@fluidframework/core-utils';
 import {
 	type IChannelAttributes,
-	type IFluidDataStoreRuntime,
+	type IFluidDataStoreRuntimeBase,
 	type IChannelServices,
 	type IChannelFactory,
 } from '@fluidframework/datastore-definitions';
@@ -57,7 +57,7 @@ export class SharedTreeShimFactory implements IChannelFactory {
 	 * Should be loading the SharedTreeShim from a new SharedTree snapshot only.
 	 */
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		attributes: IChannelAttributes
@@ -75,7 +75,7 @@ export class SharedTreeShimFactory implements IChannelFactory {
 	 * Should be only creating the SharedTreeShim, which will only generate a new SharedTree snapshot. That way we do
 	 * not have the capability of accidentally creating a LegacySharedTree snapshot.
 	 */
-	public create(runtime: IFluidDataStoreRuntime, id: string): SharedTreeShim {
+	public create(runtime: IFluidDataStoreRuntimeBase, id: string): SharedTreeShim {
 		const sharedTreeShim = new SharedTreeShim(id, runtime, this.factory);
 		sharedTreeShim.create();
 		return sharedTreeShim;

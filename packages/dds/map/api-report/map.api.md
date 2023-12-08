@@ -12,7 +12,7 @@ import { IDisposable } from '@fluidframework/core-interfaces';
 import { IEvent } from '@fluidframework/core-interfaces';
 import { IEventProvider } from '@fluidframework/core-interfaces';
 import { IEventThisPlaceHolder } from '@fluidframework/core-interfaces';
-import { IFluidDataStoreRuntime } from '@fluidframework/datastore-definitions';
+import { IFluidDataStoreRuntimeBase } from '@fluidframework/datastore-definitions';
 import { IFluidHandle } from '@fluidframework/core-interfaces';
 import { IFluidSerializer } from '@fluidframework/shared-object-base';
 import { ISequencedDocumentMessage } from '@fluidframework/protocol-definitions';
@@ -29,9 +29,9 @@ export class DirectoryFactory implements IChannelFactory {
     // (undocumented)
     get attributes(): IChannelAttributes;
     // (undocumented)
-    create(runtime: IFluidDataStoreRuntime, id: string): ISharedDirectory;
+    create(runtime: IFluidDataStoreRuntimeBase, id: string): ISharedDirectory;
     // (undocumented)
-    load(runtime: IFluidDataStoreRuntime, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<ISharedDirectory>;
+    load(runtime: IFluidDataStoreRuntimeBase, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<ISharedDirectory>;
     // (undocumented)
     static readonly Type = "https://graph.microsoft.com/types/directory";
     // (undocumented)
@@ -203,9 +203,9 @@ export class MapFactory implements IChannelFactory {
     // (undocumented)
     get attributes(): IChannelAttributes;
     // (undocumented)
-    create(runtime: IFluidDataStoreRuntime, id: string): ISharedMap;
+    create(runtime: IFluidDataStoreRuntimeBase, id: string): ISharedMap;
     // (undocumented)
-    load(runtime: IFluidDataStoreRuntime, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<ISharedMap>;
+    load(runtime: IFluidDataStoreRuntimeBase, id: string, services: IChannelServices, attributes: IChannelAttributes): Promise<ISharedMap>;
     // (undocumented)
     static readonly Type = "https://graph.microsoft.com/types/map";
     // (undocumented)
@@ -216,13 +216,13 @@ export class MapFactory implements IChannelFactory {
 export class SharedDirectory extends SharedObject<ISharedDirectoryEvents> implements ISharedDirectory {
     [Symbol.iterator](): IterableIterator<[string, any]>;
     [Symbol.toStringTag]: string;
-    constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes);
+    constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes);
     get absolutePath(): string;
     // (undocumented)
     protected applyStashedOp(op: unknown): unknown;
     clear(): void;
     countSubDirectory(): number;
-    static create(runtime: IFluidDataStoreRuntime, id?: string): SharedDirectory;
+    static create(runtime: IFluidDataStoreRuntimeBase, id?: string): SharedDirectory;
     createSubDirectory(subdirName: string): IDirectory;
     delete(key: string): boolean;
     deleteSubDirectory(subdirName: string): boolean;
@@ -265,11 +265,11 @@ export class SharedDirectory extends SharedObject<ISharedDirectoryEvents> implem
 export class SharedMap extends SharedObject<ISharedMapEvents> implements ISharedMap {
     [Symbol.iterator](): IterableIterator<[string, any]>;
     readonly [Symbol.toStringTag]: string;
-    constructor(id: string, runtime: IFluidDataStoreRuntime, attributes: IChannelAttributes);
+    constructor(id: string, runtime: IFluidDataStoreRuntimeBase, attributes: IChannelAttributes);
     // (undocumented)
     protected applyStashedOp(content: unknown): unknown;
     clear(): void;
-    static create(runtime: IFluidDataStoreRuntime, id?: string): SharedMap;
+    static create(runtime: IFluidDataStoreRuntimeBase, id?: string): SharedMap;
     delete(key: string): boolean;
     entries(): IterableIterator<[string, any]>;
     forEach(callbackFn: (value: any, key: string, map: Map<string, any>) => void): void;

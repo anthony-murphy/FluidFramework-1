@@ -18,7 +18,11 @@ export {
 	IDeltaConnection,
 	IDeltaHandler,
 } from "./channel";
-export { IFluidDataStoreRuntime, IFluidDataStoreRuntimeEvents } from "./dataStoreRuntime";
+export {
+	IFluidDataStoreRuntimeBase,
+	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeEvents,
+} from "./dataStoreRuntime";
 export { Jsonable } from "./jsonable";
 export { Serializable } from "./serializable";
 export { IChannelAttributes } from "./storage";

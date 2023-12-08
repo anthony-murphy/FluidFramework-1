@@ -5,7 +5,7 @@
 
 import {
 	IChannelAttributes,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelServices,
 } from "@fluidframework/datastore-definitions";
 import { ConsensusQueue } from "./consensusQueue";
@@ -36,7 +36,7 @@ export class ConsensusQueueFactory implements IConsensusOrderedCollectionFactory
 	 * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.load}
 	 */
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		attributes: IChannelAttributes,
@@ -46,7 +46,7 @@ export class ConsensusQueueFactory implements IConsensusOrderedCollectionFactory
 		return collection;
 	}
 
-	public create(document: IFluidDataStoreRuntime, id: string): IConsensusOrderedCollection {
+	public create(document: IFluidDataStoreRuntimeBase, id: string): IConsensusOrderedCollection {
 		const collection = new ConsensusQueue(id, document, this.attributes);
 		collection.initializeLocal();
 		return collection;

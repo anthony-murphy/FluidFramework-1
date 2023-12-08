@@ -6,7 +6,7 @@
 import { ISequencedDocumentMessage, MessageType } from "@fluidframework/protocol-definitions";
 import {
 	IChannelAttributes,
-	IFluidDataStoreRuntime,
+	IFluidDataStoreRuntimeBase,
 	IChannelStorageService,
 	IChannelServices,
 	IChannelFactory,
@@ -69,7 +69,7 @@ export class MapFactory implements IChannelFactory {
 	 * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.load}
 	 */
 	public async load(
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		id: string,
 		services: IChannelServices,
 		attributes: IChannelAttributes,
@@ -83,7 +83,7 @@ export class MapFactory implements IChannelFactory {
 	/**
 	 * {@inheritDoc @fluidframework/datastore-definitions#IChannelFactory.create}
 	 */
-	public create(runtime: IFluidDataStoreRuntime, id: string): ISharedMap {
+	public create(runtime: IFluidDataStoreRuntimeBase, id: string): ISharedMap {
 		const map = new AttributableMap(id, runtime, MapFactory.Attributes);
 		map.initializeLocal();
 
@@ -112,7 +112,7 @@ export class AttributableMap extends SharedObject<ISharedMapEvents> implements I
 	 * const myMap = AttributableMap.create(this.runtime, id);
 	 * ```
 	 */
-	public static create(runtime: IFluidDataStoreRuntime, id?: string): AttributableMap {
+	public static create(runtime: IFluidDataStoreRuntimeBase, id?: string): AttributableMap {
 		return runtime.createChannel(id, MapFactory.Type) as AttributableMap;
 	}
 
@@ -143,7 +143,7 @@ export class AttributableMap extends SharedObject<ISharedMapEvents> implements I
 	 */
 	public constructor(
 		id: string,
-		runtime: IFluidDataStoreRuntime,
+		runtime: IFluidDataStoreRuntimeBase,
 		attributes: IChannelAttributes,
 	) {
 		super(id, runtime, attributes, "fluid_map_");
