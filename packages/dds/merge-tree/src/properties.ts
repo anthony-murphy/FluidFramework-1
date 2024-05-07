@@ -19,7 +19,7 @@ export interface MapLike<T> {
  * @privateRemarks PropertySet is typed using `any` because when you include
  * custom methods such as toJSON(), JSON.stringify accepts most types other than
  * functions
- * @alpha
+ * @public
  */
 export type PropertySet = MapLike<any>;
 

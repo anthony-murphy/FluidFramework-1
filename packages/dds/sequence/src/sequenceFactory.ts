@@ -75,13 +75,13 @@ export class SharedStringFactory implements IChannelFactory<ISharedString> {
 
 /**
  * Entrypoint for {@link ISharedString} creation.
- * @alpha
+ * @public
  */
 export const SharedString: ISharedObjectKind<ISharedString> =
 	createSharedObjectKind(SharedStringFactory);
 
 /**
  * Alias for {@link ISharedString} for compatibility.
- * @alpha
+ * @public
  */
 export type SharedString = ISharedString;

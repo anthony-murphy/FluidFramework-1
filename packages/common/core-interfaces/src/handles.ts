@@ -57,7 +57,7 @@ export const IFluidHandle = "IFluidHandle";
 
 /**
  * @deprecated {@link IFluidHandleInternal} and {@link IFluidHandleInternal} should be identified should be identified using the {@link fluidHandleSymbol} symbol.
- * @alpha
+ * @public
  */
 export interface IProvideFluidHandle {
 	/**
@@ -72,7 +72,7 @@ export interface IProvideFluidHandle {
 
 /**
  * Handle to a shared {@link FluidObject}.
- * @alpha
+ * @public
  */
 export interface IFluidHandleInternal<
 	// REVIEW: Constrain `T` to something? How do we support dds and datastores safely?

@@ -11,7 +11,7 @@ import { IMergeTreeGroupMsg, IMergeTreeOp, MergeTreeDeltaType } from "./ops.js";
 import { PropertySet } from "./properties.js";
 
 /**
- * @alpha
+ * @public
  */
 export type MergeTreeDeltaOperationType =
 	| typeof MergeTreeDeltaType.ANNOTATE
@@ -24,7 +24,7 @@ export type MergeTreeDeltaOperationType =
  * Maintenance events correspond to structural segment changes or acks of pending segments.
  *
  * Note: these values are assigned negative integers to avoid clashing with `MergeTreeDeltaType`.
- * @alpha
+ * @public
  */
 export const MergeTreeMaintenanceType = {
 	/**
@@ -54,18 +54,18 @@ export const MergeTreeMaintenanceType = {
 	ACKNOWLEDGED: -4,
 } as const;
 /**
- * @alpha
+ * @public
  */
 export type MergeTreeMaintenanceType =
 	(typeof MergeTreeMaintenanceType)[keyof typeof MergeTreeMaintenanceType];
 
 /**
- * @alpha
+ * @public
  */
 export type MergeTreeDeltaOperationTypes = MergeTreeDeltaOperationType | MergeTreeMaintenanceType;
 
 /**
- * @alpha
+ * @public
  */
 export interface IMergeTreeDeltaCallbackArgs<
 	TOperationType extends MergeTreeDeltaOperationTypes = MergeTreeDeltaOperationType,
@@ -87,7 +87,7 @@ export interface IMergeTreeDeltaCallbackArgs<
 }
 
 /**
- * @alpha
+ * @public
  */
 export interface IMergeTreeSegmentDelta {
 	/**
@@ -108,7 +108,7 @@ export interface IMergeTreeSegmentDelta {
 }
 
 /**
- * @alpha
+ * @public
  */
 export interface IMergeTreeDeltaOpArgs {
 	/**
@@ -151,7 +151,7 @@ export type MergeTreeDeltaCallback = (
 ) => void;
 
 /**
- * @alpha
+ * @public
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface IMergeTreeMaintenanceCallbackArgs

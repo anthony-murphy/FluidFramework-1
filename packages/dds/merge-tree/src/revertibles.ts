@@ -60,7 +60,7 @@ interface RemoveSegmentRefProperties {
 }
 
 /**
- * @alpha
+ * @public
  */
 export interface MergeTreeRevertibleDriver {
 	insertFromSpec(pos: number, spec: IJSONSegment): void;

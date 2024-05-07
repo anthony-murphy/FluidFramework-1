@@ -24,7 +24,7 @@ import { PropertiesManager, PropertiesRollback } from "./segmentPropertiesManage
 
 /**
  * Common properties for a node in a merge tree.
- * @alpha
+ * @public
  */
 export interface IMergeNodeCommon {
 	/**
@@ -47,7 +47,7 @@ export type IMergeNode = MergeBlock | ISegmentLeaf;
 
 /**
  * Contains removal information associated to an {@link ISegment}.
- * @alpha
+ * @public
  */
 export interface IRemovalInfo {
 	/**
@@ -86,7 +86,7 @@ export function toRemovalInfo(maybe: Partial<IRemovalInfo> | undefined): IRemova
  * Note that merge-tree does not currently support moving and only supports
  * obliterate. The fields below include "move" in their names to avoid renaming
  * in the future, when moves _are_ supported.
- * @alpha
+ * @public
  */
 export interface IMoveInfo {
 	/**
@@ -162,7 +162,7 @@ export function toMoveInfo(maybe: Partial<IMoveInfo> | undefined): IMoveInfo | u
 /**
  * A segment representing a portion of the merge tree.
  * Segments are leaf nodes of the merge tree and contain data.
- * @alpha
+ * @public
  */
 export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Partial<IMoveInfo> {
 	readonly type: string;
@@ -355,7 +355,7 @@ export interface SegmentActions<TClientData> {
 
 /**
  * @deprecated This functionality was not meant to be exported and will be removed in a future release
- * @alpha
+ * @public
  */
 export interface SegmentGroup {
 	segments: ISegment[];
@@ -461,7 +461,7 @@ export function seqLTE(seq: number, minOrRefSeq: number) {
 }
 
 /**
- * @alpha
+ * @public
  */
 export abstract class BaseSegment implements ISegment {
 	public clientId: number = LocalClientId;
@@ -712,8 +712,7 @@ export interface IJSONMarkerSegment extends IJSONSegment {
  * sub-linear time. This is useful, for example, in the case of jumping from the
  * start of a paragraph to the end, assuming a paragraph is bound by markers at
  * the start and end.
- *
- * @alpha
+ * @public
  */
 export class Marker extends BaseSegment implements ReferencePosition, ISegment {
 	public static readonly type = "Marker";
@@ -789,7 +788,7 @@ export class Marker extends BaseSegment implements ReferencePosition, ISegment {
 
 /**
  * @deprecated This functionality was not meant to be exported and will be removed in a future release
- * @alpha
+ * @public
  */
 export class CollaborationWindow {
 	clientId = LocalClientId;

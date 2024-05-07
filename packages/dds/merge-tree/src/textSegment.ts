@@ -21,14 +21,14 @@ import { PropertySet } from "./properties.js";
 export const TextSegmentGranularity = 256;
 
 /**
- * @alpha
+ * @public
  */
 export interface IJSONTextSegment extends IJSONSegment {
 	text: string;
 }
 
 /**
- * @alpha
+ * @public
  */
 export class TextSegment extends BaseSegment {
 	public static readonly type = "TextSegment";
@@ -106,7 +106,7 @@ export class TextSegment extends BaseSegment {
 
 /**
  * @deprecated This functionality was not meant to be exported and will be removed in a future release
- * @alpha
+ * @public
  */
 export interface IMergeTreeTextHelper {
 	getText(

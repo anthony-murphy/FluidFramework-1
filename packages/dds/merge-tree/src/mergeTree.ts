@@ -134,7 +134,7 @@ const LRUSegmentComparer: IComparer<LRUSegment> = {
 };
 
 /**
- * @alpha
+ * @public
  */
 export interface IMergeTreeOptions {
 	catchUpBlobName?: string;
@@ -183,7 +183,7 @@ export interface IMergeTreeOptions {
 }
 
 /**
- * @alpha
+ * @public
  */
 export interface IMergeTreeAttributionOptions {
 	/**
@@ -209,7 +209,7 @@ export interface IMergeTreeAttributionOptions {
 /**
  * Implements policy dictating which kinds of operations should be attributed and how.
  * @sealed
- * @alpha
+ * @public
  */
 export interface AttributionPolicy {
 	/**

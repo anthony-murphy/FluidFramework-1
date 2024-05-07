@@ -8,7 +8,7 @@ import { DoublyLinkedList, walkList } from "./collections/index.js";
 import { ISegment, SegmentGroup } from "./mergeTreeNodes.js";
 
 /**
- * @alpha
+ * @public
  */
 export class SegmentGroupCollection {
 	// eslint-disable-next-line import/no-deprecated

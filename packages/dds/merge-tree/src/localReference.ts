@@ -17,7 +17,7 @@ import { ReferencePosition, refTypeIncludesFlag } from "./referencePositions.js"
 /**
  * Dictates the preferential direction for a {@link ReferencePosition} to slide
  * in a merge-tree
- * @alpha
+ * @public
  */
 export const SlidingPreference = {
 	/**
@@ -33,7 +33,7 @@ export const SlidingPreference = {
 /**
  * Dictates the preferential direction for a {@link ReferencePosition} to slide
  * in a merge-tree
- * @alpha
+ * @public
  */
 export type SlidingPreference = (typeof SlidingPreference)[keyof typeof SlidingPreference];
 
@@ -56,7 +56,7 @@ function _validateReferenceType(refType: ReferenceType) {
 }
 /**
  * @sealed
- * @alpha
+ * @public
  */
 export interface LocalReferencePosition extends ReferencePosition {
 	callbacks?: Partial<
@@ -214,8 +214,7 @@ export function setValidateRefCount(cb?: (collection?: LocalReferenceCollection)
  * one segment in a merge-tree.
  * Represents a collection of {@link LocalReferencePosition}s associated with one segment in a merge-tree.
  * @sealed
- *
- * @alpha
+ * @public
  */
 export class LocalReferenceCollection {
 	public static append(seg1: ISegment, seg2: ISegment) {

@@ -13,7 +13,7 @@ import {
 import { ISegment } from "./mergeTreeNodes.js";
 
 /**
- * @alpha
+ * @public
  */
 export interface SequenceOffsets {
 	/**
@@ -34,7 +34,7 @@ export interface SequenceOffsets {
 }
 
 /**
- * @alpha
+ * @public
  */
 export interface SerializedAttributionCollection extends SequenceOffsets {
 	channels?: { [name: string]: SequenceOffsets };
@@ -54,8 +54,8 @@ export interface IAttributionCollectionSpec<T> {
 }
 
 /**
- * @alpha
  * @sealed
+ * @public
  */
 export interface IAttributionCollectionSerializer {
 	/***/

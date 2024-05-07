@@ -8,7 +8,7 @@ import { FluidErrorTypes } from "@fluidframework/core-interfaces/internal";
 
 /**
  * Different error types the ClientSession may report out to the Host.
- * @alpha
+ * @public
  */
 export const ContainerErrorTypes = {
 	...FluidErrorTypes,
@@ -21,7 +21,7 @@ export const ContainerErrorTypes = {
 
 /**
  * {@inheritDoc (ContainerErrorTypes:variable)}
- * @alpha
+ * @public
  */
 export type ContainerErrorTypes = (typeof ContainerErrorTypes)[keyof typeof ContainerErrorTypes];
 

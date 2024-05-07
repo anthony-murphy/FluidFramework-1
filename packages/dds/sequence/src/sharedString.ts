@@ -22,7 +22,7 @@ import { SharedStringFactory } from "./sequenceFactory.js";
 
 /**
  * Fluid object interface describing access methods on a SharedString
- * @alpha
+ * @public
  */
 export interface ISharedString extends SharedSegmentSequence<SharedStringSegment> {
 	/**
@@ -118,7 +118,7 @@ export interface ISharedString extends SharedSegmentSequence<SharedStringSegment
 }
 
 /**
- * @alpha
+ * @public
  */
 export type SharedStringSegment = TextSegment | Marker;
 
