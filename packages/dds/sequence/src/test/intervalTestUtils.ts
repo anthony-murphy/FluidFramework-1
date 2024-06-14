@@ -6,6 +6,7 @@
 import { strict as assert } from "assert";
 
 import { isObject } from "@fluidframework/core-utils/internal";
+import { toRemovalInfo } from "@fluidframework/merge-tree/internal";
 import { isFluidHandle } from "@fluidframework/runtime-utils/internal";
 import { MockContainerRuntimeForReconnection } from "@fluidframework/test-runtime-utils/internal";
 
@@ -84,26 +85,44 @@ export async function assertEquivalentSharedStrings(a: SharedString, b: SharedSt
 				otherInterval.end.slidingPreference,
 				"end sliding preference not equal",
 			);
-			const firstStart = a.localReferencePositionToPosition(interval.start);
-			const otherStart = b.localReferencePositionToPosition(otherInterval.start);
-			assert.equal(
-				firstStart,
-				otherStart,
-				`Startpoints of interval ${intervalId} different:\n` +
-					`\tfull text:${a.getText()}\n` +
-					`\tclient ${a.id} char:${a.getText(firstStart, firstStart + 1)}\n` +
-					`\tclient ${b.id} char:${b.getText(otherStart, otherStart + 1)}`,
-			);
-			const firstEnd = a.localReferencePositionToPosition(interval.end);
-			const otherEnd = b.localReferencePositionToPosition(otherInterval.end);
-			assert.equal(
-				firstEnd,
-				otherEnd,
-				`Endpoints of interval ${intervalId} different:\n` +
-					`\tfull text:${a.getText()}\n` +
-					`\tclient ${a.id} char:${a.getText(firstEnd, firstEnd + 1)}\n` +
-					`\tclient ${b.id} char:${b.getText(otherEnd, otherEnd + 1)}`,
-			);
+			const validateEndpoint = (
+				endpoint: keyof Pick<SequenceInterval, "start" | "end">,
+				intA: SequenceInterval,
+				intB: SequenceInterval,
+			) => {
+				const refA = intA[endpoint];
+				const refB = intB[endpoint];
+				if (
+					toRemovalInfo(refA.getSegment()) === undefined &&
+					toRemovalInfo(refB.getSegment()) === undefined
+				) {
+					const firstStart = a.localReferencePositionToPosition(refA);
+					const otherStart = b.localReferencePositionToPosition(refB);
+					assert.equal(
+						firstStart,
+						otherStart,
+						`${endpoint}points of interval ${intervalId} different:\n` +
+							`\tfull text:${a.getText()}\n` +
+							`\tclient ${a.id} char:${a.getText(firstStart, firstStart + 1)}\n` +
+							`\tclient ${b.id} char:${b.getText(otherStart, otherStart + 1)}`,
+					);
+				} else {
+					// in general we fully synchronize dds before asserting equivalence
+					// however, in the rehydrate case of the fuzz tests we many
+					// compare between and attaching dds and a detached dds, and
+					// the attaching dds may have un-acked ops, like removals.
+					// Since we only slide on acked ops, we can't guarantee the
+					// the intervals will be equivalent in this case. So we just
+					// assert that one of the intervals is detached.
+					assert(
+						!a.isAttached() || !b.isAttached(),
+						"there should only be removed segments when detached",
+					);
+				}
+			};
+			validateEndpoint("start", interval, otherInterval);
+			validateEndpoint("end", interval, otherInterval);
+
 			assert.equal(interval.intervalType, otherInterval.intervalType);
 			assert.deepEqual(interval.properties, otherInterval.properties);
 		}

@@ -434,17 +434,22 @@ export const baseModel: Omit<
 	],
 };
 
-export const defaultFuzzOptions: Partial<DDSFuzzSuiteOptions> = {
+export const defaultFuzzOptions = {
 	validationStrategy: { type: "fixedInterval", interval: 10 },
 	reconnectProbability: 0.1,
 	numberOfClients: 3,
 	clientJoinOptions: {
 		maxNumberOfClients: 6,
 		clientAddProbability: 0.1,
+		stashableClientProbability: 0.02,
 	},
 	defaultTestCount: 100,
 	saveFailures: { directory: path.join(_dirname, "../../src/test/fuzz/results") },
-};
+	// by using satisfies we can ensure that the options are a subset of DDSFuzzSuiteOptions
+	// but keep strong typing for the values themselves which makes augmentation via rest expansion easier
+	// for example: `{...defaultFuzzOptions, clientJoinOptions: {...defaultFuzzOptions.clientJoinOptions,  maxNumberOfClients: 10}}`
+	// that only works, as typescript knows that clientJoinOptions is defined on defaultFuzzOptions even though DDSFuzzSuiteOptions allows undefined
+} satisfies Partial<DDSFuzzSuiteOptions>;
 
 export function makeIntervalOperationGenerator(
 	optionsParam?: IntervalOperationGenerationConfig,

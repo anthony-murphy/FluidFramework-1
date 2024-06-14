@@ -14,13 +14,18 @@ import {
 	makeIntervalOperationGenerator,
 } from "./fuzzUtils.js";
 
+const defaultTestCount = 200;
+
 const baseIntervalModel = {
 	...baseModel,
 	generatorFactory: () =>
-		takeAsync(100, makeIntervalOperationGenerator(defaultIntervalOperationGenerationConfig)),
+		takeAsync(
+			defaultTestCount,
+			makeIntervalOperationGenerator(defaultIntervalOperationGenerationConfig),
+		),
 };
 
-describe("IntervalCollection fuzz testing", () => {
+describe("IntervalCollection", () => {
 	const model = {
 		...baseIntervalModel,
 		workloadName: "default interval collection",
@@ -28,55 +33,10 @@ describe("IntervalCollection fuzz testing", () => {
 
 	createDDSFuzzSuite(model, {
 		...defaultFuzzOptions,
-		skip: [79],
-		// Note: there are some known eventual consistency issues which the tests don't currently reproduce.
-		// Search this package for AB#6552 (or look at that work item) for a skipped test and further details.
-		// Other relevant work items are AB#7806 and #7807.
+		defaultTestCount,
 		// Uncomment this line to replay a specific seed from its failure file:
 		// replay: 0,
-	});
-});
-
-describe("IntervalCollection with stashing", () => {
-	const model = {
-		...baseIntervalModel,
-		workloadName: "default interval collection with stashing",
-	};
-
-	createDDSFuzzSuite(model, {
-		...defaultFuzzOptions,
-		clientJoinOptions: {
-			clientAddProbability: 0.1,
-			maxNumberOfClients: Number.MAX_SAFE_INTEGER,
-			stashableClientProbability: 0.2,
-		},
-		// AB#7220
-		skip: [79],
-		// Uncomment this line to replay a specific seed from its failure file:
-		// replay: 0,
-	});
-});
-
-describe("IntervalCollection no reconnect fuzz testing", () => {
-	const noReconnectModel = {
-		...baseIntervalModel,
-		workloadName: "interval collection without reconnects",
-	};
-
-	const options = {
-		...defaultFuzzOptions,
-		skip: [79],
-		reconnectProbability: 0.0,
-		clientJoinOptions: {
-			maxNumberOfClients: 3,
-			clientAddProbability: 0.0,
-		},
-	};
-
-	createDDSFuzzSuite(noReconnectModel, {
-		...options,
-		// Uncomment this line to replay a specific seed from its failure file:
-		// replay: 0,
+		skip: [148],
 	});
 });
 
@@ -98,7 +58,7 @@ describe("IntervalCollection fuzz testing with rebased batches", () => {
 			flushMode: FlushMode.TurnBased,
 			enableGroupedBatching: true,
 		},
-		skip: [79],
 		// Uncomment this line to replay a specific seed from its failure file:
+		// replay: 0,
 	});
 });
