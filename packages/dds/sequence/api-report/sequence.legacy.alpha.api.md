@@ -368,6 +368,8 @@ export { SequencePlace }
 export abstract class SharedSegmentSequence<T extends ISegment> extends SharedObject<ISharedSegmentSequenceEvents> implements ISharedSegmentSequence<T> {
     constructor(dataStoreRuntime: IFluidDataStoreRuntime, id: string, attributes: IChannelAttributes, segmentFromSpec: (spec: IJSONSegment) => ISegment);
     // (undocumented)
+    adjustRange(start: number, end: number, adjust: MapLike<AdjustParams>): void;
+    // (undocumented)
     annotateRange(start: number, end: number, props: PropertySet): void;
     protected applyStashedOp(content: any): void;
     // (undocumented)

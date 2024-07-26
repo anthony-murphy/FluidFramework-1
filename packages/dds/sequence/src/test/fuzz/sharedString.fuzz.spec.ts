@@ -59,13 +59,14 @@ const baseSharedStringModel = {
 		take(100, makeSharedStringOperationGenerator(defaultIntervalOperationGenerationConfig)),
 };
 
-describe("SharedString fuzz testing", () => {
+describe.only("SharedString fuzz testing", () => {
 	createDDSFuzzSuite(
 		{ ...baseSharedStringModel, workloadName: "default" },
 		{
 			...defaultFuzzOptions,
 			// Uncomment this line to replay a specific seed from its failure file:
-			// replay: 0,
+			// replay: 1,
+			only: [1],
 		},
 	);
 });

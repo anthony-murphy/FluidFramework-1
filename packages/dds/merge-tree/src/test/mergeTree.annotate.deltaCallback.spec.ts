@@ -12,6 +12,7 @@ import {
 } from "../constants.js";
 import { MergeTree } from "../mergeTree.js";
 import { MergeTreeMaintenanceType } from "../mergeTreeDeltaCallback.js";
+import { createAnnotateRangeOp } from "../opBuilder.js";
 import { MergeTreeDeltaType } from "../ops.js";
 import { TextSegment } from "../textSegment.js";
 
@@ -45,17 +46,11 @@ describe("MergeTree", () => {
 		it("Event on annotation", () => {
 			const count = countOperations(mergeTree);
 
-			mergeTree.annotateRange(
-				4,
-				6,
-				{
+			mergeTree.annotateRange(currentSequenceNumber, localClientId, UnassignedSequenceNumber, {
+				op: createAnnotateRangeOp(4, 6, {
 					foo: "bar",
-				},
-				currentSequenceNumber,
-				localClientId,
-				UnassignedSequenceNumber,
-				undefined as never,
-			);
+				}),
+			});
 
 			assert.deepStrictEqual(count, {
 				[MergeTreeDeltaType.ANNOTATE]: 1,
@@ -65,17 +60,11 @@ describe("MergeTree", () => {
 
 		it("No event on annotation of empty range", () => {
 			const count = countOperations(mergeTree);
-			mergeTree.annotateRange(
-				3,
-				3,
-				{
+			mergeTree.annotateRange(currentSequenceNumber, localClientId, ++currentSequenceNumber, {
+				op: createAnnotateRangeOp(3, 3, {
 					foo: "bar",
-				},
-				currentSequenceNumber,
-				localClientId,
-				++currentSequenceNumber,
-				undefined as never,
-			);
+				}),
+			});
 
 			assert.deepStrictEqual(count, {
 				[MergeTreeMaintenanceType.SPLIT]: 1,
@@ -96,17 +85,11 @@ describe("MergeTree", () => {
 
 			const count = countOperations(mergeTree);
 
-			mergeTree.annotateRange(
-				3,
-				8,
-				{
+			mergeTree.annotateRange(currentSequenceNumber, localClientId, UnassignedSequenceNumber, {
+				op: createAnnotateRangeOp(3, 8, {
 					foo: "bar",
-				},
-				currentSequenceNumber,
-				localClientId,
-				UnassignedSequenceNumber,
-				undefined as never,
-			);
+				}),
+			});
 
 			assert.deepStrictEqual(count, {
 				[MergeTreeDeltaType.ANNOTATE]: 1,
@@ -131,17 +114,11 @@ describe("MergeTree", () => {
 
 			const count = countOperations(mergeTree);
 
-			mergeTree.annotateRange(
-				3,
-				8,
-				{
+			mergeTree.annotateRange(currentSequenceNumber, localClientId, UnassignedSequenceNumber, {
+				op: createAnnotateRangeOp(3, 8, {
 					foo: "bar",
-				},
-				currentSequenceNumber,
-				localClientId,
-				UnassignedSequenceNumber,
-				undefined as never,
-			);
+				}),
+			});
 
 			assert.deepStrictEqual(count, {
 				[MergeTreeDeltaType.ANNOTATE]: 1,
@@ -166,17 +143,11 @@ describe("MergeTree", () => {
 
 			const count = countOperations(mergeTree);
 
-			mergeTree.annotateRange(
-				3,
-				8,
-				{
+			mergeTree.annotateRange(currentSequenceNumber, localClientId, UnassignedSequenceNumber, {
+				op: createAnnotateRangeOp(3, 8, {
 					foo: "bar",
-				},
-				currentSequenceNumber,
-				localClientId,
-				UnassignedSequenceNumber,
-				undefined as never,
-			);
+				}),
+			});
 
 			assert.deepStrictEqual(count, {
 				[MergeTreeDeltaType.ANNOTATE]: 1,
@@ -201,17 +172,11 @@ describe("MergeTree", () => {
 
 			const count = countOperations(mergeTree);
 
-			mergeTree.annotateRange(
-				4,
-				6,
-				{
+			mergeTree.annotateRange(remoteSequenceNumber, remoteClientId, ++remoteSequenceNumber, {
+				op: createAnnotateRangeOp(4, 6, {
 					foo: "bar",
-				},
-				remoteSequenceNumber,
-				remoteClientId,
-				++remoteSequenceNumber,
-				undefined as never,
-			);
+				}),
+			});
 
 			assert.deepStrictEqual(count, {
 				[MergeTreeMaintenanceType.SPLIT]: 2,

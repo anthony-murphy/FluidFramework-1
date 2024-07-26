@@ -3,6 +3,7 @@
  * Licensed under the MIT License.
  */
 
+import type { AdjustParams } from "./adjust.js";
 import { ISegment, Marker } from "./mergeTreeNodes.js";
 import {
 	IMergeTreeAnnotateMsg,
@@ -14,8 +15,9 @@ import {
 	IMergeTreeObliterateMsg,
 	IMergeTreeRemoveMsg,
 	MergeTreeDeltaType,
+	type Fixed,
 } from "./ops.js";
-import { PropertySet } from "./properties.js";
+import { PropertySet, type MapLike } from "./properties.js";
 
 /**
  * Creates the op for annotating the markers with the provided properties
@@ -55,11 +57,13 @@ export function createAnnotateRangeOp(
 	start: number,
 	end: number,
 	props: PropertySet,
-): IMergeTreeAnnotateMsg {
+	adjust?: MapLike<AdjustParams>,
+): Fixed<IMergeTreeAnnotateMsg> {
 	return {
 		pos1: start,
 		pos2: end,
 		props: { ...props },
+		adjust: { ...adjust },
 		type: MergeTreeDeltaType.ANNOTATE,
 	};
 }
@@ -72,7 +76,7 @@ export function createAnnotateRangeOp(
  *
  * @internal
  */
-export function createRemoveRangeOp(start: number, end: number): IMergeTreeRemoveMsg {
+export function createRemoveRangeOp(start: number, end: number): Fixed<IMergeTreeRemoveMsg> {
 	return {
 		pos1: start,
 		pos2: end,
@@ -88,8 +92,11 @@ export function createRemoveRangeOp(start: number, end: number): IMergeTreeRemov
  *
  * @internal
  */
-// eslint-disable-next-line import/no-deprecated
-export function createObliterateRangeOp(start: number, end: number): IMergeTreeObliterateMsg {
+export function createObliterateRangeOp(
+	start: number,
+	end: number,
+	// eslint-disable-next-line import/no-deprecated
+): Fixed<IMergeTreeObliterateMsg> {
 	return {
 		pos1: start,
 		pos2: end,
@@ -105,7 +112,10 @@ export function createObliterateRangeOp(start: number, end: number): IMergeTreeO
  *
  * @internal
  */
-export function createInsertSegmentOp(pos: number, segment: ISegment): IMergeTreeInsertMsg {
+export function createInsertSegmentOp(
+	pos: number,
+	segment: ISegment,
+): Fixed<IMergeTreeInsertMsg> {
 	return createInsertOp(pos, segment.toJSONObject());
 }
 
@@ -115,7 +125,7 @@ export function createInsertSegmentOp(pos: number, segment: ISegment): IMergeTre
  *
  * @internal
  */
-export function createInsertOp(pos: number, segSpec: unknown): IMergeTreeInsertMsg {
+export function createInsertOp(pos: number, segSpec: unknown): Fixed<IMergeTreeInsertMsg> {
 	return {
 		pos1: pos,
 		seg: segSpec,

@@ -46,6 +46,7 @@ import {
 	createObliterateRangeOp,
 	createRemoveRangeOp,
 	matchProperties,
+	AdjustParams,
 } from "@fluidframework/merge-tree/internal";
 import {
 	ISummaryTreeWithStats,
@@ -82,6 +83,8 @@ import {
 import { SequenceInterval } from "./intervals/index.js";
 import { SequenceDeltaEvent, SequenceMaintenanceEvent } from "./sequenceDeltaEvent.js";
 import { ISharedIntervalCollection } from "./sharedIntervalCollection.js";
+
+import type { MapLike } from "./index.js";
 
 const snapshotFileName = "header";
 const contentPath = "content";
@@ -570,6 +573,9 @@ export abstract class SharedSegmentSequence<T extends ISegment>
 
 	public annotateRange(start: number, end: number, props: PropertySet): void {
 		this.guardReentrancy(() => this.client.annotateRangeLocal(start, end, props));
+	}
+	public adjustRange(start: number, end: number, adjust: MapLike<AdjustParams>) {
+		this.guardReentrancy(() => this.client.annotateRangeLocal(start, end, {}, adjust));
 	}
 
 	public getPropertiesAtPosition(pos: number): PropertySet | undefined {

@@ -4,6 +4,16 @@
 
 ```ts
 
+// @alpha (undocumented)
+export interface AdjustParams {
+    // (undocumented)
+    max?: number;
+    // (undocumented)
+    min?: number;
+    // (undocumented)
+    value: number;
+}
+
 // @alpha
 export function appendToMergeTreeDeltaRevertibles(deltaArgs: IMergeTreeDeltaCallbackArgs, revertibles: MergeTreeDeltaRevertible[]): void;
 
@@ -92,7 +102,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
     // (undocumented)
     addLongClientId(longClientId: string): void;
     annotateMarker(marker: Marker, props: PropertySet): IMergeTreeAnnotateMsg | undefined;
-    annotateRangeLocal(start: number, end: number, props: PropertySet): IMergeTreeAnnotateMsg | undefined;
+    annotateRangeLocal(start: number, end: number, props: PropertySet, adjust?: MapLike<AdjustParams>): IMergeTreeAnnotateMsg | undefined;
     // (undocumented)
     applyMsg(msg: ISequencedDocumentMessage, local?: boolean): void;
     // (undocumented)
@@ -168,7 +178,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
     // (undocumented)
     walkSegments<TClientData>(handler: ISegmentAction<TClientData>, start: number | undefined, end: number | undefined, accum: TClientData, splitRange?: boolean): void;
     // (undocumented)
-    walkSegments<undefined>(handler: ISegmentAction<undefined>, start?: number, end?: number, accum?: undefined, splitRange?: boolean): void;
+    walkSegments(handler: ISegmentAction<undefined>, start?: number, end?: number, accum?: undefined, splitRange?: boolean): void;
 }
 
 // @alpha @deprecated (undocumented)
@@ -194,6 +204,19 @@ export function endpointPosAndSide(start: SequencePlace | undefined, end: Sequen
     startPos: number | "start" | "end" | undefined;
     endPos: number | "start" | "end" | undefined;
 };
+
+// @alpha (undocumented)
+export type Fixed<T extends IMergeTreeDeltaOp> = Omit<T, "pos1" | "pos2" | "relativePos1" | "relativePos2"> & (T extends IMergeTreeInsertMsg ? {
+    pos1: number;
+    pos2?: undefined;
+    relativePos1?: undefined;
+    relativePos2?: undefined;
+} : {
+    pos1: number;
+    pos2: number;
+    relativePos1?: undefined;
+    relativePos2?: undefined;
+});
 
 // @alpha (undocumented)
 export interface IAttributionCollection<T> {
@@ -288,6 +311,8 @@ export interface IMergeNodeCommon {
 // @alpha (undocumented)
 export interface IMergeTreeAnnotateMsg extends IMergeTreeDelta {
     // (undocumented)
+    adjust?: Record<string, AdjustParams>;
+    // (undocumented)
     pos1?: number;
     // (undocumented)
     pos2?: number;
@@ -322,9 +347,9 @@ export interface IMergeTreeDeltaCallbackArgs<TOperationType extends MergeTreeDel
 export type IMergeTreeDeltaOp = IMergeTreeInsertMsg | IMergeTreeRemoveMsg | IMergeTreeAnnotateMsg | IMergeTreeObliterateMsg;
 
 // @alpha (undocumented)
-export interface IMergeTreeDeltaOpArgs {
+export interface IMergeTreeDeltaOpArgs<T extends IMergeTreeOp = IMergeTreeOp> {
     readonly groupOp?: IMergeTreeGroupMsg;
-    readonly op: IMergeTreeOp;
+    readonly op: T;
     readonly sequencedMessage?: ISequencedDocumentMessage;
 }
 
@@ -341,11 +366,11 @@ export interface IMergeTreeInsertMsg extends IMergeTreeDelta {
     // (undocumented)
     pos1?: number;
     // (undocumented)
-    pos2?: number;
+    pos2?: never;
     // (undocumented)
     relativePos1?: IRelativePosition;
     // (undocumented)
-    relativePos2?: IRelativePosition;
+    relativePos2?: never;
     // (undocumented)
     seg?: any;
     // (undocumented)
@@ -444,6 +469,7 @@ export interface IRemovalInfo {
 // @alpha
 export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Partial<IMoveInfo> {
     ack(segmentGroup: SegmentGroup, opArgs: IMergeTreeDeltaOpArgs): boolean;
+    // @deprecated
     addProperties(newProps: PropertySet, seq?: number, collaborating?: boolean, rollback?: PropertiesRollback): PropertySet;
     // (undocumented)
     append(segment: ISegment): void;
@@ -460,6 +486,7 @@ export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Parti
     localRemovedSeq?: number;
     localSeq?: number;
     properties?: PropertySet;
+    // @deprecated
     propertyManager?: PropertiesManager;
     // (undocumented)
     readonly segmentGroups: SegmentGroupCollection;
@@ -634,7 +661,7 @@ export interface MergeTreeRevertibleDriver {
     removeRange(start: number, end: number): void;
 }
 
-// @alpha (undocumented)
+// @alpha @deprecated (undocumented)
 export class PropertiesManager {
     // (undocumented)
     ackPendingProperties(annotateOp: IMergeTreeAnnotateMsg): void;

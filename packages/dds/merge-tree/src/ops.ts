@@ -3,6 +3,8 @@
  * Licensed under the MIT License.
  */
 
+import type { AdjustParams } from "./adjust.js";
+
 /**
  * Flags enum that dictates behavior of a {@link ReferencePosition}
  * @legacy
@@ -119,8 +121,8 @@ export interface IMergeTreeInsertMsg extends IMergeTreeDelta {
 	type: typeof MergeTreeDeltaType.INSERT;
 	pos1?: number;
 	relativePos1?: IRelativePosition;
-	pos2?: number;
-	relativePos2?: IRelativePosition;
+	pos2?: never;
+	relativePos2?: never;
 	// The segment must be allowed to be of any type in order to acommodate converting from
 	// JSON to a segment.
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -174,6 +176,7 @@ export interface IMergeTreeAnnotateMsg extends IMergeTreeDelta {
 	relativePos2?: IRelativePosition;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	props: Record<string, any>;
+	adjust?: Record<string, AdjustParams>;
 }
 
 /**
@@ -207,6 +210,18 @@ export type IMergeTreeDeltaOp =
 	| IMergeTreeRemoveMsg
 	| IMergeTreeAnnotateMsg
 	| IMergeTreeObliterateMsg;
+
+/**
+ * @legacy
+ * @alpha
+ */
+export type Fixed<T extends IMergeTreeDeltaOp> = Omit<
+	T,
+	"pos1" | "pos2" | "relativePos1" | "relativePos2"
+> &
+	(T extends IMergeTreeInsertMsg
+		? { pos1: number; pos2?: undefined; relativePos1?: undefined; relativePos2?: undefined }
+		: { pos1: number; pos2: number; relativePos1?: undefined; relativePos2?: undefined });
 
 /**
  * @legacy

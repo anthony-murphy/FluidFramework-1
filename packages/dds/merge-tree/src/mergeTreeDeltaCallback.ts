@@ -119,7 +119,7 @@ export interface IMergeTreeSegmentDelta {
  * @legacy
  * @alpha
  */
-export interface IMergeTreeDeltaOpArgs {
+export interface IMergeTreeDeltaOpArgs<T extends IMergeTreeOp = IMergeTreeOp> {
 	/**
 	 * The group op which contains the operation
 	 * if there operation is part of a group op.
@@ -132,7 +132,7 @@ export interface IMergeTreeDeltaOpArgs {
 	 *
 	 * @remarks - This is useful for determining the type of change (see {@link (MergeTreeDeltaType:type)}).
 	 */
-	readonly op: IMergeTreeOp;
+	readonly op: T;
 
 	/**
 	 * The {@link @fluidframework/protocol-definitions#ISequencedDocumentMessage} corresponding to this acknowledged change.

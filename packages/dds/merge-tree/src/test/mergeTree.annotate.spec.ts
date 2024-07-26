@@ -14,6 +14,7 @@ import {
 } from "../constants.js";
 import { MergeTree } from "../mergeTree.js";
 import { BaseSegment, Marker } from "../mergeTreeNodes.js";
+import { createAnnotateRangeOp } from "../opBuilder.js";
 import { MergeTreeDeltaType, ReferenceType } from "../ops.js";
 import { TextSegment } from "../textSegment.js";
 
@@ -58,15 +59,14 @@ describe("MergeTree", () => {
 		describe("not collaborating", () => {
 			it("remote", () => {
 				mergeTree.annotateRange(
-					annotateStart,
-					annotateEnd,
-					{
-						propertySource: "remote",
-					},
 					currentSequenceNumber,
 					remoteClientId,
 					currentSequenceNumber + 1,
-					undefined as never,
+					{
+						op: createAnnotateRangeOp(annotateStart, annotateEnd, {
+							propertySource: "remote",
+						}),
+					},
 				);
 
 				const segmentInfo = mergeTree.getContainingSegment(
@@ -80,15 +80,14 @@ describe("MergeTree", () => {
 
 			it("local", () => {
 				mergeTree.annotateRange(
-					annotateStart,
-					annotateEnd,
-					{
-						propertySource: "local",
-					},
 					currentSequenceNumber,
 					localClientId,
 					UnassignedSequenceNumber,
-					undefined as never,
+					{
+						op: createAnnotateRangeOp(annotateStart, annotateEnd, {
+							propertySource: "local",
+						}),
+					},
 				);
 
 				const segmentInfo = mergeTree.getContainingSegment(
@@ -114,13 +113,12 @@ describe("MergeTree", () => {
 				};
 				beforeEach(() => {
 					mergeTree.annotateRange(
-						annotateStart,
-						annotateEnd,
-						props,
 						currentSequenceNumber,
 						localClientId,
 						UnassignedSequenceNumber,
-						undefined as never,
+						{
+							op: createAnnotateRangeOp(annotateStart, annotateEnd, props),
+						},
 					);
 				});
 
@@ -136,15 +134,14 @@ describe("MergeTree", () => {
 
 				it("unsequenced local after unsequenced local", () => {
 					mergeTree.annotateRange(
-						annotateStart,
-						annotateEnd,
-						{
-							secondProperty: "local",
-						},
 						currentSequenceNumber,
 						localClientId,
 						UnassignedSequenceNumber,
-						undefined as never,
+						{
+							op: createAnnotateRangeOp(annotateStart, annotateEnd, {
+								secondProperty: "local",
+							}),
+						},
 					);
 
 					const segmentInfo = mergeTree.getContainingSegment(
@@ -174,13 +171,12 @@ describe("MergeTree", () => {
 						secondChange: 1,
 					};
 					mergeTree.annotateRange(
-						annotateStart,
-						annotateEnd,
-						secondChangeProps,
 						currentSequenceNumber,
 						localClientId,
 						UnassignedSequenceNumber,
-						undefined as never,
+						{
+							op: createAnnotateRangeOp(annotateStart, annotateEnd, secondChangeProps),
+						},
 					);
 
 					const splitOnlyProps = {
@@ -188,13 +184,12 @@ describe("MergeTree", () => {
 					};
 
 					mergeTree.annotateRange(
-						splitPos,
-						annotateEnd,
-						splitOnlyProps,
 						currentSequenceNumber,
 						localClientId,
 						UnassignedSequenceNumber,
-						undefined as never,
+						{
+							op: createAnnotateRangeOp(splitPos, annotateEnd, splitOnlyProps),
+						},
 					);
 
 					const segmentInfo = mergeTree.getContainingSegment(
@@ -290,16 +285,15 @@ describe("MergeTree", () => {
 
 				it("unsequenced local before remote", () => {
 					mergeTree.annotateRange(
-						annotateStart,
-						annotateEnd,
-						{
-							propertySource: "remote",
-							remoteProperty: 1,
-						},
 						currentSequenceNumber,
 						remoteClientId,
 						++currentSequenceNumber,
-						undefined as never,
+						{
+							op: createAnnotateRangeOp(annotateStart, annotateEnd, {
+								propertySource: "remote",
+								remoteProperty: 1,
+							}),
+						},
 					);
 
 					const segmentInfo = mergeTree.getContainingSegment(
@@ -351,16 +345,15 @@ describe("MergeTree", () => {
 					});
 
 					mergeTree.annotateRange(
-						annotateStart,
-						annotateEnd,
-						{
-							propertySource: "remote",
-							remoteProperty: 1,
-						},
 						currentSequenceNumber,
 						remoteClientId,
 						++currentSequenceNumber,
-						undefined as never,
+						{
+							op: createAnnotateRangeOp(annotateStart, annotateEnd, {
+								propertySource: "remote",
+								remoteProperty: 1,
+							}),
+						},
 					);
 
 					const segmentInfo = mergeTree.getContainingSegment(
@@ -390,13 +383,12 @@ describe("MergeTree", () => {
 						secondSource: 1,
 					};
 					mergeTree.annotateRange(
-						annotateStart,
-						annotateEnd,
-						props2,
 						currentSequenceNumber,
 						localClientId,
 						UnassignedSequenceNumber,
-						undefined as never,
+						{
+							op: createAnnotateRangeOp(annotateStart, annotateEnd, props2),
+						},
 					);
 
 					assert.equal(segment.properties?.propertySource, "local2");
@@ -406,13 +398,12 @@ describe("MergeTree", () => {
 						thirdSource: 1,
 					};
 					mergeTree.annotateRange(
-						annotateStart,
-						annotateEnd,
-						props3,
 						currentSequenceNumber,
 						localClientId,
 						UnassignedSequenceNumber,
-						undefined as never,
+						{
+							op: createAnnotateRangeOp(annotateStart, annotateEnd, props3),
+						},
 					);
 
 					assert.equal(segment.properties?.propertySource, "local2");
@@ -470,15 +461,14 @@ describe("MergeTree", () => {
 
 				it("two local changes with interleaved remote", () => {
 					mergeTree.annotateRange(
-						annotateStart,
-						annotateEnd,
-						{
-							secondSource: "local2",
-						},
 						currentSequenceNumber,
 						localClientId,
 						UnassignedSequenceNumber,
-						undefined as never,
+						{
+							op: createAnnotateRangeOp(annotateStart, annotateEnd, {
+								secondSource: "local2",
+							}),
+						},
 					);
 
 					mergeTree.ackPendingSegment({
@@ -494,17 +484,16 @@ describe("MergeTree", () => {
 					});
 
 					mergeTree.annotateRange(
-						annotateStart,
-						annotateEnd,
-						{
-							propertySource: "remote",
-							remoteOnly: 1,
-							secondSource: "remote",
-						},
 						currentSequenceNumber,
 						remoteClientId,
 						++currentSequenceNumber,
-						undefined as never,
+						{
+							op: createAnnotateRangeOp(annotateStart, annotateEnd, {
+								propertySource: "remote",
+								remoteOnly: 1,
+								secondSource: "remote",
+							}),
+						},
 					);
 
 					const segmentInfo = mergeTree.getContainingSegment(
@@ -522,16 +511,15 @@ describe("MergeTree", () => {
 			describe("remote first", () => {
 				beforeEach(() => {
 					mergeTree.annotateRange(
-						annotateStart,
-						annotateEnd,
-						{
-							propertySource: "remote",
-							remoteProperty: 1,
-						},
 						currentSequenceNumber,
 						remoteClientId,
 						++currentSequenceNumber,
-						undefined as never,
+						{
+							op: createAnnotateRangeOp(annotateStart, annotateEnd, {
+								propertySource: "remote",
+								remoteProperty: 1,
+							}),
+						},
 					);
 
 					const segmentInfo = mergeTree.getContainingSegment(
@@ -567,15 +555,14 @@ describe("MergeTree", () => {
 
 				it("remote before unsequenced local", () => {
 					mergeTree.annotateRange(
-						annotateStart,
-						annotateEnd,
-						{
-							propertySource: "local",
-						},
 						currentSequenceNumber,
 						localClientId,
 						UnassignedSequenceNumber,
-						undefined as never,
+						{
+							op: createAnnotateRangeOp(annotateStart, annotateEnd, {
+								propertySource: "local",
+							}),
+						},
 					);
 
 					const segmentInfo = mergeTree.getContainingSegment(
@@ -601,13 +588,12 @@ describe("MergeTree", () => {
 					assert(segmentInfo.segment?.segmentGroups.empty);
 
 					mergeTree.annotateRange(
-						annotateStart,
-						annotateEnd,
-						props,
 						currentSequenceNumber,
 						localClientId,
 						UnassignedSequenceNumber,
-						undefined as never,
+						{
+							op: createAnnotateRangeOp(annotateStart, annotateEnd, props),
+						},
 					);
 
 					assert.equal(segmentInfo.segment?.segmentGroups.size, 1);
@@ -635,28 +621,26 @@ describe("MergeTree", () => {
 				};
 				beforeEach(() => {
 					mergeTree.annotateRange(
-						annotateStart,
-						annotateEnd,
-						props,
 						currentSequenceNumber,
 						localClientId,
 						UnassignedSequenceNumber,
-						undefined as never,
+						{
+							op: createAnnotateRangeOp(annotateStart, annotateEnd, props),
+						},
 					);
 				});
 
 				it("unsequenced local after unsequenced local", () => {
 					mergeTree.annotateRange(
-						annotateStart,
-						annotateEnd,
-						{
-							propertySource: "local2",
-							secondProperty: "local",
-						},
 						currentSequenceNumber,
 						localClientId,
 						UnassignedSequenceNumber,
-						undefined as never,
+						{
+							op: createAnnotateRangeOp(annotateStart, annotateEnd, {
+								propertySource: "local2",
+								secondProperty: "local",
+							}),
+						},
 					);
 
 					const segmentInfo = mergeTree.getContainingSegment(
@@ -671,16 +655,15 @@ describe("MergeTree", () => {
 
 				it("unsequenced local before remote", () => {
 					mergeTree.annotateRange(
-						annotateStart,
-						annotateEnd,
-						{
-							propertySource: "remote",
-							remoteProperty: 1,
-						},
 						currentSequenceNumber,
 						remoteClientId,
 						++currentSequenceNumber,
-						undefined as never,
+						{
+							op: createAnnotateRangeOp(annotateStart, annotateEnd, {
+								propertySource: "remote",
+								remoteProperty: 1,
+							}),
+						},
 					);
 
 					const segmentInfo = mergeTree.getContainingSegment(
@@ -709,16 +692,15 @@ describe("MergeTree", () => {
 					});
 
 					mergeTree.annotateRange(
-						annotateStart,
-						annotateEnd,
-						{
-							propertySource: "remote",
-							remoteProperty: 1,
-						},
 						currentSequenceNumber,
 						remoteClientId,
 						++currentSequenceNumber,
-						undefined as never,
+						{
+							op: createAnnotateRangeOp(annotateStart, annotateEnd, {
+								propertySource: "remote",
+								remoteProperty: 1,
+							}),
+						},
 					);
 
 					const segmentInfo = mergeTree.getContainingSegment(
@@ -735,15 +717,14 @@ describe("MergeTree", () => {
 
 				it("two local changes with interleaved remote", () => {
 					mergeTree.annotateRange(
-						annotateStart,
-						annotateEnd,
-						{
-							secondSource: "local2",
-						},
 						currentSequenceNumber,
 						localClientId,
 						UnassignedSequenceNumber,
-						undefined as never,
+						{
+							op: createAnnotateRangeOp(annotateStart, annotateEnd, {
+								secondSource: "local2",
+							}),
+						},
 					);
 
 					mergeTree.ackPendingSegment({
@@ -759,17 +740,16 @@ describe("MergeTree", () => {
 					});
 
 					mergeTree.annotateRange(
-						annotateStart,
-						annotateEnd,
-						{
-							propertySource: "remote",
-							remoteOnly: 1,
-							secondSource: "remote",
-						},
 						currentSequenceNumber,
 						remoteClientId,
 						++currentSequenceNumber,
-						undefined as never,
+						{
+							op: createAnnotateRangeOp(annotateStart, annotateEnd, {
+								propertySource: "remote",
+								remoteOnly: 1,
+								secondSource: "remote",
+							}),
+						},
 					);
 
 					const segmentInfo = mergeTree.getContainingSegment(

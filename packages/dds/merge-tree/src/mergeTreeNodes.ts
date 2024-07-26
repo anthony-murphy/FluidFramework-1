@@ -17,6 +17,7 @@ import {
 import { LocalReferenceCollection } from "./localReference.js";
 import { IMergeTreeDeltaOpArgs } from "./mergeTreeDeltaCallback.js";
 import { TrackingGroupCollection } from "./mergeTreeTracking.js";
+import { createAnnotateRangeOp } from "./opBuilder.js";
 import { IJSONSegment, IMarkerDef, MergeTreeDeltaType, ReferenceType } from "./ops.js";
 import { computeHierarchicalOrdinal } from "./ordinal.js";
 import type { PartialSequenceLengths } from "./partialLengths.js";
@@ -27,7 +28,14 @@ import {
 	refTypeIncludesFlag,
 } from "./referencePositions.js";
 import { SegmentGroupCollection } from "./segmentGroupCollection.js";
-import { PropertiesManager, PropertiesRollback } from "./segmentPropertiesManager.js";
+import {
+	handleProperties,
+	PropertiesRollback,
+	// eslint-disable-next-line import/no-deprecated
+	PropertiesManager,
+	InternalPropertiesManager,
+	ackProperties,
+} from "./segmentPropertiesManager.js";
 import { Side } from "./sequencePlace.js";
 
 /**
@@ -218,8 +226,13 @@ export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Parti
 
 	/**
 	 * Manages pending local state for properties on this segment.
+	 *
+	 * @deprecated This will be removed is future release.
+	 *
 	 */
+	// eslint-disable-next-line import/no-deprecated
 	propertyManager?: PropertiesManager;
+
 	/**
 	 * Local seq at which this segment was inserted.
 	 * This is defined if and only if the insertion of the segment is pending ack, i.e. `seq` is UnassignedSequenceNumber.
@@ -268,6 +281,8 @@ export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Parti
 	 *
 	 * @remarks This function should not be called directly. Properties should
 	 * be added through the `annotateRange` functions.
+	 *
+	 * @deprecated This method will be removed in a future release.
 	 */
 	addProperties(
 		newProps: PropertySet,
@@ -514,6 +529,7 @@ export abstract class BaseSegment implements ISegment {
 	);
 	/***/
 	public attribution?: IAttributionCollection<AttributionKey>;
+	// eslint-disable-next-line import/no-deprecated
 	public propertyManager?: PropertiesManager;
 	public properties?: PropertySet;
 	public localRefs?: LocalReferenceCollection;
@@ -528,13 +544,9 @@ export abstract class BaseSegment implements ISegment {
 		collaborating?: boolean,
 		rollback: PropertiesRollback = PropertiesRollback.None,
 	): PropertySet {
-		this.propertyManager ??= new PropertiesManager();
-		// A property set must be able to hold properties of any type, so the any is needed.
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		this.properties ??= createMap<any>();
-		return this.propertyManager.addProperties(
-			this.properties,
-			newProps,
+		return handleProperties(
+			createAnnotateRangeOp(0, 0, newProps),
+			this,
 			seq,
 			collaborating,
 			rollback,
@@ -586,11 +598,7 @@ export abstract class BaseSegment implements ISegment {
 		);
 		switch (opArgs.op.type) {
 			case MergeTreeDeltaType.ANNOTATE: {
-				assert(
-					!!this.propertyManager,
-					0x044 /* "On annotate ack, missing segment property manager!" */,
-				);
-				this.propertyManager.ackPendingProperties(opArgs.op);
+				ackProperties(opArgs.op, this);
 				return true;
 			}
 
@@ -686,7 +694,7 @@ export abstract class BaseSegment implements ISegment {
 
 	private copyPropertiesTo(other: ISegment): void {
 		if (this.propertyManager && this.properties) {
-			other.propertyManager = new PropertiesManager();
+			other.propertyManager = new InternalPropertiesManager();
 			other.properties = this.propertyManager.copyTo(
 				this.properties,
 				other.properties,
@@ -766,7 +774,7 @@ export class Marker extends BaseSegment implements ReferencePosition, ISegment {
 	public static make(refType: ReferenceType, props?: PropertySet): Marker {
 		const marker = new Marker(refType);
 		if (props) {
-			marker.addProperties(props);
+			handleProperties({ props }, marker);
 		}
 		return marker;
 	}

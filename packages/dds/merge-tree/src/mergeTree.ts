@@ -74,6 +74,8 @@ import {
 	IRelativePosition,
 	MergeTreeDeltaType,
 	ReferenceType,
+	type Fixed,
+	type IMergeTreeAnnotateMsg,
 } from "./ops.js";
 import { PartialSequenceLengths } from "./partialLengths.js";
 import { PerspectiveImpl, isSegmentPresent } from "./perspective.js";
@@ -85,7 +87,7 @@ import {
 	refHasTileLabel,
 	refTypeIncludesFlag,
 } from "./referencePositions.js";
-import { PropertiesRollback } from "./segmentPropertiesManager.js";
+import { handleProperties, PropertiesRollback } from "./segmentPropertiesManager.js";
 import { endpointPosAndSide, type SequencePlace } from "./sequencePlace.js";
 import { zamboniSegments } from "./zamboni.js";
 
@@ -1847,7 +1849,6 @@ export class MergeTree {
 	 * Annotate a range with properties
 	 * @param start - The inclusive start position of the range to annotate
 	 * @param end - The exclusive end position of the range to annotate
-	 * @param props - The properties to annotate the range with
 	 * @param refSeq - The reference sequence number to use to apply the annotate
 	 * @param clientId - The id of the client making the annotate
 	 * @param seq - The sequence number of the annotate operation
@@ -1855,15 +1856,13 @@ export class MergeTree {
 	 * @param rollback - Whether this is for a local rollback and what kind
 	 */
 	public annotateRange(
-		start: number,
-		end: number,
-		props: PropertySet,
 		refSeq: number,
 		clientId: number,
 		seq: number,
-		opArgs: IMergeTreeDeltaOpArgs,
+		opArgs: IMergeTreeDeltaOpArgs<Fixed<IMergeTreeAnnotateMsg>>,
 		rollback: PropertiesRollback = PropertiesRollback.None,
 	): void {
+		const { props, pos1: start, pos2: end } = opArgs.op;
 		this.ensureIntervalBoundary(start, refSeq, clientId);
 		this.ensureIntervalBoundary(end, refSeq, clientId);
 		const deltaSegments: IMergeTreeSegmentDelta[] = [];
@@ -1878,8 +1877,9 @@ export class MergeTree {
 					props.markerId === segment.properties?.markerId,
 				0x5ad /* Cannot change the markerId of an existing marker */,
 			);
-			const propertyDeltas = segment.addProperties(
-				props,
+			const propertyDeltas = handleProperties(
+				opArgs.op,
+				segment,
 				seq,
 				this.collabWindow.collaborating,
 				rollback,
@@ -2279,9 +2279,6 @@ export class MergeTree {
 					const props = pendingSegmentGroup.previousProps![i]!;
 					const annotateOp = createAnnotateRangeOp(start, start + segment.cachedLength, props);
 					this.annotateRange(
-						start,
-						start + segment.cachedLength,
-						props,
 						UniversalSequenceNumber,
 						this.collabWindow.clientId,
 						UniversalSequenceNumber,

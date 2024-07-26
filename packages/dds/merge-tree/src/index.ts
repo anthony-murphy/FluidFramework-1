@@ -2,7 +2,7 @@
  * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
-
+export { AdjustParams } from "./adjust.js";
 export {
 	IAttributionCollection,
 	IAttributionCollectionSerializer,
@@ -99,6 +99,7 @@ export {
 	MergeTreeDeltaType,
 	ReferenceType,
 	IMergeTreeObliterateMsg,
+	Fixed,
 } from "./ops.js";
 export {
 	addProperties,

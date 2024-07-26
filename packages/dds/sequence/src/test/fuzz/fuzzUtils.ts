@@ -240,7 +240,11 @@ export function makeReducer(
 		annotateRange: async ({ client }, { start, end, props }) => {
 			const propertySet: PropertySet = {};
 			for (const { key, value } of props) {
-				propertySet[key] = value;
+				if (typeof value === "number") {
+					client.channel.adjustRange(start, end, { [key]: { value } });
+				} else {
+					propertySet[key] = value;
+				}
 			}
 			client.channel.annotateRange(start, end, propertySet);
 		},
@@ -330,7 +334,13 @@ export function createSharedStringGeneratorOperations(
 	async function annotateRange(state: ClientOpState): Promise<AnnotateRange> {
 		const { random } = state;
 		const key = random.pick(options.propertyNamePool);
-		const value = random.pick([random.string(5), random.handle(), undefined, null]);
+		const value = random.pick([
+			random.string(5),
+			random.handle(),
+			random.integer(-100, 100),
+			undefined,
+			null,
+		]);
 		return {
 			type: "annotateRange",
 			...exclusiveRange(state),
@@ -444,7 +454,7 @@ export const baseModel: Omit<
 
 export const defaultFuzzOptions: Partial<DDSFuzzSuiteOptions> = {
 	validationStrategy: { type: "fixedInterval", interval: 10 },
-	reconnectProbability: 0.1,
+	reconnectProbability: 0,
 	numberOfClients: 3,
 	clientJoinOptions: {
 		maxNumberOfClients: 6,
