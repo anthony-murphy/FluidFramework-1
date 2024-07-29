@@ -26,6 +26,7 @@ import {
 } from "@fluidframework/telemetry-utils/internal";
 
 import { MergeTreeTextHelper } from "./MergeTreeTextHelper.js";
+import type { AdjustParams } from "./adjust.js";
 import { DoublyLinkedList, RedBlackTree } from "./collections/index.js";
 import { UnassignedSequenceNumber, UniversalSequenceNumber } from "./constants.js";
 import { LocalReferencePosition, SlidingPreference } from "./localReference.js";
@@ -81,7 +82,6 @@ import { SnapshotV1 } from "./snapshotV1.js";
 import { SnapshotLegacy } from "./snapshotlegacy.js";
 // eslint-disable-next-line import/no-deprecated
 import { IMergeTreeTextHelper } from "./textSegment.js";
-import type { AdjustParams } from "./adjust.js";
 
 type IMergeTreeDeltaRemoteOpArgs<T extends IMergeTreeOp = IMergeTreeOp> = Omit<
 	IMergeTreeDeltaOpArgs<T>,

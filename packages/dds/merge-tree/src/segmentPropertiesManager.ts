@@ -207,6 +207,14 @@ export class InternalPropertiesManager extends PropertiesManager {
 			? this.addProperties(properties, props, seq, collaborating, rollback)
 			: {};
 
+		if (props && this.pendingAdjustments) {
+			for (const key of Object.keys(props)) {
+				if (this.pendingAdjustments[key] !== undefined) {
+					this.pendingAdjustments[key] = undefined;
+				}
+			}
+		}
+
 		const adjustDeltas = adjust
 			? this.adjustProperties(properties, adjust, seq, collaborating)
 			: {};
@@ -227,7 +235,9 @@ export class InternalPropertiesManager extends PropertiesManager {
 		const deltas: MapLike<unknown> = {};
 		const local = collaborating && seq === UnassignedSequenceNumber;
 		for (const [key, value] of Object.entries(newProps)) {
-			this.adjustProperty(oldProps, key, value, local, deltas);
+			if (local || !this.hasPendingProperty(key)) {
+				this.adjustProperty(oldProps, key, value, local, deltas);
+			}
 		}
 		return deltas;
 	}
@@ -270,8 +280,8 @@ export class InternalPropertiesManager extends PropertiesManager {
 			for (const [key, value] of Object.entries(adjust)) {
 				const adjusts = this.pendingAdjustments?.[key];
 				assert(adjusts !== undefined, "local should have adjusts");
-				// unshift the pending adjust
-				adjusts.pending.unshift();
+				// dequeue the earliest pending adjust
+				adjusts.pending.shift();
 				// re-apply the adjust as acked
 				this.adjustProperty(oldProps, key, value, false, {});
 				if (adjusts.pending.length === 0) {
@@ -279,5 +289,25 @@ export class InternalPropertiesManager extends PropertiesManager {
 				}
 			}
 		}
+	}
+
+	public override copyTo(
+		oldProps: PropertySet,
+		newProps: PropertySet | undefined,
+		newManager: PropertiesManager,
+	): PropertySet | undefined {
+		const copy = super.copyTo(oldProps, newProps, newManager);
+
+		assert(newManager instanceof InternalPropertiesManager, "must be internal");
+		if (this.pendingAdjustments !== undefined) {
+			for (const [key, value] of Object.entries(this.pendingAdjustments)) {
+				if (value !== undefined) {
+					const { consensus, pending } = value;
+					const newAdjusts = (newManager.pendingAdjustments ??= {});
+					newAdjusts[key] = { consensus, pending: [...pending] };
+				}
+			}
+		}
+		return copy;
 	}
 }

@@ -136,7 +136,7 @@ async function assertPropertiesEqual(a: SharedString, b: SharedString): Promise<
 				bHandle,
 				`${a.id}(${JSON.stringify(
 					aHandle,
-				)}) and ${b.id}(${JSON.stringify(bHandle)}) differ at pos: ${i} key: ${key}`,
+				)}) and ${b.id}(${JSON.stringify(bHandle)}) differ at pos: ${i} key: ${key} text: ${a.getText(i, i + 1)}`,
 			);
 		}
 	}

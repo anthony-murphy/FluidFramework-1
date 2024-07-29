@@ -487,6 +487,31 @@ describe("client.applyMsg", () => {
 		logger.validate({ baseText: "ayzXd" });
 	});
 
+	it.only("Annotate after adjust", () => {
+		const clients = createClientsAtInitialState({ initialState: "N" }, "A", "B", "C");
+
+		const logger = new TestClientLogger(clients.all);
+
+		let seq = 0;
+		const ops: ISequencedDocumentMessage[] = [];
+		ops.push(
+			clients.B.makeOpMessage(
+				clients.B.annotateRangeLocal(0, 1, {}, { prop: { value: 24 } }),
+				++seq,
+			),
+			clients.C.makeOpMessage(clients.C.annotateRangeLocal(0, 1, { prop: "foo" }), ++seq),
+		);
+
+		for (const op of ops) {
+			for (const c of clients.all) {
+				if (c.getCollabWindow().currentSeq < op.sequenceNumber) {
+					c.applyMsg(op);
+				}
+			}
+		}
+		logger.validate();
+	});
+
 	it("regenerate annotate op over removed range", () => {
 		const clientA = new TestClient();
 		clientA.startOrUpdateCollaboration("A");

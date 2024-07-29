@@ -238,15 +238,13 @@ export function makeReducer(
 			client.channel.removeRange(start, end);
 		},
 		annotateRange: async ({ client }, { start, end, props }) => {
-			const propertySet: PropertySet = {};
 			for (const { key, value } of props) {
 				if (typeof value === "number") {
 					client.channel.adjustRange(start, end, { [key]: { value } });
 				} else {
-					propertySet[key] = value;
+					client.channel.annotateRange(start, end, { [key]: value });
 				}
 			}
-			client.channel.annotateRange(start, end, propertySet);
 		},
 		obliterateRange: async ({ client }, { start, end }) => {
 			client.channel.obliterateRange(start, end);
