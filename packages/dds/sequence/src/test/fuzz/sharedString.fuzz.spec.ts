@@ -59,18 +59,17 @@ const baseSharedStringModel = {
 		take(100, makeSharedStringOperationGenerator(defaultIntervalOperationGenerationConfig)),
 };
 
-describe.only("SharedString fuzz testing", () => {
+describe("SharedString fuzz testing", () => {
 	createDDSFuzzSuite(
 		{ ...baseSharedStringModel, workloadName: "default" },
 		{
 			...defaultFuzzOptions,
 			// Uncomment this line to replay a specific seed from its failure file:
-			// replay: 14,
 		},
 	);
 });
 
-describe("SharedString fuzz with stashing", () => {
+describe.only("SharedString fuzz with stashing", () => {
 	createDDSFuzzSuite(
 		{ ...baseSharedStringModel, workloadName: "default" },
 		{
@@ -81,7 +80,8 @@ describe("SharedString fuzz with stashing", () => {
 				stashableClientProbability: 0.2,
 			},
 			// Uncomment this line to replay a specific seed from its failure file:
-			// replay: 0,
+			only: [42],
+			skipMinimization: true,
 		},
 	);
 });

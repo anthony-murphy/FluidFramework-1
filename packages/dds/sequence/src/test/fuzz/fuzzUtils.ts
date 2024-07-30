@@ -452,7 +452,7 @@ export const baseModel: Omit<
 
 export const defaultFuzzOptions: Partial<DDSFuzzSuiteOptions> = {
 	validationStrategy: { type: "fixedInterval", interval: 10 },
-	reconnectProbability: 0,
+	reconnectProbability: 0.1,
 	numberOfClients: 3,
 	clientJoinOptions: {
 		maxNumberOfClients: 6,
