@@ -573,9 +573,6 @@ export function mixinNewClient<
 	model: DDSFuzzModel<TChannelFactory, TOperation, TState>,
 	options: DDSFuzzSuiteOptions,
 ): DDSFuzzModel<TChannelFactory, TOperation | AddClient, TState> {
-	const isClientAddOp = (op: TOperation | AddClient): op is AddClient =>
-		op.type === "addClient";
-
 	const generatorFactory: () => AsyncGenerator<TOperation | AddClient, TState> = () => {
 		const baseGenerator = model.generatorFactory();
 		return async (state: TState): Promise<TOperation | AddClient | typeof done> => {
@@ -605,13 +602,13 @@ export function mixinNewClient<
 			| undefined) ?? [];
 
 	minimizationTransforms.push((op: TOperation | AddClient): void => {
-		if (isClientAddOp(op)) {
+		if (isOperationType<AddClient>("addClient", op)) {
 			op.canBeStashed = false;
 		}
 	});
 
 	const reducer: AsyncReducer<TOperation | AddClient, TState> = async (state, op) => {
-		if (isClientAddOp(op)) {
+		if (isOperationType<AddClient>("addClient", op)) {
 			const newClient = await loadClient(
 				state.containerRuntimeFactory,
 				state.summarizerClient,

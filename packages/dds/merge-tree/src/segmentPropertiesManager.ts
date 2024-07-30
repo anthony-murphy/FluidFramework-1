@@ -7,7 +7,8 @@
 
 import { assert } from "@fluidframework/core-utils/internal";
 
-import { computeValue, type AdjustParams } from "./adjust.js";
+import { computeValue, type AdjustParams, type PendingChanges } from "./adjust.js";
+import { DoublyLinkedList } from "./collections/index.js";
 import { UnassignedSequenceNumber, UniversalSequenceNumber } from "./constants.js";
 import { IMergeTreeAnnotateMsg } from "./ops.js";
 import { MapLike, PropertySet, createMap } from "./properties.js";
@@ -197,96 +198,71 @@ export class InternalPropertiesManager extends PropertiesManager {
 		rollback: PropertiesRollback = PropertiesRollback.None,
 	): MapLike<unknown> {
 		const properties = (seg.properties ??= createMap<unknown>());
-
-		const { props, adjust } = op;
-
-		// order matters in this function. we first apply props, then adjustments
-		// the returned delta supersede the adjusts with the props, so
-		// a revert goes back to the original value.
-		const propsDeltas = props
-			? this.addProperties(properties, props, seq, collaborating, rollback)
-			: {};
-
-		if (props && this.pendingAdjustments) {
-			for (const key of Object.keys(props)) {
-				if (this.pendingAdjustments[key] !== undefined) {
-					this.pendingAdjustments[key] = undefined;
+		const deltas = createMap();
+		for (const [key, value] of [
+			...Object.entries(op.props ?? {})
+				.map<[string, { raw: unknown }]>(([k, raw]) => [k, { raw }])
+				.filter(([_, v]) => v.raw !== undefined),
+			...Object.entries(op.adjust ?? {}),
+		]) {
+			// eslint-disable-next-line unicorn/no-null
+			deltas[key] = properties[key] ?? null;
+			if (seq === UnassignedSequenceNumber && collaborating) {
+				const adjustments = (this.pending ??= {});
+				const pending: PendingChanges = (adjustments[key] ??= {
+					consensus: properties[key],
+					changes: new DoublyLinkedList(),
+				});
+				pending.changes.push(value);
+				properties[key] = computeValue(
+					pending.consensus,
+					pending.changes.map((n) => n.data),
+				);
+			} else {
+				const pending = this.pending?.[key];
+				if (pending === undefined) {
+					// not pending changes, so no need to update the adjustments
+					properties[key] = computeValue(properties[key], [value]);
+				} else {
+					// there are pending changes, so update the baseline remote value
+					// and then compute the current value
+					pending.consensus = computeValue(pending.consensus, [value]);
+					properties[key] = computeValue(
+						pending.consensus,
+						pending.changes.map((n) => n.data),
+					);
 				}
 			}
-		}
-
-		const adjustDeltas = adjust
-			? this.adjustProperties(properties, adjust, seq, collaborating)
-			: {};
-
-		return { adjustDeltas, propsDeltas };
-	}
-
-	private pendingAdjustments:
-		| MapLike<{ consensus: number; pending: AdjustParams[] } | undefined>
-		| undefined;
-
-	private adjustProperties(
-		oldProps: MapLike<unknown>,
-		newProps: MapLike<AdjustParams>,
-		seq?: number,
-		collaborating: boolean = false,
-	): MapLike<unknown> {
-		const deltas: MapLike<unknown> = {};
-		const local = collaborating && seq === UnassignedSequenceNumber;
-		for (const [key, value] of Object.entries(newProps)) {
-			if (local || !this.hasPendingProperty(key)) {
-				this.adjustProperty(oldProps, key, value, local, deltas);
+			if (properties[key] === null) {
+				// eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+				delete properties[key];
 			}
 		}
 		return deltas;
 	}
 
-	private adjustProperty(
+	private pending: MapLike<PendingChanges | undefined> | undefined;
+
+	public ack(
 		oldProps: MapLike<unknown>,
-		key: string,
-		value: AdjustParams,
-		local: boolean,
-		deltas: MapLike<unknown>,
+		op: { props?: MapLike<unknown>; adjust?: MapLike<AdjustParams> },
 	): void {
-		// preserve the preceding value
-		const oldRaw = (deltas[key] = oldProps[key]);
-		const old = typeof oldRaw === "number" ? oldRaw : 0;
-
-		if (local) {
-			const adjustments = (this.pendingAdjustments ??= {});
-			const adjusts = (adjustments[key] ??= { consensus: old, pending: [] });
-			adjusts.pending.push(value);
-			oldProps[key] = computeValue(adjusts.consensus, ...adjusts.pending);
-		} else {
-			const adjusts = this.pendingAdjustments?.[key];
-			if (adjusts === undefined) {
-				// not pending changes, so no need to update the adjustments
-				oldProps[key] = computeValue(old, value);
-			} else {
-				// there are pending changes, so update the baseline remote value
-				// and then compute the current value
-				adjusts.consensus = computeValue(adjusts.consensus, value);
-				oldProps[key] = computeValue(adjusts.consensus, ...adjusts.pending);
-			}
-		}
-	}
-
-	public ack(oldProps: MapLike<unknown>, annotateOp: IMergeTreeAnnotateMsg): void {
-		super.ackPendingProperties(annotateOp);
-
-		const { adjust } = annotateOp;
-		if (adjust) {
-			for (const [key, value] of Object.entries(adjust)) {
-				const adjusts = this.pendingAdjustments?.[key];
-				assert(adjusts !== undefined, "local should have adjusts");
-				// dequeue the earliest pending adjust
-				adjusts.pending.shift();
-				// re-apply the adjust as acked
-				this.adjustProperty(oldProps, key, value, false, {});
-				if (adjusts.pending.length === 0) {
-					this.pendingAdjustments![key] = undefined;
+		for (const [key, value] of [
+			...Object.entries(op.props ?? {})
+				.map<[string, { raw: unknown }]>(([k, raw]) => [k, { raw }])
+				.filter(([_, v]) => v.raw !== undefined),
+			...Object.entries(op.adjust ?? {}),
+		]) {
+			const pending = this.pending?.[key];
+			assert(pending !== undefined, "must have pending to ack");
+			pending.changes.shift();
+			if (pending.changes.length === 0) {
+				delete this.pending?.[key];
+				if (Object.keys(this.pending ?? {}).length === 0) {
+					this.pending = undefined;
 				}
+			} else {
+				pending.consensus = computeValue(pending.consensus, [value]);
 			}
 		}
 	}
@@ -296,18 +272,31 @@ export class InternalPropertiesManager extends PropertiesManager {
 		newProps: PropertySet | undefined,
 		newManager: PropertiesManager,
 	): PropertySet | undefined {
-		const copy = super.copyTo(oldProps, newProps, newManager);
-
 		assert(newManager instanceof InternalPropertiesManager, "must be internal");
-		if (this.pendingAdjustments !== undefined) {
-			for (const [key, value] of Object.entries(this.pendingAdjustments)) {
+		if (this.pending !== undefined) {
+			for (const [key, value] of Object.entries(this.pending)) {
 				if (value !== undefined) {
-					const { consensus, pending } = value;
-					const newAdjusts = (newManager.pendingAdjustments ??= {});
-					newAdjusts[key] = { consensus, pending: [...pending] };
+					const { consensus, changes } = value;
+					const pending = (newManager.pending ??= {});
+					pending[key] = {
+						consensus,
+						changes: new DoublyLinkedList(changes.map((n) => n.data)),
+					};
 				}
 			}
 		}
-		return copy;
+		return { ...oldProps };
+	}
+
+	public override hasPendingProperties(props: PropertySet): boolean {
+		for (const [key, value] of Object.entries(props)) {
+			if (value !== undefined && this.pending?.[key] === undefined) {
+				return false;
+			}
+		}
+		return true;
+	}
+	public override hasPendingProperty(key: string): boolean {
+		return this.pending?.[key] !== undefined;
 	}
 }

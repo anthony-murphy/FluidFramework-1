@@ -65,8 +65,6 @@ describe.only("SharedString fuzz testing", () => {
 		{
 			...defaultFuzzOptions,
 			// Uncomment this line to replay a specific seed from its failure file:
-			// replay: 1,
-			only: [2, 3, 5],
 		},
 	);
 });

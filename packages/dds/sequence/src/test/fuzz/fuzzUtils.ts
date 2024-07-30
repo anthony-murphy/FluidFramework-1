@@ -240,7 +240,7 @@ export function makeReducer(
 		annotateRange: async ({ client }, { start, end, props }) => {
 			for (const { key, value } of props) {
 				if (typeof value === "number") {
-					client.channel.adjustRange(start, end, { [key]: { value } });
+					client.channel.adjustRange(start, end, { [key]: { value, min: 0, max: 50 } });
 				} else {
 					client.channel.annotateRange(start, end, { [key]: value });
 				}

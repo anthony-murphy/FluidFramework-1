@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { isObject } from "@fluidframework/core-utils/internal";
+import type { DoublyLinkedList } from "./collections/index.js";
 
 import type { MapLike } from "./index.js";
 
@@ -30,73 +30,29 @@ export interface AdjustOp {
 	props: MapLike<AdjustParams>;
 }
 
-export function isAdjustableValue(value: unknown): value is AdjustValue {
-	return (
-		isObject(value) &&
-		"remoteValue" in value &&
-		typeof value.remoteValue === "number" &&
-		"pendingValues" in value &&
-		Array.isArray(value.pendingValues)
-	);
+export interface PendingChanges {
+	consensus: unknown;
+	changes: DoublyLinkedList<Readonly<AdjustParams | { raw: unknown }>>;
 }
 
-export function toAdjustableValue(value: unknown): AdjustValue {
-	if (isAdjustableValue(value)) {
-		return value;
-	}
-	if (typeof value === "number") {
-		return {
-			remoteValue: value,
-			// localValue: value,
-			pendingValues: [],
-		};
-	}
-	return {
-		remoteValue: 0, // localValue: 0,
-		pendingValues: [],
-	};
-}
-
-export function incrementAdjust(op: AdjustParams, currentValue: AdjustValue): AdjustValue {
-	const { remoteValue, pendingValues } = currentValue;
-	pendingValues.push({ ...op });
-	// const localValue = computeValue(remoteValue, ...pendingValues);
-	return {
-		remoteValue, // localValue,
-		pendingValues,
-	};
-}
-
-export function processAdjust(
-	op: AdjustParams,
-	local: boolean,
-	currentValue: AdjustValue,
-): AdjustValue {
-	const { remoteValue: oldRemoteValue, pendingValues } = currentValue;
-
-	if (local) {
-		pendingValues.shift();
-	}
-	const remoteValue = computeValue(oldRemoteValue, op);
-
-	// const localValue = computeValue(remoteValue, ...pendingValues);
-
-	return {
-		remoteValue, // localValue,
-		pendingValues,
-	};
-}
-
-export function computeValue(value: number, ...ops: AdjustParams[]): number {
-	let newValue = value;
+export function computeValue(
+	consensus: unknown,
+	ops: Iterable<Readonly<AdjustParams | { raw: unknown }>>,
+): unknown {
+	let computedValue = consensus;
 	for (const op of ops) {
-		newValue += op.value;
-		if (op.max) {
-			newValue = Math.max(newValue, op.max);
-		}
-		if (op.min) {
-			newValue = Math.min(newValue, op.min);
+		if ("raw" in op) {
+			computedValue = op.raw;
+		} else {
+			const adjust = (typeof computedValue === "number" ? computedValue : 0) + op.value;
+			if (op.max && adjust > op.max) {
+				computedValue = op.max;
+			} else if (op.min && adjust < op.min) {
+				computedValue = op.min;
+			} else {
+				computedValue = adjust;
+			}
 		}
 	}
-	return newValue;
+	return computedValue;
 }

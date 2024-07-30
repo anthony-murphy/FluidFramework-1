@@ -488,7 +488,7 @@ describe("client.applyMsg", () => {
 	});
 
 	it.only("Annotate after adjust", () => {
-		const clients = createClientsAtInitialState({ initialState: "N" }, "A", "B", "C");
+		const clients = createClientsAtInitialState({ initialState: "01234567" }, "A", "B", "C");
 
 		const logger = new TestClientLogger(clients.all);
 
@@ -496,10 +496,60 @@ describe("client.applyMsg", () => {
 		const ops: ISequencedDocumentMessage[] = [];
 		ops.push(
 			clients.B.makeOpMessage(
-				clients.B.annotateRangeLocal(0, 1, {}, { prop: { value: 24 } }),
+				clients.B.annotateRangeLocal(0, 5, {}, { prop: { value: 24 } }),
 				++seq,
 			),
-			clients.C.makeOpMessage(clients.C.annotateRangeLocal(0, 1, { prop: "foo" }), ++seq),
+			clients.C.makeOpMessage(clients.C.annotateRangeLocal(3, 7, { prop: "foo" }), ++seq),
+		);
+
+		for (const op of ops) {
+			for (const c of clients.all) {
+				if (c.getCollabWindow().currentSeq < op.sequenceNumber) {
+					c.applyMsg(op);
+				}
+			}
+		}
+		logger.validate();
+	});
+
+	it.only("adjust after annotate", () => {
+		const clients = createClientsAtInitialState({ initialState: "01234567" }, "A", "B", "C");
+
+		const logger = new TestClientLogger(clients.all);
+
+		let seq = 0;
+		const ops: ISequencedDocumentMessage[] = [];
+		ops.push(
+			clients.C.makeOpMessage(clients.C.annotateRangeLocal(3, 8, { prop: "foo" }), ++seq),
+
+			clients.B.makeOpMessage(
+				clients.B.annotateRangeLocal(1, 7, {}, { prop: { value: 24 } }),
+				++seq,
+			),
+		);
+
+		for (const op of ops) {
+			for (const c of clients.all) {
+				if (c.getCollabWindow().currentSeq < op.sequenceNumber) {
+					c.applyMsg(op);
+				}
+			}
+		}
+		logger.validate();
+	});
+
+	it.only("adjust after annotate2", () => {
+		const clients = createClientsAtInitialState({ initialState: "dCEbvN" }, "A", "B", "C");
+
+		const logger = new TestClientLogger(clients.all);
+
+		let seq = 0;
+		const ops: ISequencedDocumentMessage[] = [];
+		ops.push(
+			clients.B.makeOpMessage(
+				clients.B.annotateRangeLocal(3, 4, {}, { prop3: { value: 10 } }),
+				++seq,
+			),
 		);
 
 		for (const op of ops) {
