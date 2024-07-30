@@ -1148,7 +1148,11 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 
 		// Must continue to support legacy
 		//       (See https://github.com/microsoft/FluidFramework/issues/84)
-		if (this._mergeTree.options?.newMergeTreeSnapshotFormat === true) {
+		if (this._mergeTree.options?.newMergeTreeSnapshotFormat === false) {
+			const snap = new SnapshotLegacy(this._mergeTree, this.logger);
+			snap.extractSync();
+			return snap.emit(catchUpMsgs, serializer, handle);
+		} else {
 			assert(
 				catchUpMsgs === undefined || catchUpMsgs.length === 0,
 				0x03f /* "New format should not emit catchup ops" */,
@@ -1158,10 +1162,6 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 			);
 			snap.extractSync();
 			return snap.emit(serializer, handle);
-		} else {
-			const snap = new SnapshotLegacy(this._mergeTree, this.logger);
-			snap.extractSync();
-			return snap.emit(catchUpMsgs, serializer, handle);
 		}
 	}
 

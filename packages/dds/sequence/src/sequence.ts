@@ -19,14 +19,9 @@ import {
 	// eslint-disable-next-line import/no-deprecated
 	Client,
 	IJSONSegment,
-	IMergeTreeAnnotateMsg,
-	IMergeTreeDeltaOp,
 	// eslint-disable-next-line import/no-deprecated
 	IMergeTreeGroupMsg,
-	// eslint-disable-next-line import/no-deprecated
-	IMergeTreeObliterateMsg,
 	IMergeTreeOp,
-	IMergeTreeRemoveMsg,
 	IRelativePosition,
 	ISegment,
 	ISegmentAction,
@@ -39,13 +34,6 @@ import {
 	// eslint-disable-next-line import/no-deprecated
 	SegmentGroup,
 	SlidingPreference,
-	createAnnotateRangeOp,
-	// eslint-disable-next-line import/no-deprecated
-	createGroupOp,
-	createInsertOp,
-	createObliterateRangeOp,
-	createRemoveRangeOp,
-	matchProperties,
 	AdjustParams,
 } from "@fluidframework/merge-tree/internal";
 import {
@@ -376,63 +364,6 @@ export abstract class SharedSegmentSequence<T extends ISegment>
 	 */
 	protected guardReentrancy: <TRet>(callback: () => TRet) => TRet;
 
-	private static createOpsFromDelta(event: SequenceDeltaEvent): IMergeTreeDeltaOp[] {
-		const ops: IMergeTreeDeltaOp[] = [];
-		for (const r of event.ranges) {
-			switch (event.deltaOperation) {
-				case MergeTreeDeltaType.ANNOTATE: {
-					const lastAnnotate = ops[ops.length - 1] as IMergeTreeAnnotateMsg;
-					const props: PropertySet = {};
-					for (const key of Object.keys(r.propertyDeltas)) {
-						props[key] = r.segment.properties?.[key] ?? null;
-					}
-					if (
-						lastAnnotate &&
-						lastAnnotate.pos2 === r.position &&
-						matchProperties(lastAnnotate.props, props)
-					) {
-						lastAnnotate.pos2 += r.segment.cachedLength;
-					} else {
-						ops.push(
-							createAnnotateRangeOp(r.position, r.position + r.segment.cachedLength, props),
-						);
-					}
-					break;
-				}
-
-				case MergeTreeDeltaType.INSERT:
-					ops.push(createInsertOp(r.position, r.segment.clone().toJSONObject()));
-					break;
-
-				case MergeTreeDeltaType.REMOVE: {
-					const lastRem = ops[ops.length - 1] as IMergeTreeRemoveMsg;
-					if (lastRem?.pos1 === r.position) {
-						assert(lastRem.pos2 !== undefined, 0x3ff /* pos2 should not be undefined here */);
-						lastRem.pos2 += r.segment.cachedLength;
-					} else {
-						ops.push(createRemoveRangeOp(r.position, r.position + r.segment.cachedLength));
-					}
-					break;
-				}
-
-				case MergeTreeDeltaType.OBLITERATE: {
-					// eslint-disable-next-line import/no-deprecated
-					const lastRem = ops[ops.length - 1] as IMergeTreeObliterateMsg;
-					if (lastRem?.pos1 === r.position) {
-						assert(lastRem.pos2 !== undefined, 0x874 /* pos2 should not be undefined here */);
-						lastRem.pos2 += r.segment.cachedLength;
-					} else {
-						ops.push(createObliterateRangeOp(r.position, r.position + r.segment.cachedLength));
-					}
-					break;
-				}
-
-				default:
-			}
-		}
-		return ops;
-	}
-
 	/**
 	 * Note: this field only provides a lower-bound on the reference sequence numbers for in-flight ops.
 	 * The exact reason isn't understood, but some e2e tests suggest that the runtime may sometimes process
@@ -469,7 +400,6 @@ export abstract class SharedSegmentSequence<T extends ISegment>
 
 	// eslint-disable-next-line import/no-deprecated
 	protected client: Client;
-	private messagesSinceMSNChange: ISequencedDocumentMessage[] = [];
 	private readonly intervalCollections: IntervalCollectionMap<SequenceInterval>;
 	constructor(
 		dataStoreRuntime: IFluidDataStoreRuntime,
@@ -894,20 +824,7 @@ export abstract class SharedSegmentSequence<T extends ISegment>
 	}
 
 	private summarizeMergeTree(serializer: IFluidSerializer): ISummaryTreeWithStats {
-		const minSeq = this.deltaManager.minimumSequenceNumber;
-
-		this.processMinSequenceNumberChanged(minSeq);
-
-		this.messagesSinceMSNChange.forEach((m) => {
-			m.minimumSequenceNumber = minSeq;
-		});
-
-		return this.client.summarize(
-			this.runtime,
-			this.handle,
-			serializer,
-			this.messagesSinceMSNChange,
-		);
+		return this.client.summarize(this.runtime, this.handle, serializer, []);
 	}
 
 	/**
@@ -915,59 +832,7 @@ export abstract class SharedSegmentSequence<T extends ISegment>
 	 * @param message - Message with decoded and hydrated handles
 	 */
 	private processMergeTreeMsg(message: ISequencedDocumentMessage, local?: boolean) {
-		const ops: IMergeTreeDeltaOp[] = [];
-		function transformOps(event: SequenceDeltaEvent) {
-			ops.push(...SharedSegmentSequence.createOpsFromDelta(event));
-		}
-		const needsTransformation = message.referenceSequenceNumber !== message.sequenceNumber - 1;
-		let stashMessage: Readonly<ISequencedDocumentMessage> = message;
-		if (this.runtime.options.newMergeTreeSnapshotFormat !== true) {
-			if (needsTransformation) {
-				this.on("sequenceDelta", transformOps);
-			}
-		}
-
 		this.client.applyMsg(message, local);
-
-		if (this.runtime.options.newMergeTreeSnapshotFormat !== true) {
-			if (needsTransformation) {
-				this.removeListener("sequenceDelta", transformOps);
-				// shallow clone the message as we only overwrite top level properties,
-				// like referenceSequenceNumber and content only
-				stashMessage = {
-					...message,
-					referenceSequenceNumber: stashMessage.sequenceNumber - 1,
-					// eslint-disable-next-line import/no-deprecated
-					contents: ops.length !== 1 ? createGroupOp(...ops) : ops[0],
-				};
-			}
-
-			this.messagesSinceMSNChange.push(stashMessage);
-
-			// Do GC every once in a while...
-			if (
-				this.messagesSinceMSNChange.length > 20 &&
-				// TODO Non null asserting, why is this not null?
-				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-				this.messagesSinceMSNChange[20]!.sequenceNumber < message.minimumSequenceNumber
-			) {
-				this.processMinSequenceNumberChanged(message.minimumSequenceNumber);
-			}
-		}
-	}
-
-	private processMinSequenceNumberChanged(minSeq: number) {
-		let index = 0;
-		for (; index < this.messagesSinceMSNChange.length; index++) {
-			// TODO Non null asserting, why is this not null?
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			if (this.messagesSinceMSNChange[index]!.sequenceNumber > minSeq) {
-				break;
-			}
-		}
-		if (index !== 0) {
-			this.messagesSinceMSNChange = this.messagesSinceMSNChange.slice(index);
-		}
 	}
 
 	private initializeIntervalCollections() {
