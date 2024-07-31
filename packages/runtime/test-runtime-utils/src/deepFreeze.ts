@@ -2,6 +2,7 @@
  * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
+import { isObject } from "@fluidframework/core-utils/internal";
 
 const frozenMethod = () => {
 	throw new Error("Object is frozen");
@@ -66,7 +67,7 @@ export function deepFreeze<T>(object: T, filter?: (object: object) => boolean): 
 		// Freeze properties before freezing self
 		for (const name of propNames) {
 			const value = object[name];
-			if (typeof value === "object") {
+			if (isObject(value)) {
 				deepFreeze(value, filter);
 			}
 		}

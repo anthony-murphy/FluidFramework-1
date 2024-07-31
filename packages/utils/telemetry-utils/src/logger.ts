@@ -11,6 +11,7 @@ import {
 	type Tagged,
 	type TelemetryBaseEventPropertyType,
 } from "@fluidframework/core-interfaces";
+import { isObject } from "@fluidframework/core-utils/internal";
 
 import {
 	CachedConfigProvider,
@@ -328,10 +329,9 @@ export class TaggedLoggerAdapter implements ITelemetryBaseLogger {
 		};
 		for (const key of Object.keys(eventWithTagsMaybe)) {
 			const taggableProp = eventWithTagsMaybe[key];
-			const { value, tag } =
-				typeof taggableProp === "object"
-					? taggableProp
-					: { value: taggableProp, tag: undefined };
+			const { value, tag } = isObject(taggableProp)
+				? taggableProp
+				: { value: taggableProp, tag: undefined };
 			switch (tag) {
 				case undefined: {
 					// No tag means we can log plainly
@@ -742,7 +742,7 @@ export class PerformanceEvent {
 			this.reportEvent("start");
 		}
 
-		if (typeof window === "object" && window?.performance?.mark) {
+		if (isObject(window) && window?.performance?.mark) {
 			this.startMark = `${event.eventName}-start`;
 			window.performance.mark(this.startMark);
 		}

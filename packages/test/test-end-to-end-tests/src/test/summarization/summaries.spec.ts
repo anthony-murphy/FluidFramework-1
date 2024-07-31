@@ -18,6 +18,7 @@ import {
 	ISummarizeResults,
 	type ISummarizer,
 } from "@fluidframework/container-runtime/internal";
+import { isObject } from "@fluidframework/core-utils/internal";
 import { ISummaryBlob, ISummaryTree, SummaryType } from "@fluidframework/driver-definitions";
 import { ISummaryContext } from "@fluidframework/driver-definitions/internal";
 import {
@@ -576,7 +577,7 @@ describeCompat("Summaries 2", "NoCompat", (getTestObjectProvider) => {
 			);
 
 			const parsed = JSON.parse(summarizeTelemetryEvents[0].details as string);
-			assert(parsed && typeof parsed === "object", "Should be proper JSON");
+			assert(parsed && isObject(parsed), "Should be proper JSON");
 
 			assert.notStrictEqual(
 				summarizeTelemetryEvents[0].details,

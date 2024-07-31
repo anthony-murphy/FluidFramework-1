@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { assert } from "@fluidframework/core-utils/internal";
+import { assert, isObject } from "@fluidframework/core-utils/internal";
 
 import type { FieldKey } from "../schema-stored/index.js";
 
@@ -27,9 +27,7 @@ export function isCursor(data: unknown): data is ITreeCursor {
 	// Other than on null and undefined, looking up a missing symbol shouldn't type error.
 	// typeof check deals with undefined while providing an early out for other non-object types.
 	return (
-		data !== null &&
-		typeof data === "object" &&
-		(data as Partial<ITreeCursor>)[CursorMarker] === true
+		data !== null && isObject(data) && (data as Partial<ITreeCursor>)[CursorMarker] === true
 	);
 }
 

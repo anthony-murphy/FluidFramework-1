@@ -8,7 +8,7 @@ import {
 	IChunkedOp,
 	unpackRuntimeMessage,
 } from "@fluidframework/container-runtime/internal";
-import { assert, unreachableCase } from "@fluidframework/core-utils/internal";
+import { assert, unreachableCase, isObject } from "@fluidframework/core-utils/internal";
 import { DataStoreMessageType } from "@fluidframework/datastore/internal";
 import {
 	ISummaryAck,
@@ -640,7 +640,7 @@ function processOp(
 						let subType = innerContent2.type;
 						if (
 							innerContent2.type === "set" &&
-							typeof innerContent2.value === "object" &&
+							isObject(innerContent2.value) &&
 							innerContent2.value !== null
 						) {
 							type = `${type}/${subType}`;

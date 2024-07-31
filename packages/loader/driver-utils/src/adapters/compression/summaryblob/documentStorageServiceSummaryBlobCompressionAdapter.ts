@@ -4,7 +4,7 @@
  */
 
 import { IsoBuffer } from "@fluid-internal/client-utils";
-import { assert } from "@fluidframework/core-utils/internal";
+import { assert, isObject } from "@fluidframework/core-utils/internal";
 import {
 	ISummaryBlob,
 	ISummaryHandle,
@@ -259,7 +259,7 @@ export class DocumentStorageServiceCompressionAdapter extends DocumentStorageSer
 		config: ICompressionStorageConfig,
 		context?: ISummaryContext,
 	): SummaryObject {
-		assert(typeof input === "object", 0x6f6 /* input must be a non-null object */);
+		assert(isObject(input), 0x6f6 /* input must be a non-null object */);
 		const maybeReplaced = isEncode ? encoder(input, config) : decoder(input);
 
 		if (maybeReplaced !== input) {
@@ -269,7 +269,7 @@ export class DocumentStorageServiceCompressionAdapter extends DocumentStorageSer
 		for (const key of Object.keys(input)) {
 			const value = input[key];
 
-			if (Boolean(value) && typeof value === "object") {
+			if (Boolean(value) && isObject(value)) {
 				const replaced = this.recursivelyReplace(
 					isEncode,
 					value as SummaryObject,
@@ -295,7 +295,7 @@ export class DocumentStorageServiceCompressionAdapter extends DocumentStorageSer
 	 * @returns The summary tree containing the metadata blob.
 	 */
 	private static findMetadataHolderSummary(summary: ISummaryTree): ISummaryTree | undefined {
-		assert(typeof summary === "object", 0x6f7 /* summary must be a non-null object */);
+		assert(isObject(summary), 0x6f7 /* summary must be a non-null object */);
 		for (const [key, value] of Object.entries(summary.tree)) {
 			if (Boolean(value) && value.type === SummaryType.Tree) {
 				const found = this.findMetadataHolderSummary(value);
@@ -344,7 +344,7 @@ export class DocumentStorageServiceCompressionAdapter extends DocumentStorageSer
 	 * @returns True if the compression markup blob is found, otherwise false.
 	 */
 	private static hasCompressionMarkup(snapshot: ISnapshotTree): boolean {
-		assert(typeof snapshot === "object", 0x6f9 /* snapshot must be a non-null object */);
+		assert(isObject(snapshot), 0x6f9 /* snapshot must be a non-null object */);
 		for (const key of Object.keys(snapshot.blobs)) {
 			if (key === metadataBlobName) {
 				const value = snapshot.blobs[blobHeadersBlobName];

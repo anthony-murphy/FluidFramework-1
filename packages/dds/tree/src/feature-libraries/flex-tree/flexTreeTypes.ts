@@ -34,6 +34,7 @@ import type {
 } from "../typed-schema/index.js";
 
 import type { FlexTreeContext } from "./context.js";
+import { isObject } from "@fluidframework/core-utils/internal";
 
 /**
  * An anchor slot which records the {@link FlexTreeNode} associated with that anchor, if there is one.
@@ -48,7 +49,7 @@ export const flexTreeSlot = anchorSlot<FlexTreeNode>();
 export const flexTreeMarker = Symbol("flexTreeMarker");
 
 export function isFlexTreeEntity(t: unknown): t is FlexTreeEntity {
-	return typeof t === "object" && t !== null && flexTreeMarker in t;
+	return isObject(t) && flexTreeMarker in t;
 }
 
 export function isFlexTreeNode(t: unknown): t is FlexTreeNode {

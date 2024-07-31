@@ -4,6 +4,7 @@
  */
 
 import type { ITelemetryBaseProperties } from "@fluidframework/core-interfaces";
+import { isObject } from "@fluidframework/core-utils/internal";
 import { DriverErrorTypes } from "@fluidframework/driver-definitions/internal";
 import {
 	AuthorizationError,
@@ -161,7 +162,6 @@ function isOdspErrorResponse(x: any): x is OdspErrorResponse {
  */
 export function tryParseErrorResponse(
 	response: string | undefined,
-	// eslint-disable-next-line @typescript-eslint/member-delimiter-style
 ): { success: true; errorResponse: OdspErrorResponse } | { success: false } {
 	try {
 		if (response !== undefined) {
@@ -180,7 +180,7 @@ export function tryParseErrorResponse(
 export function parseFacetCodes(errorResponse: OdspErrorResponse): string[] {
 	const stack: string[] = [];
 	let error: OdspErrorResponseInnerError | undefined = errorResponse.error;
-	while (typeof error === "object" && error !== null) {
+	while (isObject(error) && error !== null) {
 		if (error.code !== undefined) {
 			stack.unshift(error.code);
 		}
@@ -429,7 +429,6 @@ export function throwOdspNetworkError(
 
 	networkError.addTelemetryProperties({ odspError: true, storageServiceError: true });
 
-	// eslint-disable-next-line @typescript-eslint/no-throw-literal
 	throw networkError;
 }
 
@@ -459,7 +458,7 @@ export function hasRedirectionLocation(
 ): x is Pick<IOdspErrorAugmentations, "redirectLocation"> {
 	return (
 		x !== null &&
-		typeof x === "object" &&
+		isObject(x) &&
 		"redirectLocation" in x &&
 		typeof x?.redirectLocation === "string"
 	);

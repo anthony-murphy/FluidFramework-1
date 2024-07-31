@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { assert, unreachableCase } from "@fluidframework/core-utils/internal";
+import { assert, unreachableCase, isObject } from "@fluidframework/core-utils/internal";
 import { UsageError } from "@fluidframework/telemetry-utils/internal";
 
 import { DoublyLinkedList } from "./collections/index.js";
@@ -42,7 +42,7 @@ export type MergeTreeDeltaRevertible =
  * @internal
  */
 export function isMergeTreeDeltaRevertible(x: unknown): x is MergeTreeDeltaRevertible {
-	return !!x && typeof x === "object" && "operation" in x && "trackingGroup" in x;
+	return !!x && isObject(x) && "operation" in x && "trackingGroup" in x;
 }
 
 type TypedRevertible<T extends MergeTreeDeltaRevertible["operation"]> =

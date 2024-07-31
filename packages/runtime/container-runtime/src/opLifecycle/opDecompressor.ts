@@ -5,7 +5,7 @@
 
 import { IsoBuffer, Uint8ArrayToString } from "@fluid-internal/client-utils";
 import { ITelemetryBaseLogger } from "@fluidframework/core-interfaces";
-import { assert } from "@fluidframework/core-utils/internal";
+import { assert, isObject } from "@fluidframework/core-utils/internal";
 import { ISequencedDocumentMessage } from "@fluidframework/driver-definitions/internal";
 import { createChildLogger } from "@fluidframework/telemetry-utils/internal";
 import { decompress } from "lz4js";
@@ -57,7 +57,7 @@ export class OpDecompressor {
 		try {
 			if (
 				message.contents !== null &&
-				typeof message.contents === "object" &&
+				isObject(message.contents) &&
 				Object.keys(message.contents).length === 1 &&
 				typeof (message.contents as { packedContents?: unknown }).packedContents ===
 					"string" &&

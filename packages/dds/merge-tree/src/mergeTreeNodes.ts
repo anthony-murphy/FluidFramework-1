@@ -5,7 +5,7 @@
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-import { assert } from "@fluidframework/core-utils/internal";
+import { assert, isObject } from "@fluidframework/core-utils/internal";
 import { AttributionKey } from "@fluidframework/runtime-definitions/internal";
 
 import { IAttributionCollection } from "./attributionCollection.js";
@@ -783,7 +783,7 @@ export class Marker extends BaseSegment implements ReferencePosition, ISegment {
 	}
 
 	static fromJSONObject(spec: IJSONSegment): Marker | undefined {
-		if (spec && typeof spec === "object" && "marker" in spec) {
+		if (spec && isObject(spec) && "marker" in spec) {
 			return Marker.make((spec.marker as Marker).refType, spec.props as PropertySet);
 		}
 		return undefined;

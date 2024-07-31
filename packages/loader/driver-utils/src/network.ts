@@ -4,6 +4,7 @@
  */
 
 import { ITelemetryBaseProperties } from "@fluidframework/core-interfaces";
+import { isObject } from "@fluidframework/core-utils/internal";
 import {
 	IAuthorizationError,
 	ILocationRedirectionError,
@@ -30,11 +31,7 @@ export enum OnlineStatus {
  * @internal
  */
 export function isOnline(): OnlineStatus {
-	if (
-		typeof navigator === "object" &&
-		navigator !== null &&
-		typeof navigator.onLine === "boolean"
-	) {
+	if (isObject(navigator) && navigator !== null && typeof navigator.onLine === "boolean") {
 		return navigator.onLine ? OnlineStatus.Online : OnlineStatus.Offline;
 	}
 	return OnlineStatus.Unknown;

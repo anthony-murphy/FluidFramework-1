@@ -5,7 +5,7 @@
 
 import { TypedEventEmitter } from "@fluid-internal/client-utils";
 import { IFluidHandle } from "@fluidframework/core-interfaces";
-import { assert } from "@fluidframework/core-utils/internal";
+import { assert, isObject } from "@fluidframework/core-utils/internal";
 import { ISequencedDocumentMessage } from "@fluidframework/driver-definitions/internal";
 import { ValueType, IFluidSerializer } from "@fluidframework/shared-object-base/internal";
 
@@ -37,7 +37,7 @@ import {
 } from "./intervals/index.js";
 
 function isMapOperation(op: unknown): op is IMapOperation {
-	return typeof op === "object" && op !== null && "type" in op && op.type === "act";
+	return isObject(op) && op !== null && "type" in op && op.type === "act";
 }
 
 /**

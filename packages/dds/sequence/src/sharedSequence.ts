@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { assert } from "@fluidframework/core-utils/internal";
+import { assert, isObject } from "@fluidframework/core-utils/internal";
 import {
 	IChannelAttributes,
 	IFluidDataStoreRuntime,
@@ -38,9 +38,9 @@ export class SubSequence<T> extends BaseSegment {
 		return segment.type === SubSequence.typeString;
 	}
 	public static fromJSONObject<U>(spec: any) {
-		if (spec && typeof spec === "object" && "items" in spec) {
+		if (spec && isObject(spec) && "items" in spec && Array.isArray(spec.items)) {
 			const segment = new SubSequence<U>(spec.items);
-			if (spec.props) {
+			if ("props" in spec && isObject(spec.props)) {
 				segment.addProperties(spec.props);
 			}
 			return segment;

@@ -53,7 +53,7 @@ export interface IFluidFileConverter {
  */
 export function isCodeLoaderBundle(bundle: any): bundle is ICodeLoaderBundle {
 	// eslint-disable-next-line @typescript-eslint/no-unsafe-return
-	return bundle?.fluidExport && typeof bundle.fluidExport === "object";
+	return bundle?.fluidExport && isObject(bundle.fluidExport);
 }
 
 export function isFluidFileConverter(obj: any): obj is IFluidFileConverter {

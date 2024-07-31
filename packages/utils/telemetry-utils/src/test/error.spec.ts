@@ -6,6 +6,7 @@
 import { strict as assert } from "node:assert";
 
 import { FluidErrorTypes } from "@fluidframework/core-interfaces/internal";
+import { isObject } from "@fluidframework/core-utils/internal";
 
 import { DataCorruptionError, DataProcessingError } from "../error.js";
 import { LoggingError, isILoggingError, normalizeError } from "../errorLogging.js";
@@ -175,7 +176,7 @@ describe("Errors", () => {
 				!originalMalformations.some(
 					(value) =>
 						typeof value === "string" ||
-						(typeof value === "object" && !Array.isArray(value) && value !== null),
+						(isObject(value) && !Array.isArray(value) && value !== null),
 				),
 				"Neither strings nor objects are considered malformed",
 			);

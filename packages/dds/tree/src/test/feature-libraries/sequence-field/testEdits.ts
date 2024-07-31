@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { assert } from "@fluidframework/core-utils/internal";
+import { assert, isObject } from "@fluidframework/core-utils/internal";
 import { type NodeId, SequenceField as SF } from "../../../feature-libraries/index.js";
 // eslint-disable-next-line import/no-internal-modules
 import { isNewAttach } from "../../../feature-libraries/sequence-field/utils.js";
@@ -168,7 +168,7 @@ function createInsertMark(
 	cellId: ChangesetLocalId | SF.CellId,
 	overrides?: Partial<SF.CellMark<SF.Insert>>,
 ): SF.CellMark<SF.Insert> {
-	const cellIdObject: SF.CellId = typeof cellId === "object" ? cellId : { localId: cellId };
+	const cellIdObject: SF.CellId = isObject(cellId) ? cellId : { localId: cellId };
 	const mark: SF.CellMark<SF.Insert> = {
 		type: "Insert",
 		count,
@@ -210,7 +210,7 @@ function createPinMark(
 	id: SF.MoveId | SF.CellId,
 	overrides?: Partial<SF.CellMark<SF.Insert>>,
 ): SF.CellMark<SF.Insert> {
-	const cellIdObject: SF.CellId = typeof id === "object" ? id : { localId: id };
+	const cellIdObject: SF.CellId = isObject(id) ? id : { localId: id };
 	const mark: SF.CellMark<SF.Insert> = {
 		type: "Insert",
 		count,
@@ -233,7 +233,7 @@ function createRemoveMark(
 	markId: ChangesetLocalId | ChangeAtomId,
 	overrides?: Partial<SF.CellMark<SF.Remove>>,
 ): SF.CellMark<SF.Remove> {
-	const cellId: ChangeAtomId = typeof markId === "object" ? markId : { localId: markId };
+	const cellId: ChangeAtomId = isObject(markId) ? markId : { localId: markId };
 	const mark: SF.CellMark<SF.Remove> = {
 		type: "Remove",
 		count,
@@ -257,10 +257,10 @@ function createRenameMark(
 	outputCellId: ChangesetLocalId | SF.CellId,
 	overrides?: Partial<SF.CellMark<SF.Rename>>,
 ): SF.CellMark<SF.Rename> {
-	const cellId: ChangeAtomId =
-		typeof inputCellId === "object" ? inputCellId : { localId: inputCellId };
-	const outputId: ChangeAtomId =
-		typeof outputCellId === "object" ? outputCellId : { localId: outputCellId };
+	const cellId: ChangeAtomId = isObject(inputCellId) ? inputCellId : { localId: inputCellId };
+	const outputId: ChangeAtomId = isObject(outputCellId)
+		? outputCellId
+		: { localId: outputCellId };
 	const mark: SF.CellMark<SF.Rename> = {
 		type: "Rename",
 		count,
@@ -300,7 +300,7 @@ function createMoveOutMark(
 	markId: ChangesetLocalId | ChangeAtomId,
 	overrides?: Partial<SF.CellMark<SF.MoveOut>>,
 ): SF.CellMark<SF.MoveOut> {
-	const atomId: ChangeAtomId = typeof markId === "object" ? markId : { localId: markId };
+	const atomId: ChangeAtomId = isObject(markId) ? markId : { localId: markId };
 	const mark: SF.CellMark<SF.MoveOut> = {
 		type: "MoveOut",
 		count,

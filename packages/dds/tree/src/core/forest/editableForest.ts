@@ -4,7 +4,7 @@
  */
 
 import type { SessionSpaceCompressedId, IIdCompressor } from "@fluidframework/id-compressor";
-import { assert } from "@fluidframework/core-utils/internal";
+import { assert, isObject } from "@fluidframework/core-utils/internal";
 
 import type { RevisionTagCodec } from "../rebase/index.js";
 import type { FieldKey } from "../schema-stored/index.js";
@@ -94,7 +94,7 @@ export interface TreeLocation {
 }
 
 export function isFieldLocation(range: FieldLocation | DetachedField): range is FieldLocation {
-	return typeof range === "object";
+	return isObject(range);
 }
 
 /**

@@ -5,7 +5,7 @@
 
 import { performance } from "@fluid-internal/client-utils";
 import type { IDisposable, ITelemetryBaseProperties } from "@fluidframework/core-interfaces";
-import { assert } from "@fluidframework/core-utils/internal";
+import { assert, isObject } from "@fluidframework/core-utils/internal";
 
 import { roundToDecimalPlaces } from "./mathTools.js";
 import type {
@@ -233,10 +233,7 @@ export class SampledTelemetryHelper<
 
 	private isCustomData(data: unknown): data is ICustomData<TCustomMetrics> {
 		return (
-			typeof data === "object" &&
-			data !== null &&
-			"customData" in data &&
-			typeof data.customData === "object"
+			isObject(data) && data !== null && "customData" in data && isObject(data.customData)
 		);
 	}
 

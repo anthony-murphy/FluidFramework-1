@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { assert } from "@fluidframework/core-utils/internal";
+import { assert, isObject } from "@fluidframework/core-utils/internal";
 
 import {
 	EmptyKey,
@@ -31,7 +31,7 @@ import { isFluidHandle } from "@fluidframework/runtime-utils/internal";
 
 const adapter: CursorAdapter<JsonCompatible> = {
 	value: (node: JsonCompatible) =>
-		node !== null && typeof node === "object"
+		node !== null && isObject(node)
 			? undefined // arrays and objects have no defined value
 			: node, // null, boolean, numbers, and strings are their own values
 	type: (node: JsonCompatible) => {
@@ -159,7 +159,7 @@ type TypedJsonCompatible = JsonCompatible | TypedJsonCompatibleObject;
 const typedJsonSymbol = Symbol("JSON Cursor Type");
 
 function hasType(json: JsonCompatible): json is TypedJsonCompatibleObject {
-	if (typeof json === "object" && json !== null) {
+	if (isObject(json) && json !== null) {
 		const typed = json as Partial<TypedJsonCompatibleObject>;
 		return typed[typedJsonSymbol] !== undefined;
 	}

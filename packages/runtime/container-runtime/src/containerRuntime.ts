@@ -43,6 +43,7 @@ import {
 	LazyPromise,
 	PromiseCache,
 	delay,
+	isObject,
 } from "@fluidframework/core-utils/internal";
 import {
 	IClientDetails,
@@ -647,7 +648,7 @@ export const agentSchedulerId = "_scheduler";
 // safely check navigator and get the hardware spec value
 export function getDeviceSpec() {
 	try {
-		if (typeof navigator === "object" && navigator !== null) {
+		if (isObject(navigator) && navigator !== null) {
 			return {
 				deviceMemory: (navigator as any).deviceMemory,
 				hardwareConcurrency: navigator.hardwareConcurrency,

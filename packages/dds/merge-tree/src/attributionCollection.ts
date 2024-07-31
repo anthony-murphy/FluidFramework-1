@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { assert, unreachableCase } from "@fluidframework/core-utils/internal";
+import { assert, unreachableCase, isObject } from "@fluidframework/core-utils/internal";
 import {
 	AttributionKey,
 	DetachedAttributionKey,
@@ -440,7 +440,7 @@ export class AttributionCollection implements IAttributionCollection<Attribution
 					attribution.offsets.push(offset);
 					attribution.keys.push(
 						// eslint-disable-next-line unicorn/no-null
-						seq === null ? null : typeof seq === "object" ? seq : { type: "op", seq },
+						seq === null ? null : isObject(seq) ? seq : { type: "op", seq },
 					);
 				};
 				// TODO Non null asserting, why is this not null?

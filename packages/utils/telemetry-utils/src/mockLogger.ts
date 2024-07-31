@@ -8,7 +8,7 @@ import {
 	type ITelemetryBaseLogger,
 	LogLevel,
 } from "@fluidframework/core-interfaces";
-import { assert } from "@fluidframework/core-utils/internal";
+import { assert, isObject } from "@fluidframework/core-utils/internal";
 
 import { createChildLogger } from "./logger.js";
 import type {
@@ -335,11 +335,7 @@ function matchObjects(
 ): boolean {
 	for (const [expectedKey, expectedValue] of Object.entries(expected)) {
 		const actualValue = actual[expectedKey];
-		if (
-			!Array.isArray(expectedValue) &&
-			expectedValue !== null &&
-			typeof expectedValue === "object"
-		) {
+		if (!Array.isArray(expectedValue) && expectedValue !== null && isObject(expectedValue)) {
 			if (
 				Array.isArray(actualValue) ||
 				actualValue === null ||

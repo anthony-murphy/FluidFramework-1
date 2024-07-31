@@ -10,7 +10,8 @@
  *
  * @internal
  */
-export const isObject = (value: unknown): value is object =>
+// eslint-disable-next-line @rushstack/no-new-null
+export const isObject = (value: unknown): value is Exclude<object, null> =>
 	typeof value === "object" && value !== null;
 
 /**

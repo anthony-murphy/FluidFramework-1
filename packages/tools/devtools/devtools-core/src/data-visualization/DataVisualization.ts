@@ -482,7 +482,7 @@ export async function visualizeChildData(
 	data: unknown,
 	resolveHandle: (handle: IFluidHandle) => Promise<FluidObjectId | undefined>,
 ): Promise<VisualChildNode> {
-	// Special case for `null` because `typeof null === "object"`.
+	// Special case for `null` because `isObject(null)`.
 	if (data === null) {
 		return {
 			value: data,

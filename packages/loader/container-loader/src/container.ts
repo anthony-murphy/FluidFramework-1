@@ -38,7 +38,12 @@ import {
 	LogLevel,
 } from "@fluidframework/core-interfaces";
 import { type ISignalEnvelope } from "@fluidframework/core-interfaces/internal";
-import { assert, isPromiseLike, unreachableCase } from "@fluidframework/core-utils/internal";
+import {
+	assert,
+	isPromiseLike,
+	unreachableCase,
+	isObject,
+} from "@fluidframework/core-utils/internal";
 import {
 	IClient,
 	IClientDetails,
@@ -1022,7 +1027,7 @@ export class Container
 		);
 
 		const isDomAvailable =
-			typeof document === "object" &&
+			isObject(document) &&
 			document !== null &&
 			typeof document.addEventListener === "function" &&
 			document.addEventListener !== null;

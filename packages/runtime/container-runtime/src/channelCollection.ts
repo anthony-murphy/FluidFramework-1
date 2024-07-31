@@ -3,6 +3,10 @@
  * Licensed under the MIT License.
  */
 
+/*!
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
+ * Licensed under the MIT License.
+ */
 import { AttachState } from "@fluidframework/container-definitions";
 import {
 	FluidObject,
@@ -12,7 +16,7 @@ import {
 	ITelemetryBaseLogger,
 } from "@fluidframework/core-interfaces";
 import type { IFluidHandleInternal } from "@fluidframework/core-interfaces/internal";
-import { assert, Lazy, LazyPromise } from "@fluidframework/core-utils/internal";
+import { assert, Lazy, LazyPromise, isObject } from "@fluidframework/core-utils/internal";
 import { FluidObjectHandle } from "@fluidframework/datastore/internal";
 import type { ISnapshot } from "@fluidframework/driver-definitions/internal";
 import {
@@ -1544,7 +1548,7 @@ export function detectOutboundReferences(
 	let ddsAddress: string | undefined;
 
 	function recursivelyFindHandles(obj: unknown) {
-		if (typeof obj === "object" && obj !== null) {
+		if (isObject(obj) && obj !== null) {
 			for (const [key, value] of Object.entries(obj)) {
 				// If 'value' is a serialized IFluidHandle, it represents a new outbound route.
 				if (isSerializedHandle(value)) {

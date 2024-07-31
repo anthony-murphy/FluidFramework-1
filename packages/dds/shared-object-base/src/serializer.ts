@@ -11,6 +11,7 @@ import {
 	IFluidHandleContext,
 	type IFluidHandleInternal,
 } from "@fluidframework/core-interfaces/internal";
+import { isObject } from "@fluidframework/core-utils/internal";
 import {
 	generateHandleContextPath,
 	isSerializedHandle,
@@ -88,7 +89,7 @@ export class FluidSerializer implements IFluidSerializer {
 		// If the given 'input' cannot contain handles, return it immediately.  Otherwise,
 		// return the result of 'recursivelyReplace()'.
 		// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-		return !!input && typeof input === "object"
+		return !!input && isObject(input)
 			? this.recursivelyReplace(input, this.encodeValue, bind)
 			: input;
 	}
@@ -106,7 +107,7 @@ export class FluidSerializer implements IFluidSerializer {
 		// If the given 'input' cannot contain handles, return it immediately.  Otherwise,
 		// return the result of 'recursivelyReplace()'.
 		// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-		return !!input && typeof input === "object"
+		return !!input && isObject(input)
 			? this.recursivelyReplace(input, this.decodeValue)
 			: input;
 	}
@@ -173,7 +174,7 @@ export class FluidSerializer implements IFluidSerializer {
 		for (const key of Object.keys(input)) {
 			const value = input[key];
 			// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-			if (!!value && typeof value === "object") {
+			if (!!value && isObject(value)) {
 				// Note: Except for IFluidHandle, `input` must not contain circular references (as object must
 				//       be JSON serializable.)  Therefore, guarding against infinite recursion here would only
 				//       lead to a later error when attempting to stringify().

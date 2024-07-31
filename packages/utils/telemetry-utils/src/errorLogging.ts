@@ -5,6 +5,7 @@
 
 import type { ITelemetryBaseProperties, Tagged } from "@fluidframework/core-interfaces";
 import type { ILoggingError } from "@fluidframework/core-interfaces/internal";
+import { isObject } from "@fluidframework/core-utils/internal";
 import { v4 as uuid } from "uuid";
 
 import { type IFluidErrorBase, hasErrorInstanceId, isFluidError } from "./fluidErrorBase.js";
@@ -19,7 +20,7 @@ import type {
  * Determines if the provided value is an object but neither null nor an array.
  */
 const isRegularObject = (value: unknown): boolean => {
-	return value !== null && !Array.isArray(value) && typeof value === "object";
+	return value !== null && !Array.isArray(value) && isObject(value);
 };
 
 /**
@@ -134,7 +135,7 @@ export function normalizeError(
 	// We need to preserve these properties which are used in a non-typesafe way throughout driver code (see #8743)
 	// Anywhere they are set should be on a valid Fluid Error that would have been returned above,
 	// but we can't prove it with the types, so adding this defensive measure.
-	if (typeof error === "object" && error !== null) {
+	if (isObject(error) && error !== null) {
 		const maybeHasRetry: Partial<Record<"canRetry" | "retryAfterSeconds", unknown>> = error;
 		let retryProps: Partial<Record<"canRetry" | "retryAfterSeconds", unknown>> | undefined;
 		if ("canRetry" in error) {
@@ -224,14 +225,14 @@ export function generateStack(): string | undefined {
  */
 export function wrapError<T extends LoggingError>(
 	innerError: unknown,
-	newErrorFn: (message: string) => T,
+	newErrorFn: (message: string, errorType: string | undefined) => T,
 ): T {
-	const { message, stack } = extractLogSafeErrorProperties(
+	const { message, stack, errorType } = extractLogSafeErrorProperties(
 		innerError,
 		false /* sanitizeStack */,
 	);
 
-	const newError = newErrorFn(message);
+	const newError = newErrorFn(message, errorType);
 
 	if (stack !== undefined) {
 		overwriteStack(newError, stack);
@@ -361,7 +362,7 @@ export function isTaggedTelemetryPropertyValue(
 export const getCircularReplacer = (): ((key: string, value: unknown) => any) => {
 	const seen = new WeakSet();
 	return (key: string, value: unknown): any => {
-		if (typeof value === "object" && value !== null) {
+		if (isObject(value) && value !== null) {
 			if (seen.has(value)) {
 				return "<removed/circular>";
 			}
@@ -421,7 +422,7 @@ export class LoggingError
 	 * @returns true if the object is an instance of a LoggingError, false if not.
 	 */
 	public static typeCheck(object: unknown): object is LoggingError {
-		if (typeof object === "object" && object !== null) {
+		if (isObject(object) && object !== null) {
 			return (
 				typeof (object as LoggingError).addTelemetryProperties === "function" &&
 				typeof (object as LoggingError).getTelemetryProperties === "function" &&

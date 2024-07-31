@@ -8,7 +8,12 @@ import {
 	bufferToString,
 	stringToBuffer,
 } from "@fluid-internal/client-utils";
-import { assert, compareArrays, unreachableCase } from "@fluidframework/core-utils/internal";
+import {
+	assert,
+	compareArrays,
+	unreachableCase,
+	isObject,
+} from "@fluidframework/core-utils/internal";
 import { ISummaryTree, SummaryType } from "@fluidframework/driver-definitions";
 import {
 	DriverErrorTypes,
@@ -312,7 +317,7 @@ export function isDeltaStreamConnectionForbiddenError(
 	error: unknown,
 ): error is DeltaStreamConnectionForbiddenError {
 	return (
-		typeof error === "object" &&
+		isObject(error) &&
 		error !== null &&
 		(error as Partial<IFluidErrorBase>)?.errorType ===
 			DriverErrorTypes.deltaStreamConnectionForbidden

@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { assert } from "@fluidframework/core-utils/internal";
+import { assert, isObject } from "@fluidframework/core-utils/internal";
 import { Type } from "@sinclair/typebox";
 import structuredClone from "@ungap/structured-clone";
 
@@ -270,7 +270,7 @@ export const JsonCompatibleReadOnlySchema = Type.Any();
 export function isJsonObject(
 	value: JsonCompatibleReadOnly,
 ): value is { readonly [P in string]?: JsonCompatibleReadOnly } {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
+	return isObject(value) && value !== null && !Array.isArray(value);
 }
 
 /**

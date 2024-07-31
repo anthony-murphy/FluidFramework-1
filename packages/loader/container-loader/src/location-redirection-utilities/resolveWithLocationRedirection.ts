@@ -4,6 +4,7 @@
  */
 
 import { IRequest, ITelemetryBaseLogger } from "@fluidframework/core-interfaces";
+import { isObject } from "@fluidframework/core-utils/internal";
 import {
 	ILocationRedirectionError,
 	IUrlResolver,
@@ -21,7 +22,7 @@ export function isLocationRedirectionError(
 	error: unknown,
 ): error is ILocationRedirectionError {
 	return (
-		typeof error === "object" &&
+		isObject(error) &&
 		error !== null &&
 		(error as Partial<ILocationRedirectionError>).errorType ===
 			DriverErrorTypes.locationRedirection

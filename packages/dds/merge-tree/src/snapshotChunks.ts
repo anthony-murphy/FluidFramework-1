@@ -6,6 +6,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import { IFluidHandle } from "@fluidframework/core-interfaces";
+import { isObject } from "@fluidframework/core-utils/internal";
 import { IFluidSerializer } from "@fluidframework/shared-object-base/internal";
 import { ITelemetryLoggerExt } from "@fluidframework/telemetry-utils/internal";
 
@@ -79,7 +80,7 @@ export interface IJSONSegmentWithMergeInfo {
 export function hasMergeInfo(
 	spec: IJSONSegment | IJSONSegmentWithMergeInfo,
 ): spec is IJSONSegmentWithMergeInfo {
-	return !!spec && typeof spec === "object" && "json" in spec;
+	return isObject(spec) && "json" in spec;
 }
 
 export function serializeAsMinSupportedVersion(

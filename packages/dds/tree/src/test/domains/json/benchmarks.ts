@@ -8,6 +8,7 @@ import type {
 	JsonCompatibleReadOnly,
 	JsonCompatibleReadOnlyObject,
 } from "../../../util/index.js";
+import { isObject } from "@fluidframework/core-utils/internal";
 
 export function sum(cursor: ITreeCursor): number {
 	let total = 0;
@@ -46,7 +47,7 @@ export function sumDirect(
 ): number {
 	let total = 0;
 	for (const value of Object.values(jsonObj)) {
-		if (typeof value === "object" && value !== null) {
+		if (isObject(value)) {
 			total += sumDirect(value);
 		} else if (typeof value === "number") {
 			total += value;

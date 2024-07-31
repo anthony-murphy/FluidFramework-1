@@ -3,6 +3,12 @@
  * Licensed under the MIT License.
  */
 
+/*!
+ * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
+ * Licensed under the MIT License.
+ */
+import { isObject } from "@fluidframework/core-utils/internal";
+
 /**
  * Any mapping from a string to values of type `T`
  * @legacy
@@ -49,7 +55,7 @@ export function matchProperties(
 	for (const key of keysA) {
 		if (b?.[key] === undefined) {
 			return false;
-		} else if (typeof b[key] === "object") {
+		} else if (isObject(b[key])) {
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 			if (!matchProperties(a?.[key], b[key])) {
 				return false;

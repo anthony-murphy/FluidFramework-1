@@ -18,7 +18,7 @@
  * Messages must match known structures when scrubbing for Fluid Preview.
  */
 
-import { assert } from "@fluidframework/core-utils/internal";
+import { assert, isObject } from "@fluidframework/core-utils/internal";
 import { ISequencedDocumentMessage } from "@fluidframework/driver-definitions/internal";
 import * as Validator from "jsonschema";
 
@@ -319,7 +319,7 @@ export class Sanitizer {
 				input[i] = this.replaceText(value);
 			} else if (Array.isArray(value)) {
 				input[i] = this.replaceArray(value);
-			} else if (typeof value === "object") {
+			} else if (isObject(value)) {
 				input[i] = this.replaceObject(value);
 			}
 		}
@@ -354,7 +354,7 @@ export class Sanitizer {
 					);
 				} else if (Array.isArray(value)) {
 					input[key] = this.replaceArray(value);
-				} else if (typeof value === "object") {
+				} else if (isObject(value)) {
 					input[key] = this.replaceObject(value, excludedKeys);
 				}
 			}
@@ -378,7 +378,7 @@ export class Sanitizer {
 		} else if (Array.isArray(input)) {
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-return
 			return this.replaceArray(input);
-		} else if (typeof input === "object") {
+		} else if (isObject(input)) {
 			return this.replaceObject(input, excludedKeys);
 		}
 
@@ -464,7 +464,7 @@ export class Sanitizer {
 	 */
 	fixAttachContents(contents: any): any {
 		assert(
-			typeof contents === "object",
+			isObject(contents),
 			0x08b /* "Unexpected type on contents for fix of an attach!" */,
 		);
 		if (!this.objectMatchesSchema(contents, attachContentsSchema)) {

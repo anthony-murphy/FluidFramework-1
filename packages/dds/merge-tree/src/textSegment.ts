@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { assert } from "@fluidframework/core-utils/internal";
+import { assert, isObject } from "@fluidframework/core-utils/internal";
 
 import { BaseSegment, ISegment } from "./mergeTreeNodes.js";
 import { IJSONSegment } from "./ops.js";
@@ -51,7 +51,7 @@ export class TextSegment extends BaseSegment {
 	public static fromJSONObject(spec: string | IJSONSegment): TextSegment | undefined {
 		if (typeof spec === "string") {
 			return new TextSegment(spec);
-		} else if (spec && typeof spec === "object" && "text" in spec) {
+		} else if (spec && isObject(spec) && "text" in spec) {
 			const textSpec = spec as IJSONTextSegment;
 			return TextSegment.make(textSpec.text, textSpec.props as PropertySet);
 		}

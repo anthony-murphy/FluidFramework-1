@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { assert, oob } from "@fluidframework/core-utils/internal";
+import { assert, oob, isObject } from "@fluidframework/core-utils/internal";
 import { UsageError } from "@fluidframework/telemetry-utils/internal";
 
 import {
@@ -346,7 +346,7 @@ function arrayToMapTreeFields(
  */
 function arrayToMapTree(data: InsertableContent, schema: TreeNodeSchema): ExclusiveMapTree {
 	assert(schema.kind === NodeKind.Array, 0x922 /* Expected an array schema. */);
-	if (!(typeof data === "object" && data !== null && Symbol.iterator in data)) {
+	if (!(isObject(data) && data !== null && Symbol.iterator in data)) {
 		throw new UsageError(`Input data is incompatible with Array schema: ${data}`);
 	}
 
@@ -375,7 +375,7 @@ function arrayToMapTree(data: InsertableContent, schema: TreeNodeSchema): Exclus
  */
 function mapToMapTree(data: InsertableContent, schema: TreeNodeSchema): ExclusiveMapTree {
 	assert(schema.kind === NodeKind.Map, 0x923 /* Expected a Map schema. */);
-	if (!(typeof data === "object" && data !== null)) {
+	if (!(isObject(data) && data !== null)) {
 		throw new UsageError(`Input data is incompatible with Map schema: ${data}`);
 	}
 

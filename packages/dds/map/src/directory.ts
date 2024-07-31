@@ -4,7 +4,7 @@
  */
 
 import { TypedEventEmitter } from "@fluid-internal/client-utils";
-import { assert, unreachableCase } from "@fluidframework/core-utils/internal";
+import { assert, unreachableCase, isObject } from "@fluidframework/core-utils/internal";
 import type {
 	IChannelAttributes,
 	IFluidDataStoreRuntime,
@@ -1152,7 +1152,7 @@ function isClearLocalOpMetadata(metadata: any): metadata is IClearLocalOpMetadat
 		metadata !== undefined &&
 		metadata.type === "clear" &&
 		typeof metadata.pendingMessageId === "number" &&
-		typeof metadata.previousStorage === "object"
+		isObject(metadata.previousStorage)
 	);
 }
 

@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { assert, Deferred } from "@fluidframework/core-utils/internal";
+import { assert, Deferred, isObject } from "@fluidframework/core-utils/internal";
 import {
 	IDocumentDeltaStorageService,
 	IDocumentService,
@@ -38,7 +38,7 @@ export type debuggerUIFactory = (controller: IDebuggerController) => IDebuggerUI
 export class DebugReplayController extends ReplayController implements IDebuggerController {
 	// eslint-disable-next-line @rushstack/no-new-null
 	public static create(createUi: debuggerUIFactory): DebugReplayController | null {
-		if (typeof localStorage === "object" && localStorage?.FluidDebugger) {
+		if (isObject(localStorage) && localStorage?.FluidDebugger) {
 			const controller = new DebugReplayController();
 			const ui = createUi(controller);
 			if (ui) {
