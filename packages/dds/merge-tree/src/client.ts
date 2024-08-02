@@ -30,7 +30,7 @@ import type { AdjustParams } from "./adjust.js";
 import { DoublyLinkedList, RedBlackTree } from "./collections/index.js";
 import { UnassignedSequenceNumber, UniversalSequenceNumber } from "./constants.js";
 import { LocalReferencePosition, SlidingPreference } from "./localReference.js";
-import { IMergeTreeOptions, MergeTree } from "./mergeTree.js";
+import { IMergeTreeOptions, MergeTree, errorIfOptionNotTrue } from "./mergeTree.js";
 import type {
 	IMergeTreeClientSequenceArgs,
 	IMergeTreeDeltaCallbackArgs,
@@ -48,6 +48,7 @@ import {
 	// eslint-disable-next-line import/no-deprecated
 	SegmentGroup,
 	compareStrings,
+	toMoveInfo,
 } from "./mergeTreeNodes.js";
 import {
 	createAnnotateMarkerOp,
@@ -818,14 +819,30 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 						segment.seq === UnassignedSequenceNumber,
 						0x037 /* "Segment already has assigned sequence number" */,
 					);
+					const moveInfo = toMoveInfo(segment);
+
+					if (moveInfo !== undefined) {
+						errorIfOptionNotTrue(
+							this._mergeTree.options,
+							"mergeTreeEnableObliterateReconnect",
+						);
+						if (moveInfo.movedSeq !== UnassignedSequenceNumber) {
+							// the segment was remotely obliterated, so is considered removed
+							// we set the seq to the universal seq and remove the local seq,
+							// so its length is not considered for subsequent local changes
+							// this allows us to not send the op as even the local client will ignore the segment
+							segment.seq = UniversalSequenceNumber;
+							segment.localSeq = undefined;
+							break;
+						}
+					}
+
 					const segInsertOp: ISegment = segment.clone();
 					const opProps =
 						isObject(resetOp.seg) && "props" in resetOp.seg && isObject(resetOp.seg.props)
 							? { ...resetOp.seg.props }
 							: undefined;
-					if (segInsertOp.properties !== undefined || opProps !== undefined) {
-						segInsertOp.properties = opProps;
-					}
+					segInsertOp.properties = opProps;
 					newOp = createInsertSegmentOp(segmentPosition, segInsertOp);
 					break;
 				}
@@ -846,6 +863,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 					break;
 				}
 				case MergeTreeDeltaType.OBLITERATE: {
+					errorIfOptionNotTrue(this._mergeTree.options, "mergeTreeEnableObliterateReconnect");
 					if (
 						segment.localMovedSeq !== undefined &&
 						segment.movedSeq === UnassignedSequenceNumber &&
