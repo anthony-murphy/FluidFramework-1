@@ -69,7 +69,7 @@ describe("SharedString fuzz testing", () => {
 	);
 });
 
-describe.only("SharedString fuzz with stashing", () => {
+describe("SharedString fuzz with stashing", () => {
 	createDDSFuzzSuite(
 		{ ...baseSharedStringModel, workloadName: "SharedString with stashing" },
 		{
@@ -80,8 +80,7 @@ describe.only("SharedString fuzz with stashing", () => {
 				stashableClientProbability: 0.2,
 			},
 			// Uncomment this line to replay a specific seed from its failure file:
-			only: [42],
-			skipMinimization: true,
+			// only: [42],
 		},
 	);
 });

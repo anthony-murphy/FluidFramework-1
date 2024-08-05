@@ -24,7 +24,7 @@ import {
 	type Serializable,
 	IChannelServices,
 } from "@fluidframework/datastore-definitions/internal";
-import { PropertySet, Side } from "@fluidframework/merge-tree/internal";
+import { PropertySet, Side, AdjustParams } from "@fluidframework/merge-tree/internal";
 
 import type { SequenceInterval, SharedStringClass } from "../../index.js";
 import { type IIntervalCollection } from "../../intervalCollection.js";
@@ -65,7 +65,8 @@ export interface RemoveRange extends RangeSpec {
 
 export interface AnnotateRange extends RangeSpec {
 	type: "annotateRange";
-	props: { key: string; value?: Serializable<any> }[];
+	props?: { key: string; value?: Serializable<any> }[];
+	adjust?: { key: string; value: AdjustParams };
 }
 
 export interface ObliterateRange extends RangeSpec {
@@ -237,13 +238,14 @@ export function makeReducer(
 		removeRange: async ({ client }, { start, end }) => {
 			client.channel.removeRange(start, end);
 		},
-		annotateRange: async ({ client }, { start, end, props }) => {
-			for (const { key, value } of props) {
-				if (typeof value === "number") {
-					client.channel.adjustRange(start, end, { [key]: { value, min: 0, max: 50 } });
-				} else {
+		annotateRange: async ({ client }, { start, end, props, adjust }) => {
+			if (props) {
+				for (const { key, value } of props) {
 					client.channel.annotateRange(start, end, { [key]: value });
 				}
+			}
+			if (adjust) {
+				client.channel.adjustRange(start, end, { [adjust.key]: adjust.value });
 			}
 		},
 		obliterateRange: async ({ client }, { start, end }) => {
@@ -332,17 +334,33 @@ export function createSharedStringGeneratorOperations(
 	async function annotateRange(state: ClientOpState): Promise<AnnotateRange> {
 		const { random } = state;
 		const key = random.pick(options.propertyNamePool);
-		const value = random.pick([
-			random.string(5),
-			random.handle(),
-			random.integer(-100, 100),
-			undefined,
-			null,
-		]);
+		if (random.bool()) {
+			const value = random.pick([
+				random.string(5),
+				random.handle(),
+				random.integer(-100, 100),
+				undefined,
+				null,
+			]);
+			return {
+				type: "annotateRange",
+				...exclusiveRange(state),
+				props: [{ key, value }],
+				adjust: undefined,
+			};
+		}
 		return {
 			type: "annotateRange",
 			...exclusiveRange(state),
-			props: [{ key, value }],
+			props: undefined,
+			adjust: {
+				key,
+				value: {
+					value: random.integer(-100, 100),
+					min: random.bool() ? undefined : random.integer(-10, 10),
+					max: random.bool() ? undefined : random.integer(-10, 10),
+				},
+			},
 		};
 	}
 
