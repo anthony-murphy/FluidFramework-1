@@ -112,7 +112,8 @@ describe("client.applyMsg", () => {
 				"all segments should be acked",
 			);
 			assert(
-				segmentInfo.segment?.segmentGroups.empty,
+				segmentInfo.segment &&
+					client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.empty,
 				"there should be no outstanding segmentGroups",
 			);
 		}
@@ -217,12 +218,18 @@ describe("client.applyMsg", () => {
 		const initialLength = initialText.length;
 
 		assert.equal(segmentInfo.segment?.removedSeq, undefined);
-		assert(segmentInfo.segment?.segmentGroups.empty);
+		assert(
+			segmentInfo.segment &&
+				client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.empty,
+		);
 
 		const removeOp = client.removeRangeLocal(start, end);
 
 		assert.equal(segmentInfo.segment?.removedSeq, UnassignedSequenceNumber);
-		assert.equal(segmentInfo.segment?.segmentGroups.size, 1);
+		assert.equal(
+			client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.size,
+			1,
+		);
 
 		const remoteMessage = client.makeOpMessage(removeOp, 17);
 		remoteMessage.clientId = "remoteClient";
@@ -230,12 +237,15 @@ describe("client.applyMsg", () => {
 		client.applyMsg(remoteMessage);
 
 		assert.equal(segmentInfo.segment?.removedSeq, remoteMessage.sequenceNumber);
-		assert.equal(segmentInfo.segment?.segmentGroups.size, 1);
+		assert.equal(
+			client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.size,
+			1,
+		);
 
 		client.applyMsg(client.makeOpMessage(removeOp, 18, 0));
 
 		assert.equal(segmentInfo.segment?.removedSeq, remoteMessage.sequenceNumber);
-		assert(segmentInfo.segment?.segmentGroups.empty);
+		assert(client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.empty);
 		assert.equal(client.getLength(), initialLength - (end - start));
 		assert.equal(
 			client.getText(),

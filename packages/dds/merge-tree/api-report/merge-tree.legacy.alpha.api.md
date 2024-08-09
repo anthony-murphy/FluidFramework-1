@@ -67,8 +67,6 @@ export abstract class BaseSegment implements ISegment {
     // (undocumented)
     removedSeq?: number;
     // (undocumented)
-    readonly segmentGroups: SegmentGroupCollection;
-    // (undocumented)
     seq: number;
     // (undocumented)
     splitAt(pos: number): ISegment | undefined;
@@ -164,7 +162,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
     // (undocumented)
     walkSegments<TClientData>(handler: ISegmentAction<TClientData>, start: number | undefined, end: number | undefined, accum: TClientData, splitRange?: boolean): void;
     // (undocumented)
-    walkSegments<undefined>(handler: ISegmentAction<undefined>, start?: number, end?: number, accum?: undefined, splitRange?: boolean): void;
+    walkSegments(handler: ISegmentAction<undefined>, start?: number, end?: number, accum?: undefined, splitRange?: boolean): void;
 }
 
 // @alpha @deprecated (undocumented)
@@ -457,8 +455,6 @@ export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Parti
     localRemovedSeq?: number;
     localSeq?: number;
     properties?: PropertySet;
-    // (undocumented)
-    readonly segmentGroups: SegmentGroupCollection;
     seq?: number;
     // (undocumented)
     splitAt(pos: number): ISegment | undefined;
@@ -681,25 +677,6 @@ export interface SegmentGroup {
     refSeq: number;
     // (undocumented)
     segments: ISegment[];
-}
-
-// @alpha (undocumented)
-export class SegmentGroupCollection {
-    constructor(segment: ISegment);
-    // (undocumented)
-    copyTo(segment: ISegment): void;
-    // (undocumented)
-    dequeue(): SegmentGroup | undefined;
-    // (undocumented)
-    get empty(): boolean;
-    // (undocumented)
-    enqueue(segmentGroup: SegmentGroup): void;
-    // (undocumented)
-    pop?(): SegmentGroup | undefined;
-    // (undocumented)
-    remove?(segmentGroup: SegmentGroup): boolean;
-    // (undocumented)
-    get size(): number;
 }
 
 // @alpha (undocumented)

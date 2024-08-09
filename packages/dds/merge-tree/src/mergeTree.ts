@@ -161,7 +161,7 @@ export function weakMapGetOrInitialize<K extends WeakKey, V, P extends keyof V>(
 	return initVal;
 }
 
-interface InternalSegment {
+export interface InternalSegment {
 	propertyManager?: PropertiesManager;
 	segmentGroups?: SegmentGroupCollection;
 }

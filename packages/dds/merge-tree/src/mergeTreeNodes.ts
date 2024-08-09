@@ -3,8 +3,6 @@
  * Licensed under the MIT License.
  */
 
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-
 import { assert } from "@fluidframework/core-utils/internal";
 import { AttributionKey } from "@fluidframework/runtime-definitions/internal";
 
@@ -26,7 +24,6 @@ import {
 	refGetTileLabels,
 	refTypeIncludesFlag,
 } from "./referencePositions.js";
-import { SegmentGroupCollection } from "./segmentGroupCollection.js";
 import { Side } from "./sequencePlace.js";
 
 /**
@@ -367,6 +364,7 @@ export interface SegmentActions<TClientData> {
  * @deprecated This functionality was not meant to be exported and will be removed in a future release
  * @legacy
  * @alpha
+ * @privateRemarks After deprecation period this interface should be made internal
  */
 export interface SegmentGroup {
 	segments: ISegment[];
@@ -491,7 +489,6 @@ export abstract class BaseSegment implements ISegment {
 	public ordinal: string = "";
 	public cachedLength: number = 0;
 
-	public readonly segmentGroups: SegmentGroupCollection = new SegmentGroupCollection(this);
 	public readonly trackingCollection: TrackingGroupCollection = new TrackingGroupCollection(
 		this,
 	);
@@ -580,7 +577,7 @@ export abstract class BaseSegment implements ISegment {
 		leafSegment.movedSeqs = this.movedSeqs?.slice();
 		leafSegment.localMovedSeq = this.localMovedSeq;
 		leafSegment.wasMovedOnInsert = this.wasMovedOnInsert;
-		this.segmentGroups.copyTo(leafSegment);
+		// this.segmentGroups.copyTo(leafSegment);
 		this.trackingCollection.copyTo(leafSegment);
 		if (this.localRefs) {
 			this.localRefs.split(pos, leafSegment);

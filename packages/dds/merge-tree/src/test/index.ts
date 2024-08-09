@@ -116,7 +116,6 @@ export {
 	reservedTileLabelsKey,
 	revertMergeTreeDeltaRevertibles,
 	SegmentGroup,
-	SegmentGroupCollection,
 	SortedSegmentSet,
 	SortedSegmentSetItem,
 	SortedSet,

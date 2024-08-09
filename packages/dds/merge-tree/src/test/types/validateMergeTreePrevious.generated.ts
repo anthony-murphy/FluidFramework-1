@@ -1244,7 +1244,7 @@ declare type current_as_old_for_Interface_SegmentGroup = requireAssignableTo<Typ
  * If this test starts failing, it indicates a change that is not forward compatible.
  * To acknowledge the breaking change, add the following to package.json under
  * typeValidation.broken:
- * "Class_SegmentGroupCollection": {"forwardCompat": false}
+ * "RemovedClass_SegmentGroupCollection": {"forwardCompat": false}
  */
 declare type old_as_current_for_Class_SegmentGroupCollection = requireAssignableTo<TypeOnly<old.SegmentGroupCollection>, TypeOnly<current.SegmentGroupCollection>>
 
@@ -1253,18 +1253,18 @@ declare type old_as_current_for_Class_SegmentGroupCollection = requireAssignable
  * If this test starts failing, it indicates a change that is not backward compatible.
  * To acknowledge the breaking change, add the following to package.json under
  * typeValidation.broken:
- * "Class_SegmentGroupCollection": {"backCompat": false}
+ * "RemovedClass_SegmentGroupCollection": {"backCompat": false}
  */
-declare type current_as_old_for_Class_SegmentGroupCollection = requireAssignableTo<TypeOnly<current.SegmentGroupCollection>, TypeOnly<old.SegmentGroupCollection>>
+declare type current_as_old_for_RemovedClass_SegmentGroupCollection = requireAssignableTo<TypeOnly<current.SegmentGroupCollection>, TypeOnly<old.SegmentGroupCollection>>
 
 /*
  * Validate backward compatibility by using the current type in place of the old type.
  * If this test starts failing, it indicates a change that is not backward compatible.
  * To acknowledge the breaking change, add the following to package.json under
  * typeValidation.broken:
- * "ClassStatics_SegmentGroupCollection": {"backCompat": false}
+ * "RemovedClassStatics_SegmentGroupCollection": {"backCompat": false}
  */
-declare type current_as_old_for_ClassStatics_SegmentGroupCollection = requireAssignableTo<TypeOnly<typeof current.SegmentGroupCollection>, TypeOnly<typeof old.SegmentGroupCollection>>
+declare type current_as_old_for_RemovedClassStatics_SegmentGroupCollection = requireAssignableTo<TypeOnly<typeof current.SegmentGroupCollection>, TypeOnly<typeof old.SegmentGroupCollection>>
 
 /*
  * Validate forward compatibility by using the old type in place of the current type.

@@ -539,7 +539,9 @@ describe("MergeTree", () => {
 						currentSequenceNumber,
 						localClientId,
 					);
-					assert(segmentInfo.segment?.segmentGroups.empty);
+					assert(
+						client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.empty,
+					);
 				});
 				it("remote only", () => {
 					const segmentInfo = mergeTree.getContainingSegment(
@@ -598,7 +600,9 @@ describe("MergeTree", () => {
 						currentSequenceNumber,
 						localClientId,
 					);
-					assert(segmentInfo.segment?.segmentGroups.empty);
+					assert(
+						client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.empty,
+					);
 
 					mergeTree.annotateRange(
 						annotateStart,
@@ -610,7 +614,10 @@ describe("MergeTree", () => {
 						undefined as never,
 					);
 
-					assert.equal(segmentInfo.segment?.segmentGroups.size, 1);
+					assert.equal(
+						client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.size,
+						1,
+					);
 
 					mergeTree.ackPendingSegment({
 						op: {
@@ -624,7 +631,9 @@ describe("MergeTree", () => {
 						} as unknown as ISequencedDocumentMessage,
 					});
 
-					assert(segmentInfo.segment?.segmentGroups.empty);
+					assert(
+						client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.empty,
+					);
 					assert.equal(segmentInfo.segment?.properties?.propertySource, "local");
 					assert.equal(segmentInfo.segment?.properties?.remoteProperty, 1);
 				});

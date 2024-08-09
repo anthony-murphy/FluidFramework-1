@@ -304,7 +304,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 		accum: TClientData,
 		splitRange?: boolean,
 	): void;
-	public walkSegments<undefined>(
+	public walkSegments(
 		handler: ISegmentAction<undefined>,
 		start?: number,
 		end?: number,
@@ -777,7 +777,9 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 			a.ordinal < b.ordinal ? -1 : 1,
 		)) {
 			assert(
-				segment.segmentGroups.remove?.(segmentGroup) === true,
+				this._mergeTree.internalSegments
+					.get(segment)
+					?.segmentGroups?.remove?.(segmentGroup) === true,
 				0x035 /* "Segment group not in segment pending queue" */,
 			);
 			assert(
@@ -884,7 +886,9 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 			}
 
 			if (newOp && resetOp.type === MergeTreeDeltaType.OBLITERATE) {
-				segment.segmentGroups.enqueue(obliterateSegmentGroup);
+				this._mergeTree.internalSegments
+					.get(segment)
+					?.segmentGroups?.enqueue(obliterateSegmentGroup);
 
 				const first = opList[0];
 
@@ -900,7 +904,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 					localSeq: segmentGroup.localSeq,
 					refSeq: this.getCollabWindow().currentSeq,
 				};
-				segment.segmentGroups.enqueue(newSegmentGroup);
+				this._mergeTree.internalSegments.get(segment)?.segmentGroups?.enqueue(newSegmentGroup);
 
 				this._mergeTree.pendingSegments.push(newSegmentGroup);
 
