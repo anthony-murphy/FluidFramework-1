@@ -29,7 +29,12 @@ import { MergeTreeTextHelper } from "./MergeTreeTextHelper.js";
 import { DoublyLinkedList, RedBlackTree } from "./collections/index.js";
 import { UnassignedSequenceNumber, UniversalSequenceNumber } from "./constants.js";
 import { LocalReferencePosition, SlidingPreference } from "./localReference.js";
-import { IMergeTreeOptions, MergeTree, errorIfOptionNotTrue } from "./mergeTree.js";
+import {
+	IMergeTreeOptions,
+	MergeTree,
+	errorIfOptionNotTrue,
+	weakMapGetOrInitialize,
+} from "./mergeTree.js";
 import type {
 	IMergeTreeClientSequenceArgs,
 	IMergeTreeDeltaCallbackArgs,
@@ -75,6 +80,7 @@ import {
 } from "./ops.js";
 import { PropertySet } from "./properties.js";
 import { DetachedReferencePosition, ReferencePosition } from "./referencePositions.js";
+import { SegmentGroupCollection } from "./segmentGroupCollection.js";
 import { SnapshotLoader } from "./snapshotLoader.js";
 import { SnapshotV1 } from "./snapshotV1.js";
 import { SnapshotLegacy } from "./snapshotlegacy.js";
@@ -886,9 +892,12 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 			}
 
 			if (newOp && resetOp.type === MergeTreeDeltaType.OBLITERATE) {
-				this._mergeTree.internalSegments
-					.get(segment)
-					?.segmentGroups?.enqueue(obliterateSegmentGroup);
+				weakMapGetOrInitialize(
+					this._mergeTree.internalSegments,
+					segment,
+					"segmentGroups",
+					() => new SegmentGroupCollection(segment),
+				).enqueue(obliterateSegmentGroup);
 
 				const first = opList[0];
 
@@ -904,7 +913,12 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 					localSeq: segmentGroup.localSeq,
 					refSeq: this.getCollabWindow().currentSeq,
 				};
-				this._mergeTree.internalSegments.get(segment)?.segmentGroups?.enqueue(newSegmentGroup);
+				weakMapGetOrInitialize(
+					this._mergeTree.internalSegments,
+					segment,
+					"segmentGroups",
+					() => new SegmentGroupCollection(segment),
+				).enqueue(newSegmentGroup);
 
 				this._mergeTree.pendingSegments.push(newSegmentGroup);
 

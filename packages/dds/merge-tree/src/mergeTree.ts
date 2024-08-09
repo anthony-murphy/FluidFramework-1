@@ -1734,19 +1734,29 @@ export class MergeTree {
 		}
 
 		const next = segment.splitAt(pos)!;
-		const internalNext: InternalSegment = {};
-		this.internalSegments.set(next, internalNext);
 
 		const internalSegment = this.internalSegments.get(segment);
-
-		internalSegment?.segmentGroups?.copyTo?.(next, internalNext);
+		if (internalSegment?.segmentGroups) {
+			internalSegment.segmentGroups.copyTo(
+				weakMapGetOrInitialize(
+					this.internalSegments,
+					next,
+					"segmentGroups",
+					() => new SegmentGroupCollection(next),
+				),
+			);
+		}
 
 		if (internalSegment?.propertyManager && segment.properties) {
-			internalNext.propertyManager = new PropertiesManager();
 			next.properties = internalSegment.propertyManager.copyTo(
 				segment.properties,
 				next.properties,
-				internalNext.propertyManager,
+				weakMapGetOrInitialize(
+					this.internalSegments,
+					next,
+					"propertyManager",
+					() => new PropertiesManager(),
+				),
 			);
 		}
 

@@ -58,15 +58,15 @@ describe("segmentGroupCollection", () => {
 		}
 
 		const segmentCopy = TextSegment.make("");
-		const internalCopy: InternalSegment = {};
-		internalSegment.segmentGroups.copyTo(segmentCopy, internalCopy);
+		const segmentGroupCopy = new SegmentGroupCollection(segmentCopy);
+		internalSegment.segmentGroups.copyTo(segmentGroupCopy);
 
 		assert.equal(internalSegment.segmentGroups.size, segmentGroupCount);
-		assert.equal(internalCopy?.segmentGroups?.size, segmentGroupCount);
+		assert.equal(segmentGroupCopy.size, segmentGroupCount);
 
-		while (!internalSegment.segmentGroups.empty || !internalCopy.segmentGroups.empty) {
+		while (!internalSegment.segmentGroups.empty || !segmentGroupCopy.empty) {
 			const segmentGroup = internalSegment.segmentGroups.dequeue();
-			const copySegmentGroup = internalCopy.segmentGroups.dequeue();
+			const copySegmentGroup = segmentGroupCopy.dequeue();
 
 			assert.equal(segmentGroup, copySegmentGroup);
 			assert.equal(segmentGroup?.segments.length, 2);

@@ -4,7 +4,6 @@
  */
 
 import { DoublyLinkedList, walkList } from "./collections/index.js";
-import type { InternalSegment } from "./mergeTree.js";
 // eslint-disable-next-line import/no-deprecated
 import { ISegment, SegmentGroup } from "./mergeTreeNodes.js";
 
@@ -54,10 +53,7 @@ export class SegmentGroupCollection {
 		return this.segmentGroups.pop ? this.segmentGroups.pop()?.data : undefined;
 	}
 
-	public copyTo(segment: ISegment, internalSegment: InternalSegment): void {
-		const segmentGroups = (internalSegment.segmentGroups ??= new SegmentGroupCollection(
-			segment,
-		));
+	public copyTo(segmentGroups: SegmentGroupCollection): void {
 		walkList(this.segmentGroups, (sg) => segmentGroups.enqueueOnCopy(sg.data, this.segment));
 	}
 
