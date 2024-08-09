@@ -5,8 +5,6 @@
 
 import type { DoublyLinkedList } from "./collections/index.js";
 
-import type { MapLike } from "./index.js";
-
 /**
  * @alpha
  * @legacy
@@ -17,29 +15,16 @@ export interface AdjustParams {
 	max?: number;
 }
 
-export interface AdjustValue {
-	remoteValue: number;
-	// localValue: number;
-	pendingValues: AdjustParams[];
-}
-
-export interface AdjustOp {
-	type: "adjust";
-	pos1: number;
-	pos2: number;
-	props: MapLike<AdjustParams>;
-}
-
 export interface PendingChanges {
 	consensus: unknown;
 	changes: DoublyLinkedList<Readonly<AdjustParams | { raw: unknown }>>;
 }
 
 export function computeValue(
-	consensus: unknown,
+	consensus: Readonly<unknown>,
 	ops: Iterable<Readonly<AdjustParams | { raw: unknown }>>,
 ): unknown {
-	let computedValue = consensus;
+	let computedValue: unknown = consensus;
 	for (const op of ops) {
 		if ("raw" in op) {
 			computedValue = op.raw;
