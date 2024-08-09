@@ -59,7 +59,7 @@ const baseSharedStringModel = {
 		take(100, makeSharedStringOperationGenerator(defaultIntervalOperationGenerationConfig)),
 };
 
-describe("SharedString fuzz testing", () => {
+describe.only("SharedString fuzz testing", () => {
 	createDDSFuzzSuite(
 		{ ...baseSharedStringModel, workloadName: "SharedString default" },
 		{

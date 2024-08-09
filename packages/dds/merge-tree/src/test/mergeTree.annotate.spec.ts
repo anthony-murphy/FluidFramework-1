@@ -13,7 +13,7 @@ import {
 	UniversalSequenceNumber,
 } from "../constants.js";
 import { MergeTree } from "../mergeTree.js";
-import { BaseSegment, Marker } from "../mergeTreeNodes.js";
+import { BaseSegment, Marker, type ISegmentChanges } from "../mergeTreeNodes.js";
 import { MergeTreeDeltaType, ReferenceType } from "../ops.js";
 import { TextSegment } from "../textSegment.js";
 
@@ -162,11 +162,11 @@ describe("MergeTree", () => {
 						currentSequenceNumber,
 						localClientId,
 					);
-					const segment = segmentInfo.segment as BaseSegment;
+					const segment = segmentInfo.segment;
 
-					const splitSegment = segment.splitAt(splitPos) as BaseSegment;
+					const splitSegment: ISegmentChanges = mergeTree.splitLeafSegment(segment, splitPos);
 
-					assert.equal(splitSegment.properties?.propertySource, "local");
+					assert.equal(splitSegment.next?.properties?.propertySource, "local");
 				});
 
 				it("unsequenced local after unsequenced local split", () => {
@@ -211,12 +211,12 @@ describe("MergeTree", () => {
 					);
 					const splitSegment = splitSegmentInfo.segment as BaseSegment;
 
-					assert.equal(segment.segmentGroups.size, 2);
+					assert.equal(mergeTree.internalSegments.get(segment)?.segmentGroups?.size, 2);
 					assert.equal(segment.properties?.propertySource, "local");
 					assert.equal(segment.properties?.secondChange, 1);
 					assert(!segment.properties?.splitOnly);
 
-					assert.equal(splitSegment.segmentGroups.size, 3);
+					assert.equal(mergeTree.internalSegments.get(splitSegment)?.segmentGroups?.size, 3);
 					assert.equal(splitSegment.properties?.propertySource, "local");
 					assert.equal(splitSegment.properties?.secondChange, 1);
 					assert.equal(splitSegment.properties?.splitOnly, 1);
@@ -233,12 +233,12 @@ describe("MergeTree", () => {
 						} as unknown as ISequencedDocumentMessage,
 					});
 
-					assert.equal(segment.segmentGroups.size, 1);
+					assert.equal(mergeTree.internalSegments.get(segment)?.segmentGroups?.size, 1);
 					assert.equal(segment.properties?.propertySource, "local");
 					assert.equal(segment.properties?.secondChange, 1);
 					assert(!segment.properties?.splitOnly);
 
-					assert.equal(splitSegment.segmentGroups.size, 2);
+					assert.equal(mergeTree.internalSegments.get(splitSegment)?.segmentGroups?.size, 2);
 					assert.equal(splitSegment.properties?.propertySource, "local");
 					assert.equal(splitSegment.properties?.secondChange, 1);
 					assert.equal(splitSegment.properties?.splitOnly, 1);
@@ -255,12 +255,12 @@ describe("MergeTree", () => {
 						} as unknown as ISequencedDocumentMessage,
 					});
 
-					assert.equal(segment.segmentGroups.size, 0);
+					assert.equal(mergeTree.internalSegments.get(segment)?.segmentGroups?.size, 0);
 					assert.equal(segment.properties?.propertySource, "local");
 					assert.equal(segment.properties?.secondChange, 1);
 					assert(!segment.properties?.splitOnly);
 
-					assert.equal(splitSegment.segmentGroups.size, 1);
+					assert.equal(mergeTree.internalSegments.get(splitSegment)?.segmentGroups?.size, 1);
 					assert.equal(splitSegment.properties?.propertySource, "local");
 					assert.equal(splitSegment.properties?.secondChange, 1);
 					assert.equal(splitSegment.properties?.splitOnly, 1);
@@ -277,12 +277,12 @@ describe("MergeTree", () => {
 						} as unknown as ISequencedDocumentMessage,
 					});
 
-					assert.equal(segment.segmentGroups.size, 0);
+					assert.equal(mergeTree.internalSegments.get(segment)?.segmentGroups?.size, 0);
 					assert.equal(segment.properties?.propertySource, "local");
 					assert.equal(segment.properties?.secondChange, 1);
 					assert(!segment.properties?.splitOnly);
 
-					assert.equal(splitSegment.segmentGroups.size, 0);
+					assert.equal(mergeTree.internalSegments.get(splitSegment)?.segmentGroups?.size, 0);
 					assert.equal(splitSegment.properties?.propertySource, "local");
 					assert.equal(splitSegment.properties?.secondChange, 1);
 					assert.equal(splitSegment.properties?.splitOnly, 1);
@@ -309,7 +309,7 @@ describe("MergeTree", () => {
 					);
 					const segment = segmentInfo.segment as BaseSegment;
 
-					assert.equal(segment.segmentGroups.size, 1);
+					assert.equal(mergeTree.internalSegments.get(segment)?.segmentGroups?.size, 1);
 					assert.equal(segment.properties?.propertySource, "local");
 					assert.equal(segment.properties?.remoteProperty, 1);
 				});
@@ -333,7 +333,7 @@ describe("MergeTree", () => {
 						localClientId,
 					);
 					const segment = segmentInfo.segment as BaseSegment;
-					assert.equal(segment.segmentGroups.size, 0);
+					assert.equal(mergeTree.internalSegments.get(segment)?.segmentGroups?.size, 0);
 					assert.equal(segment.properties?.propertySource, "local");
 				});
 
@@ -370,7 +370,7 @@ describe("MergeTree", () => {
 					);
 					const segment = segmentInfo.segment as BaseSegment;
 
-					assert.equal(segment.segmentGroups.size, 0);
+					assert.equal(mergeTree.internalSegments.get(segment)?.segmentGroups?.size, 0);
 					assert.equal(segment.properties?.propertySource, "remote");
 					assert.equal(segment.properties?.remoteProperty, 1);
 				});
@@ -540,7 +540,9 @@ describe("MergeTree", () => {
 						localClientId,
 					);
 					assert(
-						client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.empty,
+						segmentInfo.segment &&
+							mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.empty !==
+								false,
 					);
 				});
 				it("remote only", () => {
@@ -562,9 +564,9 @@ describe("MergeTree", () => {
 					);
 					const segment = segmentInfo.segment as BaseSegment;
 
-					const splitSegment = segment.splitAt(1) as BaseSegment;
-					assert.equal(splitSegment.properties?.propertySource, "remote");
-					assert.equal(splitSegment.properties?.remoteProperty, 1);
+					const splitSegment = mergeTree.splitLeafSegment(segment, 1);
+					assert.equal(splitSegment.next?.properties?.propertySource, "remote");
+					assert.equal(splitSegment.next?.properties?.remoteProperty, 1);
 				});
 
 				it("remote before unsequenced local", () => {
@@ -601,7 +603,9 @@ describe("MergeTree", () => {
 						localClientId,
 					);
 					assert(
-						client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.empty,
+						segmentInfo.segment &&
+							mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.empty !==
+								false,
 					);
 
 					mergeTree.annotateRange(
@@ -615,7 +619,8 @@ describe("MergeTree", () => {
 					);
 
 					assert.equal(
-						client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.size,
+						segmentInfo.segment &&
+							mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.size,
 						1,
 					);
 
@@ -632,7 +637,8 @@ describe("MergeTree", () => {
 					});
 
 					assert(
-						client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.empty,
+						segmentInfo.segment &&
+							mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.empty,
 					);
 					assert.equal(segmentInfo.segment?.properties?.propertySource, "local");
 					assert.equal(segmentInfo.segment?.properties?.remoteProperty, 1);
@@ -699,7 +705,7 @@ describe("MergeTree", () => {
 					);
 					const segment = segmentInfo.segment as BaseSegment;
 
-					assert.equal(segment.segmentGroups.size, 1);
+					assert.equal(mergeTree.internalSegments.get(segment)?.segmentGroups?.size, 1);
 					assert.equal(segment.properties?.propertySource, "local");
 					assert.equal(segment.properties?.remoteProperty, 1);
 				});
@@ -737,7 +743,7 @@ describe("MergeTree", () => {
 					);
 					const segment = segmentInfo.segment as BaseSegment;
 
-					assert.equal(segment.segmentGroups.size, 0);
+					assert.equal(mergeTree.internalSegments.get(segment)?.segmentGroups?.size, 0);
 					assert.equal(segment.properties?.propertySource, "remote");
 					assert.equal(segment.properties?.remoteProperty, 1);
 				});

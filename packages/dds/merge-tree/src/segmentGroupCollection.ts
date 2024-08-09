@@ -55,7 +55,9 @@ export class SegmentGroupCollection {
 	}
 
 	public copyTo(segment: ISegment, internalSegment: InternalSegment): void {
-		const segmentGroups = internalSegment.segmentGroups ?? new SegmentGroupCollection(segment);
+		const segmentGroups = (internalSegment.segmentGroups ??= new SegmentGroupCollection(
+			segment,
+		));
 		walkList(this.segmentGroups, (sg) => segmentGroups.enqueueOnCopy(sg.data, this.segment));
 	}
 

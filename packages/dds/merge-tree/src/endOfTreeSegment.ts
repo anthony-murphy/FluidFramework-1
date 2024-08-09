@@ -43,7 +43,6 @@ abstract class BaseEndpointSegment {
 	removedSeq: number = 0;
 	removedClientIds: number[] = [LocalClientId];
 	attribution: undefined;
-	propertyManager: undefined;
 	localSeq: undefined;
 	localRemovedSeq: undefined;
 	properties: undefined;

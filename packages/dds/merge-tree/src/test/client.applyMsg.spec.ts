@@ -113,7 +113,8 @@ describe("client.applyMsg", () => {
 			);
 			assert(
 				segmentInfo.segment &&
-					client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.empty,
+					client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.empty !==
+						false,
 				"there should be no outstanding segmentGroups",
 			);
 		}
@@ -220,7 +221,8 @@ describe("client.applyMsg", () => {
 		assert.equal(segmentInfo.segment?.removedSeq, undefined);
 		assert(
 			segmentInfo.segment &&
-				client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.empty,
+				client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.empty !==
+					false,
 		);
 
 		const removeOp = client.removeRangeLocal(start, end);

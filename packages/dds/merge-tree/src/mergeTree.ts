@@ -148,15 +148,10 @@ export function weakMapGetOrInitialize<K extends WeakKey, V, P extends keyof V>(
 	weakMap: WeakMap<K, Partial<V>>,
 	key: K,
 	property: P,
-	initialize: (key: K) => V[typeof property],
-): Required<V>[P] {
+	initialize: (key: K) => V[P],
+): V[P] {
 	const maybeObject: Partial<V> = weakMap.get(key) ?? {};
-	const maybeVal: V[P] | undefined = maybeObject[property];
-	if (maybeVal !== undefined) {
-		return maybeVal;
-	}
-
-	const initVal = (maybeObject[property] = initialize(key));
+	const initVal = (maybeObject[property] ??= initialize(key));
 	weakMap.set(key, maybeObject);
 	return initVal;
 }
@@ -1730,7 +1725,7 @@ export class MergeTree {
 		}
 	}
 
-	private readonly splitLeafSegment = (
+	public readonly splitLeafSegment = (
 		segment: ISegment | undefined,
 		pos: number,
 	): ISegmentChanges => {
@@ -1739,6 +1734,22 @@ export class MergeTree {
 		}
 
 		const next = segment.splitAt(pos)!;
+		const internalNext: InternalSegment = {};
+		this.internalSegments.set(next, internalNext);
+
+		const internalSegment = this.internalSegments.get(segment);
+
+		internalSegment?.segmentGroups?.copyTo?.(next, internalNext);
+
+		if (internalSegment?.propertyManager && segment.properties) {
+			internalNext.propertyManager = new PropertiesManager();
+			next.properties = internalSegment.propertyManager.copyTo(
+				segment.properties,
+				next.properties,
+				internalNext.propertyManager,
+			);
+		}
+
 		this.mergeTreeMaintenanceCallback?.(
 			{
 				operation: MergeTreeMaintenanceType.SPLIT,
@@ -1998,7 +2009,7 @@ export class MergeTree {
 				"propertyManager",
 				() => new PropertiesManager(),
 			);
-			const properties = segment.properties ?? createMap();
+			const properties = (segment.properties ??= createMap());
 			const propertyDeltas = propertyManager.addProperties(
 				properties,
 				props,

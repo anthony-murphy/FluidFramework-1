@@ -553,7 +553,6 @@ export abstract class BaseSegment implements ISegment {
 			return undefined;
 		}
 
-		this.copyPropertiesTo(leafSegment);
 		// eslint-disable-next-line @typescript-eslint/no-this-alias, unicorn/no-this-assignment
 		const thisAsMergeSegment: ISegmentLeaf = this;
 		leafSegment.parent = thisAsMergeSegment.parent;
@@ -577,7 +576,7 @@ export abstract class BaseSegment implements ISegment {
 		leafSegment.movedSeqs = this.movedSeqs?.slice();
 		leafSegment.localMovedSeq = this.localMovedSeq;
 		leafSegment.wasMovedOnInsert = this.wasMovedOnInsert;
-		// this.segmentGroups.copyTo(leafSegment);
+
 		this.trackingCollection.copyTo(leafSegment);
 		if (this.localRefs) {
 			this.localRefs.split(pos, leafSegment);
@@ -587,17 +586,6 @@ export abstract class BaseSegment implements ISegment {
 		}
 
 		return leafSegment;
-	}
-
-	private copyPropertiesTo(other: ISegment): void {
-		/* if (this.propertyManager && this.properties) {
-			other.propertyManager = new PropertiesManager();
-			other.properties = this.propertyManager.copyTo(
-				this.properties,
-				other.properties,
-				other.propertyManager,
-			);
-		} */
 	}
 
 	public abstract clone(): ISegment;
