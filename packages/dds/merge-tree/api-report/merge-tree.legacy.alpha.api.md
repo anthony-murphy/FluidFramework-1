@@ -517,6 +517,8 @@ export class LocalReferenceCollection {
 // @alpha @sealed (undocumented)
 export interface LocalReferencePosition extends ReferencePosition {
     // (undocumented)
+    addProperties(newProps: PropertySet): void;
+    // (undocumented)
     callbacks?: Partial<Record<"beforeSlide" | "afterSlide", (ref: LocalReferencePosition) => void>>;
     readonly canSlideToEndpoint?: boolean;
     // (undocumented)
