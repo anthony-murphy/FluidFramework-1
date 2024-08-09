@@ -140,7 +140,7 @@ function createPropertyTrackingMergeTreeCallbacks(
 		{ op, sequencedMessage }: IMergeTreeDeltaOpArgs,
 		key: AttributionKey,
 	): void => {
-		for (const { segment } of deltaSegments) {
+		for (const { segment, propertyDeltas } of deltaSegments) {
 			for (const { propName, channelName } of toTrack) {
 				const shouldAttributeInsert =
 					op.type === MergeTreeDeltaType.INSERT &&
@@ -149,12 +149,10 @@ function createPropertyTrackingMergeTreeCallbacks(
 				const isLocal = sequencedMessage === undefined;
 				const shouldAttributeAnnotate =
 					op.type === MergeTreeDeltaType.ANNOTATE &&
-					// Only attribute annotations which change the tracked property
-					op.props[propName] !== undefined &&
 					// Local changes to the tracked property always take effect
 					(isLocal ||
 						// Acked changes only take effect if there isn't a pending local change
-						(!isLocal && !segment.propertyManager?.hasPendingProperty(propName)));
+						(!isLocal && propertyDeltas !== undefined && propName in propertyDeltas));
 
 				if (shouldAttributeInsert || shouldAttributeAnnotate) {
 					segment.attribution?.update(

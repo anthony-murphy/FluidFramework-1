@@ -85,7 +85,7 @@ import {
 	refHasTileLabel,
 	refTypeIncludesFlag,
 } from "./referencePositions.js";
-import { PropertiesRollback } from "./segmentPropertiesManager.js";
+import { PropertiesManager, PropertiesRollback } from "./segmentPropertiesManager.js";
 import { endpointPosAndSide, type SequencePlace } from "./sequencePlace.js";
 import { zamboniSegments } from "./zamboni.js";
 
@@ -142,6 +142,89 @@ const LRUSegmentComparer: IComparer<LRUSegment> = {
 	min: { maxSeq: -2 },
 	compare: (a, b) => a.maxSeq - b.maxSeq,
 };
+
+export function weakMapGetOrInitialize<K extends WeakKey, V>(
+	weakMap: WeakMap<K, Partial<V>>,
+	key: K,
+	property: keyof V,
+	initialize: (key: K) => V[typeof property],
+): V[typeof property] {
+	const maybeObject: Partial<V> = weakMap.get(key) ?? {};
+	const maybeVal: V[typeof property] | undefined = maybeObject[property];
+	if (maybeVal !== undefined) {
+		return maybeVal;
+	}
+
+	const initVal = (maybeObject[property] = initialize(key));
+	weakMap.set(key, maybeObject);
+	return initVal;
+}
+
+interface InternalSegment {
+	propertyManager?: PropertiesManager;
+}
+
+function ackSegment(
+	segment: ISegment,
+	internalSegment: InternalSegment | undefined,
+	// eslint-disable-next-line import/no-deprecated
+	segmentGroup: SegmentGroup,
+	opArgs: IMergeTreeDeltaOpArgs,
+): boolean {
+	const currentSegmentGroup = segment.segmentGroups.dequeue();
+	assert(currentSegmentGroup === segmentGroup, 0x043 /* "On ack, unexpected segmentGroup!" */);
+	switch (opArgs.op.type) {
+		case MergeTreeDeltaType.ANNOTATE: {
+			assert(
+				!!internalSegment?.propertyManager,
+				0x044 /* "On annotate ack, missing segment property manager!" */,
+			);
+			internalSegment.propertyManager.ackPendingProperties(opArgs.op);
+			return true;
+		}
+
+		case MergeTreeDeltaType.INSERT: {
+			assert(
+				segment.seq === UnassignedSequenceNumber,
+				0x045 /* "On insert, seq number already assigned!" */,
+			);
+			segment.seq = opArgs.sequencedMessage!.sequenceNumber;
+			segment.localSeq = undefined;
+			return true;
+		}
+
+		case MergeTreeDeltaType.REMOVE: {
+			const removalInfo: IRemovalInfo | undefined = toRemovalInfo(segment);
+			assert(removalInfo !== undefined, 0x046 /* "On remove ack, missing removal info!" */);
+			segment.localRemovedSeq = undefined;
+			if (removalInfo.removedSeq === UnassignedSequenceNumber) {
+				removalInfo.removedSeq = opArgs.sequencedMessage!.sequenceNumber;
+				return true;
+			}
+			return false;
+		}
+
+		case MergeTreeDeltaType.OBLITERATE: {
+			const moveInfo: IMoveInfo | undefined = toMoveInfo(segment);
+			assert(moveInfo !== undefined, 0x86e /* On obliterate ack, missing move info! */);
+			segment.localMovedSeq = undefined;
+			const seqIdx = moveInfo.movedSeqs.indexOf(UnassignedSequenceNumber);
+			assert(seqIdx !== -1, 0x86f /* expected movedSeqs to contain unacked seq */);
+			moveInfo.movedSeqs[seqIdx] = opArgs.sequencedMessage!.sequenceNumber;
+
+			if (moveInfo.movedSeq === UnassignedSequenceNumber) {
+				moveInfo.movedSeq = opArgs.sequencedMessage!.sequenceNumber;
+				return true;
+			}
+
+			return false;
+		}
+
+		default: {
+			throw new Error(`${opArgs.op.type} is in unrecognized operation type`);
+		}
+	}
+}
 
 /**
  * @legacy
@@ -434,6 +517,8 @@ export class MergeTree {
 	public readonly segmentsToScour = new Heap<LRUSegment>(LRUSegmentComparer);
 
 	public readonly attributionPolicy: AttributionPolicy | undefined;
+
+	public readonly internalSegments = new WeakMap<ISegment, InternalSegment>();
 
 	/**
 	 * Whether or not all blocks in the mergeTree currently have information about local partial lengths computed.
@@ -1192,7 +1277,12 @@ export class MergeTree {
 			const overlappingRemoves: boolean[] = [];
 			pendingSegmentGroup.segments.map((pendingSegment: ISegmentLeaf) => {
 				const localMovedSeq = pendingSegment.localMovedSeq;
-				const overlappingRemove = !pendingSegment.ack(pendingSegmentGroup, opArgs);
+				const overlappingRemove = ackSegment(
+					pendingSegment,
+					this.internalSegments.get(pendingSegment),
+					pendingSegmentGroup,
+					opArgs,
+				);
 
 				if (opArgs.op.type === MergeTreeDeltaType.OBLITERATE && localMovedSeq !== undefined) {
 					const locallyMovedSegments = this.locallyMovedSegments.get(localMovedSeq);
@@ -1895,12 +1985,22 @@ export class MergeTree {
 					props.markerId === segment.properties?.markerId,
 				0x5ad /* Cannot change the markerId of an existing marker */,
 			);
-			const propertyDeltas = segment.addProperties(
+
+			const propertyManager = weakMapGetOrInitialize(
+				this.internalSegments,
+				segment,
+				"propertyManager",
+				() => new PropertiesManager(),
+			);
+			const properties = segment.properties ?? createMap();
+			const propertyDeltas = propertyManager.addProperties(
+				properties,
 				props,
 				seq,
 				this.collabWindow.collaborating,
 				rollback,
 			);
+
 			if (!isRemovedOrMoved(segment)) {
 				deltaSegments.push({ segment, propertyDeltas });
 			}

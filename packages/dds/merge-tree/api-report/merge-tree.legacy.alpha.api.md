@@ -21,8 +21,6 @@ export abstract class BaseSegment implements ISegment {
     // (undocumented)
     ack(segmentGroup: SegmentGroup, opArgs: IMergeTreeDeltaOpArgs): boolean;
     // (undocumented)
-    addProperties(newProps: PropertySet, seq?: number, collaborating?: boolean, rollback?: PropertiesRollback): PropertySet;
-    // (undocumented)
     protected addSerializedProps(jseg: IJSONSegment): void;
     // (undocumented)
     append(other: ISegment): void;
@@ -64,8 +62,6 @@ export abstract class BaseSegment implements ISegment {
     ordinal: string;
     // (undocumented)
     properties?: PropertySet;
-    // (undocumented)
-    propertyManager?: PropertiesManager;
     // (undocumented)
     removedClientIds?: number[];
     // (undocumented)
@@ -444,8 +440,8 @@ export interface IRemovalInfo {
 
 // @alpha
 export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Partial<IMoveInfo> {
+    // @deprecated
     ack(segmentGroup: SegmentGroup, opArgs: IMergeTreeDeltaOpArgs): boolean;
-    addProperties(newProps: PropertySet, seq?: number, collaborating?: boolean, rollback?: PropertiesRollback): PropertySet;
     // (undocumented)
     append(segment: ISegment): void;
     attribution?: IAttributionCollection<AttributionKey>;
@@ -461,7 +457,6 @@ export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Parti
     localRemovedSeq?: number;
     localSeq?: number;
     properties?: PropertySet;
-    propertyManager?: PropertiesManager;
     // (undocumented)
     readonly segmentGroups: SegmentGroupCollection;
     seq?: number;
@@ -635,32 +630,11 @@ export interface MergeTreeRevertibleDriver {
     removeRange(start: number, end: number): void;
 }
 
-// @alpha (undocumented)
-export class PropertiesManager {
-    // (undocumented)
-    ackPendingProperties(annotateOp: IMergeTreeAnnotateMsg): void;
-    // (undocumented)
-    addProperties(oldProps: PropertySet, newProps: PropertySet, seq?: number, collaborating?: boolean, rollback?: PropertiesRollback): PropertySet;
-    // (undocumented)
-    copyTo(oldProps: PropertySet, newProps: PropertySet | undefined, newManager: PropertiesManager): PropertySet | undefined;
-    hasPendingProperties(props: PropertySet): boolean;
-    // (undocumented)
-    hasPendingProperty(key: string): boolean;
-}
-
-// @alpha (undocumented)
-export enum PropertiesRollback {
-    None = 0,
-    Rollback = 1
-}
-
 // @alpha
 export type PropertySet = MapLike<any>;
 
 // @alpha
 export interface ReferencePosition {
-    // (undocumented)
-    addProperties(newProps: PropertySet): void;
     getOffset(): number;
     getSegment(): ISegment | undefined;
     // (undocumented)

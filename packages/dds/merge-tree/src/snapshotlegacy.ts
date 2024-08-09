@@ -247,7 +247,6 @@ export class SnapshotLegacy {
 			totalLength += segment.cachedLength;
 			if (segment.properties !== undefined && Object.keys(segment.properties).length === 0) {
 				segment.properties = undefined;
-				segment.propertyManager = undefined;
 			}
 			this.segments!.push(segment);
 		});

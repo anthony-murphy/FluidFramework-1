@@ -17,7 +17,7 @@ import {
 import { LocalReferenceCollection } from "./localReference.js";
 import { IMergeTreeDeltaOpArgs } from "./mergeTreeDeltaCallback.js";
 import { TrackingGroupCollection } from "./mergeTreeTracking.js";
-import { IJSONSegment, IMarkerDef, MergeTreeDeltaType, ReferenceType } from "./ops.js";
+import { IJSONSegment, IMarkerDef, ReferenceType } from "./ops.js";
 import { computeHierarchicalOrdinal } from "./ordinal.js";
 import type { PartialSequenceLengths } from "./partialLengths.js";
 import { PropertySet, clone, createMap, type MapLike } from "./properties.js";
@@ -27,7 +27,6 @@ import {
 	refTypeIncludesFlag,
 } from "./referencePositions.js";
 import { SegmentGroupCollection } from "./segmentGroupCollection.js";
-import { PropertiesManager, PropertiesRollback } from "./segmentPropertiesManager.js";
 import { Side } from "./sequencePlace.js";
 
 /**
@@ -217,10 +216,6 @@ export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Parti
 	attribution?: IAttributionCollection<AttributionKey>;
 
 	/**
-	 * Manages pending local state for properties on this segment.
-	 */
-	propertyManager?: PropertiesManager;
-	/**
 	 * Local seq at which this segment was inserted.
 	 * This is defined if and only if the insertion of the segment is pending ack, i.e. `seq` is UnassignedSequenceNumber.
 	 * Once the segment is acked, this field is cleared.
@@ -263,18 +258,6 @@ export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Parti
 	 */
 	endSide?: Side.Before | Side.After;
 
-	/**
-	 * Add properties to this segment via annotation.
-	 *
-	 * @remarks This function should not be called directly. Properties should
-	 * be added through the `annotateRange` functions.
-	 */
-	addProperties(
-		newProps: PropertySet,
-		seq?: number,
-		collaborating?: boolean,
-		rollback?: PropertiesRollback,
-	): PropertySet;
 	clone(): ISegment;
 	canAppend(segment: ISegment): boolean;
 	append(segment: ISegment): void;
@@ -293,6 +276,7 @@ export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Parti
 	 * @throws - error if the segment state doesn't match segment group or op.
 	 * E.g. if the segment group is not first in the pending queue, or
 	 * an inserted segment does not have unassigned sequence number.
+	 * @deprecated - This will be removed in a future release
 	 */
 	ack(segmentGroup: SegmentGroup, opArgs: IMergeTreeDeltaOpArgs): boolean;
 }
@@ -514,32 +498,12 @@ export abstract class BaseSegment implements ISegment {
 	);
 	/***/
 	public attribution?: IAttributionCollection<AttributionKey>;
-	public propertyManager?: PropertiesManager;
 	public properties?: PropertySet;
 	public localRefs?: LocalReferenceCollection;
 	public abstract readonly type: string;
 	public localSeq?: number;
 	public localRemovedSeq?: number;
 	public localMovedSeq?: number;
-
-	public addProperties(
-		newProps: PropertySet,
-		seq?: number,
-		collaborating?: boolean,
-		rollback: PropertiesRollback = PropertiesRollback.None,
-	): PropertySet {
-		this.propertyManager ??= new PropertiesManager();
-		// A property set must be able to hold properties of any type, so the any is needed.
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		this.properties ??= createMap<any>();
-		return this.propertyManager.addProperties(
-			this.properties,
-			newProps,
-			seq,
-			collaborating,
-			rollback,
-		);
-	}
 
 	public hasProperty(key: string): boolean {
 		return !!this.properties && this.properties[key] !== undefined;
@@ -579,62 +543,7 @@ export abstract class BaseSegment implements ISegment {
 	public abstract toJSONObject(): any;
 
 	public ack(segmentGroup: SegmentGroup, opArgs: IMergeTreeDeltaOpArgs): boolean {
-		const currentSegmentGroup = this.segmentGroups.dequeue();
-		assert(
-			currentSegmentGroup === segmentGroup,
-			0x043 /* "On ack, unexpected segmentGroup!" */,
-		);
-		switch (opArgs.op.type) {
-			case MergeTreeDeltaType.ANNOTATE: {
-				assert(
-					!!this.propertyManager,
-					0x044 /* "On annotate ack, missing segment property manager!" */,
-				);
-				this.propertyManager.ackPendingProperties(opArgs.op);
-				return true;
-			}
-
-			case MergeTreeDeltaType.INSERT: {
-				assert(
-					this.seq === UnassignedSequenceNumber,
-					0x045 /* "On insert, seq number already assigned!" */,
-				);
-				this.seq = opArgs.sequencedMessage!.sequenceNumber;
-				this.localSeq = undefined;
-				return true;
-			}
-
-			case MergeTreeDeltaType.REMOVE: {
-				const removalInfo: IRemovalInfo | undefined = toRemovalInfo(this);
-				assert(removalInfo !== undefined, 0x046 /* "On remove ack, missing removal info!" */);
-				this.localRemovedSeq = undefined;
-				if (removalInfo.removedSeq === UnassignedSequenceNumber) {
-					removalInfo.removedSeq = opArgs.sequencedMessage!.sequenceNumber;
-					return true;
-				}
-				return false;
-			}
-
-			case MergeTreeDeltaType.OBLITERATE: {
-				const moveInfo: IMoveInfo | undefined = toMoveInfo(this);
-				assert(moveInfo !== undefined, 0x86e /* On obliterate ack, missing move info! */);
-				this.localMovedSeq = undefined;
-				const seqIdx = moveInfo.movedSeqs.indexOf(UnassignedSequenceNumber);
-				assert(seqIdx !== -1, 0x86f /* expected movedSeqs to contain unacked seq */);
-				moveInfo.movedSeqs[seqIdx] = opArgs.sequencedMessage!.sequenceNumber;
-
-				if (moveInfo.movedSeq === UnassignedSequenceNumber) {
-					moveInfo.movedSeq = opArgs.sequencedMessage!.sequenceNumber;
-					return true;
-				}
-
-				return false;
-			}
-
-			default: {
-				throw new Error(`${opArgs.op.type} is in unrecognized operation type`);
-			}
-		}
+		throw new Error("blah");
 	}
 
 	public splitAt(pos: number): ISegment | undefined {
@@ -685,14 +594,14 @@ export abstract class BaseSegment implements ISegment {
 	}
 
 	private copyPropertiesTo(other: ISegment): void {
-		if (this.propertyManager && this.properties) {
+		/* if (this.propertyManager && this.properties) {
 			other.propertyManager = new PropertiesManager();
 			other.properties = this.propertyManager.copyTo(
 				this.properties,
 				other.properties,
 				other.propertyManager,
 			);
-		}
+		} */
 	}
 
 	public abstract clone(): ISegment;
@@ -766,7 +675,7 @@ export class Marker extends BaseSegment implements ReferencePosition, ISegment {
 	public static make(refType: ReferenceType, props?: PropertySet): Marker {
 		const marker = new Marker(refType);
 		if (props) {
-			marker.addProperties(props);
+			marker.properties = { ...props };
 		}
 		return marker;
 	}

@@ -12,8 +12,7 @@ import { IMergeTreeAnnotateMsg } from "./ops.js";
 import { MapLike, PropertySet, createMap } from "./properties.js";
 
 /**
- * @legacy
- * @alpha
+ * @internal
  */
 export enum PropertiesRollback {
 	/**
@@ -28,8 +27,7 @@ export enum PropertiesRollback {
 }
 
 /**
- * @legacy
- * @alpha
+ * @internal
  */
 export class PropertiesManager {
 	private pendingKeyUpdateCount: MapLike<number> | undefined;
