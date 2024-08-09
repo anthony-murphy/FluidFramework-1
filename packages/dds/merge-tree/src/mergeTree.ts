@@ -85,6 +85,7 @@ import {
 	refHasTileLabel,
 	refTypeIncludesFlag,
 } from "./referencePositions.js";
+import { SegmentGroupCollection } from "./segmentGroupCollection.js";
 import { PropertiesManager, PropertiesRollback } from "./segmentPropertiesManager.js";
 import { endpointPosAndSide, type SequencePlace } from "./sequencePlace.js";
 import { zamboniSegments } from "./zamboni.js";
@@ -143,14 +144,14 @@ const LRUSegmentComparer: IComparer<LRUSegment> = {
 	compare: (a, b) => a.maxSeq - b.maxSeq,
 };
 
-export function weakMapGetOrInitialize<K extends WeakKey, V>(
+export function weakMapGetOrInitialize<K extends WeakKey, V, P extends keyof V>(
 	weakMap: WeakMap<K, Partial<V>>,
 	key: K,
-	property: keyof V,
+	property: P,
 	initialize: (key: K) => V[typeof property],
-): V[typeof property] {
+): Required<V>[P] {
 	const maybeObject: Partial<V> = weakMap.get(key) ?? {};
-	const maybeVal: V[typeof property] | undefined = maybeObject[property];
+	const maybeVal: V[P] | undefined = maybeObject[property];
 	if (maybeVal !== undefined) {
 		return maybeVal;
 	}
@@ -162,6 +163,7 @@ export function weakMapGetOrInitialize<K extends WeakKey, V>(
 
 interface InternalSegment {
 	propertyManager?: PropertiesManager;
+	segmentGroups?: SegmentGroupCollection;
 }
 
 function ackSegment(
@@ -171,7 +173,7 @@ function ackSegment(
 	segmentGroup: SegmentGroup,
 	opArgs: IMergeTreeDeltaOpArgs,
 ): boolean {
-	const currentSegmentGroup = segment.segmentGroups.dequeue();
+	const currentSegmentGroup = internalSegment?.segmentGroups?.dequeue();
 	assert(currentSegmentGroup === segmentGroup, 0x043 /* "On ack, unexpected segmentGroup!" */);
 	switch (opArgs.op.type) {
 		case MergeTreeDeltaType.ANNOTATE: {
@@ -1385,8 +1387,12 @@ export class MergeTree {
 		if (previousProps) {
 			_segmentGroup.previousProps!.push(previousProps);
 		}
-
-		segment.segmentGroups.enqueue(_segmentGroup);
+		weakMapGetOrInitialize(
+			this.internalSegments,
+			segment,
+			"segmentGroups",
+			() => new SegmentGroupCollection(segment),
+		).enqueue(_segmentGroup);
 		return _segmentGroup;
 	}
 
@@ -2318,7 +2324,7 @@ export class MergeTree {
 			// Disabling because a for of loop causes the type of segment to be ISegment, which does not have parent information stored
 			// eslint-disable-next-line unicorn/no-array-for-each
 			pendingSegmentGroup.segments.forEach((segment: ISegmentLeaf) => {
-				const segmentSegmentGroup = segment.segmentGroups?.pop?.();
+				const segmentSegmentGroup = this.internalSegments.get(segment)?.segmentGroups?.pop?.();
 				assert(
 					segmentSegmentGroup === pendingSegmentGroup,
 					0x3ee /* Unexpected segmentGroup in segment */,
@@ -2369,7 +2375,7 @@ export class MergeTree {
 			}
 			let i = 0;
 			for (const segment of pendingSegmentGroup.segments) {
-				const segmentSegmentGroup = segment.segmentGroups.pop?.();
+				const segmentSegmentGroup = this.internalSegments.get(segment)?.segmentGroups?.pop?.();
 				assert(
 					segmentSegmentGroup === pendingSegmentGroup,
 					0x3ef /* Unexpected segmentGroup in segment */,

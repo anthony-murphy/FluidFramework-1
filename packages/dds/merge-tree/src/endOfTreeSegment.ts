@@ -83,7 +83,6 @@ abstract class BaseEndpointSegment {
 	get trackingCollection(): never {
 		return notSupported();
 	}
-	addProperties = notSupported;
 	clone = notSupported;
 	canAppend = notSupported;
 	append = notSupported;
