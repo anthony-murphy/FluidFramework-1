@@ -1274,7 +1274,7 @@ export class MergeTree {
 			const overlappingRemoves: boolean[] = [];
 			pendingSegmentGroup.segments.map((pendingSegment: ISegmentLeaf) => {
 				const localMovedSeq = pendingSegment.localMovedSeq;
-				const overlappingRemove = ackSegment(
+				const overlappingRemove = !ackSegment(
 					pendingSegment,
 					this.internalSegments.get(pendingSegment),
 					pendingSegmentGroup,
