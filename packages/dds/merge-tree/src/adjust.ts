@@ -21,7 +21,7 @@ export interface PendingChanges {
 }
 
 export function computeValue(
-	consensus: Readonly<unknown>,
+	consensus: unknown,
 	ops: Iterable<Readonly<AdjustParams | { raw: unknown }>>,
 ): unknown {
 	let computedValue: unknown = consensus;

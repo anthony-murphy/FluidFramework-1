@@ -7,8 +7,7 @@ import { assert } from "@fluidframework/core-utils/internal";
 
 import { BaseSegment, ISegment } from "./mergeTreeNodes.js";
 import { IJSONSegment } from "./ops.js";
-import { PropertySet } from "./properties.js";
-import { handleProperties } from "./segmentPropertiesManager.js";
+import { clone, PropertySet } from "./properties.js";
 
 // Maximum length of text segment to be considered to be merged with other segment.
 // Maximum segment length is at least 2x of it (not taking into account initial segment creation).
@@ -44,7 +43,7 @@ export class TextSegment extends BaseSegment {
 	public static make(text: string, props?: PropertySet): TextSegment {
 		const seg = new TextSegment(text);
 		if (props) {
-			handleProperties({ props }, seg);
+			seg.properties = clone(props);
 		}
 		return seg;
 	}

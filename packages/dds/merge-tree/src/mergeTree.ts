@@ -87,6 +87,7 @@ import {
 	refHasTileLabel,
 	refTypeIncludesFlag,
 } from "./referencePositions.js";
+// eslint-disable-next-line import/no-deprecated
 import { handleProperties, PropertiesRollback } from "./segmentPropertiesManager.js";
 import { endpointPosAndSide, type SequencePlace } from "./sequencePlace.js";
 import { zamboniSegments } from "./zamboni.js";
@@ -1877,6 +1878,7 @@ export class MergeTree {
 		clientId: number,
 		seq: number,
 		opArgs: IMergeTreeDeltaOpArgs<Fixed<IMergeTreeAnnotateMsg>>,
+		// eslint-disable-next-line import/no-deprecated
 		rollback: PropertiesRollback = PropertiesRollback.None,
 	): void {
 		const { props, pos1: start, pos2: end } = opArgs.op;
@@ -2298,6 +2300,7 @@ export class MergeTree {
 						this.collabWindow.clientId,
 						UniversalSequenceNumber,
 						{ op: annotateOp },
+						// eslint-disable-next-line import/no-deprecated
 						PropertiesRollback.Rollback,
 					);
 					i++;

@@ -30,7 +30,7 @@ export interface AttributionPolicy {
 export abstract class BaseSegment implements ISegment {
     // (undocumented)
     ack(segmentGroup: SegmentGroup, opArgs: IMergeTreeDeltaOpArgs): boolean;
-    // (undocumented)
+    // @deprecated
     addProperties(newProps: PropertySet, seq?: number, collaborating?: boolean, rollback?: PropertiesRollback): PropertySet;
     // (undocumented)
     protected addSerializedProps(jseg: IJSONSegment): void;
@@ -74,7 +74,7 @@ export abstract class BaseSegment implements ISegment {
     ordinal: string;
     // (undocumented)
     properties?: PropertySet;
-    // (undocumented)
+    // @deprecated
     propertyManager?: PropertiesManager;
     // (undocumented)
     removedClientIds?: number[];
@@ -549,6 +549,8 @@ export class LocalReferenceCollection {
 // @alpha @sealed (undocumented)
 export interface LocalReferencePosition extends ReferencePosition {
     // (undocumented)
+    addProperties(newProps: PropertySet): void;
+    // (undocumented)
     callbacks?: Partial<Record<"beforeSlide" | "afterSlide", (ref: LocalReferencePosition) => void>>;
     readonly canSlideToEndpoint?: boolean;
     // (undocumented)
@@ -675,7 +677,7 @@ export class PropertiesManager {
     hasPendingProperty(key: string): boolean;
 }
 
-// @alpha (undocumented)
+// @alpha @deprecated (undocumented)
 export enum PropertiesRollback {
     None = 0,
     Rollback = 1
@@ -686,7 +688,7 @@ export type PropertySet = MapLike<any>;
 
 // @alpha
 export interface ReferencePosition {
-    // (undocumented)
+    // @deprecated (undocumented)
     addProperties(newProps: PropertySet): void;
     getOffset(): number;
     getSegment(): ISegment | undefined;

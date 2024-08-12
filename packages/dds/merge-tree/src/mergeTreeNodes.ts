@@ -30,6 +30,7 @@ import {
 import { SegmentGroupCollection } from "./segmentGroupCollection.js";
 import {
 	handleProperties,
+	// eslint-disable-next-line import/no-deprecated
 	PropertiesRollback,
 	// eslint-disable-next-line import/no-deprecated
 	PropertiesManager,
@@ -227,8 +228,7 @@ export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Parti
 	/**
 	 * Manages pending local state for properties on this segment.
 	 *
-	 * @deprecated This will be removed is future release.
-	 *
+	 * @deprecated - This property should not be used externally and will be removed in a subsequent release.
 	 */
 	// eslint-disable-next-line import/no-deprecated
 	propertyManager?: PropertiesManager;
@@ -279,6 +279,8 @@ export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Parti
 	/**
 	 * Add properties to this segment via annotation.
 	 *
+	 * @deprecated - This function should not be used externally and will be removed in a subsequent release.
+	 *
 	 * @remarks This function should not be called directly. Properties should
 	 * be added through the `annotateRange` functions.
 	 *
@@ -288,6 +290,7 @@ export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Parti
 		newProps: PropertySet,
 		seq?: number,
 		collaborating?: boolean,
+		// eslint-disable-next-line import/no-deprecated
 		rollback?: PropertiesRollback,
 	): PropertySet;
 	clone(): ISegment;
@@ -529,6 +532,10 @@ export abstract class BaseSegment implements ISegment {
 	);
 	/***/
 	public attribution?: IAttributionCollection<AttributionKey>;
+	/**
+	 * {@inheritdoc ISegment.propertyManager}
+	 * @deprecated - This property should not be used externally and will be removed in a subsequent release.
+	 */
 	// eslint-disable-next-line import/no-deprecated
 	public propertyManager?: PropertiesManager;
 	public properties?: PropertySet;
@@ -538,10 +545,15 @@ export abstract class BaseSegment implements ISegment {
 	public localRemovedSeq?: number;
 	public localMovedSeq?: number;
 
+	/**
+	 * {@inheritdoc ISegment.addProperties}
+	 * @deprecated - This function should not be used externally and will be removed in a subsequent release.
+	 */
 	public addProperties(
 		newProps: PropertySet,
 		seq?: number,
 		collaborating?: boolean,
+		// eslint-disable-next-line import/no-deprecated
 		rollback: PropertiesRollback = PropertiesRollback.None,
 	): PropertySet {
 		return handleProperties(
@@ -774,7 +786,7 @@ export class Marker extends BaseSegment implements ReferencePosition, ISegment {
 	public static make(refType: ReferenceType, props?: PropertySet): Marker {
 		const marker = new Marker(refType);
 		if (props) {
-			handleProperties({ props }, marker);
+			marker.properties = clone(props);
 		}
 		return marker;
 	}
