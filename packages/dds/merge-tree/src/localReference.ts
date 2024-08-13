@@ -132,7 +132,7 @@ class LocalReference implements LocalReferencePosition {
 		this.offset = offset;
 	}
 
-	public isLeaf(): boolean {
+	public isLeaf(): this is ISegment {
 		return false;
 	}
 

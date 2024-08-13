@@ -501,6 +501,12 @@ export abstract class BaseSegment implements ISegment {
 	public localRemovedSeq?: number;
 	public localMovedSeq?: number;
 
+	public constructor(properties?: PropertySet) {
+		if (properties !== undefined) {
+			this.properties = clone(properties);
+		}
+	}
+
 	public hasProperty(key: string): boolean {
 		return !!this.properties && this.properties[key] !== undefined;
 	}
@@ -657,15 +663,14 @@ export class Marker extends BaseSegment implements ReferencePosition, ISegment {
 	public readonly type = Marker.type;
 
 	public static make(refType: ReferenceType, props?: PropertySet): Marker {
-		const marker = new Marker(refType);
-		if (props) {
-			marker.properties = { ...props };
-		}
-		return marker;
+		return new Marker(refType, props);
 	}
 
-	constructor(public refType: ReferenceType) {
-		super();
+	constructor(
+		public refType: ReferenceType,
+		props?: PropertySet,
+	) {
+		super(props);
 		this.cachedLength = 1;
 	}
 

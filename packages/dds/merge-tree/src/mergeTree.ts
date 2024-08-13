@@ -77,7 +77,7 @@ import {
 } from "./ops.js";
 import { PartialSequenceLengths } from "./partialLengths.js";
 import { PerspectiveImpl, isSegmentPresent } from "./perspective.js";
-import { PropertySet, createMap, extend, extendIfUndefined } from "./properties.js";
+import { PropertySet, clone, createMap, extend, extendIfUndefined } from "./properties.js";
 import {
 	DetachedReferencePosition,
 	ReferencePosition,
@@ -85,6 +85,7 @@ import {
 	refHasTileLabel,
 	refTypeIncludesFlag,
 } from "./referencePositions.js";
+// eslint-disable-next-line import/no-deprecated
 import { SegmentGroupCollection } from "./segmentGroupCollection.js";
 import { PropertiesManager, PropertiesRollback } from "./segmentPropertiesManager.js";
 import { endpointPosAndSide, type SequencePlace } from "./sequencePlace.js";
@@ -1746,18 +1747,19 @@ export class MergeTree {
 				),
 			);
 		}
-
-		if (internalSegment?.propertyManager && segment.properties) {
-			next.properties = internalSegment.propertyManager.copyTo(
-				segment.properties,
-				next.properties,
-				weakMapGetOrInitialize(
-					this.internalSegments,
-					next,
-					"propertyManager",
-					() => new PropertiesManager(),
-				),
-			);
+		if (segment.properties) {
+			next.properties = internalSegment?.propertyManager
+				? internalSegment.propertyManager.copyTo(
+						segment.properties,
+						next.properties,
+						weakMapGetOrInitialize(
+							this.internalSegments,
+							next,
+							"propertyManager",
+							() => new PropertiesManager(),
+						),
+					)
+				: clone(segment.properties);
 		}
 
 		this.mergeTreeMaintenanceCallback?.(
@@ -1996,6 +1998,7 @@ export class MergeTree {
 		clientId: number,
 		seq: number,
 		opArgs: IMergeTreeDeltaOpArgs,
+		// eslint-disable-next-line import/no-deprecated
 		rollback: PropertiesRollback = PropertiesRollback.None,
 	): void {
 		this.ensureIntervalBoundary(start, refSeq, clientId);
@@ -2428,6 +2431,7 @@ export class MergeTree {
 						this.collabWindow.clientId,
 						UniversalSequenceNumber,
 						{ op: annotateOp },
+						// eslint-disable-next-line import/no-deprecated
 						PropertiesRollback.Rollback,
 					);
 					i++;

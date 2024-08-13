@@ -9,7 +9,7 @@ import { assert } from "@fluidframework/core-utils/internal";
 
 import { UnassignedSequenceNumber, UniversalSequenceNumber } from "./constants.js";
 import { IMergeTreeAnnotateMsg } from "./ops.js";
-import { MapLike, PropertySet, createMap } from "./properties.js";
+import { MapLike, PropertySet, clone, createMap, extend } from "./properties.js";
 
 /**
  * @internal
@@ -123,14 +123,10 @@ export class PropertiesManager {
 			if (!newManager) {
 				throw new Error("Must provide new PropertyManager");
 			}
-			for (const key of Object.keys(oldProps)) {
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-				newProps[key] = oldProps[key];
-			}
-			newManager.pendingKeyUpdateCount = createMap<number>();
-			for (const key of Object.keys(this.pendingKeyUpdateCount!)) {
-				// TODO Non null asserting, why is this not null?
-				newManager.pendingKeyUpdateCount[key] = this.pendingKeyUpdateCount![key]!;
+			extend(newProps, oldProps);
+
+			if (this.pendingKeyUpdateCount) {
+				newManager.pendingKeyUpdateCount = clone(this.pendingKeyUpdateCount);
 			}
 		}
 		return newProps;
