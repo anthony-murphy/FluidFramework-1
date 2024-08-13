@@ -107,11 +107,6 @@ export class RunSegment extends SubSequence<SparseMatrixItem> {
 	}
 	public static fromJSONObject(spec: any) {
 		if (spec && typeof spec === "object" && "items" in spec) {
-			const segment = new RunSegment(spec.items);
-			if (spec.props) {
-				segment.properties = { ...spec.props };
-			}
-			return segment;
 			return new RunSegment(spec.items, spec.props);
 		}
 		return undefined;
