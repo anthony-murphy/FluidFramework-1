@@ -13,7 +13,6 @@ import {
 	UniversalSequenceNumber,
 } from "./constants.js";
 import { LocalReferenceCollection } from "./localReference.js";
-import { IMergeTreeDeltaOpArgs } from "./mergeTreeDeltaCallback.js";
 import { TrackingGroupCollection } from "./mergeTreeTracking.js";
 import { IJSONSegment, IMarkerDef, ReferenceType } from "./ops.js";
 import { computeHierarchicalOrdinal } from "./ordinal.js";
@@ -261,21 +260,6 @@ export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Parti
 	// Changing this to something other than any would break consumers.
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	toJSONObject(): any;
-	/**
-	 * @deprecated - This function should not be used externally and will be removed in a subsequent release.
-	 * Acks the current segment against the segment group, op, and merge tree.
-	 *
-	 * @param segmentGroup - Pending segment group associated with this op.
-	 * @param opArgs - Information about the op that was acked
-	 * @returns `true` if the op modifies the segment, otherwise `false`.
-	 * The only current false case is overlapping remove, where a segment is removed
-	 * by a previously sequenced operation before the current operation is acked.
-	 * @throws - error if the segment state doesn't match segment group or op.
-	 * E.g. if the segment group is not first in the pending queue, or
-	 * an inserted segment does not have unassigned sequence number.
-	 * @deprecated - This will be removed in a future release
-	 */
-	ack(segmentGroup: SegmentGroup, opArgs: IMergeTreeDeltaOpArgs): boolean;
 }
 
 /**
@@ -544,14 +528,6 @@ export abstract class BaseSegment implements ISegment {
 	// TODO: If possible, change the return type to match what should be returned for each segment type.
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	public abstract toJSONObject(): any;
-
-	/**
-	 * {@inheritdoc ISegment.ack}
-	 * @deprecated - This function should not be used externally and will be removed in a subsequent release.
-	 */
-	public ack(segmentGroup: SegmentGroup, opArgs: IMergeTreeDeltaOpArgs): boolean {
-		throw new Error("blah");
-	}
 
 	public splitAt(pos: number): ISegment | undefined {
 		if (pos <= 0) {

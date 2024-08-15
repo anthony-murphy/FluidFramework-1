@@ -162,6 +162,19 @@ export interface InternalSegment {
 	segmentGroups?: SegmentGroupCollection;
 }
 
+/**
+ * Acks the current segment against the segment group, op, and merge tree
+ * @param segment - The segment to be ack'd
+ * @param internalSegment - the matching internal segment for the segment
+ * @param segmentGroup - Pending segment group associated with this op.
+ * @param opArgs - Information about the op that was acked
+ * @returns `true` if the op modifies the segment, otherwise `false`.
+ * The only current false case is overlapping remove, where a segment is removed
+ * by a previously sequenced operation before the current operation is acked.
+ * @throws - error if the segment state doesn't match segment group or op.
+ * E.g. if the segment group is not first in the pending queue, or
+ * an inserted segment does not have unassigned sequence number.
+ */
 function ackSegment(
 	segment: ISegment,
 	internalSegment: InternalSegment | undefined,
