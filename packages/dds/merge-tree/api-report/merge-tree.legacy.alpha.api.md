@@ -19,7 +19,7 @@ export interface AttributionPolicy {
 // @alpha (undocumented)
 export abstract class BaseSegment implements ISegment {
     constructor(properties?: PropertySet);
-    // (undocumented)
+    // @deprecated (undocumented)
     ack(segmentGroup: SegmentGroup, opArgs: IMergeTreeDeltaOpArgs): boolean;
     // (undocumented)
     protected addSerializedProps(jseg: IJSONSegment): void;
@@ -439,7 +439,7 @@ export interface IRemovalInfo {
 
 // @alpha
 export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Partial<IMoveInfo> {
-    // @deprecated
+    // @deprecated (undocumented)
     ack(segmentGroup: SegmentGroup, opArgs: IMergeTreeDeltaOpArgs): boolean;
     // (undocumented)
     append(segment: ISegment): void;

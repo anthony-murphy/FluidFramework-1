@@ -262,6 +262,7 @@ export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Parti
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	toJSONObject(): any;
 	/**
+	 * @deprecated - This function should not be used externally and will be removed in a subsequent release.
 	 * Acks the current segment against the segment group, op, and merge tree.
 	 *
 	 * @param segmentGroup - Pending segment group associated with this op.
@@ -544,6 +545,10 @@ export abstract class BaseSegment implements ISegment {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	public abstract toJSONObject(): any;
 
+	/**
+	 * {@inheritdoc ISegment.ack}
+	 * @deprecated - This function should not be used externally and will be removed in a subsequent release.
+	 */
 	public ack(segmentGroup: SegmentGroup, opArgs: IMergeTreeDeltaOpArgs): boolean {
 		throw new Error("blah");
 	}
