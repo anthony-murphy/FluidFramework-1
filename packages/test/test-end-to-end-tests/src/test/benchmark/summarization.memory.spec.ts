@@ -9,15 +9,13 @@ import { bufferToString } from "@fluid-internal/client-utils";
 import { ITestDataObject, describeCompat } from "@fluid-private/test-version-utils";
 import { IMemoryTestObject, benchmarkMemory } from "@fluid-tools/benchmark";
 import { IContainer } from "@fluidframework/container-definitions/internal";
-import {
-	ContainerRuntime,
-	DefaultSummaryConfiguration,
-} from "@fluidframework/container-runtime/internal";
+import { DefaultSummaryConfiguration } from "@fluidframework/container-runtime/internal";
 import { ISummaryBlob, SummaryType } from "@fluidframework/driver-definitions";
 import { channelsTreeName } from "@fluidframework/runtime-definitions/internal";
 import {
 	ITestContainerConfig,
 	ITestObjectProvider,
+	unsafeSummarize,
 } from "@fluidframework/test-utils/internal";
 
 const defaultDataStoreId = "default";
@@ -53,12 +51,11 @@ describeCompat("Summarization - runtime benchmarks", "NoCompat", (getTestObjectP
 			title = "Generate summary tree";
 			async run() {
 				const defaultDataStore = (await mainContainer.getEntryPoint()) as ITestDataObject;
-				const containerRuntime = defaultDataStore._context
-					.containerRuntime as ContainerRuntime;
+				const containerRuntime = defaultDataStore._context.containerRuntime;
 
 				await provider.ensureSynchronized();
 
-				const { stats, summary } = await containerRuntime.summarize({
+				const { stats, summary } = await unsafeSummarize(containerRuntime, {
 					runGC: false,
 					fullTree: true,
 				});

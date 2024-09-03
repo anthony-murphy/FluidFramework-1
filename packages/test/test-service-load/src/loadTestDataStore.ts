@@ -13,7 +13,6 @@ import {
 } from "@fluidframework/aqueduct/internal";
 import { ILoaderOptions } from "@fluidframework/container-definitions/internal";
 import {
-	ContainerRuntime,
 	IContainerRuntimeOptions,
 	UnknownContainerRuntimeMessage,
 } from "@fluidframework/container-runtime/internal";
@@ -32,6 +31,7 @@ import { IContainerRuntimeBase } from "@fluidframework/runtime-definitions/inter
 import { toDeltaManagerInternal } from "@fluidframework/runtime-utils/internal";
 import { ITaskManager, TaskManager } from "@fluidframework/task-manager/internal";
 import { ITelemetryLoggerExt } from "@fluidframework/telemetry-utils/internal";
+import { unsafeResolveHandle } from "@fluidframework/test-utils/internal";
 
 import type { TestConfiguration } from "./testConfigFile.js";
 import { printStatus } from "./utils.js";
@@ -135,7 +135,7 @@ class LoadTestDataStoreModel {
 		// If we did not create the data store above, load it by getting its url.
 		if (gcDataStore === undefined) {
 			const gcDataStoreId = root.get(gcDataStoreIdKey);
-			const response = await (containerRuntime as ContainerRuntime).resolveHandle({
+			const response = await unsafeResolveHandle(containerRuntime, {
 				url: `/${gcDataStoreId}`,
 			});
 			if (response.status !== 200 || response.mimeType !== "fluid/object") {

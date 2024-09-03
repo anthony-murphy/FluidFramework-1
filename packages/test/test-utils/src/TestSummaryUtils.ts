@@ -10,6 +10,7 @@ import {
 	LoaderHeader,
 } from "@fluidframework/container-definitions/internal";
 import {
+	ContainerRuntime,
 	IOnDemandSummarizeOptions,
 	ISummarizer,
 	ISummaryRuntimeOptions,
@@ -26,6 +27,7 @@ import { DriverHeader } from "@fluidframework/driver-definitions/internal";
 import {
 	IFluidDataStoreFactory,
 	NamedFluidDataStoreRegistryEntries,
+	IContainerRuntimeBase,
 } from "@fluidframework/runtime-definitions/internal";
 
 import { createTestConfigProvider } from "./TestConfigs.js";
@@ -233,4 +235,30 @@ export interface SummaryInfo {
 	 * Reference sequence number of the current summary generation
 	 */
 	summaryRefSeq: number;
+}
+
+/**
+ * @internal
+ */
+export async function unsafeSummarize(
+	containerRuntime: IContainerRuntimeBase,
+	...params: Parameters<ContainerRuntime["summarize"]>
+) {
+	if (containerRuntime instanceof ContainerRuntime) {
+		return containerRuntime.summarize(...params);
+	}
+	throw new Error("containerRuntime is not a ContainerRuntime");
+}
+
+/**
+ * @internal
+ */
+export async function unsafeResolveHandle(
+	containerRuntime: IContainerRuntimeBase,
+	...params: Parameters<ContainerRuntime["resolveHandle"]>
+) {
+	if (containerRuntime instanceof ContainerRuntime) {
+		return containerRuntime.resolveHandle(...params);
+	}
+	throw new Error("containerRuntime is not a ContainerRuntime");
 }

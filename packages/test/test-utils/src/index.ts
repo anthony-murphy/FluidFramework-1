@@ -46,6 +46,8 @@ export {
 	createSummarizerFromFactory,
 	summarizeNow,
 	SummaryInfo,
+	unsafeSummarize,
+	unsafeResolveHandle,
 } from "./TestSummaryUtils.js";
 export {
 	defaultTimeoutDurationMs,
