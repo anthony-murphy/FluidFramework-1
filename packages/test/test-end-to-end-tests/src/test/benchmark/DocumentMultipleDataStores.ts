@@ -16,7 +16,6 @@ import {
 } from "@fluidframework/aqueduct/internal";
 import { IContainer, LoaderHeader } from "@fluidframework/container-definitions/internal";
 import {
-	ContainerRuntime,
 	IContainerRuntimeOptions,
 	ISummarizer,
 } from "@fluidframework/container-runtime/internal";
@@ -27,6 +26,7 @@ import {
 	IRequest,
 } from "@fluidframework/core-interfaces";
 import { type ISharedMap, SharedMap } from "@fluidframework/map/internal";
+import { IContainerRuntimeBase } from "@fluidframework/runtime-definitions/internal";
 import { SharedString } from "@fluidframework/sequence/internal";
 import { ITelemetryLoggerExt } from "@fluidframework/telemetry-utils/internal";
 import {
@@ -95,7 +95,7 @@ const runtimeOptions: IContainerRuntimeOptions = {
 // implement IDocumentLoader methods
 export class DocumentMultipleDds implements IDocumentLoaderAndSummarizer {
 	private _mainContainer: IContainer | undefined;
-	private containerRuntime: ContainerRuntime | undefined;
+	private containerRuntime: IContainerRuntimeBase | undefined;
 	private mainDataStore: TestDataObject | undefined;
 	private readonly numberDataStoreCounts: number;
 	private readonly dsCountsPerIteration: number;
@@ -202,7 +202,7 @@ export class DocumentMultipleDds implements IDocumentLoaderAndSummarizer {
 		});
 		this.props.provider.updateDocumentId(this._mainContainer.resolvedUrl);
 		this.mainDataStore = (await this._mainContainer.getEntryPoint()) as TestDataObject;
-		this.containerRuntime = this.mainDataStore._context.containerRuntime as ContainerRuntime;
+		this.containerRuntime = this.mainDataStore._context.containerRuntime;
 		this.mainDataStore._root.set("mode", "write");
 		await this.ensureContainerConnectedWriteMode(this._mainContainer);
 		await this.createDataStores();

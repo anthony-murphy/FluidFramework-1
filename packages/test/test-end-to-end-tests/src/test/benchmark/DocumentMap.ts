@@ -16,7 +16,6 @@ import {
 import { IContainer, LoaderHeader } from "@fluidframework/container-definitions/internal";
 import {
 	CompressionAlgorithms,
-	ContainerRuntime,
 	IContainerRuntimeOptions,
 	ISummarizer,
 } from "@fluidframework/container-runtime/internal";
@@ -114,7 +113,6 @@ export class DocumentMap implements IDocumentLoaderAndSummarizer {
 	private readonly keysInMap: number;
 	private readonly sizeOfItemMb: number;
 	private _mainContainer: IContainer | undefined;
-	private containerRuntime: ContainerRuntime | undefined;
 	private mainDataStore: TestDataObject | undefined;
 	private readonly _dataObjectFactory: DataObjectFactory<TestDataObject>;
 	public get dataObjectFactory() {
@@ -218,7 +216,6 @@ export class DocumentMap implements IDocumentLoaderAndSummarizer {
 			this.props.provider.driver.createCreateNewRequest(this.props.provider.documentId),
 		);
 		await this.waitForContainerSave(this._mainContainer);
-		this.containerRuntime = this.mainDataStore._context.containerRuntime as ContainerRuntime;
 
 		if (this._mainContainer.deltaManager.active) {
 			await this.ensureContainerConnectedWriteMode(this._mainContainer);

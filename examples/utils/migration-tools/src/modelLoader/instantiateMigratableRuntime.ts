@@ -9,7 +9,7 @@ import {
 	IRuntime,
 } from "@fluidframework/container-definitions/internal";
 import {
-	ContainerRuntime,
+	loadContainerRuntime,
 	IContainerRuntimeOptions,
 } from "@fluidframework/container-runtime/internal";
 import { IContainerRuntime } from "@fluidframework/container-runtime-definitions/internal";
@@ -81,7 +81,7 @@ export const instantiateMigratableRuntime = async <ModelType>(
 		...registryEntries,
 		[migrationToolRegistryKey, Promise.resolve(migrationToolFactory)],
 	];
-	const runtime = await ContainerRuntime.loadRuntime({
+	const runtime = await loadContainerRuntime({
 		context,
 		registryEntries: combinedRegistryEntries,
 		provideEntryPoint: async (

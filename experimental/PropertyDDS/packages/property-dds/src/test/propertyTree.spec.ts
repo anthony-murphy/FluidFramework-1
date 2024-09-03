@@ -18,13 +18,13 @@ import {
 	ILoaderOptions,
 } from "@fluidframework/container-definitions/internal";
 import { Loader as ContainerLoader } from "@fluidframework/container-loader/internal";
-import { ContainerRuntime } from "@fluidframework/container-runtime/internal";
 import { IFluidHandle } from "@fluidframework/core-interfaces";
 import { IUrlResolver } from "@fluidframework/driver-definitions/internal";
 import {
 	LocalDocumentServiceFactory,
 	LocalResolver,
 } from "@fluidframework/local-driver/internal";
+import { IContainerRuntimeBase } from "@fluidframework/runtime-definitions/internal";
 import {
 	ILocalDeltaConnectionServer,
 	LocalDeltaConnectionServer,
@@ -221,7 +221,7 @@ describe("PropertyDDS summarizer", () => {
 		// Summarize
 		await summarizeNow(summarizer.summarizer);
 
-		const runtime = (summarizer.summarizer as any).runtime as ContainerRuntime;
+		const runtime = (summarizer.summarizer as any).runtime as IContainerRuntimeBase;
 		const entryPoint = (await runtime.getAliasedDataStoreEntryPoint("default")) as
 			| IFluidHandle<ITestFluidObject>
 			| undefined;

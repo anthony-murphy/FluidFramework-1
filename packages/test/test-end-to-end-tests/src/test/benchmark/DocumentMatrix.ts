@@ -16,7 +16,6 @@ import {
 } from "@fluidframework/aqueduct/internal";
 import { IContainer, LoaderHeader } from "@fluidframework/container-definitions/internal";
 import {
-	ContainerRuntime,
 	IContainerRuntimeOptions,
 	ISummarizer,
 } from "@fluidframework/container-runtime/internal";
@@ -98,7 +97,6 @@ const runtimeOptions: IContainerRuntimeOptions = {
 
 export class DocumentMatrix implements IDocumentLoaderAndSummarizer {
 	private _mainContainer: IContainer | undefined;
-	private containerRuntime: ContainerRuntime | undefined;
 	private mainDataStore: TestDataObject | undefined;
 	private readonly rowSize: number;
 	private readonly columnSize: number;
@@ -231,7 +229,6 @@ export class DocumentMatrix implements IDocumentLoaderAndSummarizer {
 		);
 
 		await this.waitForContainerSave(this._mainContainer);
-		this.containerRuntime = this.mainDataStore._context.containerRuntime as ContainerRuntime;
 
 		if (this._mainContainer.deltaManager.active) {
 			await this.ensureContainerConnectedWriteMode(this._mainContainer);

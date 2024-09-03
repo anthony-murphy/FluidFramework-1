@@ -118,7 +118,7 @@ describeCompat("Attributor for SharedCell", "NoCompat", (getTestObjectProvider, 
 
 	const getAttributorFromContainer = async (container: IContainer) => {
 		const dataStore = (await container.getEntryPoint()) as ITestFluidObject;
-		const containerRuntime = dataStore.context.containerRuntime as ContainerRuntime;
+		const containerRuntime = dataStore.context.containerRuntime;
 		const attributor = await getRuntimeAttributor(containerRuntime);
 		assert(attributor !== undefined, "Attributor should be defined");
 		return attributor;
