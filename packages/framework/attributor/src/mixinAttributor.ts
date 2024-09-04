@@ -13,8 +13,10 @@ import {
 	type IResponse,
 } from "@fluidframework/core-interfaces";
 import { assert } from "@fluidframework/core-utils/internal";
-import { IContainerRuntimeBase } from "@fluidframework/runtime-definitions/internal";
-import { type NamedFluidDataStoreRegistryEntries } from "@fluidframework/runtime-definitions/internal";
+import {
+	type IContainerRuntimeBase,
+	type NamedFluidDataStoreRegistryEntries,
+} from "@fluidframework/runtime-definitions/internal";
 import { loggerToMonitoringContext } from "@fluidframework/telemetry-utils/internal";
 
 import {
