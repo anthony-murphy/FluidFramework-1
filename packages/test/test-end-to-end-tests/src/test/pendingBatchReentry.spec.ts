@@ -166,7 +166,7 @@ describeCompat(
 			 */
 			it(`Pending batches with reentry - ${test.name}`, async function () {
 				await setupContainers();
-				const containerRuntime = dataObject.context.containerRuntime;
+				const containerRuntime = dataObject.context.containerRuntime as ContainerRuntime;
 
 				test.initial();
 				containerRuntime.orderSequentially(() => {

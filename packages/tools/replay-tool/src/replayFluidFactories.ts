@@ -10,9 +10,9 @@ import {
 	SparseMatrix,
 } from "@fluid-experimental/sequence-deprecated";
 import { SharedCell } from "@fluidframework/cell/internal";
-import { IContainerContext, IRuntime } from "@fluidframework/container-definitions/internal";
+import { IContainerContext } from "@fluidframework/container-definitions/internal";
 import {
-	loadContainerRuntime,
+	ContainerRuntime,
 	IContainerRuntimeOptions,
 } from "@fluidframework/container-runtime/internal";
 import { IContainerRuntime } from "@fluidframework/container-runtime-definitions/internal";
@@ -48,8 +48,8 @@ export class ReplayRuntimeFactory extends RuntimeFactoryHelper {
 	public async preInitialize(
 		context: IContainerContext,
 		existing: boolean,
-	): Promise<IContainerRuntime & IRuntime> {
-		return loadContainerRuntime({
+	): Promise<ContainerRuntime> {
+		return ContainerRuntime.loadRuntime({
 			context,
 			provideEntryPoint: async (containerRuntime: IContainerRuntime) => {
 				// For the replay tool, the entryPoint exposes the containerRuntime itself so the helpers for the tool
@@ -59,7 +59,7 @@ export class ReplayRuntimeFactory extends RuntimeFactoryHelper {
 				// where we might need to use/validate internal bits. In this case the replay tool reaches into our
 				// implementation of the container runtime to trigger summarization (see uploadSummary() in helpers.ts).
 				const entryPoint: ReplayToolContainerEntryPoint = {
-					containerRuntime,
+					containerRuntime: containerRuntime as ContainerRuntime,
 					get ReplayToolContainerEntryPoint() {
 						return this as ReplayToolContainerEntryPoint;
 					},
