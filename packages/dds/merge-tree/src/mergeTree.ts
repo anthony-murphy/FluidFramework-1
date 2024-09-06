@@ -88,7 +88,7 @@ import {
 } from "./referencePositions.js";
 // eslint-disable-next-line import/no-deprecated
 import { PropertiesRollback } from "./segmentPropertiesManager.js";
-import { endpointPosAndSide, type SequencePlace } from "./sequencePlace.js";
+import { endpointPosAndSide, Side, type SequencePlace } from "./sequencePlace.js";
 import { zamboniSegments } from "./zamboni.js";
 
 export function wasRemovedAfter(seg: ISegment, seq: number): boolean {
@@ -1566,7 +1566,10 @@ export class MergeTree {
 				const movedClientIds: number[] = [];
 				const movedSeqs: number[] = [];
 				for (const ob of overlapping) {
-					if (ob.seq === UnassignedSequenceNumber || ob.seq > refSeq) {
+					if (
+						ob.clientId !== clientId &&
+						(ob.seq === UnassignedSequenceNumber || ob.seq > refSeq)
+					) {
 						if (found === undefined || found.seq < ob.seq) {
 							found = ob;
 							movedClientIds.unshift(ob.clientId);
@@ -1965,22 +1968,47 @@ export class MergeTree {
 		): boolean => {
 			const existingMoveInfo = toMoveInfo(segment);
 			if (startPos === pos || (startPos === "start" && pos === 0)) {
-				obliterate.start = this.createLocalReferencePosition(
-					segment,
-					0,
-					ReferenceType.StayOnRemove,
-					{ obliterate },
-				);
+				if (startSide === Side.Before && pos !== 0) {
+					backwardExcursion(segment, (seg) => {
+						obliterate.start = this.createLocalReferencePosition(
+							seg,
+							seg.cachedLength - 1,
+							ReferenceType.StayOnRemove,
+							{ obliterate },
+						);
+						return false;
+					});
+				} else {
+					obliterate.start = this.createLocalReferencePosition(
+						segment,
+						0,
+						ReferenceType.StayOnRemove,
+						{ obliterate },
+					);
+				}
 			}
 			if (obliterate.end) {
 				this.removeLocalReferencePosition(obliterate.end);
 			}
-			obliterate.end = this.createLocalReferencePosition(
-				segment,
-				segment.cachedLength - 1,
-				ReferenceType.StayOnRemove,
-				{ obliterate },
-			);
+
+			if (endSide === Side.After) {
+				forwardExcursion(segment, (seg) => {
+					obliterate.start = this.createLocalReferencePosition(
+						seg,
+						0,
+						ReferenceType.StayOnRemove,
+						{ obliterate },
+					);
+					return false;
+				});
+			} else {
+				obliterate.end = this.createLocalReferencePosition(
+					segment,
+					segment.cachedLength - 1,
+					ReferenceType.StayOnRemove,
+					{ obliterate },
+				);
+			}
 
 			if (
 				clientId !== segment.clientId &&
@@ -2055,7 +2083,7 @@ export class MergeTree {
 		};
 
 		this.nodeMap(
-			refSeq,
+			seq === UnassignedSequenceNumber ? refSeq : seq,
 			clientId,
 			markMoved,
 			undefined,
