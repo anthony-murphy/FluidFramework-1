@@ -11,6 +11,7 @@ import {
 	describeCompat,
 } from "@fluid-private/test-version-utils";
 import { IContainer } from "@fluidframework/container-definitions/internal";
+import { ContainerRuntime } from "@fluidframework/container-runtime/internal";
 import { IContainerRuntime } from "@fluidframework/container-runtime-definitions/internal";
 import { toFluidHandleInternal } from "@fluidframework/runtime-utils/internal";
 import {
@@ -19,7 +20,6 @@ import {
 	getContainerEntryPointBackCompat,
 	summarizeNow,
 	waitForContainerConnection,
-	unsafeSummarize,
 } from "@fluidframework/test-utils/internal";
 
 import { defaultGCConfig } from "./gcTestConfigs.js";
@@ -37,7 +37,7 @@ describeCompat("GC Data Store Aliased Full Compat", "FullCompat", (getTestObject
 
 	async function waitForSummary(container: IContainer) {
 		const dataStore = await getContainerEntryPointBackCompat<ITestDataObject>(container);
-		return unsafeSummarize(dataStore._context.containerRuntime, {
+		return (dataStore._context.containerRuntime as ContainerRuntime).summarize({
 			runGC: true,
 			trackState: false,
 			fullTree: true,

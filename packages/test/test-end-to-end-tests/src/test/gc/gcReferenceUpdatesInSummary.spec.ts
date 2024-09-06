@@ -7,7 +7,10 @@ import { strict as assert } from "assert";
 
 import { describeCompat } from "@fluid-private/test-version-utils";
 import { IContainer } from "@fluidframework/container-definitions/internal";
-import { IContainerRuntimeOptions } from "@fluidframework/container-runtime/internal";
+import {
+	ContainerRuntime,
+	IContainerRuntimeOptions,
+} from "@fluidframework/container-runtime/internal";
 import { IFluidHandle } from "@fluidframework/core-interfaces";
 import { ISummaryTree, SummaryType } from "@fluidframework/driver-definitions";
 import type { SharedMatrix } from "@fluidframework/matrix/internal";
@@ -16,7 +19,6 @@ import {
 	ReferenceType,
 	reservedMarkerIdKey,
 } from "@fluidframework/merge-tree/internal";
-import { IContainerRuntimeBase } from "@fluidframework/runtime-definitions/internal";
 import type { SharedString } from "@fluidframework/sequence/internal";
 import { createChildLogger } from "@fluidframework/telemetry-utils/internal";
 import {
@@ -24,7 +26,6 @@ import {
 	createContainerRuntimeFactoryWithDefaultDataStore,
 	getContainerEntryPointBackCompat,
 	waitForContainerConnection,
-	unsafeSummarize,
 } from "@fluidframework/test-utils/internal";
 import { UndoRedoStackManager } from "@fluidframework/undo-redo/internal";
 
@@ -107,7 +108,7 @@ describeCompat(
 			},
 		);
 
-		let containerRuntime: IContainerRuntimeBase;
+		let containerRuntime: ContainerRuntime;
 		let mainDataStore: TestDataObject;
 
 		/**
@@ -123,7 +124,7 @@ describeCompat(
 		 */
 		async function validateDataStoreInSummary(dataStoreId: string, referenced: boolean) {
 			await provider.ensureSynchronized();
-			const { summary } = await unsafeSummarize(containerRuntime, {
+			const { summary } = await containerRuntime.summarize({
 				runGC: true,
 				fullTree: true,
 				trackState: false,
@@ -171,7 +172,7 @@ describeCompat(
 
 			const container = await createContainer();
 			mainDataStore = await getContainerEntryPointBackCompat<TestDataObject>(container);
-			containerRuntime = mainDataStore._context.containerRuntime;
+			containerRuntime = mainDataStore._context.containerRuntime as ContainerRuntime;
 			await waitForContainerConnection(container);
 		});
 

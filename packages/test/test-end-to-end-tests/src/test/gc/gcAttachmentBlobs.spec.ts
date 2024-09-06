@@ -8,15 +8,14 @@ import { strict as assert } from "assert";
 import { stringToBuffer } from "@fluid-internal/client-utils";
 import { ITestDataObject, describeCompat } from "@fluid-private/test-version-utils";
 import { IContainer } from "@fluidframework/container-definitions/internal";
+import { ContainerRuntime } from "@fluidframework/container-runtime/internal";
 // eslint-disable-next-line import/no-internal-modules
 import { blobManagerBasePath } from "@fluidframework/container-runtime/internal/test/blobManager";
 import type { IFluidHandleInternal } from "@fluidframework/core-interfaces/internal";
-import { IContainerRuntimeBase } from "@fluidframework/runtime-definitions/internal";
 import {
 	ITestContainerConfig,
 	ITestObjectProvider,
 	waitForContainerConnection,
-	unsafeSummarize,
 } from "@fluidframework/test-utils/internal";
 
 import {
@@ -57,11 +56,9 @@ describeCompat("Garbage collection of blobs", "NoCompat", (getTestObjectProvider
 		/**
 		 * Summarizes and returns the referenced / unreferenced state of each blob node if the GC state in summary.
 		 */
-		async function summarizeAndGetUnreferencedNodeStates(
-			summarizerRuntime: IContainerRuntimeBase,
-		) {
+		async function summarizeAndGetUnreferencedNodeStates(summarizerRuntime: ContainerRuntime) {
 			await provider.ensureSynchronized();
-			const { summary } = await unsafeSummarize(summarizerRuntime, {
+			const { summary } = await summarizerRuntime.summarize({
 				runGC: true,
 				fullTree: true,
 			});
@@ -101,7 +98,7 @@ describeCompat("Garbage collection of blobs", "NoCompat", (getTestObjectProvider
 			const summarizerContainer = await loadContainer();
 			const summarizerDefaultDataStore =
 				(await summarizerContainer.getEntryPoint()) as ITestDataObject;
-			return summarizerDefaultDataStore._context.containerRuntime;
+			return summarizerDefaultDataStore._context.containerRuntime as ContainerRuntime;
 		}
 
 		beforeEach("setup", async function () {

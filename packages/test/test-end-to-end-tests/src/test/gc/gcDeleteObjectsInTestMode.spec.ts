@@ -11,12 +11,10 @@ import {
 	TestDataObjectType,
 	describeCompat,
 } from "@fluid-private/test-version-utils";
+import { ContainerRuntime } from "@fluidframework/container-runtime/internal";
 import type { IFluidHandleInternal } from "@fluidframework/core-interfaces/internal";
 import { ISummaryTree, SummaryType } from "@fluidframework/driver-definitions";
-import {
-	channelsTreeName,
-	IContainerRuntimeBase,
-} from "@fluidframework/runtime-definitions/internal";
+import { channelsTreeName } from "@fluidframework/runtime-definitions/internal";
 import { createChildLogger } from "@fluidframework/telemetry-utils/internal";
 import {
 	ITestContainerConfig,
@@ -24,8 +22,6 @@ import {
 	getContainerEntryPointBackCompat,
 	getDataStoreEntryPointBackCompat,
 	waitForContainerConnection,
-	unsafeSummarize,
-	unsafeResolveHandle,
 } from "@fluidframework/test-utils/internal";
 
 import { defaultGCConfig } from "./gcTestConfigs.js";
@@ -43,13 +39,13 @@ import { getGCStateFromSummary } from "./gcTestSummaryUtils.js";
  */
 async function validateNodeStateInGCSummaryTree(
 	provider: ITestObjectProvider,
-	summarizerContainerRuntime: IContainerRuntimeBase,
+	summarizerContainerRuntime: ContainerRuntime,
 	nodeId: string,
 	referenced: boolean,
 	deletedFromGCState = false,
 ) {
 	await provider.ensureSynchronized();
-	const { summary } = await unsafeSummarize(summarizerContainerRuntime, {
+	const { summary } = await summarizerContainerRuntime.summarize({
 		runGC: true,
 		fullTree: true,
 		trackState: false,
@@ -121,12 +117,12 @@ function validateChildReferenceStates(summary: ISummaryTree, referenced: boolean
  * - Otherwise, the load should pass because the data store exists.
  */
 async function validateDataStoreLoad(
-	summarizerContainerRuntime: IContainerRuntimeBase,
+	summarizerContainerRuntime: ContainerRuntime,
 	deleteContent: boolean,
 	dataStoreId: string,
 	referenced: boolean,
 ) {
-	const response = await unsafeResolveHandle(summarizerContainerRuntime, {
+	const response = await summarizerContainerRuntime.resolveHandle({
 		url: `/${dataStoreId}`,
 		headers: { wait: false },
 	});
@@ -144,7 +140,7 @@ async function validateDataStoreLoad(
  */
 async function validateDataStoreReferenceState(
 	provider: ITestObjectProvider,
-	summarizerContainerRuntime: IContainerRuntimeBase,
+	summarizerContainerRuntime: ContainerRuntime,
 	deleteContent: boolean,
 	dataStoreId: string,
 	referenced: boolean,
@@ -207,7 +203,7 @@ describeCompat("GC delete objects in test mode", "FullCompat", (getTestObjectPro
 	// deleted after each GC run.
 	const tests = (deleteContent: boolean = false) => {
 		let provider: ITestObjectProvider;
-		let summarizerContainerRuntime: IContainerRuntimeBase;
+		let summarizerContainerRuntime: ContainerRuntime;
 		let mainDataStore: ITestDataObject;
 
 		beforeEach("setup", async function () {
@@ -235,7 +231,8 @@ describeCompat("GC delete objects in test mode", "FullCompat", (getTestObjectPro
 			const summarizerContainer = await provider.loadTestContainer(testContainerConfig);
 			const summarizerMainDataStore =
 				await getContainerEntryPointBackCompat<ITestDataObject>(summarizerContainer);
-			summarizerContainerRuntime = summarizerMainDataStore._context.containerRuntime;
+			summarizerContainerRuntime = summarizerMainDataStore._context
+				.containerRuntime as ContainerRuntime;
 		});
 
 		it("marks default data store as referenced", async () => {
@@ -343,7 +340,7 @@ describeCompat("GC delete objects in test mode", "FullCompat", (getTestObjectPro
  */
 async function validateBlobsReferenceState(
 	provider: ITestObjectProvider,
-	summarizerContainerRuntime: IContainerRuntimeBase,
+	summarizerContainerRuntime: ContainerRuntime,
 	deleteContent: boolean,
 	blobHandle: IFluidHandleInternal<ArrayBufferLike>,
 	referenced: boolean,
@@ -397,7 +394,7 @@ describeCompat(
 		// deleted after each GC run.
 		const tests = (deleteContent: boolean = false) => {
 			let provider: ITestObjectProvider;
-			let summarizerContainerRuntime: IContainerRuntimeBase;
+			let summarizerContainerRuntime: ContainerRuntime;
 			let mainDataStore: ITestDataObject;
 
 			beforeEach("setup", async function () {
@@ -416,7 +413,8 @@ describeCompat(
 				};
 				const container = await provider.makeTestContainer(testContainerConfig);
 				mainDataStore = (await container.getEntryPoint()) as ITestDataObject;
-				summarizerContainerRuntime = mainDataStore._context.containerRuntime;
+				summarizerContainerRuntime = mainDataStore._context
+					.containerRuntime as ContainerRuntime;
 				await waitForContainerConnection(container);
 			});
 
