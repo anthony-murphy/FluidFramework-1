@@ -1576,7 +1576,7 @@ export class MergeTree {
 							movedClientIds.unshift(ob.clientId);
 							movedSeqs.unshift(ob.seq);
 						} else {
-							if (newest === undefined && normalizedNewestSeq < normalizedObSeq) {
+							if (newest === undefined || normalizedNewestSeq < normalizedObSeq) {
 								normalizedNewestSeq = normalizedObSeq;
 								newest = ob;
 							}
