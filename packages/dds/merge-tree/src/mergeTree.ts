@@ -473,16 +473,6 @@ export class MergeTree {
 	 */
 	private readonly localMoveSeqs: Set<number> = new Set();
 
-	/**
-	 * Groups of segments moved by local moves/obliterates
-	 *
-	 * When a local obliterate is acked, we must also ack segments that were
-	 * concurrently obliterated on insert. We check this segment group to find
-	 * such segments
-	 */
-	// eslint-disable-next-line import/no-deprecated
-	private readonly locallyMovedSegments: Map<number, SegmentGroup> = new Map();
-
 	public constructor(public options?: IMergeTreeOptions) {
 		this._root = this.makeBlock(0);
 		this._root.mergeTree = this;
@@ -1191,40 +1181,15 @@ export class MergeTree {
 			const deltaSegments: IMergeTreeSegmentDelta[] = [];
 			const overlappingRemoves: boolean[] = [];
 			pendingSegmentGroup.segments.map((pendingSegment: ISegmentLeaf) => {
-				const localMovedSeq = pendingSegment.localMovedSeq;
 				const overlappingRemove = !pendingSegment.ack(pendingSegmentGroup, opArgs);
-
-				if (opArgs.op.type === MergeTreeDeltaType.OBLITERATE && localMovedSeq !== undefined) {
-					const locallyMovedSegments = this.locallyMovedSegments.get(localMovedSeq);
-
-					if (locallyMovedSegments) {
-						// Disabling because a for of loop causes the type of segment to be ISegment, which does not have parent information stored
-						// eslint-disable-next-line unicorn/no-array-for-each
-						locallyMovedSegments.segments.forEach((segment: ISegmentLeaf) => {
-							segment.localMovedSeq = undefined;
-
-							if (!nodesToUpdate.includes(segment.parent!)) {
-								nodesToUpdate.push(segment.parent!);
-							}
-
-							if (segment.movedSeq === UnassignedSequenceNumber) {
-								segment.movedSeq = seq;
-							}
-						});
-
-						this.locallyMovedSegments.delete(localMovedSeq);
-					}
-				}
 
 				overwrite = overlappingRemove || overwrite;
 
-				if (opArgs.op.type === MergeTreeDeltaType.OBLITERATE) {
-					if (seq !== this.moveSeqs[this.moveSeqs.length - 1]) {
-						this.moveSeqs.push(seq);
-					}
-					if (localMovedSeq !== undefined) {
-						this.localMoveSeqs.delete(localMovedSeq);
-					}
+				if (
+					opArgs.op.type === MergeTreeDeltaType.OBLITERATE &&
+					seq !== this.moveSeqs[this.moveSeqs.length - 1]
+				) {
+					this.moveSeqs.push(seq);
 				}
 
 				overlappingRemoves.push(overlappingRemove);
@@ -1598,14 +1563,12 @@ export class MergeTree {
 					markSegmentMoved(newSegment, moveInfo);
 
 					if (moveInfo.localMovedSeq !== undefined) {
-						const movedSegmentGroup = this.locallyMovedSegments.get(moveInfo.localMovedSeq);
-
 						assert(
-							movedSegmentGroup !== undefined,
+							oldest.segmentGroup !== undefined,
 							0x86c /* expected segment group to exist */,
 						);
 
-						this.addToPendingList(newSegment, movedSegmentGroup, localSeq);
+						this.addToPendingList(newSegment, oldest.segmentGroup);
 					}
 
 					if (newSegment.parent) {
@@ -1953,9 +1916,6 @@ export class MergeTree {
 		} else if (seq === UnassignedSequenceNumber && localSeq !== undefined) {
 			this.localMoveSeqs.add(localSeq);
 		}
-		// eslint-disable-next-line import/no-deprecated
-		let segmentGroup: SegmentGroup;
-
 		const obliterate: ObliterateInfo = {
 			clientId,
 			end: createDetachedLocalReferencePosition(undefined),
@@ -1963,6 +1923,7 @@ export class MergeTree {
 			seq,
 			start: createDetachedLocalReferencePosition(undefined),
 			localSeq,
+			segmentGroup: undefined,
 		};
 
 		const markMoved = (
@@ -2038,8 +1999,12 @@ export class MergeTree {
 					segment.movedSeq === UnassignedSequenceNumber &&
 					clientId === this.collabWindow.clientId
 				) {
-					segmentGroup = this.addToPendingList(segment, segmentGroup, localSeq);
-					segmentGroup.obliterateInfo ??= obliterate;
+					obliterate.segmentGroup = this.addToPendingList(
+						segment,
+						obliterate.segmentGroup,
+						localSeq,
+					);
+					obliterate.segmentGroup.obliterateInfo ??= obliterate;
 				} else {
 					if (MergeTree.options.zamboniSegments) {
 						this.addToLRUSet(segment, seq);
@@ -2082,10 +2047,6 @@ export class MergeTree {
 				operation: MergeTreeDeltaType.OBLITERATE,
 				deltaSegments: movedSegments,
 			});
-		}
-
-		if (segmentGroup! && localSeq !== undefined) {
-			this.locallyMovedSegments.set(localSeq, segmentGroup);
 		}
 
 		// these events are newly removed
