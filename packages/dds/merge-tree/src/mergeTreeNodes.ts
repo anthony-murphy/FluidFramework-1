@@ -14,8 +14,7 @@ import {
 	UnassignedSequenceNumber,
 	UniversalSequenceNumber,
 } from "./constants.js";
-import { LocalReferenceCollection } from "./localReference.js";
-import type { ObliterateInfo } from "./mergeTree.js";
+import { LocalReferenceCollection, type LocalReferencePosition } from "./localReference.js";
 import { IMergeTreeDeltaOpArgs } from "./mergeTreeDeltaCallback.js";
 import { TrackingGroupCollection } from "./mergeTreeTracking.js";
 import { IJSONSegment, IMarkerDef, MergeTreeDeltaType, ReferenceType } from "./ops.js";
@@ -392,6 +391,19 @@ export interface SegmentActions<TClientData> {
 	contains?: NodeAction<TClientData>;
 	pre?: BlockAction<TClientData>;
 	post?: BlockAction<TClientData>;
+}
+
+/**
+ * @legacy
+ * @alpha
+ */
+export interface ObliterateInfo {
+	start: LocalReferencePosition;
+	end: LocalReferencePosition;
+	refSeq: number;
+	clientId: number;
+	seq: number;
+	localSeq: number | undefined;
 }
 
 /**

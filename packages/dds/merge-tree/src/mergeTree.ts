@@ -63,6 +63,7 @@ import {
 	seqLTE,
 	toMoveInfo,
 	toRemovalInfo,
+	type ObliterateInfo,
 } from "./mergeTreeNodes.js";
 import type { TrackingGroup } from "./mergeTreeTracking.js";
 import {
@@ -414,15 +415,6 @@ const forwardPred = (ref: LocalReferencePosition): boolean =>
 	ref.slidingPreference !== SlidingPreference.BACKWARD;
 const backwardPred = (ref: LocalReferencePosition): boolean =>
 	ref.slidingPreference === SlidingPreference.BACKWARD;
-
-export interface ObliterateInfo {
-	start: LocalReferencePosition;
-	end: LocalReferencePosition;
-	refSeq: number;
-	clientId: number;
-	seq: number;
-	localSeq: number | undefined;
-}
 
 /**
  * @internal
@@ -1583,13 +1575,11 @@ export class MergeTree {
 							oldest = ob;
 							movedClientIds.unshift(ob.clientId);
 							movedSeqs.unshift(ob.seq);
-						}
-						if (newest === undefined && normalizedNewestSeq < normalizedObSeq) {
-							normalizedNewestSeq = normalizedObSeq;
-							newest = ob;
-							movedClientIds.push(ob.clientId);
-							movedSeqs.push(ob.seq);
 						} else {
+							if (newest === undefined && normalizedNewestSeq < normalizedObSeq) {
+								normalizedNewestSeq = normalizedObSeq;
+								newest = ob;
+							}
 							movedClientIds.push(ob.clientId);
 							movedSeqs.push(ob.seq);
 						}
