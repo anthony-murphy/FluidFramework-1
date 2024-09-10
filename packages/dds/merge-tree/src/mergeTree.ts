@@ -1563,11 +1563,21 @@ export class MergeTree {
 				forwardExcursion(newSegment, findRightMovedSegment);
 
 				let found: ObliterateInfo | undefined;
+				let normalizedFoundSeq: number = 0;
 				const movedClientIds: number[] = [];
 				const movedSeqs: number[] = [];
 				for (const ob of overlapping) {
-					if (ob.seq === UnassignedSequenceNumber || ob.seq > refSeq) {
-						if (found === undefined || found.seq < ob.seq) {
+					// compute a normalized seq that takes into account local seqs
+					// but is still comparable to remote seqs to keep the checks below easy
+					// REMOTE SEQUENCE NUMBERS                                     LOCAL SEQUENCE NUMBERS
+					// [0, 1, 2, 3, ..., 100, ..., 1000, ..., (MAX - MaxLocalSeq), L1, L2, L3, L4, ..., L100, ..., L1000]
+					const normalizedObSeq =
+						ob.seq === UnassignedSequenceNumber
+							? Number.MAX_SAFE_INTEGER - this.collabWindow.localSeq + ob.localSeq!
+							: ob.seq;
+					if (normalizedObSeq > refSeq) {
+						if (found === undefined || normalizedFoundSeq < normalizedObSeq) {
+							normalizedFoundSeq = normalizedObSeq;
 							found = ob;
 							movedClientIds.unshift(ob.clientId);
 							movedSeqs.unshift(ob.seq);
@@ -1578,7 +1588,7 @@ export class MergeTree {
 					}
 				}
 
-				if (found) {
+				if (found && found.clientId !== clientId) {
 					const moveInfo: IMoveInfo = {
 						movedClientIds,
 						movedSeq: found.seq,
