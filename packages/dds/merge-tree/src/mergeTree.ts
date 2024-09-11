@@ -1181,15 +1181,18 @@ export class MergeTree {
 			const deltaSegments: IMergeTreeSegmentDelta[] = [];
 			const overlappingRemoves: boolean[] = [];
 			pendingSegmentGroup.segments.map((pendingSegment: ISegmentLeaf) => {
+				const localMovedSeq = pendingSegment.localMovedSeq;
 				const overlappingRemove = !pendingSegment.ack(pendingSegmentGroup, opArgs);
 
 				overwrite = overlappingRemove || overwrite;
 
-				if (
-					opArgs.op.type === MergeTreeDeltaType.OBLITERATE &&
-					seq !== this.moveSeqs[this.moveSeqs.length - 1]
-				) {
-					this.moveSeqs.push(seq);
+				if (opArgs.op.type === MergeTreeDeltaType.OBLITERATE) {
+					if (seq !== this.moveSeqs[this.moveSeqs.length - 1]) {
+						this.moveSeqs.push(seq);
+					}
+					if (localMovedSeq !== undefined) {
+						this.localMoveSeqs.delete(localMovedSeq);
+					}
 				}
 
 				overlappingRemoves.push(overlappingRemove);
