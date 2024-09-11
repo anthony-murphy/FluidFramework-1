@@ -420,20 +420,20 @@ const backwardPred = (ref: LocalReferencePosition): boolean =>
 class Obliterates {
 	/**
 	 * Array containing the all move operations within the
-	 * collab window
+	 * collab window.
 	 *
-	 * When a segment is inserted, we must traverse to the left and right of it
-	 * to determine whether the segment was inserted into an obliterated range.
-	 * By keeping track of all move seqs, we can significantly reduce the search
-	 * space we must traverse.
-	 *
-	 * Sequence numbers in `moveSeqs` are sorted to accelerate bookkeeping.
+	 * The moves are stored in sequence order which accelerates clean up in setMinSeq
 	 *
 	 * See https://github.com/microsoft/FluidFramework/blob/main/packages/dds/merge-tree/docs/Obliterate.md#remote-perspective
 	 * for additional context
 	 */
 	private readonly seqOrdered = new DoublyLinkedList<ObliterateInfo>();
 
+	/**
+	 * This contains a sorted lists of all obliterate starts
+	 * and is used to accelerate finding overlapping obliterates
+	 * as well as determining if there are any obliterates at all.
+	 */
 	private readonly startOrdered = new SortedSegmentSet<LocalReferencePosition>();
 
 	constructor(private readonly mergeTree: MergeTree) {}
@@ -448,7 +448,7 @@ class Obliterates {
 		}
 	}
 
-	public add(obliterateInfo: ObliterateInfo): void {
+	public addOrUpdate(obliterateInfo: ObliterateInfo): void {
 		const { seq, start } = obliterateInfo;
 		if (seq !== UnassignedSequenceNumber) {
 			this.seqOrdered.push(obliterateInfo);
@@ -1237,7 +1237,7 @@ export class MergeTree {
 			});
 
 			if (opArgs.op.type === MergeTreeDeltaType.OBLITERATE) {
-				this.obliterates.add(pendingSegmentGroup.obliterateInfo!);
+				this.obliterates.addOrUpdate(pendingSegmentGroup.obliterateInfo!);
 			}
 
 			// Perform slides after all segments have been acked, so that
@@ -2032,7 +2032,7 @@ export class MergeTree {
 			seq === UnassignedSequenceNumber ? undefined : seq,
 		);
 
-		this.obliterates.add(obliterate);
+		this.obliterates.addOrUpdate(obliterate);
 
 		this.slideAckedRemovedSegmentReferences(localOverlapWithRefs);
 		// opArgs == undefined => test code
