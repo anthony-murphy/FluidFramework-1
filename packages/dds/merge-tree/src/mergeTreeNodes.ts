@@ -12,7 +12,7 @@ import {
 	UnassignedSequenceNumber,
 	UniversalSequenceNumber,
 } from "./constants.js";
-import { LocalReferenceCollection } from "./localReference.js";
+import { LocalReferenceCollection, type LocalReferencePosition } from "./localReference.js";
 import { TrackingGroupCollection } from "./mergeTreeTracking.js";
 import { IJSONSegment, IMarkerDef, ReferenceType } from "./ops.js";
 import { computeHierarchicalOrdinal } from "./ordinal.js";
@@ -351,11 +351,27 @@ export interface SegmentActions<TClientData> {
  * @alpha
  * @privateRemarks After deprecation period this interface should be made internal
  */
+export interface ObliterateInfo {
+	start: LocalReferencePosition;
+	end: LocalReferencePosition;
+	refSeq: number;
+	clientId: number;
+	seq: number;
+	localSeq: number | undefined;
+	segmentGroup: SegmentGroup | undefined;
+}
+
+/**
+ * @deprecated This functionality was not meant to be exported and will be removed in a future release
+ * @legacy
+ * @alpha
+ */
 export interface SegmentGroup {
 	segments: ISegment[];
 	previousProps?: PropertySet[];
 	localSeq?: number;
 	refSeq: number;
+	obliterateInfo?: ObliterateInfo;
 }
 
 /**

@@ -625,6 +625,43 @@ export interface MergeTreeRevertibleDriver {
     removeRange(start: number, end: number): void;
 }
 
+// @alpha @deprecated (undocumented)
+export interface ObliterateInfo {
+    // (undocumented)
+    clientId: number;
+    // (undocumented)
+    end: LocalReferencePosition;
+    // (undocumented)
+    localSeq: number | undefined;
+    // (undocumented)
+    refSeq: number;
+    // (undocumented)
+    segmentGroup: SegmentGroup | undefined;
+    // (undocumented)
+    seq: number;
+    // (undocumented)
+    start: LocalReferencePosition;
+}
+
+// @alpha @deprecated (undocumented)
+export class PropertiesManager {
+    // (undocumented)
+    ackPendingProperties(annotateOp: IMergeTreeAnnotateMsg): void;
+    // (undocumented)
+    addProperties(oldProps: PropertySet, newProps: PropertySet, seq?: number, collaborating?: boolean, rollback?: PropertiesRollback): PropertySet;
+    // (undocumented)
+    copyTo(oldProps: PropertySet, newProps: PropertySet | undefined, newManager: PropertiesManager): PropertySet | undefined;
+    hasPendingProperties(props: PropertySet): boolean;
+    // (undocumented)
+    hasPendingProperty(key: string): boolean;
+}
+
+// @alpha @deprecated (undocumented)
+export enum PropertiesRollback {
+    None = 0,
+    Rollback = 1
+}
+
 // @alpha
 export type PropertySet = MapLike<any>;
 
@@ -668,6 +705,8 @@ export function revertMergeTreeDeltaRevertibles(driver: MergeTreeRevertibleDrive
 export interface SegmentGroup {
     // (undocumented)
     localSeq?: number;
+    // (undocumented)
+    obliterateInfo?: ObliterateInfo;
     // (undocumented)
     previousProps?: PropertySet[];
     // (undocumented)
