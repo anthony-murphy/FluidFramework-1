@@ -9,8 +9,6 @@ import { ISequencedDocumentMessage } from "@fluidframework/driver-definitions/in
 import {
 	// eslint-disable-next-line import/no-deprecated
 	Client,
-	// eslint-disable-next-line import/no-deprecated
-	PropertiesManager,
 	PropertySet,
 	SlidingPreference,
 	SequencePlace,
@@ -160,11 +158,7 @@ export interface ISerializedInterval {
 export interface ISerializableInterval extends IInterval {
 	/** Serializable bag of properties associated with the interval. */
 	properties: PropertySet;
-	/**
-	 * @deprecated - This property should not be used externally and will be removed in a subsequent release.
-	 */
-	// eslint-disable-next-line import/no-deprecated
-	propertyManager: PropertiesManager;
+
 	/***/
 	serialize(): ISerializedInterval;
 	/**

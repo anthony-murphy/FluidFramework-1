@@ -11,7 +11,7 @@ import { ISequencedDocumentMessage } from "@fluidframework/driver-definitions/in
 
 import { UnassignedSequenceNumber } from "../constants.js";
 import { walkAllChildSegments } from "../mergeTreeNodeWalk.js";
-import { ISegment, SegmentGroup } from "../mergeTreeNodes.js";
+import { ISegment, ISegmentLeaf, SegmentGroup } from "../mergeTreeNodes.js";
 import { TrackingGroup } from "../mergeTreeTracking.js";
 import { MergeTreeDeltaType, ReferenceType } from "../ops.js";
 import { TextSegment } from "../textSegment.js";
@@ -104,7 +104,7 @@ describe("client.applyMsg", () => {
 		}
 		assert.equal(client.mergeTree.pendingSegments?.length, 0);
 		for (let i = 0; i < client.getText().length; i++) {
-			const segmentInfo = client.getContainingSegment(i);
+			const segmentInfo = client.getContainingSegment<ISegmentLeaf>(i);
 
 			assert.notEqual(
 				segmentInfo.segment?.seq,
@@ -112,9 +112,7 @@ describe("client.applyMsg", () => {
 				"all segments should be acked",
 			);
 			assert(
-				segmentInfo.segment &&
-					client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.empty !==
-						false,
+				segmentInfo.segment?.segmentGroups?.empty !== false,
 				"there should be no outstanding segmentGroups",
 			);
 		}
@@ -123,7 +121,7 @@ describe("client.applyMsg", () => {
 	it("insertTextLocal", () => {
 		const op = client.insertTextLocal(0, "abc");
 
-		const segmentInfo = client.getContainingSegment(0);
+		const segmentInfo = client.getContainingSegment<ISegmentLeaf>(0);
 
 		assert.equal(segmentInfo.segment?.seq, UnassignedSequenceNumber);
 
@@ -133,7 +131,7 @@ describe("client.applyMsg", () => {
 	});
 
 	it("removeRangeLocal", () => {
-		const segmentInfo = client.getContainingSegment(0);
+		const segmentInfo = client.getContainingSegment<ISegmentLeaf>(0);
 
 		const removeOp = client.removeRangeLocal(0, 1);
 
@@ -158,7 +156,7 @@ describe("client.applyMsg", () => {
 	});
 
 	it("annotateSegmentLocal then removeRangeLocal", () => {
-		const segmentInfo = client.getContainingSegment(0);
+		const segmentInfo = client.getContainingSegment<ISegmentLeaf>(0);
 
 		const start = 0;
 		const end = client.getText().length;
@@ -211,7 +209,7 @@ describe("client.applyMsg", () => {
 	});
 
 	it("overlapping deletes", () => {
-		const segmentInfo = client.getContainingSegment(0);
+		const segmentInfo = client.getContainingSegment<ISegmentLeaf>(0);
 
 		const start = 0;
 		const end = 5;
@@ -219,19 +217,12 @@ describe("client.applyMsg", () => {
 		const initialLength = initialText.length;
 
 		assert.equal(segmentInfo.segment?.removedSeq, undefined);
-		assert(
-			segmentInfo.segment &&
-				client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.empty !==
-					false,
-		);
+		assert(segmentInfo.segment?.segmentGroups?.empty !== false);
 
 		const removeOp = client.removeRangeLocal(start, end);
 
 		assert.equal(segmentInfo.segment?.removedSeq, UnassignedSequenceNumber);
-		assert.equal(
-			client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.size,
-			1,
-		);
+		assert.equal(segmentInfo.segment?.segmentGroups?.size, 1);
 
 		const remoteMessage = client.makeOpMessage(removeOp, 17);
 		remoteMessage.clientId = "remoteClient";
@@ -239,15 +230,12 @@ describe("client.applyMsg", () => {
 		client.applyMsg(remoteMessage);
 
 		assert.equal(segmentInfo.segment?.removedSeq, remoteMessage.sequenceNumber);
-		assert.equal(
-			client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.size,
-			1,
-		);
+		assert.equal(segmentInfo.segment?.segmentGroups.size, 1);
 
 		client.applyMsg(client.makeOpMessage(removeOp, 18, 0));
 
 		assert.equal(segmentInfo.segment?.removedSeq, remoteMessage.sequenceNumber);
-		assert(client.mergeTree.internalSegments.get(segmentInfo.segment)?.segmentGroups?.empty);
+		assert(segmentInfo.segment?.segmentGroups.empty);
 		assert.equal(client.getLength(), initialLength - (end - start));
 		assert.equal(
 			client.getText(),
@@ -541,7 +529,7 @@ describe("client.applyMsg", () => {
 
 		// op with no reference sequence should count removed segment
 		const insertMessage2 = clientB.makeOpMessage(insertOp2, ++seq);
-		let seg = clientA.getContainingSegment(2, {
+		let seg = clientA.getContainingSegment<ISegmentLeaf>(2, {
 			referenceSequenceNumber: insertMessage2.referenceSequenceNumber,
 			clientId: insertMessage2.clientId,
 		});
@@ -550,7 +538,7 @@ describe("client.applyMsg", () => {
 
 		// op with reference sequence >= remove op sequence should not count removed segment
 		const insertMessage3 = clientB.makeOpMessage(insertOp2, seq, removeSequence);
-		seg = clientA.getContainingSegment(2, {
+		seg = clientA.getContainingSegment<ISegmentLeaf>(2, {
 			referenceSequenceNumber: insertMessage3.referenceSequenceNumber,
 			clientId: insertMessage3.clientId,
 		});
@@ -649,7 +637,7 @@ describe("client.applyMsg", () => {
 		};
 
 		// TODO: tracking group
-		const { segment, offset } = clients.C.getContainingSegment(5);
+		const { segment, offset } = clients.C.getContainingSegment<ISegmentLeaf>(5);
 		assert(segment !== undefined, "expected segment");
 		const ref = clients.C.createLocalReferencePosition(
 			segment,

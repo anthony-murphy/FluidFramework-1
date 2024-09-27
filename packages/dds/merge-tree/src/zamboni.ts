@@ -137,10 +137,7 @@ function scourNode(node: MergeBlock, holdNodes: IMergeNode[], mergeTree: MergeTr
 	for (let k = 0; k < node.childCount; k++) {
 		// TODO Non null asserting, why is this not null?
 		const childNode = node.children[k]!;
-		if (
-			!childNode.isLeaf() ||
-			mergeTree.internalSegments.get(childNode)?.segmentGroups?.empty === false
-		) {
+		if (!childNode.isLeaf() || childNode.segmentGroups?.empty === false) {
 			holdNodes.push(childNode);
 			prevSegment = undefined;
 			continue;
@@ -166,7 +163,6 @@ function scourNode(node: MergeBlock, holdNodes: IMergeNode[], mergeTree: MergeTr
 				);
 
 				segment.parent = undefined;
-				mergeTree.internalSegments.delete(segment);
 
 				if (Marker.is(segment)) {
 					mergeTree.unlinkMarker(segment);

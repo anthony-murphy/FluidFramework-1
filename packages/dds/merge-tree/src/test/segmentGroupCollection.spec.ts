@@ -5,47 +5,46 @@
 
 import { strict as assert } from "node:assert";
 
-import type { InternalSegment } from "../mergeTree.js";
-import type { ISegment } from "../mergeTreeNodes.js";
+import { type ISegmentLeaf } from "../mergeTreeNodes.js";
 import { SegmentGroupCollection } from "../segmentGroupCollection.js";
 import { TextSegment } from "../textSegment.js";
 
 describe("segmentGroupCollection", () => {
-	let internalSegment: Required<Pick<InternalSegment, "segmentGroups">>;
-	let segment: ISegment;
+	let segment: ISegmentLeaf;
+	let segmentGroups: SegmentGroupCollection;
 	beforeEach(() => {
 		segment = TextSegment.make("abc");
-		internalSegment = { segmentGroups: new SegmentGroupCollection(segment) };
+		segmentGroups = segment.segmentGroups = new SegmentGroupCollection(segment);
 	});
 	it(".empty", () => {
-		assert(internalSegment.segmentGroups.empty);
+		assert(segmentGroups.empty);
 	});
 
 	it(".size", () => {
-		assert.equal(internalSegment.segmentGroups.size, 0);
+		assert.equal(segmentGroups.size, 0);
 	});
 
 	it(".enqueue", () => {
 		const segmentGroup = { segments: [], localSeq: 1, refSeq: 0 };
-		internalSegment.segmentGroups.enqueue(segmentGroup);
+		segmentGroups.enqueue(segmentGroup);
 
-		assert(!internalSegment.segmentGroups.empty);
-		assert.equal(internalSegment.segmentGroups.size, 1);
+		assert(!segmentGroups.empty);
+		assert.equal(segmentGroups.size, 1);
 		assert.equal(segmentGroup.segments.length, 1);
 		assert.equal(segmentGroup.segments[0], segment);
 	});
 
 	it(".dequeue", () => {
 		const segmentGroup = { segments: [], localSeq: 1, refSeq: 0 };
-		internalSegment.segmentGroups.enqueue(segmentGroup);
+		segmentGroups.enqueue(segmentGroup);
 		const segmentGroupCount = 6;
-		while (internalSegment.segmentGroups.size < segmentGroupCount) {
-			internalSegment.segmentGroups.enqueue({ segments: [], localSeq: 1, refSeq: 0 });
+		while (segmentGroups.size < segmentGroupCount) {
+			segmentGroups.enqueue({ segments: [], localSeq: 1, refSeq: 0 });
 		}
 
-		const dequeuedSegmentGroup = internalSegment.segmentGroups.dequeue();
+		const dequeuedSegmentGroup = segmentGroups.dequeue();
 
-		assert.equal(internalSegment.segmentGroups.size, segmentGroupCount - 1);
+		assert.equal(segmentGroups.size, segmentGroupCount - 1);
 		assert.equal(dequeuedSegmentGroup?.segments.length, 1);
 		assert.equal(dequeuedSegmentGroup.segments[0], segment);
 		assert.equal(dequeuedSegmentGroup, segmentGroup);
@@ -53,19 +52,19 @@ describe("segmentGroupCollection", () => {
 
 	it(".copyTo", () => {
 		const segmentGroupCount = 6;
-		while (internalSegment.segmentGroups.size < segmentGroupCount) {
-			internalSegment.segmentGroups.enqueue({ segments: [], localSeq: 1, refSeq: 0 });
+		while (segmentGroups.size < segmentGroupCount) {
+			segmentGroups.enqueue({ segments: [], localSeq: 1, refSeq: 0 });
 		}
 
 		const segmentCopy = TextSegment.make("");
 		const segmentGroupCopy = new SegmentGroupCollection(segmentCopy);
-		internalSegment.segmentGroups.copyTo(segmentGroupCopy);
+		segmentGroups.copyTo(segmentGroupCopy);
 
-		assert.equal(internalSegment.segmentGroups.size, segmentGroupCount);
+		assert.equal(segmentGroups.size, segmentGroupCount);
 		assert.equal(segmentGroupCopy.size, segmentGroupCount);
 
-		while (!internalSegment.segmentGroups.empty || !segmentGroupCopy.empty) {
-			const segmentGroup = internalSegment.segmentGroups.dequeue();
+		while (!segmentGroups.empty || !segmentGroupCopy.empty) {
+			const segmentGroup = segmentGroups.dequeue();
 			const copySegmentGroup = segmentGroupCopy.dequeue();
 
 			assert.equal(segmentGroup, copySegmentGroup);

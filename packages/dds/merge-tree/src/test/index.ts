@@ -42,6 +42,7 @@ export {
 export { LRUSegment, MergeTree } from "../mergeTree.js";
 export { MergeTreeTextHelper } from "../MergeTreeTextHelper.js";
 export { SnapshotLegacy } from "../snapshotlegacy.js";
+export { SegmentGroupCollection } from "../segmentGroupCollection.js";
 export {
 	addProperties,
 	appendToMergeTreeDeltaRevertibles,

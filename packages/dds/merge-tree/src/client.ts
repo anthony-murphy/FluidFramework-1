@@ -812,11 +812,9 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 		// so their recalculated positions will be correct.
 		for (const segment of segmentGroup.segments.sort((a, b) =>
 			a.ordinal < b.ordinal ? -1 : 1,
-		)) {
+		) as ISegmentLeaf[]) {
 			assert(
-				this._mergeTree.internalSegments
-					.get(segment)
-					?.segmentGroups?.remove?.(segmentGroup) === true,
+				segment.segmentGroups?.remove?.(segmentGroup) === true,
 				0x035 /* "Segment group not in segment pending queue" */,
 			);
 			assert(
@@ -828,9 +826,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 			switch (resetOp.type) {
 				case MergeTreeDeltaType.ANNOTATE: {
 					assert(
-						this._mergeTree.internalSegments
-							.get(segment)
-							?.propertyManager?.hasPendingProperties(resetOp.props) === true,
+						segment?.propertyManager?.hasPendingProperties(resetOp.props) === true,
 						0x036 /* "Segment has no pending properties" */,
 					);
 					// if the segment has been removed or obliterated, there's no need to send the annotate op
@@ -923,9 +919,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 			}
 
 			if (newOp && resetOp.type === MergeTreeDeltaType.OBLITERATE) {
-				this._mergeTree.internalSegments
-					.get(segment)
-					.segmentGroups.enqueue(obliterateSegmentGroup);
+				segment.segmentGroups.enqueue(obliterateSegmentGroup);
 
 				const first = opList[0];
 
@@ -946,7 +940,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 					localSeq: segmentGroup.localSeq,
 					refSeq: this.getCollabWindow().currentSeq,
 				};
-				this._mergeTree.internalSegments.get(segment).segmentGroups.enqueue(newSegmentGroup);
+				segment.segmentGroups.enqueue(newSegmentGroup);
 
 				this._mergeTree.pendingSegments.push(newSegmentGroup);
 

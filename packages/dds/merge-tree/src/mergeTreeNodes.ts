@@ -23,6 +23,8 @@ import {
 	refGetTileLabels,
 	refTypeIncludesFlag,
 } from "./referencePositions.js";
+import type { SegmentGroupCollection } from "./segmentGroupCollection.js";
+import type { PropertiesManager } from "./segmentPropertiesManager.js";
 
 /**
  * Common properties for a node in a merge tree.
@@ -41,11 +43,34 @@ export interface IMergeNodeCommon {
 	ordinal: string;
 	isLeaf(): this is ISegment;
 }
+
 /**
+ * This interface exposes internal things to dds that leverage merge tree,
+ * like sequence and matrix.
+ *
+ * We use tiered interface to control visibility of segment properties.
+ * This sits between ISegment and ISegmentLeaf. It should only expose
+ * things tagged internal.
+ *
+ * @internal
+ */
+export type ISegmentInternal = ISegment & {
+	localRefs?: LocalReferenceCollection;
+};
+
+/**
+ * We use tiered interface to control visibility of segment properties.
+ * This is the lowest interface and is not exported, it site below ISegment and ISegmentInternal.
+ * It should only expose unexported things.
+ *
  * someday we may split tree leaves from segments, but for now they are the same
  * this is just a convenience type that makes it clear that we need something that is both a segment and a leaf node
  */
-export type ISegmentLeaf = ISegment & { parent?: MergeBlock };
+export type ISegmentLeaf = ISegmentInternal & {
+	parent?: MergeBlock;
+	segmentGroups?: SegmentGroupCollection;
+	propertyManager?: PropertiesManager;
+};
 export type IMergeNode = MergeBlock | ISegmentLeaf;
 
 /**
@@ -242,10 +267,6 @@ export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Parti
 	 * Short clientId for the client that inserted this segment.
 	 */
 	clientId: number;
-	/**
-	 * Local references added to this segment.
-	 */
-	localRefs?: LocalReferenceCollection;
 	/**
 	 * Properties that have been added to this segment via annotation.
 	 */
@@ -494,7 +515,6 @@ export abstract class BaseSegment implements ISegment {
 	/***/
 	public attribution?: IAttributionCollection<AttributionKey>;
 	public properties?: PropertySet;
-	public localRefs?: LocalReferenceCollection;
 	public abstract readonly type: string;
 	public localSeq?: number;
 	public localRemovedSeq?: number;
@@ -579,9 +599,6 @@ export abstract class BaseSegment implements ISegment {
 		leafSegment.wasMovedOnInsert = this.wasMovedOnInsert;
 
 		this.trackingCollection.copyTo(leafSegment);
-		if (this.localRefs) {
-			this.localRefs.split(pos, leafSegment);
-		}
 		if (this.attribution) {
 			leafSegment.attribution = this.attribution.splitAt(pos);
 		}

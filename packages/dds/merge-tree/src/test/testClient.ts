@@ -529,9 +529,9 @@ export class TestClient extends Client {
 	): ReferencePosition | undefined {
 		let foundMarker: Marker | undefined;
 
-		const { segment } = this.getContainingSegment(startPos);
+		const { segment } = this.getContainingSegment<ISegmentLeaf>(startPos);
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const segWithParent: ISegmentLeaf = segment!;
+		const segWithParent = segment!;
 
 		if (Marker.is(segWithParent)) {
 			if (refHasTileLabel(segWithParent, markerLabel)) {

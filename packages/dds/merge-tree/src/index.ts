@@ -63,6 +63,7 @@ export {
 	IMoveInfo,
 	IRemovalInfo,
 	ISegment,
+	ISegmentInternal,
 	ISegmentAction,
 	Marker,
 	MergeNode,

@@ -7,6 +7,9 @@ import { DoublyLinkedList, walkList } from "./collections/index.js";
 // eslint-disable-next-line import/no-deprecated
 import { ISegment, SegmentGroup } from "./mergeTreeNodes.js";
 
+/**
+ * @internal
+ */
 export class SegmentGroupCollection {
 	// eslint-disable-next-line import/no-deprecated
 	private readonly segmentGroups: DoublyLinkedList<SegmentGroup>;
