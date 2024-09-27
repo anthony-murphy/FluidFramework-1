@@ -195,19 +195,19 @@ export interface InternalSegment {
  * E.g. if the segment group is not first in the pending queue, or
  * an inserted segment does not have unassigned sequence number.
  */
-function ackSegment(
+export function ackSegment(
 	segment: ISegment,
-	internalSegment: InternalSegment | undefined,
+	internalSegment: InternalSegment,
 	// eslint-disable-next-line import/no-deprecated
 	segmentGroup: SegmentGroup,
 	opArgs: IMergeTreeDeltaOpArgs,
 ): boolean {
-	const currentSegmentGroup = internalSegment?.segmentGroups?.dequeue();
+	const currentSegmentGroup = internalSegment.segmentGroups.dequeue();
 	assert(currentSegmentGroup === segmentGroup, 0x043 /* "On ack, unexpected segmentGroup!" */);
 	switch (opArgs.op.type) {
 		case MergeTreeDeltaType.ANNOTATE: {
 			assert(
-				!!internalSegment?.propertyManager,
+				!!internalSegment.propertyManager,
 				0x044 /* "On annotate ack, missing segment property manager!" */,
 			);
 			internalSegment.propertyManager.ackPendingProperties(opArgs.op);
@@ -241,13 +241,13 @@ function ackSegment(
 			const obliterateInfo = segmentGroup.obliterateInfo;
 			assert(obliterateInfo !== undefined, 0xa40 /* must have obliterate info */);
 			segment.localMovedSeq = obliterateInfo.localSeq = undefined;
-
 			const seqIdx = moveInfo.movedSeqs.indexOf(UnassignedSequenceNumber);
 			assert(seqIdx !== -1, 0x86f /* expected movedSeqs to contain unacked seq */);
-			moveInfo.movedSeqs[seqIdx] = opArgs.sequencedMessage!.sequenceNumber;
+			moveInfo.movedSeqs[seqIdx] = obliterateInfo.seq =
+				opArgs.sequencedMessage!.sequenceNumber;
 
 			if (moveInfo.movedSeq === UnassignedSequenceNumber) {
-				moveInfo.movedSeq = obliterateInfo.seq = opArgs.sequencedMessage!.sequenceNumber;
+				moveInfo.movedSeq = opArgs.sequencedMessage!.sequenceNumber;
 				return true;
 			}
 
@@ -259,7 +259,6 @@ function ackSegment(
 		}
 	}
 }
-
 /**
  * @legacy
  * @alpha
