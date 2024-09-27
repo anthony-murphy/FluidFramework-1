@@ -662,25 +662,6 @@ export interface ObliterateInfo {
     start: LocalReferencePosition;
 }
 
-// @alpha @deprecated (undocumented)
-export class PropertiesManager {
-    // (undocumented)
-    ackPendingProperties(annotateOp: IMergeTreeAnnotateMsg): void;
-    // (undocumented)
-    addProperties(oldProps: PropertySet, newProps: PropertySet, seq?: number, collaborating?: boolean, rollback?: PropertiesRollback): PropertySet;
-    // (undocumented)
-    copyTo(oldProps: PropertySet, newProps: PropertySet | undefined, newManager: PropertiesManager): PropertySet | undefined;
-    hasPendingProperties(props: PropertySet): boolean;
-    // (undocumented)
-    hasPendingProperty(key: string): boolean;
-}
-
-// @alpha @deprecated (undocumented)
-export enum PropertiesRollback {
-    None = 0,
-    Rollback = 1
-}
-
 // @alpha
 export type PropertySet = MapLike<any>;
 

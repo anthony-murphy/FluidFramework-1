@@ -166,6 +166,7 @@ function scourNode(node: MergeBlock, holdNodes: IMergeNode[], mergeTree: MergeTr
 				);
 
 				segment.parent = undefined;
+				mergeTree.internalSegments.delete(segment);
 
 				if (Marker.is(segment)) {
 					mergeTree.unlinkMarker(segment);

@@ -141,21 +141,45 @@ const LRUSegmentComparer: IComparer<LRUSegment> = {
 	compare: (a, b) => a.maxSeq - b.maxSeq,
 };
 
-export function weakMapGetOrInitialize<K extends WeakKey, V, P extends keyof V>(
-	weakMap: WeakMap<K, Partial<V>>,
-	key: K,
-	property: P,
-	initialize: (key: K) => V[P],
-): V[P] {
-	const maybeObject: Partial<V> = weakMap.get(key) ?? {};
-	const initVal = (maybeObject[property] ??= initialize(key));
-	weakMap.set(key, maybeObject);
-	return initVal;
+class SegmentMap {
+	private readonly map = new Map<ISegment, Partial<InternalSegment>>();
+
+	constructor(
+		private readonly defaults: {
+			[P in keyof InternalSegment]-?: (seg: ISegmentLeaf) => InternalSegment[P];
+		},
+	) {}
+
+	public get(seg: ISegmentLeaf): InternalSegment {
+		assert(seg.parent !== undefined, "segments must be in tree to have internal segments");
+		let val = this.map.get(seg);
+		if (val === undefined) {
+			this.map.set(seg, (val = {}));
+		}
+
+		return new Proxy<InternalSegment>(val as InternalSegment, {
+			get: (t: Partial<InternalSegment>, p: keyof InternalSegment, r) => {
+				if (p in t === false) {
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+					t[p] = this.defaults[p](seg) as any;
+				}
+				return t[p];
+			},
+		});
+	}
+
+	public delete(seg: ISegmentLeaf): boolean {
+		assert(
+			seg.parent === undefined,
+			"segments must removed from the tree before their internal segments are removed",
+		);
+		return this.map.delete(seg);
+	}
 }
 
 export interface InternalSegment {
-	propertyManager?: PropertiesManager;
-	segmentGroups?: SegmentGroupCollection;
+	propertyManager: PropertiesManager;
+	segmentGroups: SegmentGroupCollection;
 }
 
 /**
@@ -604,7 +628,10 @@ export class MergeTree {
 
 	public readonly attributionPolicy: AttributionPolicy | undefined;
 
-	public readonly internalSegments = new WeakMap<ISegment, InternalSegment>();
+	public readonly internalSegments = new SegmentMap({
+		propertyManager: () => new PropertiesManager(),
+		segmentGroups: (seg) => new SegmentGroupCollection(seg),
+	});
 
 	/**
 	 * Whether or not all blocks in the mergeTree currently have information about local partial lengths computed.
@@ -1408,12 +1435,7 @@ export class MergeTree {
 		if (previousProps) {
 			_segmentGroup.previousProps!.push(previousProps);
 		}
-		weakMapGetOrInitialize(
-			this.internalSegments,
-			segment,
-			"segmentGroups",
-			() => new SegmentGroupCollection(segment),
-		).enqueue(_segmentGroup);
+		this.internalSegments.get(segment).segmentGroups.enqueue(_segmentGroup);
 		return _segmentGroup;
 	}
 
@@ -1711,26 +1733,14 @@ export class MergeTree {
 
 		const internalSegment = this.internalSegments.get(segment);
 		if (internalSegment?.segmentGroups) {
-			internalSegment.segmentGroups.copyTo(
-				weakMapGetOrInitialize(
-					this.internalSegments,
-					next,
-					"segmentGroups",
-					() => new SegmentGroupCollection(next),
-				),
-			);
+			internalSegment.segmentGroups.copyTo(this.internalSegments.get(next).segmentGroups);
 		}
 		if (segment.properties) {
 			next.properties = internalSegment?.propertyManager
 				? internalSegment.propertyManager.copyTo(
 						segment.properties,
 						next.properties,
-						weakMapGetOrInitialize(
-							this.internalSegments,
-							next,
-							"propertyManager",
-							() => new PropertiesManager(),
-						),
+						this.internalSegments.get(next).propertyManager,
 					)
 				: clone(segment.properties);
 		}
@@ -1969,12 +1979,7 @@ export class MergeTree {
 				0x5ad /* Cannot change the markerId of an existing marker */,
 			);
 
-			const propertyManager = weakMapGetOrInitialize(
-				this.internalSegments,
-				segment,
-				"propertyManager",
-				() => new PropertiesManager(),
-			);
+			const propertyManager = this.internalSegments.get(segment).propertyManager;
 			const properties = (segment.properties ??= createMap());
 			const propertyDeltas = propertyManager.addProperties(
 				properties,

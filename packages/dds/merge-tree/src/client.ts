@@ -29,12 +29,7 @@ import { MergeTreeTextHelper } from "./MergeTreeTextHelper.js";
 import { DoublyLinkedList, RedBlackTree } from "./collections/index.js";
 import { UnassignedSequenceNumber, UniversalSequenceNumber } from "./constants.js";
 import { LocalReferencePosition, SlidingPreference } from "./localReference.js";
-import {
-	IMergeTreeOptions,
-	MergeTree,
-	errorIfOptionNotTrue,
-	weakMapGetOrInitialize,
-} from "./mergeTree.js";
+import { IMergeTreeOptions, MergeTree, errorIfOptionNotTrue } from "./mergeTree.js";
 import type {
 	IMergeTreeClientSequenceArgs,
 	IMergeTreeDeltaCallbackArgs,
@@ -82,7 +77,6 @@ import {
 } from "./ops.js";
 import { PropertySet } from "./properties.js";
 import { DetachedReferencePosition, ReferencePosition } from "./referencePositions.js";
-import { SegmentGroupCollection } from "./segmentGroupCollection.js";
 import { type InteriorSequencePlace } from "./sequencePlace.js";
 import { SnapshotLoader } from "./snapshotLoader.js";
 import { SnapshotV1 } from "./snapshotV1.js";
@@ -929,12 +923,9 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 			}
 
 			if (newOp && resetOp.type === MergeTreeDeltaType.OBLITERATE) {
-				weakMapGetOrInitialize(
-					this._mergeTree.internalSegments,
-					segment,
-					"segmentGroups",
-					() => new SegmentGroupCollection(segment),
-				).enqueue(obliterateSegmentGroup);
+				this._mergeTree.internalSegments
+					.get(segment)
+					.segmentGroups.enqueue(obliterateSegmentGroup);
 
 				const first = opList[0];
 
@@ -955,12 +946,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 					localSeq: segmentGroup.localSeq,
 					refSeq: this.getCollabWindow().currentSeq,
 				};
-				weakMapGetOrInitialize(
-					this._mergeTree.internalSegments,
-					segment,
-					"segmentGroups",
-					() => new SegmentGroupCollection(segment),
-				).enqueue(newSegmentGroup);
+				this._mergeTree.internalSegments.get(segment).segmentGroups.enqueue(newSegmentGroup);
 
 				this._mergeTree.pendingSegments.push(newSegmentGroup);
 
