@@ -7,7 +7,7 @@
 // @alpha
 export function appendToMergeTreeDeltaRevertibles(deltaArgs: IMergeTreeDeltaCallbackArgs, revertibles: MergeTreeDeltaRevertible[]): void;
 
-// @alpha @sealed
+// @alpha @sealed @deprecated
 export interface AttributionPolicy {
     attach: (client: Client) => void;
     detach: () => void;
@@ -234,7 +234,7 @@ export interface IAttributionCollectionSpec<T> {
     }>;
 }
 
-// @alpha
+// @alpha @deprecated
 export interface IClientEvents {
     // (undocumented)
     (event: "normalize", listener: (target: IEventThisPlaceHolder) => void): void;
@@ -292,7 +292,7 @@ export interface IMergeTreeAnnotateMsg extends IMergeTreeDelta {
     type: typeof MergeTreeDeltaType.ANNOTATE;
 }
 
-// @alpha (undocumented)
+// @alpha @deprecated (undocumented)
 export interface IMergeTreeAttributionOptions {
     policyFactory?: () => AttributionPolicy;
     track?: boolean;
