@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import type { RestrictiveReadonlyRecord } from "../util/index.js";
+import type { RestrictiveStringRecord } from "../util/index.js";
 import type {
 	TreeObjectNode,
 	InsertableObjectFromSchemaRecord,
@@ -11,6 +11,7 @@ import type {
 } from "./objectNode.js";
 import type { ImplicitFieldSchema, FieldSchema } from "./schemaTypes.js";
 import { NodeKind, type TreeNodeSchemaClass, type TreeNodeSchema } from "./core/index.js";
+import type { FieldKey } from "../core/index.js";
 
 /**
  * A schema for {@link TreeObjectNode}s.
@@ -19,10 +20,8 @@ import { NodeKind, type TreeNodeSchemaClass, type TreeNodeSchema } from "./core/
  */
 export interface ObjectNodeSchema<
 	TName extends string = string,
-	T extends RestrictiveReadonlyRecord<string, ImplicitFieldSchema> = RestrictiveReadonlyRecord<
-		string,
-		ImplicitFieldSchema
-	>,
+	T extends
+		RestrictiveStringRecord<ImplicitFieldSchema> = RestrictiveStringRecord<ImplicitFieldSchema>,
 	ImplicitlyConstructable extends boolean = boolean,
 > extends TreeNodeSchemaClass<
 		TName,
@@ -32,6 +31,9 @@ export interface ObjectNodeSchema<
 		ImplicitlyConstructable,
 		T
 	> {
+	/**
+	 * From property keys to the associated schema.
+	 */
 	readonly fields: ReadonlyMap<string, FieldSchema>;
 }
 
@@ -43,6 +45,16 @@ export interface ObjectNodeSchemaInternalData {
 	 * {@inheritdoc SimpleKeyMap}
 	 */
 	readonly flexKeyMap: SimpleKeyMap;
+
+	/**
+	 * Lookup the property keys from the stored keys.
+	 */
+	readonly storedKeyToPropertyKey: ReadonlyMap<FieldKey, string>;
+
+	/**
+	 * Stored keys which hold identifiers.
+	 */
+	readonly identifierFieldKeys: readonly FieldKey[];
 }
 
 export const ObjectNodeSchema = {

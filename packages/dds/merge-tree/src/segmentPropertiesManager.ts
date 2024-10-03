@@ -10,10 +10,9 @@ import { assert } from "@fluidframework/core-utils/internal";
 import { computeValue, type AdjustParams, type PendingChanges } from "./adjust.js";
 import { DoublyLinkedList } from "./collections/index.js";
 import { UnassignedSequenceNumber, UniversalSequenceNumber } from "./constants.js";
+import type { ISegmentLeaf } from "./mergeTreeNodes.js";
 import { IMergeTreeAnnotateMsg } from "./ops.js";
 import { MapLike, PropertySet, clone, createMap, extend } from "./properties.js";
-
-import type { ISegment } from "./index.js";
 
 /**
  * @legacy
@@ -37,7 +36,7 @@ export enum PropertiesRollback {
 
 export function handleProperties(
 	op: { props?: PropertySet; adjust?: MapLike<AdjustParams> },
-	seg: ISegment,
+	seg: ISegmentLeaf,
 	seq?: number,
 	collaborating: boolean = false,
 	rollback: PropertiesRollback = PropertiesRollback.None,
@@ -51,7 +50,7 @@ export function handleProperties(
 	return seg.propertyManager.handleProperties(op, seg, seq, collaborating, rollback);
 }
 
-export function ackProperties(op: IMergeTreeAnnotateMsg, seg: ISegment): void {
+export function ackProperties(op: IMergeTreeAnnotateMsg, seg: ISegmentLeaf): void {
 	assert(
 		seg.propertyManager instanceof InternalPropertiesManager,
 		"must be InternalPropertiesManager",
@@ -79,7 +78,6 @@ export class PropertiesManager {
 		for (const [key, value] of Object.entries(props)) {
 			if (value !== undefined && this.pendingKeyUpdateCount?.[key] !== undefined) {
 				assert(
-					// TODO Non null asserting, why is this not null?
 					this.pendingKeyUpdateCount[key]! > 0,
 					0x05c /* "Trying to update more annotate props than do exist!" */,
 				);
@@ -195,7 +193,7 @@ export class PropertiesManager {
 export class InternalPropertiesManager extends PropertiesManager {
 	public handleProperties(
 		op: { props?: MapLike<unknown>; adjust?: MapLike<AdjustParams> },
-		seg: ISegment,
+		seg: ISegmentLeaf,
 		seq?: number,
 		collaborating: boolean = false,
 		rollback: PropertiesRollback = PropertiesRollback.None,

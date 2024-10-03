@@ -70,6 +70,8 @@ export {
 	reservedMarkerSimpleTypeKey,
 	SegmentGroup,
 	toRemovalInfo,
+	ObliterateInfo,
+	ISegmentInternal,
 } from "./mergeTreeNodes.js";
 export {
 	Trackable,
@@ -99,7 +101,7 @@ export {
 	MergeTreeDeltaType,
 	ReferenceType,
 	IMergeTreeObliterateMsg,
-	Fixed,
+	IMergeTreeObliterateSidedMsg,
 } from "./ops.js";
 export {
 	addProperties,

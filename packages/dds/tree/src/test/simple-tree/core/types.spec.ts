@@ -21,22 +21,23 @@ import {
 	NodeKind,
 	type TreeNodeSchema,
 	typeNameSymbol,
+	typeSchemaSymbol,
 	// Used to test that TreeNode is a type only export.
 	TreeNode as TreeNodePublic,
 } from "../../../simple-tree/index.js";
-import type {
-	FlexTreeNode,
-	FlexTreeNodeSchema,
-	MapTreeNode,
-} from "../../../feature-libraries/index.js";
+import type { FlexTreeNode } from "../../../feature-libraries/index.js";
 // eslint-disable-next-line import/no-internal-modules
 import { numberSchema } from "../../../simple-tree/leafNodeSchema.js";
-// eslint-disable-next-line import/no-internal-modules
-import { getFlexSchema } from "../../../simple-tree/toFlexSchema.js";
 import { validateUsageError } from "../../utils.js";
 import { brand } from "../../../util/index.js";
+import {
+	UnhydratedFlexTreeNode,
+	// eslint-disable-next-line import/no-internal-modules
+} from "../../../simple-tree/core/unhydratedFlexTree.js";
 // eslint-disable-next-line import/no-internal-modules
-import { EagerMapTreeNode } from "../../../feature-libraries/flex-map-tree/mapTreeNode.js";
+import { getUnhydratedContext } from "../../../simple-tree/createContext.js";
+// eslint-disable-next-line import/no-internal-modules
+import type { Context } from "../../../simple-tree/core/index.js";
 
 describe("simple-tree types", () => {
 	describe("TreeNode", () => {
@@ -61,6 +62,9 @@ describe("simple-tree types", () => {
 		it("subclassing", () => {
 			class Subclass extends TreeNode {
 				public override get [typeNameSymbol](): string {
+					throw new Error("Method not implemented.");
+				}
+				public override get [typeSchemaSymbol](): never {
 					throw new Error("Method not implemented.");
 				}
 				public constructor() {
@@ -111,10 +115,10 @@ describe("simple-tree types", () => {
 	});
 
 	describe("TreeNodeValid", () => {
-		class MockFlexNode extends EagerMapTreeNode<FlexTreeNodeSchema> {
+		class MockFlexNode extends UnhydratedFlexTreeNode {
 			public constructor(public readonly simpleSchema: TreeNodeSchema) {
 				super(
-					getFlexSchema(simpleSchema),
+					getUnhydratedContext(simpleSchema),
 					{ fields: new Map(), type: brand(simpleSchema.identifier) },
 					undefined,
 				);
@@ -148,7 +152,7 @@ describe("simple-tree types", () => {
 					this: typeof TreeNodeValid<T2>,
 					instance: TreeNodeValid<T2>,
 					input: T2,
-				): MapTreeNode {
+				): UnhydratedFlexTreeNode {
 					assert.equal(this, Subclass);
 					assert(inPrototypeChain(Reflect.getPrototypeOf(instance), Subclass.prototype));
 					log.push(`buildRawNode ${input}`);
@@ -157,11 +161,17 @@ describe("simple-tree types", () => {
 
 				protected static override constructorCached: MostDerivedData | undefined = undefined;
 
-				protected static override oneTimeSetup<T2>(this: typeof TreeNodeValid<T2>) {
+				protected static override oneTimeSetup<T2>(this: typeof TreeNodeValid<T2>): Context {
 					log.push("oneTimeSetup");
+					return getUnhydratedContext(Subclass);
 				}
 
+				public static readonly childTypes: ReadonlySet<TreeNodeSchema> = new Set();
+
 				public override get [typeNameSymbol](): string {
+					throw new Error("Method not implemented.");
+				}
+				public override get [typeSchemaSymbol](): never {
 					throw new Error("Method not implemented.");
 				}
 				public constructor(input: number | InternalTreeNode) {
@@ -201,6 +211,9 @@ describe("simple-tree types", () => {
 				public override get [typeNameSymbol](): string {
 					throw new Error("Method not implemented.");
 				}
+				public override get [typeSchemaSymbol](): never {
+					throw new Error("Method not implemented.");
+				}
 			}
 
 			assert.throws(
@@ -221,16 +234,20 @@ describe("simple-tree types", () => {
 				public static readonly identifier = "Subclass";
 				public static readonly info = numberSchema;
 				public static readonly implicitlyConstructable: false;
+				public static readonly childTypes: ReadonlySet<TreeNodeSchema> = new Set();
 
 				public static override buildRawNode<T2>(
 					this: typeof TreeNodeValid<T2>,
 					instance: TreeNodeValid<T2>,
 					input: T2,
-				): MapTreeNode {
+				): UnhydratedFlexTreeNode {
 					return new MockFlexNode(this as unknown as TreeNodeSchema);
 				}
 
 				public override get [typeNameSymbol](): string {
+					throw new Error("Method not implemented.");
+				}
+				public override get [typeSchemaSymbol](): never {
 					throw new Error("Method not implemented.");
 				}
 				public constructor() {
@@ -241,16 +258,18 @@ describe("simple-tree types", () => {
 			class A extends Subclass {
 				protected static override constructorCached: MostDerivedData | undefined = undefined;
 
-				protected static override oneTimeSetup<T2>(this: typeof TreeNodeValid<T2>) {
+				protected static override oneTimeSetup<T2>(this: typeof TreeNodeValid<T2>): Context {
 					log.push("A");
+					return getUnhydratedContext(A);
 				}
 			}
 
 			class B extends Subclass {
 				protected static override constructorCached: MostDerivedData | undefined = undefined;
 
-				protected static override oneTimeSetup<T2>(this: typeof TreeNodeValid<T2>) {
+				protected static override oneTimeSetup<T2>(this: typeof TreeNodeValid<T2>): Context {
 					log.push("B");
+					return getUnhydratedContext(A);
 				}
 			}
 
@@ -268,16 +287,20 @@ describe("simple-tree types", () => {
 				public static readonly identifier = "Subclass";
 				public static readonly info = numberSchema;
 				public static readonly implicitlyConstructable: false;
+				public static readonly childTypes: ReadonlySet<TreeNodeSchema> = new Set();
 
 				public static override buildRawNode<T2>(
 					this: typeof TreeNodeValid<T2>,
 					instance: TreeNodeValid<T2>,
 					input: T2,
-				): MapTreeNode {
+				): UnhydratedFlexTreeNode {
 					return new MockFlexNode(this as unknown as TreeNodeSchema);
 				}
 
 				public override get [typeNameSymbol](): string {
+					throw new Error("Method not implemented.");
+				}
+				public override get [typeSchemaSymbol](): never {
 					throw new Error("Method not implemented.");
 				}
 				public constructor() {
@@ -288,8 +311,9 @@ describe("simple-tree types", () => {
 			class A extends Subclass {
 				protected static override constructorCached: MostDerivedData | undefined = undefined;
 
-				protected static override oneTimeSetup<T2>(this: typeof TreeNodeValid<T2>) {
+				protected static override oneTimeSetup<T2>(this: typeof TreeNodeValid<T2>): Context {
 					log.push(this.name);
+					return getUnhydratedContext(A);
 				}
 			}
 

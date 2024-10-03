@@ -978,7 +978,7 @@ export abstract class FluidDataStoreContext
 			eventName,
 			type,
 			isSummaryInProgress: this.summarizerNode.isSummaryInProgress?.(),
-			stack: generateStack(),
+			stack: generateStack(30),
 		});
 		this.localChangesTelemetryCount--;
 	}
@@ -1033,9 +1033,6 @@ export class RemoteFluidDataStoreContext extends FluidDataStoreContext {
 		} else {
 			this._baseSnapshot = props.snapshot;
 			this.isSnapshotInISnapshotFormat = false;
-		}
-		if (this._baseSnapshot !== undefined) {
-			this.summarizerNode.updateBaseSummaryState(this._baseSnapshot);
 		}
 	}
 

@@ -4,7 +4,7 @@
  */
 
 import type { Unenforced } from "../../feature-libraries/index.js";
-import type { RestrictiveReadonlyRecord } from "../../util/index.js";
+import type { RestrictiveStringRecord } from "../../util/index.js";
 import type { InsertableObjectFromSchemaRecord } from "../objectNode.js";
 
 import {
@@ -127,14 +127,11 @@ export type ValidateRecursiveSchema<
 		// NodeKind: These are the NodeKinds which currently can be used recursively.
 		NodeKind.Array | NodeKind.Map | NodeKind.Object,
 		// TNode: The produced node API. This is pretty minimal validation: more could be added if similar to how TInsertable works below if needed.
-		TreeNode & WithType<T["identifier"]>,
+		TreeNode & WithType<T["identifier"], T["kind"]>,
 		// TInsertable: What can be passed to the constructor. This should be enough to catch most issues with incorrect schema.
 		// These match whats defined in the recursive methods on `SchemaFactory` except they do not use `Unenforced`.
 		{
-			[NodeKind.Object]: T["info"] extends RestrictiveReadonlyRecord<
-				string,
-				ImplicitFieldSchema
-			>
+			[NodeKind.Object]: T["info"] extends RestrictiveStringRecord<ImplicitFieldSchema>
 				? InsertableObjectFromSchemaRecord<T["info"]>
 				: unknown;
 			[NodeKind.Array]: T["info"] extends ImplicitAllowedTypes
@@ -148,7 +145,7 @@ export type ValidateRecursiveSchema<
 		false,
 		// Info: What's passed to the method to create the schema. Constraining these here should be about as effective as if the actual constraints existed on the actual method itself.
 		{
-			[NodeKind.Object]: RestrictiveReadonlyRecord<string, ImplicitFieldSchema>;
+			[NodeKind.Object]: RestrictiveStringRecord<ImplicitFieldSchema>;
 			[NodeKind.Array]: ImplicitAllowedTypes;
 			[NodeKind.Map]: ImplicitAllowedTypes;
 		}[T["kind"]]

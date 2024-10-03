@@ -3,7 +3,6 @@
  * Licensed under the MIT License.
  */
 
-import { AsyncLocalStorage } from "async_hooks";
 import * as core from "@fluidframework/server-services-core";
 import * as services from "@fluidframework/server-services-shared";
 import {
@@ -32,8 +31,8 @@ export class GitrestResources implements core.IResources {
 		public readonly port: string | number,
 		public readonly fileSystemManagerFactories: IFileSystemManagerFactories,
 		public readonly repositoryManagerFactory: IRepositoryManagerFactory,
-		public readonly asyncLocalStorage?: AsyncLocalStorage<string>,
 		public readonly enableOptimizedInitialSummary?: boolean,
+		public readonly readinessCheck?: core.IReadinessCheck,
 	) {
 		const httpServerConfig: services.IHttpServerConfig = config.get("system:httpServer");
 		this.webServerFactory = new services.BasicWebServerFactory(httpServerConfig);
@@ -50,7 +49,6 @@ export class GitrestResourcesFactory implements core.IResourcesFactory<GitrestRe
 		customizations?: IGitrestResourcesCustomizations,
 	): Promise<GitrestResources> {
 		const port = normalizePort(process.env.PORT || "3000");
-		const asyncLocalStorage = config.get("asyncLocalStorageInstance")?.[0];
 
 		const fileSystemManagerFactories = this.getFileSystemManagerFactories(
 			config,
@@ -66,7 +64,8 @@ export class GitrestResourcesFactory implements core.IResourcesFactory<GitrestRe
 			port,
 			fileSystemManagerFactories,
 			repositoryManagerFactory,
-			asyncLocalStorage,
+			undefined,
+			customizations?.readinessCheck,
 		);
 	}
 
@@ -176,7 +175,7 @@ export class GitrestRunnerFactory implements core.IRunnerFactory<GitrestResource
 			resources.port,
 			resources.fileSystemManagerFactories,
 			resources.repositoryManagerFactory,
-			resources.asyncLocalStorage,
+			resources.readinessCheck,
 		);
 	}
 }
