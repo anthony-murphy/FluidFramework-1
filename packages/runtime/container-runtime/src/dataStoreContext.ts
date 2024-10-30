@@ -1428,6 +1428,19 @@ export class LocalDetachedFluidDataStoreContext
 		return this.channelToDataStoreFn(await this.channelP);
 	}
 
+	public unsafeAttachRuntimeSync(dataStoreRuntime: IFluidDataStoreChannel): IDataStore {
+		assert(this.detachedRuntimeCreation, "runtime creation is already attached");
+		this.detachedRuntimeCreation = false;
+
+		assert(this.channelP === undefined, "channel deferral is already set");
+		this.channelP = Promise.resolve(dataStoreRuntime);
+		this.channel = dataStoreRuntime;
+
+		this.processPendingOps(dataStoreRuntime);
+		this.completeBindingRuntime(dataStoreRuntime);
+		return this.channelToDataStoreFn(dataStoreRuntime);
+	}
+
 	public async getInitialSnapshotDetails(): Promise<ISnapshotDetails> {
 		if (this.detachedRuntimeCreation) {
 			throw new Error(

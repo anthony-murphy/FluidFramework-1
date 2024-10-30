@@ -67,16 +67,13 @@ class DataStoreWithSyncCreate {
 			context,
 			sharedObjectRegistry,
 			false,
-			async () => dataStore,
+			async () => instance,
 		);
-		const dataStore = DataStoreWithSyncCreate.create(context, runtime);
+		const instance = DataStoreWithSyncCreate.create(context, runtime);
 
-		const attachRuntimeP = context.attachRuntime(
-			DataStoreWithSyncCreateFactory.instance,
-			runtime,
-		);
+		const datastore = context.unsafeAttachRuntimeSync(runtime);
 
-		return { dataStore, attachRuntimeP };
+		return { instance, datastore };
 	}
 }
 
@@ -169,14 +166,11 @@ describe("Scenario Test", () => {
 				"container entrypoint must be DataStoreWithSyncCreate",
 			);
 
-			const { attachRuntimeP, dataStore } = entrypoint.DataStoreWithSyncCreate.createAnother();
+			const { instance, datastore } = entrypoint.DataStoreWithSyncCreate.createAnother();
 
-			dataStore.sharedMap.set("childValue", "childValue");
+			instance.sharedMap.set("childValue", "childValue");
 
-			// can we make this synchronous
-			await attachRuntimeP;
-
-			entrypoint.DataStoreWithSyncCreate.sharedMap.set("childInstance", dataStore.handle);
+			entrypoint.DataStoreWithSyncCreate.sharedMap.set("childInstance", datastore.entryPoint);
 			if (container.isDirty) {
 				await new Promise<void>((resolve) => container.once("saved", () => resolve()));
 			}

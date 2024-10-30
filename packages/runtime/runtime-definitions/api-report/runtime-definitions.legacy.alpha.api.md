@@ -170,6 +170,7 @@ export interface IFluidDataStoreContext extends IFluidParentContext {
 // @alpha (undocumented)
 export interface IFluidDataStoreContextDetached extends IFluidDataStoreContext {
     attachRuntime(factory: IProvideFluidDataStoreFactory, dataStoreRuntime: IFluidDataStoreChannel): Promise<IDataStore>;
+    unsafeAttachRuntimeSync(dataStoreRuntime: IFluidDataStoreChannel): IDataStore;
 }
 
 // @alpha (undocumented)

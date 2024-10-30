@@ -624,4 +624,22 @@ export interface IFluidDataStoreContextDetached extends IFluidDataStoreContext {
 		factory: IProvideFluidDataStoreFactory,
 		dataStoreRuntime: IFluidDataStoreChannel,
 	): Promise<IDataStore>;
+
+	/**
+	 * This method provides a synchronous path for binding a runtime to the context.
+	 *
+	 * Due to its synchronous nature, it is unable to validate that the runtime
+	 * represents a datastore which is instantiable by remote clients. This could
+	 * happen if the runtime's package path does not return a factory when looked up
+	 * in the container runtime's registry, or if the runtime's entrypoint is not
+	 * properly initialized. As both of these validation's are asynchronous to preform.
+	 *
+	 * If used incorrectly, this function can result in permanent data corruption.
+	 * Due to this, it is essential that consumer of this method test their usage
+	 * thoroughly, including scenarios like:
+	 * - Call while the container is detached
+	 * - Call while the container is attached
+	 * - Load a new instance of a container successfully after calling.
+	 */
+	unsafeAttachRuntimeSync(dataStoreRuntime: IFluidDataStoreChannel): IDataStore;
 }
