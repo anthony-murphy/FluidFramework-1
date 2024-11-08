@@ -21,7 +21,7 @@ import {
 	AttributionCollection,
 	SerializedAttributionCollection,
 } from "../attributionCollection.js";
-import { BaseSegment, ISegment } from "../mergeTreeNodes.js";
+import { BaseSegment, ISegmentLeaf } from "../mergeTreeNodes.js";
 import type { PropertySet } from "../properties.js";
 
 const opKey = (seq: number): AttributionKey => ({ type: "op", seq });
@@ -324,7 +324,7 @@ describe("AttributionCollection", () => {
 
 	describe(".populateAttributionCollections", () => {
 		it("correctly splits segment boundaries on breakpoints", () => {
-			const segments = [{ cachedLength: 5 }, { cachedLength: 4 }] as ISegment[];
+			const segments = [{ cachedLength: 5 }, { cachedLength: 4 }] as ISegmentLeaf[];
 			AttributionCollection.populateAttributionCollections(segments, {
 				length: 9,
 				posBreakpoints: [0, 2, 5, 7],
@@ -346,7 +346,7 @@ describe("AttributionCollection", () => {
 		});
 
 		it("correctly splits segment boundaries between breakpoints", () => {
-			const segments = [{ cachedLength: 4 }, { cachedLength: 5 }] as ISegment[];
+			const segments = [{ cachedLength: 4 }, { cachedLength: 5 }] as ISegmentLeaf[];
 			AttributionCollection.populateAttributionCollections(segments, {
 				length: 9,
 				posBreakpoints: [0, 2, 5, 7],
@@ -380,7 +380,7 @@ describe("AttributionCollection", () => {
 					attribution: new AttributionCollection(5, opKey(0)),
 					cachedLength: 5,
 				},
-			] as unknown as ISegment[];
+			] as unknown as ISegmentLeaf[];
 			const blob = AttributionCollection.serializeAttributionCollections(segments);
 			assert.deepEqual(blob, {
 				posBreakpoints: [0],
@@ -392,11 +392,11 @@ describe("AttributionCollection", () => {
 
 	describe("serializeAttributionCollections and populateAttributionCollections round-trip", () => {
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-		const seg = (length: number): ISegment => ({ cachedLength: length }) as ISegment;
+		const seg = (length: number): ISegmentLeaf => ({ cachedLength: length }) as ISegmentLeaf;
 		const testCases: {
 			name: string;
 			blob: SerializedAttributionCollection;
-			segments: ISegment[];
+			segments: ISegmentLeaf[];
 		}[] = [
 			{
 				name: "single key",
@@ -541,7 +541,7 @@ describe("AttributionCollection", () => {
 	describe("serialized structure is independent of segment lengths", () => {
 		interface State {
 			random: IRandom;
-			segments: ISegment[];
+			segments: ISegmentLeaf[];
 		}
 
 		interface InsertAction {
@@ -574,7 +574,7 @@ describe("AttributionCollection", () => {
 				return { length: this.cachedLength, props: this.properties };
 			}
 
-			public clone(): ISegment {
+			public clone(): ISegmentLeaf {
 				const seg = new Segment(this.cachedLength);
 				this.cloneInto(seg);
 				return seg;

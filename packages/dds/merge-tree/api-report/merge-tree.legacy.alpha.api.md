@@ -24,8 +24,8 @@ export abstract class BaseSegment implements ISegment {
     clientId: number;
     // (undocumented)
     abstract clone(): ISegment;
-    // (undocumented)
-    protected cloneInto(b: ISegment): void;
+    // @deprecated
+    protected cloneInto(m: ISegment): void;
     // (undocumented)
     protected abstract createSplitSegmentAt(pos: number): BaseSegment | undefined;
     // (undocumented)
@@ -153,7 +153,7 @@ export interface IMarkerDef {
     refType?: ReferenceType;
 }
 
-// @alpha
+// @alpha @deprecated
 export interface IMergeNodeCommon {
     index: number;
     // (undocumented)
@@ -292,13 +292,19 @@ export interface IMergeTreeSegmentDelta {
     segment: ISegment;
 }
 
-// @alpha
+// @alpha @deprecated
 export interface IMoveInfo {
+    // @deprecated
     localMovedSeq?: number;
+    // @deprecated
     movedClientIds: number[];
+    // @deprecated
     movedSeq: number;
+    // @deprecated
     movedSeqs: number[];
+    // @deprecated
     moveDst?: ReferencePosition;
+    // @deprecated
     wasMovedOnInsert: boolean;
 }
 
@@ -317,10 +323,13 @@ export interface IRelativePosition {
     offset?: number;
 }
 
-// @alpha
+// @alpha @deprecated
 export interface IRemovalInfo {
+    // @deprecated
     localRemovedSeq?: number;
+    // @deprecated
     removedClientIds: number[];
+    // @deprecated
     removedSeq: number;
 }
 
@@ -335,11 +344,16 @@ export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Parti
     clientId: number;
     // (undocumented)
     clone(): ISegment;
+    // @deprecated
     readonly endpointType?: "start" | "end";
+    // @deprecated
     localRefs?: LocalReferenceCollection;
+    // @deprecated
     localRemovedSeq?: number;
+    // @deprecated
     localSeq?: number;
     properties?: PropertySet;
+    // @deprecated
     seq?: number;
     // (undocumented)
     splitAt(pos: number): ISegment | undefined;
@@ -371,7 +385,7 @@ export interface ITrackingGroup {
     unlink(trackable: Trackable): boolean;
 }
 
-// @alpha @sealed
+// @alpha @sealed @deprecated
 export class LocalReferenceCollection {
     [Symbol.iterator](): {
         next(): IteratorResult<LocalReferencePosition>;

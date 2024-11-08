@@ -6,9 +6,11 @@
 import { assert } from "@fluidframework/core-utils/internal";
 
 import { LocalClientId } from "./constants.js";
+// eslint-disable-next-line import/no-deprecated
 import { LocalReferenceCollection } from "./localReference.js";
 import { MergeTree } from "./mergeTree.js";
 import { NodeAction, depthFirstNodeWalk } from "./mergeTreeNodeWalk.js";
+// eslint-disable-next-line import/no-deprecated
 import { IRemovalInfo, ISegment, ISegmentLeaf, type MergeBlock } from "./mergeTreeNodes.js";
 
 /**
@@ -71,6 +73,7 @@ abstract class BaseEndpointSegment {
 
 	abstract get ordinal(): string;
 
+	// eslint-disable-next-line import/no-deprecated
 	localRefs?: LocalReferenceCollection;
 
 	/*
@@ -99,6 +102,7 @@ const notSupported = (): never => {
 /**
  * The position immediately prior to the start of the tree
  */
+// eslint-disable-next-line import/no-deprecated
 export class StartOfTreeSegment extends BaseEndpointSegment implements ISegment, IRemovalInfo {
 	type: string = "StartOfTreeSegment";
 	readonly endpointType = "start";
@@ -149,6 +153,7 @@ export class StartOfTreeSegment extends BaseEndpointSegment implements ISegment,
 /**
  * The position immediately after the end of the tree
  */
+// eslint-disable-next-line import/no-deprecated
 export class EndOfTreeSegment extends BaseEndpointSegment implements ISegment, IRemovalInfo {
 	type: string = "EndOfTreeSegment";
 	readonly endpointType = "end";

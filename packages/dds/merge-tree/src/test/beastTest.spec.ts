@@ -36,7 +36,7 @@ import { IMergeTreeDeltaOpArgs } from "../mergeTreeDeltaCallback.js";
 import {
 	IJSONMarkerSegment,
 	IMergeNode,
-	ISegment,
+	ISegmentLeaf,
 	compareNumbers,
 	compareStrings,
 	reservedMarkerIdKey,
@@ -284,7 +284,7 @@ export function fileTest1(): void {
 	}
 }
 
-function printTextSegment(textSegment: ISegment, pos: number): boolean {
+function printTextSegment(textSegment: ISegmentLeaf, pos: number): boolean {
 	log(textSegment.toString());
 	log(`at [${pos}, ${pos + textSegment.cachedLength})`);
 	return true;

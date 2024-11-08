@@ -11,7 +11,7 @@ import { ISequencedDocumentMessage } from "@fluidframework/driver-definitions/in
 
 import { UnassignedSequenceNumber } from "../constants.js";
 import { walkAllChildSegments } from "../mergeTreeNodeWalk.js";
-import { ISegment, ISegmentLeaf, SegmentGroup } from "../mergeTreeNodes.js";
+import { ISegmentLeaf, SegmentGroup } from "../mergeTreeNodes.js";
 import { TrackingGroup } from "../mergeTreeTracking.js";
 import { MergeTreeDeltaType, ReferenceType } from "../ops.js";
 import { Side } from "../sequencePlace.js";
@@ -668,7 +668,7 @@ describe("client.applyMsg", () => {
 		ops.push(clients.B.makeOpMessage(clients.B.regeneratePendingOp(bOp.op, bOp.sg), ++seq));
 
 		const trackingGroup = new TrackingGroup();
-		const trackedSegs: ISegment[] = [];
+		const trackedSegs: ISegmentLeaf[] = [];
 		walkAllChildSegments(clients.C.mergeTree.root, (seg) => {
 			trackedSegs.push(seg);
 			trackingGroup.link(seg);

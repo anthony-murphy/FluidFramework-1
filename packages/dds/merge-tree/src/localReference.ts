@@ -228,6 +228,8 @@ export function setValidateRefCount(
  *
  * @legacy
  * @alpha
+ *
+ * @deprecated - This will be remove in a subsequent release
  */
 export class LocalReferenceCollection {
 	public static append(seg1: ISegment, seg2: ISegment): void {

@@ -11,7 +11,7 @@ import {
 	AttributionCollection as NewAttributionCollection,
 	SerializedAttributionCollection,
 } from "../attributionCollection.js";
-import { ISegment } from "../mergeTreeNodes.js";
+import { ISegmentLeaf } from "../mergeTreeNodes.js";
 import { TextSegmentGranularity } from "../textSegment.js";
 
 interface IAttributionCollectionCtor {
@@ -25,7 +25,7 @@ interface IAttributionCollectionCtor {
 	): SerializedAttributionCollection;
 
 	populateAttributionCollections(
-		segments: Iterable<Partial<ISegment>>,
+		segments: Iterable<Partial<ISegmentLeaf>>,
 		summary: SerializedAttributionCollection,
 	): void;
 }
@@ -139,12 +139,12 @@ function runAttributionCollectionSuite(
 	});
 
 	const summary = ctor.serializeAttributionCollections(segmentsToSerialize);
-	const segments: Partial<ISegment>[] = Array.from({ length: 9 }, () => ({
+	const segments: Partial<ISegmentLeaf>[] = Array.from({ length: 9 }, () => ({
 		cachedLength: Math.floor(summary.length / 10),
-	})) as ISegment[];
+	})) as ISegmentLeaf[];
 	segments.push({
 		cachedLength: summary.length - 9 * Math.floor(summary.length / 10),
-	} satisfies Partial<ISegment>);
+	} satisfies Partial<ISegmentLeaf>);
 	benchmark({
 		title: "deserialize into 10 segments",
 		benchmarkFn: () => {

@@ -6,7 +6,7 @@
 import { strict as assert } from "node:assert";
 
 import { LocalReferencePosition } from "../localReference.js";
-import { ISegment } from "../mergeTreeNodes.js";
+import { ISegmentLeaf } from "../mergeTreeNodes.js";
 import { TrackingGroup } from "../mergeTreeTracking.js";
 import { ReferenceType } from "../ops.js";
 import { SortedSegmentSet, SortedSegmentSetItem } from "../sortedSegmentSet.js";
@@ -62,7 +62,7 @@ describe("SortedSegmentSet", () => {
 	});
 
 	it("SortedSegmentSet of objects with segments", () => {
-		const set = new SortedSegmentSet<{ segment: ISegment }>();
+		const set = new SortedSegmentSet<{ segment: ISegmentLeaf }>();
 		for (let i = 0; i < client.getLength(); i++) {
 			for (const pos of [i, client.getLength() - 1 - i]) {
 				const segment = client.getContainingSegment(pos).segment;

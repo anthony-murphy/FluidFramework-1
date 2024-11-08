@@ -14,6 +14,7 @@ import {
 	UnassignedSequenceNumber,
 	UniversalSequenceNumber,
 } from "./constants.js";
+// eslint-disable-next-line import/no-deprecated
 import { LocalReferenceCollection, type LocalReferencePosition } from "./localReference.js";
 import { TrackingGroupCollection } from "./mergeTreeTracking.js";
 import { IJSONSegment, IMarkerDef, ReferenceType } from "./ops.js";
@@ -34,6 +35,7 @@ import { PropertiesManager } from "./segmentPropertiesManager.js";
  * Common properties for a node in a merge tree.
  * @legacy
  * @alpha
+ * @deprecated - This will be remove in a subsequent release
  */
 export interface IMergeNodeCommon {
 	/**
@@ -58,9 +60,49 @@ export interface IMergeNodeCommon {
  *
  * @internal
  */
-export type ISegmentInternal = ISegment & {
+export interface ISegmentInternal extends ISegment, Partial<IRemovalInfo>, Partial<IMoveInfo> {
+	/**
+	 * Whether or not this segment is a special segment denoting the start or
+	 * end of the tree
+	 *
+	 * Endpoint segments are imaginary segments positioned immediately before or
+	 * after the tree. These segments cannot be referenced by regular operations
+	 * and exist primarily as a bucket for local references to slide onto during
+	 * deletion of regular segments.
+	 */
+	readonly endpointType?: "start" | "end";
+	/**
+	 * Local seq at which this segment was inserted.
+	 * This is defined if and only if the insertion of the segment is pending ack, i.e. `seq` is UnassignedSequenceNumber.
+	 * Once the segment is acked, this field is cleared.
+	 *
+	 * @privateRemarks
+	 * See {@link CollaborationWindow.localSeq} for more information on the semantics of localSeq.
+	 */
+	localSeq?: number;
+	/**
+	 * Local seq at which this segment was removed. If this is defined, `removedSeq` will initially be set to
+	 * UnassignedSequenceNumber. However, if another client concurrently removes the same segment, `removedSeq`
+	 * will be updated to the seq at which that client removed this segment.
+	 *
+	 * Like {@link ISegment.localSeq}, this field is cleared once the local removal of the segment is acked.
+	 *
+	 * @privateRemarks
+	 * See {@link CollaborationWindow.localSeq} for more information on the semantics of localSeq.
+	 */
+	localRemovedSeq?: number;
+	/**
+	 * Seq at which this segment was inserted.
+	 * If undefined, it is assumed the segment was inserted prior to the collab window's minimum sequence number.
+	 */
+	seq?: number;
+
+	/**
+	 * Local references added to this segment.
+	 */
+	// eslint-disable-next-line import/no-deprecated
 	localRefs?: LocalReferenceCollection;
-};
+}
 
 /**
  * We use tiered interface to control visibility of segment properties.
@@ -89,14 +131,17 @@ export type IMergeNode = MergeBlock | ISegmentLeaf;
  * Contains removal information associated to an {@link ISegment}.
  * @legacy
  * @alpha
+ * @deprecated - This will be remove in a subsequent release
  */
 export interface IRemovalInfo {
 	/**
 	 * Local seq at which this segment was removed, if the removal is yet-to-be acked.
+	 * @deprecated - This will be remove in a subsequent release
 	 */
 	localRemovedSeq?: number;
 	/**
 	 * Seq at which this segment was removed.
+	 * @deprecated - This will be remove in a subsequent release
 	 */
 	removedSeq: number;
 	/**
@@ -104,6 +149,7 @@ export interface IRemovalInfo {
 	 * The client that actually removed the segment (i.e. whose removal op was sequenced first) is stored as the first
 	 * client in this list. Other clients in the list have all issued concurrent ops to remove the segment.
 	 * @remarks When this list has length \> 1, this is referred to as the "overlapping remove" case.
+	 * @deprecated - This will be remove in a subsequent release
 	 */
 	removedClientIds: number[];
 }
@@ -114,7 +160,7 @@ export interface IRemovalInfo {
  * @internal
  */
 export function toRemovalInfo(
-	maybe: Partial<IRemovalInfo> | undefined,
+	maybe: (ISegment & Partial<IRemovalInfo>) | undefined,
 ): IRemovalInfo | undefined {
 	if (maybe?.removedClientIds !== undefined && maybe?.removedSeq !== undefined) {
 		return maybe as IRemovalInfo;
@@ -133,16 +179,19 @@ export function toRemovalInfo(
  * in the future, when moves _are_ supported.
  * @legacy
  * @alpha
+ * @deprecated - This will be remove in a subsequent release
  */
 export interface IMoveInfo {
 	/**
 	 * Local seq at which this segment was moved if the move is yet-to-be
 	 * acked.
+	 * @deprecated - This will be remove in a subsequent release
 	 */
 	localMovedSeq?: number;
 
 	/**
 	 * The first seq at which this segment was moved.
+	 * @deprecated - This will be remove in a subsequent release
 	 */
 	movedSeq: number;
 
@@ -153,6 +202,7 @@ export interface IMoveInfo {
 	 * The seq at  `movedSeqs[i]` corresponds to the client id at `movedClientIds[i]`.
 	 *
 	 * The first element corresponds to the seq of the first move
+	 * @deprecated - This will be remove in a subsequent release
 	 */
 	movedSeqs: number[];
 
@@ -163,6 +213,7 @@ export interface IMoveInfo {
 	 * If undefined, the move was an obliterate.
 	 *
 	 * Currently this field is unused, as we only support obliterate operations
+	 * @deprecated - This will be remove in a subsequent release
 	 */
 	moveDst?: ReferencePosition;
 
@@ -172,6 +223,7 @@ export interface IMoveInfo {
 	 * The client that actually moved the segment (i.e. whose move op was sequenced
 	 * first) is stored as the first client in this list. Other clients in the
 	 * list have all issued concurrent ops to move the segment.
+	 * @deprecated - This will be remove in a subsequent release
 	 */
 	movedClientIds: number[];
 
@@ -188,6 +240,7 @@ export interface IMoveInfo {
 	 * If a segment is moved on insertion, its length is only ever visible to
 	 * the client that inserted the segment. This is relevant in partial length
 	 * calculations
+	 * @deprecated - This will be remove in a subsequent release
 	 */
 	wasMovedOnInsert: boolean;
 }
@@ -223,6 +276,7 @@ export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Parti
 	 * after the tree. These segments cannot be referenced by regular operations
 	 * and exist primarily as a bucket for local references to slide onto during
 	 * deletion of regular segments.
+	 * @deprecated - This will be remove in a subsequent release
 	 */
 	readonly endpointType?: "start" | "end";
 
@@ -251,7 +305,7 @@ export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Parti
 	 * Local seq at which this segment was inserted.
 	 * This is defined if and only if the insertion of the segment is pending ack, i.e. `seq` is UnassignedSequenceNumber.
 	 * Once the segment is acked, this field is cleared.
-	 *
+	 * @deprecated - This will be remove in a subsequent release
 	 * @privateRemarks
 	 * See {@link CollaborationWindow.localSeq} for more information on the semantics of localSeq.
 	 */
@@ -262,6 +316,7 @@ export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Parti
 	 * will be updated to the seq at which that client removed this segment.
 	 *
 	 * Like {@link ISegment.localSeq}, this field is cleared once the local removal of the segment is acked.
+	 * @deprecated - This will be remove in a subsequent release
 	 *
 	 * @privateRemarks
 	 * See {@link CollaborationWindow.localSeq} for more information on the semantics of localSeq.
@@ -270,15 +325,20 @@ export interface ISegment extends IMergeNodeCommon, Partial<IRemovalInfo>, Parti
 	/**
 	 * Seq at which this segment was inserted.
 	 * If undefined, it is assumed the segment was inserted prior to the collab window's minimum sequence number.
+	 *
+	 * @deprecated - This will be remove in a subsequent release
 	 */
 	seq?: number;
 	/**
 	 * Short clientId for the client that inserted this segment.
+	 *
 	 */
 	clientId: number;
 	/**
 	 * Local references added to this segment.
+	 * @deprecated - This will be remove in a subsequent release
 	 */
+	// eslint-disable-next-line import/no-deprecated
 	localRefs?: LocalReferenceCollection;
 	/**
 	 * Properties that have been added to this segment via annotation.
@@ -509,6 +569,7 @@ export abstract class BaseSegment implements ISegment {
 	public attribution?: IAttributionCollection<AttributionKey>;
 
 	public properties?: PropertySet;
+	// eslint-disable-next-line import/no-deprecated
 	public localRefs?: LocalReferenceCollection;
 	public abstract readonly type: string;
 	public localSeq?: number;
@@ -529,7 +590,12 @@ export abstract class BaseSegment implements ISegment {
 		return true;
 	}
 
-	protected cloneInto(b: ISegment): void {
+	/**
+	 * Clones common properties into the new segment
+	 * @deprecated - This will be remove in a subsequent release
+	 */
+	protected cloneInto(m: ISegment): void {
+		const b: ISegmentLeaf = m;
 		b.clientId = this.clientId;
 		// TODO: deep clone properties
 		b.properties = clone(this.properties);
@@ -606,6 +672,7 @@ export abstract class BaseSegment implements ISegment {
 	public append(other: ISegment): void {
 		// Note: Must call 'appendLocalRefs' before modifying this segment's length as
 		//       'this.cachedLength' is used to adjust the offsets of the local refs.
+		// eslint-disable-next-line import/no-deprecated
 		LocalReferenceCollection.append(this, other);
 		if (this.attribution) {
 			assert(

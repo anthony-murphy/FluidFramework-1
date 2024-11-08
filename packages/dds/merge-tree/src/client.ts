@@ -42,13 +42,11 @@ import type {
 } from "./mergeTreeDeltaCallback.js";
 import { walkAllChildSegments } from "./mergeTreeNodeWalk.js";
 import {
-	// eslint-disable-next-line import/no-deprecated
 	CollaborationWindow,
 	ISegment,
 	ISegmentAction,
 	ISegmentLeaf,
 	Marker,
-	// eslint-disable-next-line import/no-deprecated
 	SegmentGroup,
 	compareStrings,
 	toMoveInfo,
@@ -85,7 +83,6 @@ import { Side, type InteriorSequencePlace } from "./sequencePlace.js";
 import { SnapshotLoader } from "./snapshotLoader.js";
 import { SnapshotV1 } from "./snapshotV1.js";
 import { SnapshotLegacy } from "./snapshotlegacy.js";
-// eslint-disable-next-line import/no-deprecated
 import { IMergeTreeTextHelper } from "./textSegment.js";
 
 type IMergeTreeDeltaRemoteOpArgs = Omit<IMergeTreeDeltaOpArgs, "sequencedMessage"> &
@@ -191,20 +188,19 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 	 * It is used to get the segment group(s) for the previous operations.
 	 * @param count - The number segment groups to get peek from the tail of the queue. Default 1.
 	 */
-	// eslint-disable-next-line import/no-deprecated
+
 	public peekPendingSegmentGroups(): SegmentGroup | undefined;
-	// eslint-disable-next-line import/no-deprecated
+
 	public peekPendingSegmentGroups(count: number): SegmentGroup | SegmentGroup[] | undefined;
 	public peekPendingSegmentGroups(
 		count: number = 1,
-		// eslint-disable-next-line import/no-deprecated
 	): SegmentGroup | SegmentGroup[] | undefined {
 		const pending = this._mergeTree.pendingSegments;
 		let node = pending?.last;
 		if (count === 1 || pending === undefined) {
 			return node?.data;
 		}
-		// eslint-disable-next-line import/no-deprecated
+
 		const taken: SegmentGroup[] = Array.from({ length: Math.min(count, pending.length) });
 		for (let i = taken.length - 1; i >= 0; i--) {
 			taken[i] = node!.data;
@@ -396,7 +392,6 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 		}
 	}
 
-	// eslint-disable-next-line import/no-deprecated
 	public getCollabWindow(): CollaborationWindow {
 		return this._mergeTree.collabWindow;
 	}
@@ -486,7 +481,6 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 	 * Revert an op
 	 */
 	public rollback?(op: unknown, localOpMetadata: unknown): void {
-		// eslint-disable-next-line import/no-deprecated
 		this._mergeTree.rollback(op as IMergeTreeDeltaOp, localOpMetadata as SegmentGroup);
 	}
 
@@ -861,7 +855,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 
 	private resetPendingDeltaToOps(
 		resetOp: IMergeTreeDeltaOp,
-		// eslint-disable-next-line import/no-deprecated
+
 		segmentGroup: SegmentGroup<ISegmentLeaf>,
 	): IMergeTreeDeltaOp[] {
 		assert(!!segmentGroup, 0x033 /* "Segment group undefined" */);
@@ -875,7 +869,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 		}
 
 		// if this is an obliterate op, keep all segments in same segment group
-		// eslint-disable-next-line import/no-deprecated
+
 		const obliterateSegmentGroup: SegmentGroup = {
 			segments: [],
 			localSeq: segmentGroup.localSeq,
@@ -953,7 +947,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 						}
 					}
 
-					const segInsertOp: ISegment = segment.clone();
+					const segInsertOp = segment.clone();
 					const opProps =
 						isObject(resetOp.seg) && "props" in resetOp.seg && isObject(resetOp.seg.props)
 							? { ...resetOp.seg.props }
@@ -1163,7 +1157,6 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 
 	private lastNormalizationRefSeq = 0;
 
-	// eslint-disable-next-line import/no-deprecated
 	private pendingRebase: DoublyLinkedList<SegmentGroup> | undefined;
 
 	/**
@@ -1174,7 +1167,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 	 */
 	public regeneratePendingOp(
 		resetOp: IMergeTreeOp,
-		// eslint-disable-next-line import/no-deprecated
+
 		segmentGroup: SegmentGroup | SegmentGroup[],
 	): IMergeTreeOp {
 		if (this.pendingRebase === undefined || this.pendingRebase.empty) {
@@ -1241,7 +1234,6 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 		return opList.length === 1 ? opList[0] : createGroupOp(...opList);
 	}
 
-	// eslint-disable-next-line import/no-deprecated
 	public createTextHelper(): IMergeTreeTextHelper {
 		return new MergeTreeTextHelper(this._mergeTree);
 	}
@@ -1358,7 +1350,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 
 	getPropertiesAtPosition(pos: number): PropertySet | undefined {
 		let propertiesAtPosition: PropertySet | undefined;
-		const segoff = this.getContainingSegment(pos);
+		const segoff = this.getContainingSegment<ISegmentLeaf>(pos);
 		const seg = segoff.segment;
 		if (seg) {
 			propertiesAtPosition = seg.properties;

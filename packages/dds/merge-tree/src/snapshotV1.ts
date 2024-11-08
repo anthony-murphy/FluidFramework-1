@@ -22,7 +22,7 @@ import { IAttributionCollection } from "./attributionCollection.js";
 import { UnassignedSequenceNumber } from "./constants.js";
 import { MergeTree } from "./mergeTree.js";
 import { walkAllChildSegments } from "./mergeTreeNodeWalk.js";
-import { ISegment } from "./mergeTreeNodes.js";
+import { ISegmentLeaf } from "./mergeTreeNodes.js";
 import type { IJSONSegment } from "./ops.js";
 import { PropertySet, matchProperties } from "./properties.js";
 import {
@@ -208,7 +208,7 @@ export class SnapshotV1 {
 		};
 
 		// Helper to serialize the given `segment` and add it to the snapshot (if a segment is provided).
-		const pushSeg = (segment?: ISegment): void => {
+		const pushSeg = (segment?: ISegmentLeaf): void => {
 			if (segment) {
 				if (segment.properties !== undefined && Object.keys(segment.properties).length === 0) {
 					segment.properties = undefined;
@@ -221,8 +221,8 @@ export class SnapshotV1 {
 			}
 		};
 
-		let prev: ISegment | undefined;
-		const extractSegment = (segment: ISegment): boolean => {
+		let prev: ISegmentLeaf | undefined;
+		const extractSegment = (segment: ISegmentLeaf): boolean => {
 			// Elide segments that do not need to be included in the snapshot.  A segment may be elided if
 			// either condition is true:
 			//   a) The segment has not yet been ACKed.  We do not need to snapshot unACKed segments because
@@ -260,12 +260,14 @@ export class SnapshotV1 {
 					// We do not have a previous candidate for coalescing.  Make the current segment the new candidate.
 					prev = segment;
 				} else if (
-					prev.canAppend(segment) &&
+					prev.canAppend?.(segment) &&
 					matchProperties(prev.properties, segment.properties)
 				) {
 					// We have a compatible pair.  Replace `prev` with the coalesced segment.  Clone to avoid
 					// modifying the segment instances currently in the MergeTree.
+
 					prev = prev.clone();
+
 					prev.append(segment.clone());
 				} else {
 					// The segment pair could not be coalesced.  Record the `prev` segment in the snapshot
@@ -289,6 +291,7 @@ export class SnapshotV1 {
 				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 				if (segment.seq! > minSeq) {
 					raw.seq = segment.seq;
+
 					raw.client = this.getLongClientId(segment.clientId);
 				}
 				// We have already dispensed with removed segments below the MSN and removed segments with unassigned

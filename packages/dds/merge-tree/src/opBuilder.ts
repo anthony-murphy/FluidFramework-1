@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { ISegment, Marker } from "./mergeTreeNodes.js";
+import { Marker, type ISegmentInternal } from "./mergeTreeNodes.js";
 import {
 	IMergeTreeAnnotateMsg,
 	IMergeTreeDeltaOp,
@@ -137,7 +137,10 @@ export function createObliterateRangeOpSided(
  *
  * @internal
  */
-export function createInsertSegmentOp(pos: number, segment: ISegment): IMergeTreeInsertMsg {
+export function createInsertSegmentOp(
+	pos: number,
+	segment: ISegmentInternal,
+): IMergeTreeInsertMsg {
 	return createInsertOp(pos, segment.toJSONObject());
 }
 

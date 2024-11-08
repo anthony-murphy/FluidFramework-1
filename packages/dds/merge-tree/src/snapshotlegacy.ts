@@ -18,7 +18,7 @@ import {
 
 import { NonCollabClient, UnassignedSequenceNumber } from "./constants.js";
 import { MergeTree } from "./mergeTree.js";
-import { ISegment } from "./mergeTreeNodes.js";
+import { ISegmentLeaf } from "./mergeTreeNodes.js";
 import { matchProperties } from "./properties.js";
 import {
 	JsonSegmentSpecs,
@@ -55,7 +55,7 @@ export class SnapshotLegacy {
 
 	private header: SnapshotHeader | undefined;
 	private seq: number | undefined;
-	private segments: ISegment[] | undefined;
+	private segments: ISegmentLeaf[] | undefined;
 	private readonly logger: ITelemetryLoggerExt;
 	private readonly chunkSize: number;
 
@@ -71,11 +71,11 @@ export class SnapshotLegacy {
 	}
 
 	private getSeqLengthSegs(
-		allSegments: ISegment[],
+		allSegments: ISegmentLeaf[],
 		approxSequenceLength: number,
 		startIndex = 0,
 	): MergeTreeChunkLegacy {
-		const segs: ISegment[] = [];
+		const segs: ISegmentLeaf[] = [];
 		let sequenceLength = 0;
 		let segCount = 0;
 		let segsWithAttribution = 0;
@@ -191,7 +191,7 @@ export class SnapshotLegacy {
 		return builder.getSummaryTree();
 	}
 
-	extractSync(): ISegment[] {
+	extractSync(): ISegmentLeaf[] {
 		const collabWindow = this.mergeTree.collabWindow;
 		this.seq = collabWindow.minSeq;
 		this.header = {
@@ -204,10 +204,10 @@ export class SnapshotLegacy {
 
 		let originalSegments = 0;
 
-		const segs: ISegment[] = [];
-		let prev: ISegment | undefined;
+		const segs: ISegmentLeaf[] = [];
+		let prev: ISegmentLeaf | undefined;
 		const extractSegment = (
-			segment: ISegment,
+			segment: ISegmentLeaf,
 			pos: number,
 			refSeq: number,
 			clientId: number,
@@ -222,7 +222,10 @@ export class SnapshotLegacy {
 					segment.removedSeq > this.seq!)
 			) {
 				originalSegments += 1;
-				if (prev?.canAppend(segment) && matchProperties(prev.properties, segment.properties)) {
+				if (
+					prev?.canAppend?.(segment) &&
+					matchProperties(prev.properties, segment.properties)
+				) {
 					prev = prev.clone();
 					prev.append(segment.clone());
 				} else {
