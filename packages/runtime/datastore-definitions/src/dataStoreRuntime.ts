@@ -91,6 +91,11 @@ export interface IFluidDataStoreRuntime
 	 */
 	createChannel(id: string | undefined, type: string): IChannel;
 
+	branchChannel?(
+		channelId: string,
+		options: { process?: "remote" | "remote&Local" },
+	): Promise<{ channel: IChannel; context?: { merge: () => void } }>;
+
 	/**
 	 * This api allows adding channel to data store after it was created.
 	 * This allows callers to cusmomize channel instance. For example, channel implementation

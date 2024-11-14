@@ -3,6 +3,7 @@
  * Licensed under the MIT License.
  */
 
+import { TypedEventEmitter } from "@fluid-internal/client-utils";
 import { assert } from "@fluidframework/core-utils/internal";
 import {
 	IDeltaConnection,
@@ -70,7 +71,33 @@ function getContentsWithStashedOpHandling(
 	return newMessageContents;
 }
 
-export class ChannelDeltaConnection implements IDeltaConnection {
+export class ChannelDeltaConnection
+	extends TypedEventEmitter<{
+		(
+			event: "submit" | "pre-resubmit" | "post-resubmit" | "rollback",
+			listener: (content: any, localOpMetadata: unknown) => void,
+		);
+		(event: "process", listener: (message: IRuntimeMessageCollection) => void);
+	}>
+	implements IDeltaConnection
+{
+	public static clone(
+		original: ChannelDeltaConnection,
+		overrides: {
+			_connected?: boolean;
+			submit?: (message: unknown, localOpMetadata: unknown) => void;
+			dirty?: () => void;
+			isAttachedAndVisible?: () => boolean;
+		},
+	) {
+		return new ChannelDeltaConnection(
+			overrides._connected ?? original._connected,
+			overrides.submit ?? original.submitFn,
+			overrides.dirty ?? original.dirty,
+			overrides.isAttachedAndVisible ?? original.isAttachedAndVisible,
+		);
+	}
+
 	private _handler: IDeltaHandler | undefined;
 	private stashedOpMd: StashedOpMetadata | undefined;
 
@@ -87,7 +114,9 @@ export class ChannelDeltaConnection implements IDeltaConnection {
 		private readonly submitFn: (content: any, localOpMetadata: unknown) => void,
 		public readonly dirty: () => void,
 		private readonly isAttachedAndVisible: () => boolean,
-	) {}
+	) {
+		super();
+	}
 
 	public attach(handler: IDeltaHandler) {
 		assert(this._handler === undefined, 0x178 /* "Missing delta handler on attach" */);

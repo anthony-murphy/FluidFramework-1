@@ -8,6 +8,7 @@ import { assert, Lazy, LazyPromise } from "@fluidframework/core-utils/internal";
 import {
 	IChannel,
 	IFluidDataStoreRuntime,
+	type IChannelFactory,
 } from "@fluidframework/datastore-definitions/internal";
 import {
 	IDocumentStorageService,
@@ -24,11 +25,13 @@ import {
 import {
 	ITelemetryLoggerExt,
 	DataProcessingError,
+	createChildLogger,
 } from "@fluidframework/telemetry-utils/internal";
 
 import {
 	ChannelServiceEndpoints,
 	IChannelContext,
+	branchChannel,
 	createChannelServiceEndpoints,
 	loadChannel,
 	loadChannelFactoryAndAttributes,
@@ -51,7 +54,7 @@ export abstract class LocalChannelContextBase implements IChannelContext {
 		protected readonly id: string,
 		protected readonly runtime: IFluidDataStoreRuntime,
 		protected readonly services: Lazy<ChannelServiceEndpoints>,
-		private readonly channelP: Promise<IChannel>,
+		private readonly channelP: Promise<{ channel: IChannel; factory: IChannelFactory }>,
 		private _channel?: IChannel,
 	) {
 		assert(!this.id.includes("/"), 0x30f /* Channel context ID cannot contain slashes */);
@@ -62,14 +65,26 @@ export abstract class LocalChannelContextBase implements IChannelContext {
 	}
 
 	public async getChannel(): Promise<IChannel> {
-		if (this._channel === undefined) {
-			return this.channelP.then((c) => (this._channel = c));
-		}
-		return this.channelP;
+		return this.channelP.then((c) => (this._channel ??= c.channel));
 	}
 
 	public get isLoaded(): boolean {
 		return this._channel !== undefined;
+	}
+
+	public async branchChannel(options: {
+		process?: "remote" | "remote&Local";
+	}): Promise<{ channel: IChannel }> {
+		const { channel, factory } = await this.channelP;
+		const branch = await branchChannel(
+			options,
+			channel,
+			this.services.value,
+			this.runtime,
+			factory,
+			createChildLogger({ logger: this.runtime.logger }),
+		);
+		return { channel: branch.channel };
 	}
 
 	public setConnectionState(connected: boolean, clientId?: string) {
@@ -246,7 +261,7 @@ export class RehydratedLocalChannelContext extends LocalChannelContextBase {
 					blobMap,
 				);
 			}),
-			new LazyPromise<IChannel>(async () => {
+			new LazyPromise(async () => {
 				try {
 					const { attributes, factory } = await loadChannelFactoryAndAttributes(
 						dataStoreContext,
@@ -266,7 +281,7 @@ export class RehydratedLocalChannelContext extends LocalChannelContextBase {
 					for (const messageCollection of this.pendingMessagesState.messageCollections) {
 						this.services.value.deltaConnection.processMessages(messageCollection);
 					}
-					return channel;
+					return { channel, factory };
 				} catch (err) {
 					throw DataProcessingError.wrapIfUnrecognized(
 						err,
@@ -325,6 +340,7 @@ export class LocalChannelContext extends LocalChannelContextBase {
 	private readonly dirtyFn: () => void;
 	constructor(
 		public readonly channel: IChannel,
+		factory: IChannelFactory,
 		runtime: IFluidDataStoreRuntime,
 		dataStoreContext: IFluidDataStoreContext,
 		storageService: IDocumentStorageService,
@@ -345,7 +361,7 @@ export class LocalChannelContext extends LocalChannelContextBase {
 					logger,
 				);
 			}),
-			Promise.resolve(channel),
+			Promise.resolve({ channel, factory }),
 			channel,
 		);
 		this.channel = channel;

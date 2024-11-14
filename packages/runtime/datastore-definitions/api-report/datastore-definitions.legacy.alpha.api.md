@@ -26,6 +26,10 @@ export interface IChannelAttributes {
 // @alpha
 export interface IChannelFactory<out TChannel = unknown> {
     readonly attributes: IChannelAttributes;
+    // (undocumented)
+    branch?: (options: {
+        process?: "remote" | "remote&Local";
+    }, services: IChannelServices, baseChannel: IChannel & IChannel) => Promise<IChannel & IChannel>;
     create(runtime: IFluidDataStoreRuntime, id: string): TChannel & IChannel;
     load(runtime: IFluidDataStoreRuntime, id: string, services: IChannelServices, channelAttributes: Readonly<IChannelAttributes>): Promise<TChannel & IChannel>;
     readonly type: string;
@@ -74,6 +78,15 @@ export interface IFluidDataStoreRuntime extends IEventProvider<IFluidDataStoreRu
     addChannel(channel: IChannel): void;
     readonly attachState: AttachState;
     bindChannel(channel: IChannel): void;
+    // (undocumented)
+    branchChannel?(channelId: string, options: {
+        process?: "remote" | "remote&Local";
+    }): Promise<{
+        channel: IChannel;
+        context?: {
+            merge: () => void;
+        };
+    }>;
     // (undocumented)
     readonly channelsRoutingContext: IFluidHandleContext;
     // (undocumented)
