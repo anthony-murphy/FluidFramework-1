@@ -13,7 +13,6 @@ import {
 import {
 	IDocumentStorageService,
 	ISnapshotTree,
-	type ISequencedDocumentMessage,
 } from "@fluidframework/driver-definitions/internal";
 import {
 	IExperimentalIncrementalSummaryContext,
@@ -166,11 +165,10 @@ export class RemoteChannelContext implements IChannelContext {
 		return this.channelP.then((c) => c.channel);
 	}
 
-	public async branchChannel(options: { process?: "remote" | "remote&Local" }) {
+	public async branchChannel() {
 		const mainChannel = await this.channelP;
 
 		const branch = await branchChannel(
-			options,
 			mainChannel.channel,
 			mainChannel.services,
 			this.runtime,

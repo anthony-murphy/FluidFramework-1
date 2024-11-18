@@ -572,13 +572,10 @@ export class FluidDataStoreRuntime
 		}
 	}
 
-	public async branchChannel(
-		channelId: string,
-		options: { process?: "remote" | "remote&Local" },
-	): Promise<{ channel: IChannel }> {
+	public async branchChannel(channelId: string): Promise<{ channel: IChannel }> {
 		const channelContext = this.contexts.get(channelId);
 		assert(channelContext !== undefined, "foo");
-		return channelContext.branchChannel(options);
+		return channelContext.branchChannel();
 	}
 
 	/**

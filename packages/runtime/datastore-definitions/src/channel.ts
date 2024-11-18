@@ -324,7 +324,6 @@ export interface IChannelFactory<out TChannel = unknown> {
 	create(runtime: IFluidDataStoreRuntime, id: string): TChannel & IChannel;
 
 	branch?: (
-		options: { process?: "remote" | "remote&Local" },
 		services: IChannelServices,
 		baseChannel: IChannel & IChannel,
 	) => Promise<IChannel & IChannel>;

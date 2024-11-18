@@ -93,7 +93,6 @@ export interface IFluidDataStoreRuntime
 
 	branchChannel?(
 		channelId: string,
-		options: { process?: "remote" | "remote&Local" },
 	): Promise<{ channel: IChannel; context?: { merge: () => void } }>;
 
 	/**

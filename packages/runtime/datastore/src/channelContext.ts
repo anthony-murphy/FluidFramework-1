@@ -75,9 +75,7 @@ export interface IChannelContext {
 	 */
 	updateUsedRoutes(usedRoutes: string[]): void;
 
-	branchChannel(options: {
-		process?: "remote" | "remote&Local";
-	}): Promise<{ channel: IChannel; context?: { merge() } }>;
+	branchChannel(): Promise<{ channel: IChannel; context?: { merge() } }>;
 }
 
 export interface ChannelServiceEndpoints {
@@ -218,7 +216,6 @@ export async function loadChannel(
 }
 
 export async function branchChannel(
-	options: { process?: "remote" | "remote&Local" },
 	channel: IChannel,
 	channelServices: ChannelServiceEndpoints,
 	dataStoreRuntime: IFluidDataStoreRuntime,
@@ -235,7 +232,7 @@ export async function branchChannel(
 
 	if (factory.branch) {
 		return {
-			channel: await factory.branch(options, services, channel),
+			channel: await factory.branch(services, channel),
 			services,
 			// merge would probably come from the channel itself
 			merge: undefined,
@@ -252,18 +249,10 @@ export async function branchChannel(
 			channel.id,
 		),
 		services,
-		merge:
-			options.process === undefined
-				? undefined
-				: options.process === "remote"
-					? createRemoteProcessingMerge(
-							services.deltaConnection,
-							channelServices.deltaConnection,
-						)
-					: createRemoteAndLocalProcessingMerge(
-							services.deltaConnection,
-							channelServices.deltaConnection,
-						),
+		merge: createRemoteProcessingMerge(
+			services.deltaConnection,
+			channelServices.deltaConnection,
+		),
 	};
 
 	return branch;
@@ -300,104 +289,6 @@ function createRemoteProcessingMerge(
 		rebased.forEach((p) => {
 			const channelMetadata = channelDelta.applyStashedOp(p.content);
 			branchPending.push({ ...p, channelMetadata });
-			channelDelta.submit(p.content, channelMetadata);
-		});
-		ignoreChannelSubmits = false;
-	};
-}
-
-function createRemoteAndLocalProcessingMerge(
-	branchDelta: ChannelDeltaConnection,
-	channelDelta: ChannelDeltaConnection,
-) {
-	const branchPending: {
-		content: unknown;
-		branchMetadata: unknown;
-		channelMetadata?: Set<unknown>;
-	}[] = [];
-	let ignoreChannelSubmits = false;
-
-	branchDelta.on("submit", (content, branchMetadata) =>
-		branchPending.push({ content, branchMetadata }),
-	);
-
-	channelDelta.on("submit", (content, channelMetadata) => {
-		if (!ignoreChannelSubmits) {
-			// pretend the channel's op in the branches op
-			const branchMetadata = branchDelta.applyStashedOp(content);
-			branchPending.push({
-				content,
-				branchMetadata,
-				channelMetadata: new Set([channelMetadata]),
-			});
-		}
-	});
-
-	channelDelta.on("process", (message) => {
-		const { local } = message;
-		if (local) {
-			let pendingIndex = branchPending.findIndex(
-				(b) => b.channelMetadata?.has(channelMetadata) === true,
-			);
-			assert(pendingIndex !== -1, "must have pending change mapped to remote");
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			const { channelMetadata, content, branchMetadata } = branchPending[0]!;
-			while (pendingIndex > 0) {
-				assert(channelMetadata === undefined, "can;t move shared changes");
-				branchDelta.reSubmit(content, branchMetadata);
-				branchPending.shift();
-				pendingIndex--;
-			}
-
-			channelMetadata?.delete(channelMetadata);
-			if (channelMetadata?.size === 0) {
-				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-				const branchData = branchPending.shift()!;
-				branchDelta.process(
-					{ ...message, contents: branchData.content },
-					true,
-					branchData.branchMetadata,
-				);
-			}
-		} else {
-			branchDelta.process(message, false, undefined);
-		}
-	});
-
-	channelDelta.on("pre-resubmit", (_, originalChannelMetadata) => {
-		// get the original branch data from original submit metadata
-		const pendingIndex = branchPending.findIndex(
-			(b) => b.channelMetadata?.has(originalChannelMetadata) === true,
-		);
-		assert(pendingIndex !== -1, "should exist if tracking");
-
-		const newChannelMetadata = new Set<unknown>();
-		// capture the new branch metadata if submitted
-
-		const onResubmitSubmit = (c, channelMetadata) => newChannelMetadata.add(channelMetadata);
-
-		ignoreChannelSubmits = true;
-		channelDelta.on("submit", onResubmitSubmit);
-		channelDelta.once("post-resubmit", () => {
-			// stop capturing resubmit metadatas
-			channelDelta.off("submit", onResubmitSubmit);
-			ignoreChannelSubmits = false;
-			assert(newChannelMetadata.size > 0, "must have at least one outstanding op");
-			branchPending[pendingIndex].channelMetadata = newChannelMetadata;
-		});
-	});
-
-	return () => {
-		const pending = branchPending.splice(0);
-		pending.forEach((p) => {
-			assert(p.channelMetadata === undefined, "cannot rebase with remote changes");
-			branchDelta.reSubmit(p.content, p.branchMetadata);
-		});
-		const rebased = branchPending.splice(0);
-		ignoreChannelSubmits = true;
-		rebased.forEach((p) => {
-			const channelMetadata = channelDelta.applyStashedOp(p.content);
-			branchPending.push({ ...p, channelMetadata: new Set([channelMetadata]) });
 			channelDelta.submit(p.content, channelMetadata);
 		});
 		ignoreChannelSubmits = false;
