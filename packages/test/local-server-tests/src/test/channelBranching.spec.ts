@@ -5,11 +5,14 @@
 
 import { DataObject, DataObjectFactory } from "@fluidframework/aqueduct/internal";
 import { type IRuntimeFactory } from "@fluidframework/container-definitions/internal";
-import { waitContainerToCatchUp } from "@fluidframework/container-loader/internal";
 import { loadContainerRuntime } from "@fluidframework/container-runtime/internal";
-import { type FluidObject } from "@fluidframework/core-interfaces/internal";
+import type { FluidObject } from "@fluidframework/core-interfaces";
 import { assert } from "@fluidframework/core-utils/internal";
-import { LocalDeltaConnectionServer } from "@fluidframework/server-local-server";
+import type { ISharedDirectory, SharedDirectory } from "@fluidframework/map/internal";
+import {
+	LocalDeltaConnectionServer,
+	type ILocalDeltaConnectionServer,
+} from "@fluidframework/server-local-server";
 
 import { createLoader } from "../utils.js";
 
@@ -24,7 +27,31 @@ class ParentDataObject extends DataObject {
 	}
 
 	async branch() {
-		return this.runtime.branchChannel?.("root");
+		const branch = await this.runtime.branchChannel?.(this.root);
+		assert(branch !== undefined, "blah");
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		this._makeEdits(branch.channel);
+		return branch;
+	}
+
+	public makeEdits() {
+		this._makeEdits(this.root);
+	}
+	private _makeEdits(dds: ISharedDirectory) {
+		for (let i = 0; i < 5; i++) {
+			dds.set(`${dds.id}-${i}-${Date.now()}`, Date.now());
+		}
+	}
+	public containsTheSameData(dataStore: ParentDataObject);
+	public containsTheSameData(dds: SharedDirectory);
+	public containsTheSameData(ddsOrDo: SharedDirectory | ParentDataObject) {
+		const root = "ParentDataObject" in ddsOrDo ? ddsOrDo.root : ddsOrDo;
+		for (const key of this.root.keys()) {
+			if (root.get(key) !== this.root.get(key)) {
+				return false;
+			}
+		}
+		return true;
 	}
 }
 
@@ -71,34 +98,64 @@ const runtimeFactory: IRuntimeFactory = {
 	},
 };
 
+async function createContainer(deltaConnectionServer: ILocalDeltaConnectionServer) {
+	const { loader, codeDetails, urlResolver } = createLoader({
+		deltaConnectionServer,
+		runtimeFactory,
+	});
+
+	const container = await loader.createDetachedContainer(codeDetails);
+
+	// doesn't work without this, as otherwise the default datastore is not initialized
+	await container.getEntryPoint();
+
+	await container.attach(urlResolver.createCreateNewRequest("test"));
+	const url = await container.getAbsoluteUrl("");
+	assert(url !== undefined, "container must have url");
+	container.dispose();
+	return url;
+}
+
+async function loadContainer(deltaConnectionServer: ILocalDeltaConnectionServer, url: string) {
+	const { loader } = createLoader({
+		deltaConnectionServer,
+		runtimeFactory,
+	});
+	const container = await loader.resolve({ url });
+	const entryPoint: FluidObject<ParentDataObject> = await container.getEntryPoint();
+	assert(entryPoint.ParentDataObject !== undefined, "must be ParentDataObject");
+	entryPoint.ParentDataObject.makeEdits();
+	return {
+		container,
+		dataStore: entryPoint.ParentDataObject,
+		branch: await entryPoint.ParentDataObject.branch(),
+	};
+}
+
 describe("Scenario Test", () => {
-	it("Synchronously create child data store", async () => {
+	it("Channel branching", async () => {
 		const deltaConnectionServer = LocalDeltaConnectionServer.create();
+		const url = await createContainer(deltaConnectionServer);
+		const containers = [
+			await loadContainer(deltaConnectionServer, url),
+			await loadContainer(deltaConnectionServer, url),
+		];
 
-		const { loader, codeDetails, urlResolver } = createLoader({
-			deltaConnectionServer,
-			runtimeFactory,
-		});
-
-		const container = await loader.createDetachedContainer(codeDetails);
-
-		// const entrypoint: FluidObject<ParentDataObject> = await container.getEntryPoint();
-		await container.attach(urlResolver.createCreateNewRequest("test"));
-		const url = await container.getAbsoluteUrl("");
-		assert(url !== undefined, "container must have url");
-		container.dispose();
-
-		{
-			const container2 = await loader.resolve({ url });
-			await waitContainerToCatchUp(container2);
-			const entrypoint: FluidObject<ParentDataObject> = await container2.getEntryPoint();
-
-			assert(
-				entrypoint.ParentDataObject !== undefined,
-				"container2 entrypoint must be ParentDataStore",
-			);
-
-			container2.dispose();
-		}
+		await Promise.all(
+			containers.map(
+				async (c) =>
+					new Promise<void>((resolve) => c.container.once("saved", () => resolve())),
+			),
+		);
+		assert(containers[0].dataStore.containsTheSameData(containers[0].dataStore) === true, "1");
+		assert(
+			containers[0].dataStore.containsTheSameData(containers[0].branch.channel) === true,
+			"2",
+		);
+		assert(containers[0].dataStore.containsTheSameData(containers[1].dataStore) === true, "3");
+		assert(
+			containers[0].dataStore.containsTheSameData(containers[1].branch.channel) === true,
+			"4",
+		);
 	});
 });

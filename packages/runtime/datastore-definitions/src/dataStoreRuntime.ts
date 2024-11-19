@@ -91,13 +91,13 @@ export interface IFluidDataStoreRuntime
 	 */
 	createChannel(id: string | undefined, type: string): IChannel;
 
-	branchChannel?(
-		channelId: string,
-	): Promise<{ channel: IChannel; context?: { merge: () => void } }>;
+	branchChannel?<T extends IChannel>(
+		channel: T,
+	): Promise<{ channel: T; context?: { merge: () => void } }>;
 
 	/**
 	 * This api allows adding channel to data store after it was created.
-	 * This allows callers to cusmomize channel instance. For example, channel implementation
+	 * This allows callers to customize channel instance. For example, channel implementation
 	 * could have various modes of operations. As long as such configuration is provided at creation
 	 * and stored in summaries (such that all users of such channel instance behave the same), this
 	 * could be useful technique to have customized solutions without introducing a number of data structures

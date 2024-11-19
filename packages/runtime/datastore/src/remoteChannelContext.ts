@@ -165,11 +165,11 @@ export class RemoteChannelContext implements IChannelContext {
 		return this.channelP.then((c) => c.channel);
 	}
 
-	public async branchChannel() {
+	public async branchChannel<T extends IChannel>() {
 		const mainChannel = await this.channelP;
 
-		const branch = await branchChannel(
-			mainChannel.channel,
+		const branch = await branchChannel<T>(
+			mainChannel.channel as T,
 			mainChannel.services,
 			this.runtime,
 			mainChannel.factory,
@@ -181,7 +181,7 @@ export class RemoteChannelContext implements IChannelContext {
 		}
 
 		return {
-			channel: branch.channel,
+			channel: branch.channel as T,
 			context: branch.merge !== undefined ? { merge: branch.merge } : undefined,
 		};
 	}

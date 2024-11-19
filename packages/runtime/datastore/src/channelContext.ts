@@ -75,7 +75,7 @@ export interface IChannelContext {
 	 */
 	updateUsedRoutes(usedRoutes: string[]): void;
 
-	branchChannel(): Promise<{ channel: IChannel; context?: { merge() } }>;
+	branchChannel<T extends IChannel>(): Promise<{ channel: T; context?: { merge() } }>;
 }
 
 export interface ChannelServiceEndpoints {
@@ -215,8 +215,8 @@ export async function loadChannel(
 	return factory.load(dataStoreRuntime, channelId, services, attributes);
 }
 
-export async function branchChannel(
-	channel: IChannel,
+export async function branchChannel<T extends IChannel>(
+	channel: T,
 	channelServices: ChannelServiceEndpoints,
 	dataStoreRuntime: IFluidDataStoreRuntime,
 	factory: IChannelFactory,
@@ -240,14 +240,14 @@ export async function branchChannel(
 	}
 
 	const branch = {
-		channel: await loadChannel(
+		channel: (await loadChannel(
 			dataStoreRuntime,
 			channel.attributes,
 			factory,
 			services,
 			logger,
 			channel.id,
-		),
+		)) as T,
 		services,
 		merge: createRemoteProcessingMerge(
 			services.deltaConnection,

@@ -72,16 +72,16 @@ export abstract class LocalChannelContextBase implements IChannelContext {
 		return this._channel !== undefined;
 	}
 
-	public async branchChannel(): Promise<{ channel: IChannel }> {
+	public async branchChannel<T extends IChannel>(): Promise<{ channel: T }> {
 		const { channel, factory } = await this.channelP;
-		const branch = await branchChannel(
-			channel,
+		const branch = await branchChannel<T>(
+			channel as T,
 			this.services.value,
 			this.runtime,
 			factory,
 			createChildLogger({ logger: this.runtime.logger }),
 		);
-		return { channel: branch.channel };
+		return { channel: branch.channel as T };
 	}
 
 	public setConnectionState(connected: boolean, clientId?: string) {
