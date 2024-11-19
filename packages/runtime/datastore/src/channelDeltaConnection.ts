@@ -74,10 +74,9 @@ function getContentsWithStashedOpHandling(
 export class ChannelDeltaConnection
 	extends TypedEventEmitter<{
 		(
-			event: "submit" | "pre-resubmit" | "post-resubmit" | "rollback",
-			listener: (content: any, localOpMetadata: unknown) => void,
+			event: "process" | "submit",
+			listener: (messageCollection: IRuntimeMessageCollection) => void,
 		);
-		(event: "process", listener: (message: IRuntimeMessageCollection) => void);
 	}>
 	implements IDeltaConnection
 {
@@ -130,6 +129,7 @@ export class ChannelDeltaConnection
 
 	public processMessages(messageCollection: IRuntimeMessageCollection): void {
 		const { envelope, messagesContent, local } = messageCollection;
+		this.emit("process", messageCollection);
 		// catches as data processing error whether or not they come from async pending queues
 		try {
 			const newMessagesContent = getContentsWithStashedOpHandling(messagesContent);
@@ -187,6 +187,7 @@ export class ChannelDeltaConnection
 	}
 
 	public submit(contents: any, metadata: unknown): void {
+		this.emit("submit", contents, metadata);
 		if (this.stashedOpMd !== undefined) {
 			this.stashedOpMd.push({ contents, metadata });
 		} else {

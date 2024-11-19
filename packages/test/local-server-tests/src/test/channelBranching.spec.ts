@@ -142,11 +142,13 @@ describe("Scenario Test", () => {
 		];
 
 		await Promise.all(
-			containers.map(
-				async (c) =>
-					new Promise<void>((resolve) => c.container.once("saved", () => resolve())),
+			containers.map(async (c) =>
+				c.container.isDirty
+					? new Promise<void>((resolve) => c.container.once("saved", () => resolve()))
+					: undefined,
 			),
 		);
+
 		assert(containers[0].dataStore.containsTheSameData(containers[0].dataStore) === true, "1");
 		assert(
 			containers[0].dataStore.containsTheSameData(containers[0].branch.channel) === true,
@@ -156,6 +158,79 @@ describe("Scenario Test", () => {
 		assert(
 			containers[0].dataStore.containsTheSameData(containers[1].branch.channel) === true,
 			"4",
+		);
+
+		assert(containers[1].dataStore.containsTheSameData(containers[1].dataStore) === true, "5");
+		assert(
+			containers[1].dataStore.containsTheSameData(containers[1].branch.channel) === true,
+			"6",
+		);
+		assert(containers[1].dataStore.containsTheSameData(containers[0].dataStore) === true, "7");
+		assert(
+			containers[1].dataStore.containsTheSameData(containers[0].branch.channel) === true,
+			"8",
+		);
+
+		containers[0].branch.context?.merge();
+		await Promise.all(
+			containers.map(async (c) =>
+				c.container.isDirty
+					? new Promise<void>((resolve) => c.container.once("saved", () => resolve()))
+					: undefined,
+			),
+		);
+
+		assert(containers[0].dataStore.containsTheSameData(containers[0].dataStore) === true, "1");
+		assert(
+			containers[0].dataStore.containsTheSameData(containers[0].branch.channel) === true,
+			"2",
+		);
+		assert(containers[0].dataStore.containsTheSameData(containers[1].dataStore) === true, "3");
+		assert(
+			containers[0].dataStore.containsTheSameData(containers[1].branch.channel) === true,
+			"4",
+		);
+
+		assert(containers[1].dataStore.containsTheSameData(containers[1].dataStore) === true, "5");
+		assert(
+			containers[1].dataStore.containsTheSameData(containers[1].branch.channel) === true,
+			"6",
+		);
+		assert(containers[1].dataStore.containsTheSameData(containers[0].dataStore) === true, "7");
+		assert(
+			containers[1].dataStore.containsTheSameData(containers[0].branch.channel) === true,
+			"8",
+		);
+
+		containers[1].branch.context?.merge();
+		await Promise.all(
+			containers.map(async (c) =>
+				c.container.isDirty
+					? new Promise<void>((resolve) => c.container.once("saved", () => resolve()))
+					: undefined,
+			),
+		);
+
+		assert(containers[0].dataStore.containsTheSameData(containers[0].dataStore) === true, "1");
+		assert(
+			containers[0].dataStore.containsTheSameData(containers[0].branch.channel) === true,
+			"2",
+		);
+		assert(containers[0].dataStore.containsTheSameData(containers[1].dataStore) === true, "3");
+		assert(
+			containers[0].dataStore.containsTheSameData(containers[1].branch.channel) === true,
+			"4",
+		);
+
+		assert(containers[1].dataStore.containsTheSameData(containers[1].dataStore) === true, "5");
+		assert(
+			containers[1].dataStore.containsTheSameData(containers[1].branch.channel) === true,
+			"6",
+		);
+		assert(containers[1].dataStore.containsTheSameData(containers[0].dataStore) === true, "7");
+		assert(
+			containers[1].dataStore.containsTheSameData(containers[0].branch.channel) === true,
+			"8",
 		);
 	});
 });

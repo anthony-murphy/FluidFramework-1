@@ -271,7 +271,14 @@ function createRemoteProcessingMerge(
 
 	channelDelta.on("process", (msg) => {
 		if (!ignoreChannelSubmits) {
-			branchDelta.processMessages(msg);
+			branchDelta.processMessages({
+				envelope: msg.envelope,
+				local: false,
+				messagesContent: msg.messagesContent.map((mc) => ({
+					...mc,
+					localOpMetadata: undefined,
+				})),
+			});
 		}
 	});
 	branchDelta.on("submit", (content, branchMetadata) => {
