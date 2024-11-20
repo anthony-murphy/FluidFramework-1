@@ -77,8 +77,8 @@ export interface IFluidDataStoreRuntime extends IEventProvider<IFluidDataStoreRu
     readonly attachState: AttachState;
     bindChannel(channel: IChannel): void;
     // (undocumented)
-    branchChannel?(channelId: string): Promise<{
-        channel: IChannel;
+    branchChannel?<T extends IChannel>(channel: T): Promise<{
+        channel: T;
         context?: {
             merge: () => void;
         };
