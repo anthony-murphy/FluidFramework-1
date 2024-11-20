@@ -22,7 +22,7 @@ declare type MakeUnusedImportErrorsGoAway<T> = TypeOnly<T> | MinimalType<T> | Fu
  * typeValidation.broken:
  * "Class_FluidDataStoreRuntime": {"forwardCompat": false}
  */
-declare type old_as_current_for_Class_FluidDataStoreRuntime = requireAssignableTo<TypeOnly<old.FluidDataStoreRuntime>, TypeOnly<current.FluidDataStoreRuntime>>
+declare type old_as_current_for_Class_FluidDataStoreRuntime = requireAssignableTo<old.FluidDataStoreRuntime, TypeOnly<current.FluidDataStoreRuntime>>
 
 /*
  * Validate backward compatibility by using the current type in place of the old type.

@@ -572,7 +572,7 @@ export class FluidDataStoreRuntime
 		}
 	}
 
-	public async branchChannel<T extends IChannel>(channel: T): Promise<{ channel: T }> {
+	public async branchChannel?<T extends IChannel>(channel: T): Promise<{ channel: T }> {
 		const channelContext = this.contexts.get(channel.id);
 		assert(
 			channelContext !== undefined && (await channelContext.getChannel()) === channel,

@@ -5,7 +5,10 @@
 
 import { strict as assert } from "assert";
 
-import { IChannel } from "@fluidframework/datastore-definitions/internal";
+import {
+	IChannel,
+	type IChannelFactory,
+} from "@fluidframework/datastore-definitions/internal";
 import { ISnapshotTree } from "@fluidframework/driver-definitions/internal";
 import { IFluidDataStoreContext } from "@fluidframework/runtime-definitions/internal";
 import {
@@ -44,6 +47,7 @@ describe("LocalChannelContext Tests", () => {
 		const codeBlock = () =>
 			new LocalChannelContext(
 				{ id: invalidId } as any as IChannel,
+				{} as any as IChannelFactory,
 				dataStoreRuntime,
 				dataStoreContext,
 				dataStoreContext.storage,
