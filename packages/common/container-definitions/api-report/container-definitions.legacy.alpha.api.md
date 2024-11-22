@@ -92,7 +92,7 @@ export interface IConnectionDetails {
 
 // @alpha
 export interface IContainer extends IEventProvider<IContainerEvents> {
-    attach(request: IRequest, attachProps?: {
+    attach(service: IDocumentService, attachProps?: {
         deltaConnection?: "none" | "delayed";
     }): Promise<void>;
     readonly attachState: AttachState;
@@ -116,7 +116,6 @@ export interface IContainer extends IEventProvider<IContainerEvents> {
     readonly isDirty: boolean;
     proposeCodeDetails(codeDetails: IFluidCodeDetails): Promise<boolean>;
     readonly readOnlyInfo: ReadOnlyInfo;
-    resolvedUrl: IResolvedUrl | undefined;
     serialize(): string;
 }
 

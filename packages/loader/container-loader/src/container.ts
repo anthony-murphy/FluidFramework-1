@@ -1297,8 +1297,8 @@ export class Container
 								);
 								this.service = service;
 								await runWithRetry(
-									// not a real call yet
-									async () => service.createContainer(summary, this.subLogger),
+									// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+									async () => service.createContainer!(summary, this.subLogger),
 									"containerAttach",
 									this.mc.logger,
 									{
@@ -1438,7 +1438,10 @@ export class Container
 		relativeUrl: string,
 	): Promise<string | undefined> => {
 		// not real. ideally we depreacte this, but could make it optional to start
-		return this.service.getAbsoluteUrl?.(relativeUrl, getPackageName(this._loadedCodeDetails));
+		return this.service?.getAbsoluteUrl?.(
+			relativeUrl,
+			getPackageName(this._loadedCodeDetails),
+		);
 	};
 
 	public async proposeCodeDetails(codeDetails: IFluidCodeDetails): Promise<boolean> {

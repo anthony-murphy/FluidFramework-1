@@ -28,7 +28,7 @@ import type {
 	ITokenClaims,
 	IVersion,
 } from "./protocol/index.js";
-import type { IResolvedUrl } from "./urlResolver.js";
+import type { IContainerPackageInfo, IResolvedUrl } from "./urlResolver.js";
 
 /**
  * @internal
@@ -376,6 +376,27 @@ export interface IDocumentServicePolicies {
 export interface IDocumentService extends IEventProvider<IDocumentServiceEvents> {
 	resolvedUrl: IResolvedUrl;
 
+	/**
+	 * Creates a url for the created container with any data store path given in the relative url.
+	 * @param relativeUrl - relative url containing data store path; '/' represents root path.
+	 * @param packageInfoSource - optional, represents container package information to be included in url.
+	 * @returns absolute url combining container url with dta store path and optional additional information.
+	 */
+	getAbsoluteUrl?(
+		relativeUrl: string,
+		packageInfoSource?: IContainerPackageInfo,
+	): Promise<string>;
+
+	/**
+	 * Creates a new document with the provided options. Returns the document service.
+	 *
+	 * @param createNewSummary - Summary used to create file. If undefined, an empty file will be created and a summary
+	 * @param logger - Optional telemetry logger to which telemetry events will be forwarded.
+	 */
+	createContainer?(
+		createNewSummary: ISummaryTree | undefined,
+		logger?: ITelemetryBaseLogger,
+	): Promise<IDocumentService>;
 	/**
 	 * Policies implemented/instructed by driver.
 	 */
