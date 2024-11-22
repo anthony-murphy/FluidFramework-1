@@ -33,7 +33,6 @@ import {
 import {
 	FluidObject,
 	IEvent,
-	IRequest,
 	ITelemetryBaseProperties,
 	LogLevel,
 } from "@fluidframework/core-interfaces";
@@ -49,12 +48,9 @@ import {
 } from "@fluidframework/driver-definitions";
 import {
 	IDocumentService,
-	IDocumentServiceFactory,
 	IDocumentStorageService,
-	IResolvedUrl,
 	ISnapshot,
 	IThrottlingWarning,
-	IUrlResolver,
 	ICommittedProposal,
 	IDocumentAttributes,
 	IDocumentMessage,
@@ -167,10 +163,6 @@ const packageNotFactoryError = "Code package does not implement IRuntimeFactory"
  */
 export interface IContainerLoadProps {
 	/**
-	 * The resolved url of the container being loaded
-	 */
-	readonly resolvedUrl: IResolvedUrl;
-	/**
 	 * Control which snapshot version to load from.  See IParsedUrl for detailed information.
 	 */
 	readonly version: string | undefined;
@@ -183,6 +175,8 @@ export interface IContainerLoadProps {
 	 * The pending state serialized from a previous container instance
 	 */
 	readonly pendingLocalState?: IPendingContainerState;
+
+	readonly service: IDocumentService;
 }
 
 /**
@@ -198,18 +192,6 @@ export interface IContainerCreateProps {
 	 */
 	readonly clientDetailsOverride?: IClientDetails;
 
-	/**
-	 * The url resolver used by the loader for resolving external urls
-	 * into Fluid urls such that the container specified by the
-	 * external url can be loaded.
-	 */
-	readonly urlResolver: IUrlResolver;
-	/**
-	 * The document service factory take the Fluid url provided
-	 * by the resolved url and constructs all the necessary services
-	 * for communication with the container's server.
-	 */
-	readonly documentServiceFactory: IDocumentServiceFactory;
 	/**
 	 * The code loader handles loading the necessary code
 	 * for running a container once it is loaded.
@@ -380,7 +362,7 @@ export class Container
 		loadProps: IContainerLoadProps,
 		createProps: IContainerCreateProps,
 	): Promise<Container> {
-		const { version, pendingLocalState, loadMode, resolvedUrl } = loadProps;
+		const { version, pendingLocalState, loadMode, service } = loadProps;
 
 		const container = new Container(createProps, loadProps);
 
@@ -403,7 +385,7 @@ export class Container
 					container.on("closed", onClosed);
 
 					container
-						.load(version, mode, resolvedUrl, pendingLocalState)
+						.load(version, mode, pendingLocalState, service)
 						.finally(() => {
 							container.removeListener("closed", onClosed);
 						})
@@ -479,8 +461,6 @@ export class Container
 	// If false, container gets closed on loss of connection.
 	private readonly _canReconnect: boolean;
 	private readonly clientDetailsOverride: IClientDetails | undefined;
-	private readonly urlResolver: IUrlResolver;
-	private readonly serviceFactory: IDocumentServiceFactory;
 	private readonly codeLoader: ICodeDetailsLoader;
 	// eslint-disable-next-line import/no-deprecated
 	private readonly options: ILoaderOptions;
@@ -497,7 +477,7 @@ export class Container
 	 * Used by the RelativeLoader to spawn a new Container for the same document.  Used to create the summarizing client.
 	 */
 	public readonly clone: (
-		loadProps: IContainerLoadProps,
+		loadProps: Omit<IContainerLoadProps, "service">,
 		createParamOverrides: Partial<IContainerCreateProps>,
 	) => Promise<Container>;
 
@@ -622,21 +602,6 @@ export class Container
 
 	private get connectionMode(): ConnectionMode {
 		return this._deltaManager.connectionManager.connectionMode;
-	}
-
-	public get resolvedUrl(): IResolvedUrl | undefined {
-		/**
-		 * All attached containers will have a document service,
-		 * this is required, as attached containers are attached to
-		 * a service. Detached containers will neither have a document
-		 * service or a resolved url as they only exist locally.
-		 * in order to create a document service a resolved url must
-		 * first be obtained, this is how the container is identified.
-		 * Because of this, the document service's resolved url
-		 * is always the same as the containers, as we had to
-		 * obtain the resolved url, and then create the service from it.
-		 */
-		return this.service?.resolvedUrl;
 	}
 
 	public get readOnlyInfo(): ReadOnlyInfo {
@@ -784,8 +749,6 @@ export class Container
 		const {
 			canReconnect,
 			clientDetailsOverride,
-			urlResolver,
-			documentServiceFactory,
 			codeLoader,
 			options,
 			scope,
@@ -799,8 +762,6 @@ export class Container
 
 		this._canReconnect = canReconnect ?? true;
 		this.clientDetailsOverride = clientDetailsOverride;
-		this.urlResolver = urlResolver;
-		this.serviceFactory = documentServiceFactory;
 		this.codeLoader = codeLoader;
 		// Warning: this is only a shallow clone. Mutation of any individual loader option will mutate it for
 		// all clients that were loaded from the same loader (including summarizer clients).
@@ -824,13 +785,17 @@ export class Container
 
 		// Note that we capture the createProps here so we can replicate the creation call when we want to clone.
 		this.clone = async (
-			_loadProps: IContainerLoadProps,
+			_loadProps: Omit<IContainerLoadProps, "service">,
 			createParamOverrides: Partial<IContainerCreateProps>,
 		): Promise<Container> => {
-			return Container.load(_loadProps, {
-				...createProps,
-				...createParamOverrides,
-			});
+			return Container.load(
+				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+				{ ..._loadProps, service: this.service! },
+				{
+					...createProps,
+					...createParamOverrides,
+				},
+			);
 		};
 
 		this._containerId = uuid();
@@ -856,7 +821,7 @@ export class Container
 				all: {
 					clientType, // Differentiating summarizer container from main container
 					containerId: this._containerId,
-					docId: () => this.resolvedUrl?.id,
+					docId: () => this.service?.resolvedUrl.id,
 					containerAttachState: () => this.attachState,
 					containerLifecycleState: () => this._lifecycleState,
 					containerConnectionState: () => ConnectionState[this.connectionState],
@@ -1213,15 +1178,10 @@ export class Container
 			this.attachmentData.state === AttachState.Attached,
 			0x0d1 /* "Container should be attached before close" */,
 		);
-		assert(
-			this.resolvedUrl !== undefined && this.resolvedUrl.type === "fluid",
-			0x0d2 /* "resolved url should be valid Fluid url" */,
-		);
 		const pendingState = await this.serializedStateManager.getPendingLocalState(
 			props,
 			this.clientId,
 			this.runtime,
-			this.resolvedUrl,
 		);
 		return pendingState;
 	}
@@ -1271,7 +1231,7 @@ export class Container
 
 	public readonly attach = runSingle(
 		async (
-			request: IRequest,
+			service: IDocumentService,
 			attachProps?: { deltaConnection?: "none" | "delayed" },
 		): Promise<void> => {
 			await PerformanceEvent.timedExecAsync(
@@ -1291,10 +1251,6 @@ export class Container
 					const normalizeErrorAndClose = (error: unknown): IFluidErrorBase => {
 						const newError = normalizeError(error);
 						this.close(newError);
-						// add resolved URL on error object so that host has the ability to find this document and delete it
-						newError.addTelemetryProperties({
-							resolvedUrl: this.service?.resolvedUrl?.url,
-						});
 						return newError;
 					};
 
@@ -1335,20 +1291,14 @@ export class Container
 						async (summary) => {
 							// Actually go and create the resolved document
 							if (this.service === undefined) {
-								const createNewResolvedUrl = await this.urlResolver.resolve(request);
 								assert(
-									this.client.details.type !== summarizerClientType &&
-										createNewResolvedUrl !== undefined,
+									this.client.details.type !== summarizerClientType,
 									0x2c4 /* "client should not be summarizer before container is created" */,
 								);
-								this.service = await runWithRetry(
-									async () =>
-										this.serviceFactory.createContainer(
-											summary,
-											createNewResolvedUrl,
-											this.subLogger,
-											false, // clientIsSummarizer
-										),
+								this.service = service;
+								await runWithRetry(
+									// not a real call yet
+									async () => service.createContainer(summary, this.subLogger),
 									"containerAttach",
 									this.mc.logger,
 									{
@@ -1487,15 +1437,8 @@ export class Container
 	public readonly getAbsoluteUrl = async (
 		relativeUrl: string,
 	): Promise<string | undefined> => {
-		if (this.resolvedUrl === undefined) {
-			return undefined;
-		}
-
-		return this.urlResolver.getAbsoluteUrl(
-			this.resolvedUrl,
-			relativeUrl,
-			getPackageName(this._loadedCodeDetails),
-		);
+		// not real. ideally we depreacte this, but could make it optional to start
+		return this.service.getAbsoluteUrl?.(relativeUrl, getPackageName(this._loadedCodeDetails));
 	};
 
 	public async proposeCodeDetails(codeDetails: IFluidCodeDetails): Promise<boolean> {
@@ -1612,8 +1555,8 @@ export class Container
 	private async load(
 		specifiedVersion: string | undefined,
 		loadMode: IContainerLoadMode,
-		resolvedUrl: IResolvedUrl,
 		pendingLocalState: IPendingContainerState | undefined,
+		service: IDocumentService,
 	): Promise<{
 		sequenceNumber: number;
 		version: string | undefined;
@@ -1621,13 +1564,7 @@ export class Container
 		dmLastKnownSeqNumber: number;
 	}> {
 		const timings: Record<string, number> = { phase1: performance.now() };
-		this.service = await this.createDocumentService(async () =>
-			this.serviceFactory.createDocumentService(
-				resolvedUrl,
-				this.subLogger,
-				this.client.details.type === summarizerClientType,
-			),
-		);
+		this.service = await this.createDocumentService(async () => service);
 
 		// Except in cases where it has stashed ops or requested by feature gate, the container will connect in "read" mode
 		const mode =
@@ -2441,7 +2378,7 @@ export class Container
 			(error?: ICriticalContainerError) => this.close(error),
 			this.updateDirtyContainerState,
 			this.getAbsoluteUrl,
-			() => this.resolvedUrl?.id,
+			() => this.service?.resolvedUrl.id,
 			() => this.clientId,
 			() => this.attachState,
 			() => this.connected,

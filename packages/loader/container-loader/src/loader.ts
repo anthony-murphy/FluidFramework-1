@@ -25,6 +25,7 @@ import {
 	IDocumentStorageService,
 	IResolvedUrl,
 	IUrlResolver,
+	type IDocumentService,
 } from "@fluidframework/driver-definitions/internal";
 import {
 	ITelemetryLoggerExt,
@@ -64,10 +65,8 @@ export class RelativeLoader implements ILoader {
 
 	public async resolve(request: IRequest): Promise<IContainer> {
 		if (request.url.startsWith("/")) {
-			ensureResolvedUrlDefined(this.container.resolvedUrl);
 			const container = await this.container.clone(
 				{
-					resolvedUrl: { ...this.container.resolvedUrl },
 					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 					version: request.headers?.[LoaderHeader.version] ?? undefined,
 					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -361,10 +360,15 @@ export class Loader implements IHostLoader {
 		);
 	}
 
-	public async resolve(request: IRequest, pendingLocalState?: string): Promise<IContainer> {
+	public async resolve(
+		service: IDocumentService,
+		request: IRequest,
+		pendingLocalState?: string,
+	): Promise<IContainer> {
 		const eventName = pendingLocalState === undefined ? "Resolve" : "ResolveWithPendingState";
 		return PerformanceEvent.timedExecAsync(this.mc.logger, { eventName }, async () => {
 			return this.resolveCore(
+				service,
 				request,
 				getAttachedContainerStateFromSerializedContainer(pendingLocalState),
 			);
@@ -372,6 +376,7 @@ export class Loader implements IHostLoader {
 	}
 
 	private async resolveCore(
+		service: IDocumentService,
 		request: IRequest,
 		pendingLocalState?: IPendingContainerState,
 	): Promise<Container> {
@@ -401,22 +406,22 @@ export class Loader implements IHostLoader {
 		request.headers[LoaderHeader.version] =
 			parsed.version ?? request.headers[LoaderHeader.version];
 
-		return this.loadContainer(request, resolvedAsFluid, pendingLocalState);
+		return this.loadContainer(service, request, pendingLocalState);
 	}
 
 	private async loadContainer(
-		request: IRequest,
-		resolvedUrl: IResolvedUrl,
+		service: IDocumentService,
+		request: Omit<IRequest, "url">,
 		pendingLocalState?: IPendingContainerState,
 	): Promise<Container> {
 		return Container.load(
 			{
-				resolvedUrl,
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 				version: request.headers?.[LoaderHeader.version] ?? undefined,
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 				loadMode: request.headers?.[LoaderHeader.loadMode],
 				pendingLocalState,
+				service,
 			},
 			{
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment

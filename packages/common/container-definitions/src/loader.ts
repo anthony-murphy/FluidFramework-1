@@ -15,11 +15,11 @@ import type {
 	IQuorumClients,
 } from "@fluidframework/driver-definitions";
 import type {
-	IResolvedUrl,
 	IDocumentMessage,
 	ISequencedProposal,
 	ISnapshotTree,
 	ISequencedDocumentMessage,
+	IDocumentService,
 } from "@fluidframework/driver-definitions/internal";
 
 import type { IAudience } from "./audience.js";
@@ -333,12 +333,6 @@ export interface IContainer extends IEventProvider<IContainerEvents> {
 	getQuorum(): IQuorumClients;
 
 	/**
-	 * Represents the resolved url to the Container.
-	 * Will be undefined only when the container is in the {@link AttachState.Detached | detached} state.
-	 */
-	resolvedUrl: IResolvedUrl | undefined;
-
-	/**
 	 * Indicates the attachment state of the container to a host service.
 	 */
 	readonly attachState: AttachState;
@@ -418,7 +412,7 @@ export interface IContainer extends IEventProvider<IContainerEvents> {
 	 *
 	 */
 	attach(
-		request: IRequest,
+		service: IDocumentService,
 		attachProps?: { deltaConnection?: "none" | "delayed" },
 	): Promise<void>;
 

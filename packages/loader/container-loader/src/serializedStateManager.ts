@@ -18,7 +18,6 @@ import { Timer, assert } from "@fluidframework/core-utils/internal";
 import {
 	FetchSource,
 	IDocumentStorageService,
-	IResolvedUrl,
 	ISnapshot,
 	type IDocumentAttributes,
 	ISnapshotTree,
@@ -425,7 +424,6 @@ export class SerializedStateManager {
 		props: IGetPendingLocalStateProps,
 		clientId: string | undefined,
 		runtime: Pick<IRuntime, "getPendingLocalState">,
-		resolvedUrl: IResolvedUrl,
 	): Promise<string> {
 		return PerformanceEvent.timedExecAsync(
 			this.mc.logger,
@@ -466,7 +464,7 @@ export class SerializedStateManager {
 					snapshotBlobs: this.snapshot.snapshotBlobs,
 					loadedGroupIdSnapshots: hasGroupIdSnapshots ? loadedGroupIdSnapshots : undefined,
 					savedOps: this.processedOps,
-					url: resolvedUrl.url,
+					url: "some id or something maybe this.service.id",
 					clientId,
 				};
 
