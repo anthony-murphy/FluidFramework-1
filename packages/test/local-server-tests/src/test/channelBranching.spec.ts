@@ -4,10 +4,14 @@
  */
 
 import { DataObject, DataObjectFactory } from "@fluidframework/aqueduct/internal";
-import { type IRuntimeFactory } from "@fluidframework/container-definitions/internal";
+import {
+	type IContainer,
+	type IRuntimeFactory,
+} from "@fluidframework/container-definitions/internal";
 import { loadContainerRuntime } from "@fluidframework/container-runtime/internal";
 import type { FluidObject } from "@fluidframework/core-interfaces";
 import { assert } from "@fluidframework/core-utils/internal";
+import type { LocalResolver } from "@fluidframework/local-driver/internal";
 import type { ISharedDirectory, SharedDirectory } from "@fluidframework/map/internal";
 import {
 	LocalDeltaConnectionServer,
@@ -108,37 +112,59 @@ async function createContainer(deltaConnectionServer: ILocalDeltaConnectionServe
 
 	// doesn't work without this, as otherwise the default datastore is not initialized
 	await container.getEntryPoint();
+	const entryPoint: FluidObject<ParentDataObject> = await container.getEntryPoint();
+	assert(entryPoint.ParentDataObject !== undefined, "must be ParentDataObject");
+	entryPoint.ParentDataObject.makeEdits();
 
+	return {
+		deltaConnectionServer,
+		urlResolver,
+		container,
+		dataStore: entryPoint.ParentDataObject,
+	};
+}
+
+async function attachContainer<
+	T extends { container: IContainer; urlResolver: LocalResolver },
+>(params: T | Promise<T>) {
+	const { container, urlResolver } = await params;
 	await container.attach(urlResolver.createCreateNewRequest("test"));
 	const url = await container.getAbsoluteUrl("");
 	assert(url !== undefined, "container must have url");
-	container.dispose();
-	return url;
+	return { ...(await params), url };
 }
 
-async function loadContainer(deltaConnectionServer: ILocalDeltaConnectionServer, url: string) {
-	const { loader } = createLoader({
-		deltaConnectionServer,
-		runtimeFactory,
-	});
-	const container = await loader.resolve({ url });
+async function branchChannel<T extends { container: IContainer }>(params: T | Promise<T>) {
+	const { container } = await params;
 	const entryPoint: FluidObject<ParentDataObject> = await container.getEntryPoint();
 	assert(entryPoint.ParentDataObject !== undefined, "must be ParentDataObject");
 	entryPoint.ParentDataObject.makeEdits();
 	return {
-		container,
+		...(await params),
 		dataStore: entryPoint.ParentDataObject,
 		branch: await entryPoint.ParentDataObject.branch(),
 	};
 }
 
+async function loadContainer<
+	T extends { deltaConnectionServer: ILocalDeltaConnectionServer; url: string },
+>(params: T | Promise<T>) {
+	const { deltaConnectionServer, url } = await params;
+	const { loader } = createLoader({
+		deltaConnectionServer,
+		runtimeFactory,
+	});
+	const container = await loader.resolve({ url });
+	return { ...(await params), container };
+}
+
 describe("Scenario Test", () => {
 	it("Channel branching", async () => {
 		const deltaConnectionServer = LocalDeltaConnectionServer.create();
-		const url = await createContainer(deltaConnectionServer);
+		const create = await attachContainer(createContainer(deltaConnectionServer));
 		const containers = [
-			await loadContainer(deltaConnectionServer, url),
-			await loadContainer(deltaConnectionServer, url),
+			await branchChannel(loadContainer(create)),
+			await branchChannel(loadContainer(create)),
 		];
 
 		await Promise.all(
