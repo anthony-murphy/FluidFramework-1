@@ -23,6 +23,16 @@
 				"default": "./dist/index.js"
 			}
 		},
+		"./alpha": {
+			"import": {
+				"types": "./lib/alpha.d.ts",
+				"default": "./lib/index.js"
+			},
+			"require": {
+				"types": "./dist/alpha.d.ts",
+				"default": "./dist/index.js"
+			}
+		},
 		"./internal/test/container": {
 			"import": {
 				"types": "./lib/container.d.ts",
