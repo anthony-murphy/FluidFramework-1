@@ -270,6 +270,8 @@ export interface ISegment {
 	 */
 	properties?: PropertySet;
 
+	removedSeq?: number;
+
 	isLeaf(): this is ISegment;
 
 	clone(): ISegment;
