@@ -22,7 +22,7 @@ import { IAttributionCollection } from "./attributionCollection.js";
 import { UnassignedSequenceNumber } from "./constants.js";
 import { MergeTree } from "./mergeTree.js";
 import { walkAllChildSegments } from "./mergeTreeNodeWalk.js";
-import { ISegment } from "./mergeTreeNodes.js";
+import { ISegment, type ISegmentLeaf } from "./mergeTreeNodes.js";
 import type { IJSONSegment } from "./ops.js";
 import { PropertySet, matchProperties } from "./properties.js";
 import {
@@ -55,7 +55,7 @@ export class SnapshotV1 {
 	constructor(
 		public mergeTree: MergeTree,
 		logger: ITelemetryLoggerExt,
-		private readonly getLongClientId: (id: number) => string,
+		private readonly getLongClientId: (id: number | undefined) => string,
 		public filename?: string,
 		public onCompletion?: () => void,
 	) {
@@ -221,8 +221,8 @@ export class SnapshotV1 {
 			}
 		};
 
-		let prev: ISegment | undefined;
-		const extractSegment = (segment: ISegment): boolean => {
+		let prev: ISegmentLeaf | undefined;
+		const extractSegment = (segment: ISegmentLeaf): boolean => {
 			// Elide segments that do not need to be included in the snapshot.  A segment may be elided if
 			// either condition is true:
 			//   a) The segment has not yet been ACKed.  We do not need to snapshot unACKed segments because

@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { type MergeBlock, IMergeNode, ISegment } from "./mergeTreeNodes.js";
+import { type ISegmentLeaf, type MergeBlock, IMergeNode, ISegment } from "./mergeTreeNodes.js";
 
 export const LeafAction = {
 	Exit: false,
@@ -74,10 +74,11 @@ export function depthFirstNodeWalk(
 
 		// walk the leaves if we reached them
 		if (start !== undefined) {
-			for (let i = start.index; i !== -1 && i !== childCount; i += increment) {
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			for (let i = start.index!; i !== -1 && i !== childCount; i += increment) {
 				// the above loop ensures start is a leaf or undefined, so all children
 				// will be leaves if start exits, so the cast is safe
-				if (leafAction(block.children[i] as ISegment) === LeafAction.Exit) {
+				if (leafAction(block.children[i] as ISegmentLeaf) === LeafAction.Exit) {
 					exit = true;
 					break;
 				}
@@ -133,7 +134,8 @@ export function forwardExcursion(
 		// this will either be the sibling, or undefined
 		// either is fine, and will result in skipping
 		// the startNode only
-		startNode.parent.children[startNode.index + 1],
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		startNode.parent.children[startNode.index! + 1],
 		undefined /* downAction */,
 		leafAction,
 	);
@@ -155,7 +157,8 @@ export function backwardExcursion(
 		// this will either be the sibling, or undefined
 		// either is fine, and will result in skipping
 		// the startNode only
-		startNode.parent.children[startNode.index - 1],
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		startNode.parent.children[startNode.index! - 1],
 		undefined /* downAction */,
 		leafAction,
 		undefined /* upAction */,

@@ -72,6 +72,7 @@ export {
 	toRemovalInfo,
 	ObliterateInfo,
 	ISegmentInternal,
+	cloneInto,
 } from "./mergeTreeNodes.js";
 export {
 	Trackable,

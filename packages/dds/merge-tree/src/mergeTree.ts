@@ -136,7 +136,7 @@ function isRemovedOrMoved(segment: ISegmentLeaf): boolean {
 }
 
 function nodeTotalLength(mergeTree: MergeTree, node: IMergeNode): number | undefined {
-	if (!node.isLeaf()) {
+	if (!node.isLeaf?.()) {
 		return node.cachedLength;
 	}
 	return mergeTree.localNetLength(node);
@@ -375,9 +375,8 @@ export function findRootMergeBlock(
 	if (segmentOrNode === undefined) {
 		return undefined;
 	}
-	let maybeRoot: IRootMergeBlock | undefined = segmentOrNode.isLeaf()
-		? segmentOrNode.parent
-		: segmentOrNode;
+	let maybeRoot: IRootMergeBlock | undefined =
+		segmentOrNode instanceof MergeBlock ? segmentOrNode : segmentOrNode.parent;
 	while (maybeRoot?.parent !== undefined) {
 		maybeRoot = maybeRoot.parent;
 	}
@@ -495,7 +494,9 @@ export function getSlideToSegoff(
 		return segoff;
 	}
 	const offset =
-		segment && segment.ordinal < segoff.segment.ordinal ? segment.cachedLength - 1 : 0;
+		segment && (segment.ordinal ?? "") < (segoff.segment.ordinal ?? 0)
+			? segment.cachedLength - 1
+			: 0;
 	return {
 		segment,
 		offset,
@@ -557,9 +558,11 @@ class Obliterates {
 		// eslint-disable-next-line import/no-deprecated
 		const overlapping: ObliterateInfo[] = [];
 		for (const start of this.startOrdered.items) {
-			if (start.getSegment()!.ordinal <= seg.ordinal) {
+			const startSeg: ISegmentLeaf = start.getSegment()!;
+			if (startSeg.ordinal! <= seg.ordinal!) {
 				const ob = start.properties?.obliterate as ObliterateInfo;
-				if (ob.end.getSegment()!.ordinal >= seg.ordinal) {
+				const endSeg: ISegmentLeaf = ob.end.getSegment()!;
+				if (endSeg.ordinal! >= seg.ordinal!) {
 					overlapping.push(ob);
 				}
 			} else {
@@ -973,8 +976,9 @@ export class MergeTree {
 				this.options?.mergeTreeReferencesCanSlideToEndpoint,
 			);
 			const slideIsForward =
-				slideToSegment === undefined ? false : slideToSegment.ordinal > segment.ordinal;
-
+				slideToSegment === undefined
+					? false
+					: (slideToSegment.ordinal ?? "") > (segment.ordinal ?? "");
 			if (
 				slideToSegment !== currentSlideDestination ||
 				slideIsForward !== currentSlideIsForward ||
@@ -2442,7 +2446,7 @@ export class MergeTree {
 	 */
 	private findRollbackPosition(segment: ISegmentLeaf): number {
 		let segmentPosition = 0;
-		walkAllChildSegments(this.root, (seg) => {
+		walkAllChildSegments(this.root, (seg: ISegmentLeaf) => {
 			// If we've found the desired segment, terminate the walk and return 'segmentPosition'.
 			if (seg === segment) {
 				return false;
@@ -2594,7 +2598,7 @@ export class MergeTree {
 		for (let i = 0; i < newOrder.length; i++) {
 			const seg = newOrder[i];
 			const { parent, index, ordinal } = currentOrder[i];
-			parent?.assignChild(seg, index, false);
+			parent?.assignChild(seg, index!, false);
 			seg.ordinal = ordinal;
 		}
 
@@ -2658,7 +2662,7 @@ export class MergeTree {
 				this.normalizeAdjacentSegments(currentRangeToNormalize);
 			}
 		};
-		walkAllChildSegments(this.root, (seg) => {
+		walkAllChildSegments(this.root, (seg: ISegmentLeaf) => {
 			if (isRemoved(seg) || seg.seq === UnassignedSequenceNumber) {
 				if (isRemovedAndAcked(seg)) {
 					rangeContainsRemoteRemovedSegs = true;
