@@ -311,6 +311,8 @@ export interface ISegment {
     isLeaf(): this is ISegment;
     properties?: PropertySet;
     // (undocumented)
+    removedSeq?: number;
+    // (undocumented)
     splitAt(pos: number): ISegment | undefined;
     // (undocumented)
     toJSONObject(): any;
