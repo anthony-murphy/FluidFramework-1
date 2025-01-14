@@ -8,6 +8,7 @@ import { assert, LazyPromise } from "@fluidframework/core-utils/internal";
 import {
 	IChannel,
 	IFluidDataStoreRuntime,
+	type IChannelBranch,
 	type IChannelFactory,
 } from "@fluidframework/datastore-definitions/internal";
 import {
@@ -165,10 +166,10 @@ export class RemoteChannelContext implements IChannelContext {
 		return this.channelP.then((c) => c.channel);
 	}
 
-	public async branchChannel<T extends IChannel>() {
+	public async branchChannel<T extends IChannel>(): Promise<IChannelBranch<T>> {
 		const mainChannel = await this.channelP;
 
-		const branch = await branchChannel<T>(
+		const branchInfo = await branchChannel<T>(
 			mainChannel.channel as T,
 			mainChannel.services,
 			this.runtime,
@@ -177,13 +178,10 @@ export class RemoteChannelContext implements IChannelContext {
 		);
 
 		for (const msg of this.pendingMessagesState.messageCollections) {
-			branch.services.deltaConnection.processMessages(msg);
+			branchInfo.services.deltaConnection.processMessages(msg);
 		}
 
-		return {
-			channel: branch.channel as T,
-			context: branch.merge !== undefined ? { merge: branch.merge } : undefined,
-		};
+		return branchInfo.branch;
 	}
 
 	public setConnectionState(connected: boolean, clientId?: string) {

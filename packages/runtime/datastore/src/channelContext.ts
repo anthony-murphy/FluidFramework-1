@@ -3,12 +3,14 @@
  * Licensed under the MIT License.
  */
 
+import type { IDisposable } from "@fluidframework/core-interfaces";
 import { assert } from "@fluidframework/core-utils/internal";
 import {
 	IChannel,
 	IChannelAttributes,
 	IChannelFactory,
 	IFluidDataStoreRuntime,
+	type IChannelBranch,
 } from "@fluidframework/datastore-definitions/internal";
 import {
 	IDocumentStorageService,
@@ -75,12 +77,26 @@ export interface IChannelContext {
 	 */
 	updateUsedRoutes(usedRoutes: string[]): void;
 
-	branchChannel<T extends IChannel>(): Promise<{ channel: T; context?: { merge() } }>;
+	branchChannel<T extends IChannel>(): Promise<IChannelBranch<T>>;
 }
 
-export interface ChannelServiceEndpoints {
+export interface ChannelServiceEndpoints extends IDisposable {
 	deltaConnection: ChannelDeltaConnection;
 	objectStorage: ChannelStorageService;
+}
+
+export function toChannelServiceEndpoints(
+	deltaConnection: ChannelDeltaConnection,
+	objectStorage: ChannelStorageService,
+) {
+	return {
+		deltaConnection,
+		objectStorage,
+		dispose: (e) => deltaConnection.dispose(e),
+		get disposed() {
+			return deltaConnection.disposed;
+		},
+	};
 }
 
 export function createChannelServiceEndpoints(
@@ -101,10 +117,7 @@ export function createChannelServiceEndpoints(
 	);
 	const objectStorage = new ChannelStorageService(tree, storageService, logger, extraBlobs);
 
-	return {
-		deltaConnection,
-		objectStorage,
-	};
+	return toChannelServiceEndpoints(deltaConnection, objectStorage);
 }
 
 /** Used to get the channel's summary for the DDS or DataStore attach op */
@@ -216,46 +229,46 @@ export async function loadChannel(
 }
 
 export async function branchChannel<T extends IChannel>(
-	channel: T,
+	mainChannel: T,
 	channelServices: ChannelServiceEndpoints,
 	dataStoreRuntime: IFluidDataStoreRuntime,
 	factory: IChannelFactory,
 	logger: ITelemetryLoggerExt,
-) {
-	const services: ChannelServiceEndpoints = {
-		deltaConnection: ChannelDeltaConnection.clone(channelServices.deltaConnection, {
-			submit: () => {},
+): Promise<{ branch: IChannelBranch<T>; services: ChannelServiceEndpoints }> {
+	const services: ChannelServiceEndpoints = toChannelServiceEndpoints(
+		ChannelDeltaConnection.clone(channelServices.deltaConnection, {
+			submit: () => {
+				if (services.disposed) {
+					throw new Error("disposed");
+				}
+			},
 			dirty: () => {},
 		}),
-		objectStorage: channelServices.objectStorage,
-	};
+		channelServices.objectStorage,
+	);
 
-	if (factory.branch) {
-		return {
-			channel: await factory.branch(services, channel),
-			services,
-			// merge would probably come from the channel itself
-			merge: undefined,
-		};
-	}
-
-	const branch = {
-		channel: (await loadChannel(
-			dataStoreRuntime,
-			channel.attributes,
-			factory,
-			services,
-			logger,
-			channel.id,
-		)) as T,
+	const channel = (await loadChannel(
+		dataStoreRuntime,
+		mainChannel.attributes,
+		factory,
 		services,
+		logger,
+		mainChannel.id,
+	)) as T;
+
+	const branch: IChannelBranch<T> = {
+		channel,
 		merge: createRemoteProcessingMerge(
 			services.deltaConnection,
 			channelServices.deltaConnection,
 		),
+		get disposed() {
+			return services.disposed;
+		},
+		dispose: (e) => services.dispose(e),
 	};
 
-	return branch;
+	return { branch, services };
 }
 
 function createRemoteProcessingMerge(
@@ -285,7 +298,10 @@ function createRemoteProcessingMerge(
 		branchPending.push({ content, branchMetadata });
 	});
 
-	return () => {
+	return async () => {
+		// validate main channel isn't dirty before merging for now
+		// we need to ensure we are on the same remote op, and there are no
+		// local ops, or they are accounted for.
 		const pending = branchPending.splice(0);
 		pending.forEach((p) => {
 			assert(p.channelMetadata === undefined, "cannot rebase with remote changes");

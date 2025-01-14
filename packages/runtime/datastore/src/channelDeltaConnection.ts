@@ -4,6 +4,7 @@
  */
 
 import { TypedEventEmitter } from "@fluid-internal/client-utils";
+import type { IDisposable } from "@fluidframework/core-interfaces";
 import { assert } from "@fluidframework/core-utils/internal";
 import {
 	IDeltaConnection,
@@ -78,7 +79,7 @@ export class ChannelDeltaConnection
 			listener: (messageCollection: IRuntimeMessageCollection) => void,
 		);
 	}>
-	implements IDeltaConnection
+	implements IDeltaConnection, IDisposable
 {
 	public static clone(
 		original: ChannelDeltaConnection,
@@ -115,6 +116,11 @@ export class ChannelDeltaConnection
 		private readonly isAttachedAndVisible: () => boolean,
 	) {
 		super();
+	}
+	disposed: boolean = false;
+	dispose(error?: Error): void {
+		this.disposed = true;
+		this.removeAllListeners();
 	}
 
 	public attach(handler: IDeltaHandler) {

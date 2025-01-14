@@ -19,7 +19,7 @@ import type { ISequencedDocumentMessage } from "@fluidframework/driver-definitio
 import type { IIdCompressor } from "@fluidframework/id-compressor";
 import type { IInboundSignalMessage } from "@fluidframework/runtime-definitions/internal";
 
-import type { IChannel } from "./channel.js";
+import type { IChannel, IChannelBranch } from "./channel.js";
 
 /**
  * Events emitted by {@link IFluidDataStoreRuntime}.
@@ -90,9 +90,7 @@ export interface IFluidDataStoreRuntime
 	 */
 	createChannel(id: string | undefined, type: string): IChannel;
 
-	branchChannel?<T extends IChannel>(
-		channel: T,
-	): Promise<{ channel: T; context?: { merge: () => void } }>;
+	branchChannel?<T extends IChannel>(channel: T): Promise<IChannelBranch<T>>;
 
 	/**
 	 * This api allows adding channel to data store after it was created.

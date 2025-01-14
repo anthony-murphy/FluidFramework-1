@@ -4,6 +4,7 @@
  */
 
 import type { IFluidLoadable } from "@fluidframework/core-interfaces";
+import type { IDisposable } from "@fluidframework/core-interfaces/internal";
 import type { ISequencedDocumentMessage } from "@fluidframework/driver-definitions/internal";
 import type {
 	IExperimentalIncrementalSummaryContext,
@@ -117,6 +118,15 @@ export interface IChannel extends IFluidLoadable {
 	 * @param fullGC - true to bypass optimizations and force full generation of GC data.
 	 */
 	getGCData(fullGC?: boolean): IGarbageCollectionData;
+}
+
+/**
+ * @legacy
+ * @alpha
+ */
+export interface IChannelBranch<T extends IChannel> extends IDisposable {
+	channel: T;
+	merge(): Promise<void>;
 }
 
 /**
@@ -322,9 +332,4 @@ export interface IChannelFactory<out TChannel = unknown> {
 	 * for consistency.
 	 */
 	create(runtime: IFluidDataStoreRuntime, id: string): TChannel & IChannel;
-
-	branch?: (
-		services: IChannelServices,
-		baseChannel: IChannel & IChannel,
-	) => Promise<IChannel & IChannel>;
 }

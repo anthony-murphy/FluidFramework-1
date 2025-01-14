@@ -12,6 +12,7 @@
 
 export type {
 	IChannel,
+	IChannelBranch,
 	IChannelFactory,
 	IChannelServices,
 	IChannelStorageService,

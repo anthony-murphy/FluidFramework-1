@@ -25,6 +25,7 @@ import {
 	IChannelFactory,
 	IFluidDataStoreRuntime,
 	IFluidDataStoreRuntimeEvents,
+	type IChannelBranch,
 	type IDeltaManagerErased,
 } from "@fluidframework/datastore-definitions/internal";
 import {
@@ -572,7 +573,7 @@ export class FluidDataStoreRuntime
 		}
 	}
 
-	public async branchChannel?<T extends IChannel>(channel: T): Promise<{ channel: T }> {
+	public async branchChannel?<T extends IChannel>(channel: T): Promise<IChannelBranch<T>> {
 		const channelContext = this.contexts.get(channel.id);
 		assert(
 			channelContext !== undefined && (await channelContext.getChannel()) === channel,

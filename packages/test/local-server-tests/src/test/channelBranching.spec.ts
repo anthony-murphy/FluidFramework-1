@@ -8,6 +8,10 @@ import {
 	type IContainer,
 	type IRuntimeFactory,
 } from "@fluidframework/container-definitions/internal";
+import {
+	createDetachedContainer,
+	loadExistingContainer,
+} from "@fluidframework/container-loader/internal";
 import { loadContainerRuntime } from "@fluidframework/container-runtime/internal";
 import type { FluidObject } from "@fluidframework/core-interfaces";
 import { assert } from "@fluidframework/core-utils/internal";
@@ -103,12 +107,12 @@ const runtimeFactory: IRuntimeFactory = {
 };
 
 async function createContainer(deltaConnectionServer: ILocalDeltaConnectionServer) {
-	const { loader, codeDetails, urlResolver } = createLoader({
+	const { loaderProps, codeDetails, urlResolver } = createLoader({
 		deltaConnectionServer,
 		runtimeFactory,
 	});
 
-	const container = await loader.createDetachedContainer(codeDetails);
+	const container = await createDetachedContainer({ ...loaderProps, codeDetails });
 
 	// doesn't work without this, as otherwise the default datastore is not initialized
 	await container.getEntryPoint();
@@ -150,11 +154,11 @@ async function loadContainer<
 	T extends { deltaConnectionServer: ILocalDeltaConnectionServer; url: string },
 >(params: T | Promise<T>) {
 	const { deltaConnectionServer, url } = await params;
-	const { loader } = createLoader({
+	const { loaderProps } = createLoader({
 		deltaConnectionServer,
 		runtimeFactory,
 	});
-	const container = await loader.resolve({ url });
+	const container = await loadExistingContainer({ ...loaderProps, request: { url } });
 	return { ...(await params), container };
 }
 
@@ -197,7 +201,7 @@ describe("Scenario Test", () => {
 			"8",
 		);
 
-		containers[0].branch.context?.merge();
+		await containers[0].branch?.merge();
 		await Promise.all(
 			containers.map(async (c) =>
 				c.container.isDirty
@@ -228,7 +232,7 @@ describe("Scenario Test", () => {
 			"8",
 		);
 
-		containers[1].branch.context?.merge();
+		await containers[1].branch?.merge();
 		await Promise.all(
 			containers.map(async (c) =>
 				c.container.isDirty
