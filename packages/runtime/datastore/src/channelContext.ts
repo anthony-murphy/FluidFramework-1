@@ -4,13 +4,11 @@
  */
 
 import type { IDisposable } from "@fluidframework/core-interfaces";
-import { assert } from "@fluidframework/core-utils/internal";
 import {
 	IChannel,
 	IChannelAttributes,
 	IChannelFactory,
 	IFluidDataStoreRuntime,
-	type IChannelBranch,
 } from "@fluidframework/datastore-definitions/internal";
 import {
 	IDocumentStorageService,
@@ -77,7 +75,7 @@ export interface IChannelContext {
 	 */
 	updateUsedRoutes(usedRoutes: string[]): void;
 
-	branchChannel<T extends IChannel>(): Promise<IChannelBranch<T>>;
+	branchChannel<T extends IChannel>(branchPendingManager?: BranchPendingManager): Promise<T>;
 }
 
 export interface ChannelServiceEndpoints extends IDisposable {
@@ -228,13 +226,21 @@ export async function loadChannel(
 	return factory.load(dataStoreRuntime, channelId, services, attributes);
 }
 
-export async function branchChannel<T extends IChannel>(
-	mainChannel: T,
-	channelServices: ChannelServiceEndpoints,
-	dataStoreRuntime: IFluidDataStoreRuntime,
-	factory: IChannelFactory,
-	logger: ITelemetryLoggerExt,
-): Promise<{ branch: IChannelBranch<T>; services: ChannelServiceEndpoints }> {
+export async function branchChannel<T extends IChannel>({
+	mainChannel,
+	channelServices,
+	dataStoreRuntime,
+	factory,
+	logger,
+	branchPendingManager,
+}: {
+	mainChannel: T;
+	channelServices: ChannelServiceEndpoints;
+	dataStoreRuntime: IFluidDataStoreRuntime;
+	factory: IChannelFactory;
+	logger: ITelemetryLoggerExt;
+	branchPendingManager?: BranchPendingManager;
+}): Promise<{ channel: T; services: ChannelServiceEndpoints }> {
 	const services: ChannelServiceEndpoints = toChannelServiceEndpoints(
 		ChannelDeltaConnection.clone(channelServices.deltaConnection, {
 			submit: () => {
@@ -256,34 +262,31 @@ export async function branchChannel<T extends IChannel>(
 		mainChannel.id,
 	)) as T;
 
-	const branch: IChannelBranch<T> = {
-		channel,
-		merge: createRemoteProcessingMerge(
-			services.deltaConnection,
-			channelServices.deltaConnection,
-		),
-		get disposed() {
-			return services.disposed;
-		},
-		dispose: (e) => services.dispose(e),
-	};
+	const pendingManger = branchPendingManager ?? new BranchPendingManager();
+	pendingManger.register(channelServices.deltaConnection, services.deltaConnection);
 
-	return { branch, services };
+	return { channel, services };
 }
 
-function createRemoteProcessingMerge(
-	branchDelta: ChannelDeltaConnection,
-	channelDelta: ChannelDeltaConnection,
-) {
-	const branchPending: {
+export class BranchPendingManager implements IDisposable {
+	disposed: boolean = false;
+	dispose(error?: Error): void {
+		if (!this.disposed) {
+			this.disposed = true;
+			for (const change of this.branchPending.splice(0)) {
+				change.branchDelta.dispose(error);
+			}
+		}
+	}
+	private readonly branchPending: {
 		content: unknown;
 		branchMetadata: unknown;
-		channelMetadata?: unknown;
+		branchDelta: ChannelDeltaConnection;
+		channelDelta: ChannelDeltaConnection;
 	}[] = [];
-	let ignoreChannelSubmits = false;
 
-	channelDelta.on("process", (msg) => {
-		if (!ignoreChannelSubmits) {
+	register(channelDelta: ChannelDeltaConnection, branchDelta: ChannelDeltaConnection) {
+		channelDelta.on("process", (msg) => {
 			branchDelta.processMessages({
 				envelope: msg.envelope,
 				local: false,
@@ -292,28 +295,24 @@ function createRemoteProcessingMerge(
 					localOpMetadata: undefined,
 				})),
 			});
-		}
-	});
-	branchDelta.on("submit", (content, branchMetadata) => {
-		branchPending.push({ content, branchMetadata });
-	});
+		});
 
-	return async () => {
+		branchDelta.on("submit", (content, branchMetadata) => {
+			this.branchPending.push({ content, branchMetadata, branchDelta, channelDelta });
+		});
+	}
+	merge() {
 		// validate main channel isn't dirty before merging for now
 		// we need to ensure we are on the same remote op, and there are no
 		// local ops, or they are accounted for.
-		const pending = branchPending.splice(0);
+		const pending = this.branchPending.splice(0);
 		pending.forEach((p) => {
-			assert(p.channelMetadata === undefined, "cannot rebase with remote changes");
-			branchDelta.reSubmit(p.content, p.branchMetadata);
+			p.branchDelta.reSubmit(p.content, p.branchMetadata);
 		});
-		const rebased = branchPending.splice(0);
-		ignoreChannelSubmits = true;
+		const rebased = this.branchPending.splice(0);
 		rebased.forEach((p) => {
-			const channelMetadata = channelDelta.applyStashedOp(p.content);
-			branchPending.push({ ...p, channelMetadata });
-			channelDelta.submit(p.content, channelMetadata);
+			const channelMetadata = p.channelDelta.applyStashedOp(p.content);
+			p.channelDelta.submit(p.content, channelMetadata);
 		});
-		ignoreChannelSubmits = false;
-	};
+	}
 }

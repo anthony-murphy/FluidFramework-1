@@ -8,7 +8,6 @@ import { assert, LazyPromise } from "@fluidframework/core-utils/internal";
 import {
 	IChannel,
 	IFluidDataStoreRuntime,
-	type IChannelBranch,
 	type IChannelFactory,
 } from "@fluidframework/datastore-definitions/internal";
 import {
@@ -41,6 +40,7 @@ import {
 	loadChannel,
 	loadChannelFactoryAndAttributes,
 	summarizeChannelAsync,
+	type BranchPendingManager,
 } from "./channelContext.js";
 import { ISharedObjectRegistry } from "./dataStoreRuntime.js";
 
@@ -166,22 +166,25 @@ export class RemoteChannelContext implements IChannelContext {
 		return this.channelP.then((c) => c.channel);
 	}
 
-	public async branchChannel<T extends IChannel>(): Promise<IChannelBranch<T>> {
+	public async branchChannel<T extends IChannel>(
+		branchPendingManager?: BranchPendingManager,
+	): Promise<T> {
 		const mainChannel = await this.channelP;
 
-		const branchInfo = await branchChannel<T>(
-			mainChannel.channel as T,
-			mainChannel.services,
-			this.runtime,
-			mainChannel.factory,
-			this.subLogger,
-		);
+		const branchInfo = await branchChannel<T>({
+			mainChannel: mainChannel.channel as T,
+			channelServices: mainChannel.services,
+			dataStoreRuntime: this.runtime,
+			factory: mainChannel.factory,
+			logger: this.subLogger,
+			branchPendingManager,
+		});
 
 		for (const msg of this.pendingMessagesState.messageCollections) {
 			branchInfo.services.deltaConnection.processMessages(msg);
 		}
 
-		return branchInfo.branch;
+		return branchInfo.channel;
 	}
 
 	public setConnectionState(connected: boolean, clientId?: string) {

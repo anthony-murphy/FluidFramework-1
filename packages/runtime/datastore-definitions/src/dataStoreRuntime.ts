@@ -19,7 +19,7 @@ import type { ISequencedDocumentMessage } from "@fluidframework/driver-definitio
 import type { IIdCompressor } from "@fluidframework/id-compressor";
 import type { IInboundSignalMessage } from "@fluidframework/runtime-definitions/internal";
 
-import type { IChannel, IChannelBranch } from "./channel.js";
+import type { IChannel } from "./channel.js";
 
 /**
  * Events emitted by {@link IFluidDataStoreRuntime}.
@@ -43,6 +43,16 @@ export interface IFluidDataStoreRuntimeEvents extends IEvent {
  */
 export type IDeltaManagerErased =
 	ErasedType<"@fluidframework/container-definitions.IDeltaManager<ISequencedDocumentMessage, IDocumentMessage>">;
+/**
+ * @sealed
+ * @legacy
+ * @alpha
+ */
+export interface BranchedChannels<T extends Record<string, IChannel>> {
+	channels: T;
+	merge();
+	dispose();
+}
 
 /**
  * Represents the runtime for the data store. Contains helper functions/state of the data store.
@@ -90,7 +100,9 @@ export interface IFluidDataStoreRuntime
 	 */
 	createChannel(id: string | undefined, type: string): IChannel;
 
-	branchChannel?<T extends IChannel>(channel: T): Promise<IChannelBranch<T>>;
+	branchChannels?<T extends Record<string, IChannel>>(
+		baseChannels: T,
+	): Promise<BranchedChannels<T>>;
 
 	/**
 	 * This api allows adding channel to data store after it was created.

@@ -8,7 +8,6 @@ import { assert, Lazy, LazyPromise } from "@fluidframework/core-utils/internal";
 import {
 	IChannel,
 	IFluidDataStoreRuntime,
-	type IChannelBranch,
 	type IChannelFactory,
 } from "@fluidframework/datastore-definitions/internal";
 import {
@@ -33,6 +32,7 @@ import {
 	ChannelServiceEndpoints,
 	IChannelContext,
 	branchChannel,
+	BranchPendingManager,
 	createChannelServiceEndpoints,
 	loadChannel,
 	loadChannelFactoryAndAttributes,
@@ -73,16 +73,19 @@ export abstract class LocalChannelContextBase implements IChannelContext {
 		return this._channel !== undefined;
 	}
 
-	public async branchChannel<T extends IChannel>(): Promise<IChannelBranch<T>> {
+	public async branchChannel<T extends IChannel>(
+		branchPendingManager?: BranchPendingManager,
+	): Promise<T> {
 		const { channel, factory } = await this.channelP;
-		const branchInfo = await branchChannel<T>(
-			channel as T,
-			this.services.value,
-			this.runtime,
+		const branchInfo = await branchChannel<T>({
+			mainChannel: channel as T,
+			channelServices: this.services.value,
+			dataStoreRuntime: this.runtime,
 			factory,
-			createChildLogger({ logger: this.runtime.logger }),
-		);
-		return branchInfo.branch;
+			logger: createChildLogger({ logger: this.runtime.logger }),
+			branchPendingManager,
+		});
+		return branchInfo.channel;
 	}
 
 	public setConnectionState(connected: boolean, clientId?: string) {

@@ -24,21 +24,16 @@ import {
 
 import { createLoader } from "../utils.js";
 
-/**
- * This is the parent DataObject, which is also a datastore. It has a
- * synchronous method to create child datastores, which could be called
- * in response to synchronous user input, like a key press.
- */
 class ParentDataObject extends DataObject {
 	get ParentDataObject() {
 		return this;
 	}
 
 	async branch() {
-		const branch = await this.runtime.branchChannel?.(this.root);
+		const branch = await this.runtime.branchChannels?.({ root: this.root });
 		assert(branch !== undefined, "blah");
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		this._makeEdits(branch.channel);
+		this._makeEdits(branch.channels.root);
 		return branch;
 	}
 
@@ -63,10 +58,6 @@ class ParentDataObject extends DataObject {
 	}
 }
 
-/**
- * This is the parent DataObjects factory. It specifies the child data stores
- * factory in a sub-registry. This is requires for synchronous creation of the child.
- */
 const parentDataObjectFactory = new DataObjectFactory(
 	"ParentDataObject",
 	ParentDataObject,
@@ -74,8 +65,6 @@ const parentDataObjectFactory = new DataObjectFactory(
 	{},
 );
 
-// a simple container runtime factory with a single datastore aliased as default.
-// the default datastore is also returned as the entrypoint
 const runtimeFactory: IRuntimeFactory = {
 	get IRuntimeFactory() {
 		return this;
@@ -85,19 +74,16 @@ const runtimeFactory: IRuntimeFactory = {
 			context,
 			existing,
 			registryEntries: [
-				[
-					parentDataObjectFactory.type,
-					// the parent is still async in the container registry
-					// this allows things like code splitting for dynamic loading
-					Promise.resolve(parentDataObjectFactory),
-				],
+				[parentDataObjectFactory.type, Promise.resolve(parentDataObjectFactory)],
 			],
 			provideEntryPoint: async (rt) => {
 				const maybeRoot = await rt.getAliasedDataStoreEntryPoint("default");
-				if (maybeRoot === undefined) {
-					const ds = await rt.createDataStore(parentDataObjectFactory.type);
-					await ds.trySetAlias("default");
+				if (maybeRoot !== undefined) {
+					return maybeRoot.get();
 				}
+				const ds = await rt.createDataStore(parentDataObjectFactory.type);
+				await ds.trySetAlias("default");
+
 				const root = await rt.getAliasedDataStoreEntryPoint("default");
 				assert(root !== undefined, "default must exist");
 				return root.get();
@@ -181,23 +167,23 @@ describe("Scenario Test", () => {
 
 		assert(containers[0].dataStore.containsTheSameData(containers[0].dataStore) === true, "1");
 		assert(
-			containers[0].dataStore.containsTheSameData(containers[0].branch.channel) === true,
+			containers[0].dataStore.containsTheSameData(containers[0].branch.channels.root) === true,
 			"2",
 		);
 		assert(containers[0].dataStore.containsTheSameData(containers[1].dataStore) === true, "3");
 		assert(
-			containers[0].dataStore.containsTheSameData(containers[1].branch.channel) === true,
+			containers[0].dataStore.containsTheSameData(containers[1].branch.channels.root) === true,
 			"4",
 		);
 
 		assert(containers[1].dataStore.containsTheSameData(containers[1].dataStore) === true, "5");
 		assert(
-			containers[1].dataStore.containsTheSameData(containers[1].branch.channel) === true,
+			containers[1].dataStore.containsTheSameData(containers[1].branch.channels.root) === true,
 			"6",
 		);
 		assert(containers[1].dataStore.containsTheSameData(containers[0].dataStore) === true, "7");
 		assert(
-			containers[1].dataStore.containsTheSameData(containers[0].branch.channel) === true,
+			containers[1].dataStore.containsTheSameData(containers[0].branch.channels.root) === true,
 			"8",
 		);
 
@@ -212,27 +198,27 @@ describe("Scenario Test", () => {
 
 		assert(containers[0].dataStore.containsTheSameData(containers[0].dataStore) === true, "1");
 		assert(
-			containers[0].dataStore.containsTheSameData(containers[0].branch.channel) === true,
+			containers[0].dataStore.containsTheSameData(containers[0].branch.channels.root) === true,
 			"2",
 		);
 		assert(containers[0].dataStore.containsTheSameData(containers[1].dataStore) === true, "3");
 		assert(
-			containers[0].dataStore.containsTheSameData(containers[1].branch.channel) === true,
+			containers[0].dataStore.containsTheSameData(containers[1].branch.channels.root) === true,
 			"4",
 		);
 
 		assert(containers[1].dataStore.containsTheSameData(containers[1].dataStore) === true, "5");
 		assert(
-			containers[1].dataStore.containsTheSameData(containers[1].branch.channel) === true,
+			containers[1].dataStore.containsTheSameData(containers[1].branch.channels.root) === true,
 			"6",
 		);
 		assert(containers[1].dataStore.containsTheSameData(containers[0].dataStore) === true, "7");
 		assert(
-			containers[1].dataStore.containsTheSameData(containers[0].branch.channel) === true,
+			containers[1].dataStore.containsTheSameData(containers[0].branch.channels.root) === true,
 			"8",
 		);
 
-		await containers[1].branch?.merge();
+		await containers[1].branch.merge();
 		await Promise.all(
 			containers.map(async (c) =>
 				c.container.isDirty
@@ -243,23 +229,23 @@ describe("Scenario Test", () => {
 
 		assert(containers[0].dataStore.containsTheSameData(containers[0].dataStore) === true, "1");
 		assert(
-			containers[0].dataStore.containsTheSameData(containers[0].branch.channel) === true,
+			containers[0].dataStore.containsTheSameData(containers[0].branch.channels.root) === true,
 			"2",
 		);
 		assert(containers[0].dataStore.containsTheSameData(containers[1].dataStore) === true, "3");
 		assert(
-			containers[0].dataStore.containsTheSameData(containers[1].branch.channel) === true,
+			containers[0].dataStore.containsTheSameData(containers[1].branch.channels.root) === true,
 			"4",
 		);
 
 		assert(containers[1].dataStore.containsTheSameData(containers[1].dataStore) === true, "5");
 		assert(
-			containers[1].dataStore.containsTheSameData(containers[1].branch.channel) === true,
+			containers[1].dataStore.containsTheSameData(containers[1].branch.channels.root) === true,
 			"6",
 		);
 		assert(containers[1].dataStore.containsTheSameData(containers[0].dataStore) === true, "7");
 		assert(
-			containers[1].dataStore.containsTheSameData(containers[0].branch.channel) === true,
+			containers[1].dataStore.containsTheSameData(containers[0].branch.channels.root) === true,
 			"8",
 		);
 	});

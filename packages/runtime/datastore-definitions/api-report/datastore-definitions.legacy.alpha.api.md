@@ -4,6 +4,16 @@
 
 ```ts
 
+// @alpha @sealed (undocumented)
+export interface BranchedChannels<T extends Record<string, IChannel>> {
+    // (undocumented)
+    channels: T;
+    // (undocumented)
+    dispose(): any;
+    // (undocumented)
+    merge(): any;
+}
+
 // @alpha (undocumented)
 export interface IChannel extends IFluidLoadable {
     // (undocumented)
@@ -26,8 +36,6 @@ export interface IChannelAttributes {
 // @alpha
 export interface IChannelFactory<out TChannel = unknown> {
     readonly attributes: IChannelAttributes;
-    // (undocumented)
-    branch?: (services: IChannelServices, baseChannel: IChannel & IChannel) => Promise<IChannel & IChannel>;
     create(runtime: IFluidDataStoreRuntime, id: string): TChannel & IChannel;
     load(runtime: IFluidDataStoreRuntime, id: string, services: IChannelServices, channelAttributes: Readonly<IChannelAttributes>): Promise<TChannel & IChannel>;
     readonly type: string;
@@ -77,12 +85,7 @@ export interface IFluidDataStoreRuntime extends IEventProvider<IFluidDataStoreRu
     readonly attachState: AttachState;
     bindChannel(channel: IChannel): void;
     // (undocumented)
-    branchChannel?<T extends IChannel>(channel: T): Promise<{
-        channel: T;
-        context?: {
-            merge: () => void;
-        };
-    }>;
+    branchChannels?<T extends Record<string, IChannel>>(baseChannels: T): Promise<BranchedChannels<T>>;
     // (undocumented)
     readonly channelsRoutingContext: IFluidHandleContext;
     // (undocumented)

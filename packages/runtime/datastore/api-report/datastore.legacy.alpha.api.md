@@ -27,9 +27,7 @@ export class FluidDataStoreRuntime extends TypedEventEmitter<IFluidDataStoreRunt
     bind(handle: IFluidHandle): void;
     bindChannel(channel: IChannel): void;
     // (undocumented)
-    branchChannel?<T extends IChannel>(channel: T): Promise<{
-        channel: T;
-    }>;
+    branchChannels?<T extends Record<string, IChannel>>(baseChannels: T): Promise<BranchedChannels<T>>;
     // (undocumented)
     get channelsRoutingContext(): this;
     // (undocumented)

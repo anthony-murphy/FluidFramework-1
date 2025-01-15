@@ -25,7 +25,7 @@ import {
 	IChannelFactory,
 	IFluidDataStoreRuntime,
 	IFluidDataStoreRuntimeEvents,
-	type IChannelBranch,
+	type BranchedChannels,
 	type IDeltaManagerErased,
 } from "@fluidframework/datastore-definitions/internal";
 import {
@@ -88,7 +88,7 @@ import {
 } from "@fluidframework/telemetry-utils/internal";
 import { v4 as uuid } from "uuid";
 
-import { IChannelContext, summarizeChannel } from "./channelContext.js";
+import { BranchPendingManager, IChannelContext, summarizeChannel } from "./channelContext.js";
 import { FluidObjectHandle } from "./fluidHandle.js";
 import {
 	LocalChannelContext,
@@ -573,13 +573,29 @@ export class FluidDataStoreRuntime
 		}
 	}
 
-	public async branchChannel?<T extends IChannel>(channel: T): Promise<IChannelBranch<T>> {
-		const channelContext = this.contexts.get(channel.id);
-		assert(
-			channelContext !== undefined && (await channelContext.getChannel()) === channel,
-			"foo",
-		);
-		return channelContext.branchChannel<T>();
+	public async branchChannels?<T extends Record<string, IChannel>>(
+		baseChannels: T,
+	): Promise<BranchedChannels<T>> {
+		const channels: T = {} as unknown as T;
+		const branchPendingManager = new BranchPendingManager();
+		for (const [id, channel] of Object.entries(baseChannels) as [keyof T, T[keyof T]][]) {
+			const channelContext = this.contexts.get(channel.id);
+			assert(
+				channelContext !== undefined && (await channelContext.getChannel()) === channel,
+				"foo",
+			);
+
+			channels[id] = await channelContext.branchChannel(branchPendingManager);
+		}
+		return {
+			channels,
+			merge: async () => {
+				branchPendingManager.merge();
+			},
+			dispose: (error?: Error) => {
+				branchPendingManager.dispose(error);
+			},
+		};
 	}
 
 	/**

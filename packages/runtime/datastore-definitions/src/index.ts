@@ -12,7 +12,6 @@
 
 export type {
 	IChannel,
-	IChannelBranch,
 	IChannelFactory,
 	IChannelServices,
 	IChannelStorageService,
@@ -20,6 +19,7 @@ export type {
 	IDeltaHandler,
 } from "./channel.js";
 export type {
+	BranchedChannels,
 	IFluidDataStoreRuntime,
 	IFluidDataStoreRuntimeEvents,
 	IDeltaManagerErased,
