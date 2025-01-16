@@ -5,6 +5,7 @@
 
 import { DataObject, DataObjectFactory } from "@fluidframework/aqueduct/internal";
 import {
+	AttachState,
 	type IContainer,
 	type IRuntimeFactory,
 } from "@fluidframework/container-definitions/internal";
@@ -14,15 +15,19 @@ import {
 } from "@fluidframework/container-loader/internal";
 import { loadContainerRuntime } from "@fluidframework/container-runtime/internal";
 import type { FluidObject } from "@fluidframework/core-interfaces";
-import { assert } from "@fluidframework/core-utils/internal";
-import type { LocalResolver } from "@fluidframework/local-driver/internal";
+import { assert, Deferred } from "@fluidframework/core-utils/internal";
+import { IDocumentServiceFactory } from "@fluidframework/driver-definitions/internal";
+import {
+	LocalDocumentServiceFactory,
+	LocalResolver,
+} from "@fluidframework/local-driver/internal";
 import type { ISharedDirectory, SharedDirectory } from "@fluidframework/map/internal";
 import {
 	LocalDeltaConnectionServer,
 	type ILocalDeltaConnectionServer,
 } from "@fluidframework/server-local-server";
 
-import { createLoader } from "../utils.js";
+import { createLoader, type CreateLoaderParams } from "../utils.js";
 
 class ParentDataObject extends DataObject {
 	get ParentDataObject() {
@@ -92,9 +97,11 @@ const runtimeFactory: IRuntimeFactory = {
 	},
 };
 
-async function createContainer(deltaConnectionServer: ILocalDeltaConnectionServer) {
-	const { loaderProps, codeDetails, urlResolver } = createLoader({
-		deltaConnectionServer,
+async function createContainer(
+	opts: Pick<CreateLoaderParams, "deltaConnectionServer" | "documentServiceFactory">,
+) {
+	const { loaderProps, codeDetails, urlResolver, deltaConnectionServer } = createLoader({
+		...opts,
 		runtimeFactory,
 	});
 
@@ -149,9 +156,58 @@ async function loadContainer<
 }
 
 describe("Scenario Test", () => {
+	it("Branch while detached", async () => {
+		const deltaConnectionServer = LocalDeltaConnectionServer.create();
+		const create = await createContainer({ deltaConnectionServer });
+		const branch = await branchChannel(create);
+		branch.branch.merge();
+		assert(create.dataStore.containsTheSameData(branch.dataStore) === true, "1");
+	});
+
+	it("Branch while attaching", async () => {
+		const deltaConnectionServer = LocalDeltaConnectionServer.create();
+		const attachDeferred = new Deferred<void>();
+		const documentServiceFactory = new Proxy<IDocumentServiceFactory>(
+			new LocalDocumentServiceFactory(deltaConnectionServer),
+			{
+				get: (t, p: keyof LocalDocumentServiceFactory, r) => {
+					if (p === "createContainer") {
+						// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+						return attachDeferred.promise.then(() => Reflect.get(t, p, r));
+					}
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+					return Reflect.get(t, p, r);
+				},
+			},
+		);
+		const create = await createContainer({ deltaConnectionServer, documentServiceFactory });
+		const attachingP = create.container.attach(
+			create.urlResolver.createCreateNewRequest("test"),
+		);
+		if (create.container.attachState === AttachState.Detached) {
+			await new Promise<void>((resolve) =>
+				create.container.once("attaching", () => resolve()),
+			);
+		}
+		const branch = await branchChannel(create);
+		branch.branch.merge();
+		assert(create.dataStore.containsTheSameData(branch.dataStore) === true, "1");
+
+		attachDeferred.resolve();
+		await attachingP;
+	});
+
+	it("Branch after attach", async () => {
+		const deltaConnectionServer = LocalDeltaConnectionServer.create();
+		const create = await attachContainer(createContainer({ deltaConnectionServer }));
+		const branch = await branchChannel(create);
+		branch.branch.merge();
+		assert(create.dataStore.containsTheSameData(branch.dataStore) === true, "1");
+	});
+
 	it("Channel branching", async () => {
 		const deltaConnectionServer = LocalDeltaConnectionServer.create();
-		const create = await attachContainer(createContainer(deltaConnectionServer));
+		const create = await attachContainer(createContainer({ deltaConnectionServer }));
 		const containers = [
 			await branchChannel(loadContainer(create)),
 			await branchChannel(loadContainer(create)),
