@@ -57,9 +57,9 @@ export interface ISummaryTreeWithStats {
  * @legacy
  * @alpha
  */
-export interface ISummarizeResult {
+export interface ISummarizeResult<T extends SummaryTree = SummaryTree> {
 	stats: ISummaryStats;
-	summary: SummaryTree;
+	summary: T;
 }
 
 /**

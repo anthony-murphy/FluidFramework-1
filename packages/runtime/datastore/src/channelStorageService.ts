@@ -27,27 +27,38 @@ export class ChannelStorageService implements IChannelStorageService {
 		}
 	}
 
-	private readonly flattenedTree: { [path: string]: string };
+	private flattenedTree: { [path: string]: string } | undefined;
+	private tree: ISnapshotTree | undefined;
+	private extraBlobs?: Map<string, ArrayBufferLike>;
 
 	constructor(
-		private readonly tree: ISnapshotTree | undefined,
+		tree: ISnapshotTree | undefined,
 		private readonly storage: Pick<IDocumentStorageService, "readBlob">,
 		private readonly logger: ITelemetryLoggerExt,
-		private readonly extraBlobs?: Map<string, ArrayBufferLike>,
+		extraBlobs?: Map<string, ArrayBufferLike>,
 	) {
-		this.flattenedTree = {};
 		// Create a map from paths to blobs
-		if (tree !== undefined) {
+		this.registerSnapshot(tree, extraBlobs);
+	}
+
+	public registerSnapshot(
+		tree: ISnapshotTree | undefined,
+		extraBlobs?: Map<string, ArrayBufferLike>,
+	) {
+		if (tree !== undefined && this.tree === undefined) {
+			this.flattenedTree = {};
+			this.tree = tree;
+			this.extraBlobs = new Map(extraBlobs);
 			ChannelStorageService.flattenTree("", tree, this.flattenedTree);
 		}
 	}
 
 	public async contains(path: string): Promise<boolean> {
-		return this.flattenedTree[path] !== undefined;
+		return this.flattenedTree?.[path] !== undefined;
 	}
 
 	public async readBlob(path: string): Promise<ArrayBufferLike> {
-		const id = await this.getIdForPath(path);
+		const id = this.getIdForPath(path);
 		assert(id !== undefined, 0x9d7 /* id is undefined in ChannelStorageService.readBlob() */);
 		const blob = this.extraBlobs !== undefined ? this.extraBlobs.get(id) : undefined;
 
@@ -77,7 +88,7 @@ export class ChannelStorageService implements IChannelStorageService {
 		return Object.keys(tree?.blobs ?? {});
 	}
 
-	private async getIdForPath(path: string): Promise<string | undefined> {
-		return this.flattenedTree[path];
+	private getIdForPath(path: string): string | undefined {
+		return this.flattenedTree?.[path];
 	}
 }

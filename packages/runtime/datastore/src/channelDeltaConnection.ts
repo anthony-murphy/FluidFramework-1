@@ -74,10 +74,8 @@ function getContentsWithStashedOpHandling(
 
 export class ChannelDeltaConnection
 	extends TypedEventEmitter<{
-		(
-			event: "process" | "submit",
-			listener: (messageCollection: IRuntimeMessageCollection) => void,
-		);
+		(event: "process", listener: (messageCollection: IRuntimeMessageCollection) => void);
+		(event: "submit", listener: (contents: any, metadata: unknown) => void);
 	}>
 	implements IDeltaConnection, IDisposable
 {

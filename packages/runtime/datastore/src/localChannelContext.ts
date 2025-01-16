@@ -13,7 +13,9 @@ import {
 import {
 	IDocumentStorageService,
 	ISnapshotTree,
+	type ISummaryTree,
 } from "@fluidframework/driver-definitions/internal";
+import { buildSnapshotTree } from "@fluidframework/driver-utils/internal";
 import {
 	ITelemetryContext,
 	IFluidDataStoreContext,
@@ -22,6 +24,7 @@ import {
 	type IPendingMessagesState,
 	type IRuntimeMessageCollection,
 } from "@fluidframework/runtime-definitions/internal";
+import { convertSummaryTreeToITree } from "@fluidframework/runtime-utils/internal";
 import {
 	ITelemetryLoggerExt,
 	DataProcessingError,
@@ -77,6 +80,18 @@ export abstract class LocalChannelContextBase implements IChannelContext {
 		branchPendingManager?: BranchPendingManager,
 	): Promise<T> {
 		const { channel, factory } = await this.channelP;
+
+		// there are a bunch of problems here, but it works ok for post attach.
+		// 1) we don't have a good way to ensure the summary here is the actual attach summary
+		// 2) the base channel could have un-summarized changes we will miss
+		//
+		const summaryResult = this.cachedSummary ?? this.getAttachSummary();
+		const blobs = new Map<string, ArrayBufferLike>();
+		this.services.value.objectStorage.registerSnapshot(
+			buildSnapshotTree(convertSummaryTreeToITree(summaryResult.summary).entries, blobs),
+			blobs,
+		);
+
 		const branchInfo = await branchChannel<T>({
 			mainChannel: channel as T,
 			channelServices: this.services.value,
@@ -157,22 +172,26 @@ export abstract class LocalChannelContextBase implements IChannelContext {
 		return summarizeChannelAsync(channel, fullTree, trackState, telemetryContext);
 	}
 
+	private cachedSummary: ISummarizeResult<ISummaryTree> | undefined;
+
 	/**
 	 * For crafting the DataStore attach op. Only to be called when the channel is loaded (if applicable).
 	 *
 	 * Synchronously generates the channel's attach summary to be joined with the same from the DataStore's other channels
 	 */
-	public getAttachSummary(telemetryContext?: ITelemetryContext): ISummarizeResult {
+	public getAttachSummary(
+		telemetryContext?: ITelemetryContext,
+	): ISummarizeResult<ISummaryTree> {
 		assert(
 			this._channel !== undefined,
 			0x18d /* "Channel should be loaded to take snapshot" */,
 		);
-		return summarizeChannel(
+		return (this.cachedSummary = summarizeChannel(
 			this._channel,
 			true /* fullTree */,
 			false /* trackState */,
 			telemetryContext,
-		);
+		));
 	}
 
 	/**

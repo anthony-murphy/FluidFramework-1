@@ -29,37 +29,42 @@ import {
 
 import { createLoader, type CreateLoaderParams } from "../utils.js";
 
+function keysAndValueOfbMatchThoseInA(
+	a: SharedDirectory | ParentDataObject,
+	b: SharedDirectory | ParentDataObject,
+) {
+	const aDir = "ParentDataObject" in a ? a.root : a;
+	const bDir = "ParentDataObject" in b ? b.root : b;
+	for (const key of aDir.keys()) {
+		if (aDir.get(key) !== bDir.get(key)) {
+			return false;
+		}
+	}
+	return true;
+}
+
 class ParentDataObject extends DataObject {
 	get ParentDataObject() {
 		return this;
+	}
+
+	public get root() {
+		return super.root;
 	}
 
 	async branch() {
 		const branch = await this.runtime.branchChannels?.({ root: this.root });
 		assert(branch !== undefined, "blah");
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		this._makeEdits(branch.channels.root);
+		this._makeEdits(branch.channels.root, "branch");
 		return branch;
 	}
 
-	public makeEdits() {
-		this._makeEdits(this.root);
+	public makeEdits(prefix: string) {
+		this._makeEdits(this.root, prefix);
 	}
-	private _makeEdits(dds: ISharedDirectory) {
-		for (let i = 0; i < 5; i++) {
-			dds.set(`${dds.id}-${i}-${Date.now()}`, Date.now());
-		}
-	}
-	public containsTheSameData(dataStore: ParentDataObject);
-	public containsTheSameData(dds: SharedDirectory);
-	public containsTheSameData(ddsOrDo: SharedDirectory | ParentDataObject) {
-		const root = "ParentDataObject" in ddsOrDo ? ddsOrDo.root : ddsOrDo;
-		for (const key of this.root.keys()) {
-			if (root.get(key) !== this.root.get(key)) {
-				return false;
-			}
-		}
-		return true;
+	private _makeEdits(dds: ISharedDirectory, prefix: string) {
+		dds.set(`${dds.id}-${prefix}-${Date.now()}`, Date.now());
 	}
 }
 
@@ -98,10 +103,11 @@ const runtimeFactory: IRuntimeFactory = {
 };
 
 async function createContainer(
-	opts: Pick<CreateLoaderParams, "deltaConnectionServer" | "documentServiceFactory">,
+	opts?: Pick<CreateLoaderParams, "deltaConnectionServer" | "documentServiceFactory">,
 ) {
 	const { loaderProps, codeDetails, urlResolver, deltaConnectionServer } = createLoader({
 		...opts,
+		deltaConnectionServer: LocalDeltaConnectionServer.create(),
 		runtimeFactory,
 	});
 
@@ -111,7 +117,7 @@ async function createContainer(
 	await container.getEntryPoint();
 	const entryPoint: FluidObject<ParentDataObject> = await container.getEntryPoint();
 	assert(entryPoint.ParentDataObject !== undefined, "must be ParentDataObject");
-	entryPoint.ParentDataObject.makeEdits();
+	entryPoint.ParentDataObject.makeEdits("create");
 
 	return {
 		deltaConnectionServer,
@@ -135,7 +141,7 @@ async function branchChannel<T extends { container: IContainer }>(params: T | Pr
 	const { container } = await params;
 	const entryPoint: FluidObject<ParentDataObject> = await container.getEntryPoint();
 	assert(entryPoint.ParentDataObject !== undefined, "must be ParentDataObject");
-	entryPoint.ParentDataObject.makeEdits();
+	// entryPoint.ParentDataObject.makeEdits("beforeBranch");
 	return {
 		...(await params),
 		dataStore: entryPoint.ParentDataObject,
@@ -156,12 +162,32 @@ async function loadContainer<
 }
 
 describe("Scenario Test", () => {
-	it("Branch while detached", async () => {
-		const deltaConnectionServer = LocalDeltaConnectionServer.create();
-		const create = await createContainer({ deltaConnectionServer });
+	it("Branch with main channel changes while detached", async () => {
+		const create = await createContainer();
 		const branch = await branchChannel(create);
+		create.dataStore.makeEdits("afterBranch");
+		assert(
+			keysAndValueOfbMatchThoseInA(branch.branch.channels.root, create.dataStore) === false,
+			"before merge",
+		);
 		branch.branch.merge();
-		assert(create.dataStore.containsTheSameData(branch.dataStore) === true, "1");
+		assert(
+			keysAndValueOfbMatchThoseInA(create.dataStore, branch.branch.channels.root) === true,
+			"after merge",
+		);
+	});
+	it("Branch while detached", async () => {
+		const create = await createContainer();
+		const branch = await branchChannel(create);
+		assert(
+			keysAndValueOfbMatchThoseInA(branch.branch.channels.root, create.dataStore) === false,
+			"before merge",
+		);
+		branch.branch.merge();
+		assert(
+			keysAndValueOfbMatchThoseInA(create.dataStore, branch.branch.channels.root) === true,
+			"after merge",
+		);
 	});
 
 	it("Branch while attaching", async () => {
@@ -172,8 +198,8 @@ describe("Scenario Test", () => {
 			{
 				get: (t, p: keyof LocalDocumentServiceFactory, r) => {
 					if (p === "createContainer") {
-						// eslint-disable-next-line @typescript-eslint/no-unsafe-return
-						return attachDeferred.promise.then(() => Reflect.get(t, p, r));
+						return async (...args: Parameters<IDocumentServiceFactory["createContainer"]>) =>
+							attachDeferred.promise.then(async () => Reflect.get(t, p, r).bind(t)(...args));
 					}
 					// eslint-disable-next-line @typescript-eslint/no-unsafe-return
 					return Reflect.get(t, p, r);
@@ -190,24 +216,41 @@ describe("Scenario Test", () => {
 			);
 		}
 		const branch = await branchChannel(create);
+		assert(
+			keysAndValueOfbMatchThoseInA(branch.branch.channels.root, create.dataStore) === false,
+			"before merge",
+		);
 		branch.branch.merge();
-		assert(create.dataStore.containsTheSameData(branch.dataStore) === true, "1");
+		assert(
+			keysAndValueOfbMatchThoseInA(create.dataStore, branch.branch.channels.root) === true,
+			"after merge",
+		);
 
 		attachDeferred.resolve();
 		await attachingP;
 	});
 
 	it("Branch after attach", async () => {
-		const deltaConnectionServer = LocalDeltaConnectionServer.create();
-		const create = await attachContainer(createContainer({ deltaConnectionServer }));
+		const create = await attachContainer(createContainer());
 		const branch = await branchChannel(create);
+		assert(
+			keysAndValueOfbMatchThoseInA(branch.branch.channels.root, create.dataStore) === false,
+			"before merge",
+		);
+		await Promise.resolve(
+			create.container.isDirty
+				? new Promise<void>((resolve) => create.container.once("saved", () => resolve()))
+				: undefined,
+		);
 		branch.branch.merge();
-		assert(create.dataStore.containsTheSameData(branch.dataStore) === true, "1");
+		assert(
+			keysAndValueOfbMatchThoseInA(create.dataStore, branch.branch.channels.root) === true,
+			"after merge",
+		);
 	});
 
 	it("Channel branching", async () => {
-		const deltaConnectionServer = LocalDeltaConnectionServer.create();
-		const create = await attachContainer(createContainer({ deltaConnectionServer }));
+		const create = await attachContainer(createContainer());
 		const containers = [
 			await branchChannel(loadContainer(create)),
 			await branchChannel(loadContainer(create)),
@@ -221,25 +264,41 @@ describe("Scenario Test", () => {
 			),
 		);
 
-		assert(containers[0].dataStore.containsTheSameData(containers[0].dataStore) === true, "1");
 		assert(
-			containers[0].dataStore.containsTheSameData(containers[0].branch.channels.root) === true,
+			keysAndValueOfbMatchThoseInA(
+				containers[0].dataStore,
+				containers[0].branch.channels.root,
+			) === true,
 			"2",
 		);
-		assert(containers[0].dataStore.containsTheSameData(containers[1].dataStore) === true, "3");
 		assert(
-			containers[0].dataStore.containsTheSameData(containers[1].branch.channels.root) === true,
+			keysAndValueOfbMatchThoseInA(containers[0].dataStore, containers[1].dataStore) === true,
+			"3",
+		);
+		assert(
+			keysAndValueOfbMatchThoseInA(
+				containers[0].dataStore,
+				containers[1].branch.channels.root,
+			) === true,
 			"4",
 		);
 
-		assert(containers[1].dataStore.containsTheSameData(containers[1].dataStore) === true, "5");
 		assert(
-			containers[1].dataStore.containsTheSameData(containers[1].branch.channels.root) === true,
+			keysAndValueOfbMatchThoseInA(
+				containers[1].dataStore,
+				containers[1].branch.channels.root,
+			) === true,
 			"6",
 		);
-		assert(containers[1].dataStore.containsTheSameData(containers[0].dataStore) === true, "7");
 		assert(
-			containers[1].dataStore.containsTheSameData(containers[0].branch.channels.root) === true,
+			keysAndValueOfbMatchThoseInA(containers[1].dataStore, containers[0].dataStore) === true,
+			"7",
+		);
+		assert(
+			keysAndValueOfbMatchThoseInA(
+				containers[1].dataStore,
+				containers[0].branch.channels.root,
+			) === true,
 			"8",
 		);
 
@@ -252,25 +311,41 @@ describe("Scenario Test", () => {
 			),
 		);
 
-		assert(containers[0].dataStore.containsTheSameData(containers[0].dataStore) === true, "1");
 		assert(
-			containers[0].dataStore.containsTheSameData(containers[0].branch.channels.root) === true,
+			keysAndValueOfbMatchThoseInA(
+				containers[0].dataStore,
+				containers[0].branch.channels.root,
+			) === true,
 			"2",
 		);
-		assert(containers[0].dataStore.containsTheSameData(containers[1].dataStore) === true, "3");
 		assert(
-			containers[0].dataStore.containsTheSameData(containers[1].branch.channels.root) === true,
+			keysAndValueOfbMatchThoseInA(containers[0].dataStore, containers[1].dataStore) === true,
+			"3",
+		);
+		assert(
+			keysAndValueOfbMatchThoseInA(
+				containers[0].dataStore,
+				containers[1].branch.channels.root,
+			) === true,
 			"4",
 		);
 
-		assert(containers[1].dataStore.containsTheSameData(containers[1].dataStore) === true, "5");
 		assert(
-			containers[1].dataStore.containsTheSameData(containers[1].branch.channels.root) === true,
+			keysAndValueOfbMatchThoseInA(
+				containers[1].dataStore,
+				containers[1].branch.channels.root,
+			) === true,
 			"6",
 		);
-		assert(containers[1].dataStore.containsTheSameData(containers[0].dataStore) === true, "7");
 		assert(
-			containers[1].dataStore.containsTheSameData(containers[0].branch.channels.root) === true,
+			keysAndValueOfbMatchThoseInA(containers[1].dataStore, containers[0].dataStore) === true,
+			"7",
+		);
+		assert(
+			keysAndValueOfbMatchThoseInA(
+				containers[1].dataStore,
+				containers[0].branch.channels.root,
+			) === true,
 			"8",
 		);
 
@@ -283,25 +358,41 @@ describe("Scenario Test", () => {
 			),
 		);
 
-		assert(containers[0].dataStore.containsTheSameData(containers[0].dataStore) === true, "1");
 		assert(
-			containers[0].dataStore.containsTheSameData(containers[0].branch.channels.root) === true,
+			keysAndValueOfbMatchThoseInA(
+				containers[0].dataStore,
+				containers[0].branch.channels.root,
+			) === true,
 			"2",
 		);
-		assert(containers[0].dataStore.containsTheSameData(containers[1].dataStore) === true, "3");
 		assert(
-			containers[0].dataStore.containsTheSameData(containers[1].branch.channels.root) === true,
+			keysAndValueOfbMatchThoseInA(containers[0].dataStore, containers[1].dataStore) === true,
+			"3",
+		);
+		assert(
+			keysAndValueOfbMatchThoseInA(
+				containers[0].dataStore,
+				containers[1].branch.channels.root,
+			) === true,
 			"4",
 		);
 
-		assert(containers[1].dataStore.containsTheSameData(containers[1].dataStore) === true, "5");
 		assert(
-			containers[1].dataStore.containsTheSameData(containers[1].branch.channels.root) === true,
+			keysAndValueOfbMatchThoseInA(
+				containers[1].dataStore,
+				containers[1].branch.channels.root,
+			) === true,
 			"6",
 		);
-		assert(containers[1].dataStore.containsTheSameData(containers[0].dataStore) === true, "7");
 		assert(
-			containers[1].dataStore.containsTheSameData(containers[0].branch.channels.root) === true,
+			keysAndValueOfbMatchThoseInA(containers[1].dataStore, containers[0].dataStore) === true,
+			"7",
+		);
+		assert(
+			keysAndValueOfbMatchThoseInA(
+				containers[1].dataStore,
+				containers[0].branch.channels.root,
+			) === true,
 			"8",
 		);
 	});
