@@ -23,6 +23,8 @@ import {
 
 import { createLoader } from "../utils.js";
 
+const PRIVATE_DATA = "!!!SUPER_SECRET_PRIVATE_DATA!!!";
+
 /**
  * This is the parent DataObject, which is also a datastore. It has a
  * synchronous method to create child datastores, which could be called
@@ -39,8 +41,23 @@ class RootDataObject extends DataObject {
 		return this;
 	}
 
+	public hasSeenPrivateData = false;
+	protected async hasInitialized(): Promise<void> {
+		this.root.on("valueChanged", (changed) => {
+			if (this.root.get(changed.key) === PRIVATE_DATA) {
+				this.hasSeenPrivateData = true;
+			}
+		});
+	}
+
 	public makeEdit(prefix: string) {
 		this.root.set(`${prefix}-${this.instanceNumber}`, this.root.size);
+	}
+
+	public makeEditWithSquashablePrivateData(prefix: string) {
+		const key = `${prefix}-${this.instanceNumber}`;
+		this.root.set(key, PRIVATE_DATA);
+		this.root.set(key, this.root.size);
 	}
 
 	public get state(): Record<string, unknown> {
@@ -210,9 +227,66 @@ describe("Scenario Test", () => {
 			"Expected mainline change to reach branch",
 		);
 
+		branchData.commitChanges(false);
+
+		await waitForSave(clients);
+
+		assert.deepStrictEqual(
+			clients.original.dataObject.state,
+			clients.loaded.dataObject.state,
+			"states should match after save",
+		);
+	});
+
+	it("enter staging mode and squash merge", async () => {
+		const deltaConnectionServer = LocalDeltaConnectionServer.create();
+		const clients = await createClients(deltaConnectionServer);
+
+		const branchData = clients.original.dataObject.enterStagingMode();
+		assert.deepStrictEqual(
+			clients.original.dataObject.state,
+			clients.loaded.dataObject.state,
+			"states should match after branch",
+		);
+
+		clients.original.dataObject.makeEditWithSquashablePrivateData("branch-only");
+		clients.loaded.dataObject.makeEdit("after-branch");
+
+		assert(clients.original.dataObject.hasSeenPrivateData, "should see private data");
+
+		assert(!clients.loaded.dataObject.hasSeenPrivateData, "should not see private data");
+
+		await waitForSave([clients.loaded]);
+
+		// Wait for the mainline changes to propagate
+		//* TODO: Need some of e2e test utils like ContainerLoaderTracker to properly wait here
+		await new Promise<void>((resolve) => setTimeout(resolve, 100));
+
+		assert.notDeepStrictEqual(
+			clients.original.dataObject.state,
+			clients.loaded.dataObject.state,
+			"should not match after save",
+		);
+		assert.notDeepStrictEqual(
+			clients.original.dataObject.hasSeenPrivateData,
+			clients.loaded.dataObject.hasSeenPrivateData,
+			"should not match before save",
+		);
+
+		const branchState = clients.original.dataObject.state;
+		assert.notEqual(
+			Object.keys(branchState).find((k) => k.startsWith("after-branch")),
+			undefined,
+			"Expected mainline change to reach branch",
+		);
+
 		branchData.commitChanges(true);
 
 		await waitForSave(clients);
+
+		assert(clients.original.dataObject.hasSeenPrivateData, "should see private data");
+
+		assert(!clients.loaded.dataObject.hasSeenPrivateData, "should not see private data");
 
 		assert.deepStrictEqual(
 			clients.original.dataObject.state,

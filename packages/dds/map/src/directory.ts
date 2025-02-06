@@ -714,7 +714,7 @@ export class SharedDirectory
 					(this.isSubDirectoryDeletePending(message.path) &&
 						this.isSubDirectorCreatePending(message.path)) ||
 					this.getWorkingDirectory(message.path)?.get(message.key) !==
-						this.makeLocal(message.key, message.path, message.value)
+						this.makeLocal(message.key, message.path, message.value).value
 				) {
 					return;
 				}
