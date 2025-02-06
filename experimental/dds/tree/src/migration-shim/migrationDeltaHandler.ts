@@ -124,6 +124,9 @@ export class MigrationShimDeltaHandler implements IShimDeltaHandler {
 		}
 		return this.treeDeltaHandler.reSubmit(contents, localOpMetadata);
 	}
+	squash(content: unknown, localOpMetadata: unknown) {
+		throw new Error('not implemented');
+	}
 
 	public applyStashedOp(contents: unknown): void {
 		const opContents = contents as IOpContents;

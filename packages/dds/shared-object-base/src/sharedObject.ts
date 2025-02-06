@@ -518,6 +518,9 @@ export abstract class SharedObjectCore<
 			rollback: (content: unknown, localOpMetadata: unknown) => {
 				this.rollback(content, localOpMetadata);
 			},
+			squash: (content: unknown, localOpMetadata: unknown): void => {
+				this.squash(content, localOpMetadata);
+			},
 		} satisfies IDeltaHandler);
 	}
 
@@ -599,6 +602,10 @@ export abstract class SharedObjectCore<
 				localOpMetadata,
 			);
 		}
+	}
+
+	protected squash(content: unknown, localOpMetadata: unknown): void {
+		throw new Error("squash not supported");
 	}
 
 	/**

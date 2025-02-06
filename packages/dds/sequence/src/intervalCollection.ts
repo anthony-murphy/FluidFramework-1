@@ -516,9 +516,10 @@ export function makeOpsMap<T extends ISerializableInterval>(): Map<
 		collection,
 		op,
 		localOpMetadata,
+		squash,
 	) => {
 		const { localSeq } = localOpMetadata;
-		const rebasedValue = collection.rebaseLocalInterval(op.opName, op.value, localSeq);
+		const rebasedValue = collection.rebaseLocalInterval(op.opName, op.value, localSeq, squash);
 		if (rebasedValue === undefined) {
 			return undefined;
 		}
@@ -1574,6 +1575,7 @@ export class IntervalCollection<TInterval extends ISerializableInterval>
 		opName: string,
 		serializedInterval: SerializedIntervalDelta,
 		localSeq: number,
+		squash: boolean,
 	): SerializedIntervalDelta | undefined {
 		if (!this.client) {
 			// If there's no associated mergeTree client, the originally submitted op is still correct.
@@ -1590,6 +1592,20 @@ export class IntervalCollection<TInterval extends ISerializableInterval>
 
 		const intervalId = properties?.[reservedIntervalIdKey];
 		const localInterval = this.localCollection?.idIntervalIndex.getIntervalById(intervalId);
+		if (squash) {
+			// already deleted, so never send it
+			if (localInterval === undefined) {
+				return undefined;
+			}
+			// remove any properties which don't match the current properties
+			if (properties) {
+				for (const [key, value] of Object.entries(properties)) {
+					if (value !== localInterval.properties[key]) {
+						properties[key] = undefined;
+					}
+				}
+			}
+		}
 
 		const rebased: SerializedIntervalDelta = {
 			start: startRebased,

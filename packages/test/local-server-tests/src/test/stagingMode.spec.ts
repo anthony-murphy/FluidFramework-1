@@ -210,7 +210,7 @@ describe("Scenario Test", () => {
 			"Expected mainline change to reach branch",
 		);
 
-		branchData.commitChanges();
+		branchData.commitChanges(true);
 
 		await waitForSave(clients);
 

@@ -694,6 +694,40 @@ export class SharedDirectory
 		handler.submit(message, localOpMetadata);
 	}
 
+	protected squash(content: unknown, localOpMetadata: unknown): void {
+		const message = content as IDirectoryOperation;
+
+		switch (message.type) {
+			case "createSubDirectory":
+			case "deleteSubDirectory": {
+				const dirPath = posix.join(message.path, message.subdirName);
+				if (
+					this.isSubDirectoryDeletePending(dirPath) &&
+					this.isSubDirectorCreatePending(dirPath)
+				) {
+					return;
+				}
+				break;
+			}
+			case "set": {
+				if (
+					(this.isSubDirectoryDeletePending(message.path) &&
+						this.isSubDirectorCreatePending(message.path)) ||
+					this.getWorkingDirectory(message.path)?.get(message.key) !==
+						this.makeLocal(message.key, message.path, message.value)
+				) {
+					return;
+				}
+				break;
+			}
+			default:
+		}
+
+		const handler = this.messageHandlers.get(message.type);
+		assert(handler !== undefined, 0x00d /* Missing message handler for message type */);
+		handler.submit(message, localOpMetadata);
+	}
+
 	/**
 	 * {@inheritDoc @fluidframework/shared-object-base#SharedObject.loadCore}
 	 */
@@ -862,6 +896,25 @@ export class SharedDirectory
 	 * @returns `true` if there is pending delete, `false` otherwise.
 	 */
 	private isSubDirectoryDeletePending(relativePath: string): boolean {
+		const absolutePath = this.makeAbsolute(relativePath);
+		if (absolutePath === posix.sep) {
+			return false;
+		}
+		let currentParent = this.root;
+		const pathParts = absolutePath.split(posix.sep).slice(1);
+		for (const dirName of pathParts) {
+			if (currentParent.isSubDirectoryDeletePending(dirName)) {
+				return true;
+			}
+			currentParent = currentParent.getSubDirectory(dirName) as SubDirectory;
+			if (currentParent === undefined) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private isSubDirectorCreatePending(relativePath: string): boolean {
 		const absolutePath = this.makeAbsolute(relativePath);
 		if (absolutePath === posix.sep) {
 			return false;
@@ -1524,6 +1577,18 @@ class SubDirectory extends TypedEventEmitter<IDirectoryEvents> implements IDirec
 	 */
 	public isSubDirectoryDeletePending(subDirName: string): boolean {
 		if (this.pendingDeleteSubDirectoriesTracker.has(subDirName)) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * This checks if there is pending delete op for local delete for a given child subdirectory.
+	 * @param subDirName - directory name.
+	 * @returns true if there is pending delete.
+	 */
+	public isSubDirectoryCreatePending(subDirName: string): boolean {
+		if (this.pendingCreateSubDirectoriesTracker.has(subDirName)) {
 			return true;
 		}
 		return false;

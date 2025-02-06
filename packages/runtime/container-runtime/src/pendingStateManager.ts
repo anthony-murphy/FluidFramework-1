@@ -101,7 +101,7 @@ export interface IRuntimeStateHandler {
 	connected(): boolean;
 	clientId(): string | undefined;
 	applyStashedOp(content: string): Promise<unknown>;
-	reSubmitBatch(batch: PendingMessageResubmitData[], batchId: BatchId): void;
+	reSubmitBatch(batch: PendingMessageResubmitData[], batchId: BatchId, squash: boolean): void;
 	isActiveConnection: () => boolean;
 	isAttached: () => boolean;
 }
@@ -615,7 +615,7 @@ export class PendingStateManager implements IDisposable {
 	 * states in its queue. This includes triggering resubmission of unacked ops.
 	 * ! Note: successfully resubmitting an op that has been successfully sequenced is not possible due to checks in the ConnectionStateHandler (Loader layer)
 	 */
-	public replayPendingStates(): void {
+	public replayPendingStates(squash: boolean = false): void {
 		assert(
 			this.stateHandler.connected(),
 			0x172 /* "The connection state is not consistent with the runtime" */,
@@ -652,7 +652,7 @@ export class PendingStateManager implements IDisposable {
 
 			if (asEmptyBatchLocalOpMetadata(pendingMessage.localOpMetadata)?.emptyBatch === true) {
 				// Resubmit no messages, with the batchId. Will result in another empty batch marker.
-				this.stateHandler.reSubmitBatch([], batchId);
+				this.stateHandler.reSubmitBatch([], batchId, squash);
 				continue;
 			}
 
@@ -673,6 +673,7 @@ export class PendingStateManager implements IDisposable {
 						},
 					],
 					batchId,
+					squash,
 				);
 				continue;
 			}
@@ -707,7 +708,7 @@ export class PendingStateManager implements IDisposable {
 				);
 			}
 
-			this.stateHandler.reSubmitBatch(batch, batchId);
+			this.stateHandler.reSubmitBatch(batch, batchId, squash);
 		}
 
 		// pending ops should no longer depend on previous sequenced local ops after resubmit

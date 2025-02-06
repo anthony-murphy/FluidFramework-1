@@ -184,6 +184,8 @@ export interface IDeltaHandler {
 	 * @param localOpMetadata - The local metadata associated with the original message.
 	 */
 	rollback?(message: any, localOpMetadata: unknown): void;
+
+	squash(content: unknown, localOpMetadata: unknown);
 }
 
 /**

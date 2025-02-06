@@ -136,6 +136,14 @@ export class ChannelDeltaConnection implements IDeltaConnection {
 		);
 	}
 
+	public squash(content: any, localOpMetadata: unknown) {
+		processWithStashedOpMetadataHandling(
+			content,
+			localOpMetadata,
+			this.handler.squash.bind(this.handler),
+		);
+	}
+
 	public rollback(content: any, localOpMetadata: unknown) {
 		if (this.handler.rollback === undefined) {
 			throw new Error("Handler doesn't support rollback");

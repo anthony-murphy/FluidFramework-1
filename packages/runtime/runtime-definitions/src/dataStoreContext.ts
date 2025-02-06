@@ -194,7 +194,7 @@ export interface IDataStore {
  * @sealed
  */
 export interface StageControls {
-	readonly commitChanges: () => void;
+	readonly commitChanges: (squash: boolean) => void;
 	readonly discardChanges: () => void;
 }
 
@@ -394,7 +394,7 @@ export interface IFluidDataStoreChannel extends IDisposable {
 	 * @param localOpMetadata - The local metadata associated with the original message.
 	 */
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO (#28746): breaking change
-	reSubmit(type: string, content: any, localOpMetadata: unknown);
+	reSubmit(type: string, content: any, localOpMetadata: unknown, squash: boolean);
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO (#28746): breaking change
 	applyStashedOp(content: any): Promise<unknown>;

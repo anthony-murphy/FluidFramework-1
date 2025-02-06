@@ -406,12 +406,41 @@ export class MapKernel {
 	 * also sent if we are asked to resubmit the message.
 	 * @returns True if the operation was submitted, false otherwise.
 	 */
-	public trySubmitMessage(op: IMapOperation, localOpMetadata: unknown): boolean {
+	public trySubmitMessage(
+		op: IMapOperation,
+		localOpMetadata: unknown,
+		squash: boolean,
+	): boolean {
 		const handler = this.messageHandlers.get(op.type);
 		if (handler === undefined) {
 			return false;
 		}
-		handler.submit(op, localOpMetadata as MapLocalOpMetadata);
+
+		if (squash) {
+			switch (op.type) {
+				case "clear": {
+					this.clear();
+					break;
+				}
+				case "delete": {
+					this.delete(op.key);
+					break;
+				}
+				case "set": {
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+					const value = this.makeLocal(op.key, op.value).value;
+					if (this.get(op.key) === value) {
+						this.set(op.key, value);
+					}
+					break;
+				}
+				default: {
+					unreachableCase(op);
+				}
+			}
+		} else {
+			handler.submit(op, localOpMetadata as MapLocalOpMetadata);
+		}
 		return true;
 	}
 

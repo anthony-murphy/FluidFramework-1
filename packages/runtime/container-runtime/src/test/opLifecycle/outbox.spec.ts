@@ -282,11 +282,11 @@ describe("Outbox", () => {
 		outbox.submit(messages[1]);
 		outbox.submitIdAllocation(messages[2]);
 		outbox.submitIdAllocation(messages[3]);
-		outbox.flush();
+		outbox.flush(false);
 
 		// Flush 2
 		outbox.submit(messages[4]);
-		outbox.flush();
+		outbox.flush(false);
 
 		// Not Flushed
 		outbox.submit(messages[5]);
@@ -335,14 +335,14 @@ describe("Outbox", () => {
 		});
 		currentSeqNumbers.referenceSequenceNumber = 0;
 		// Typically, flushing with nothing submitted should be a no-op...
-		outbox.flush();
+		outbox.flush(false);
 		assert.equal(state.opsSubmitted, 0);
 		assert.equal(state.batchesSubmitted.length, 0);
 		assert.equal(state.deltaManagerFlushCalls, 0);
 		assert.equal(state.pendingOpContents.length, 0);
 		const batchId = "batchId";
 		// ...But if batchId is provided, it's resubmit, and we need to send an empty batch with the batchId
-		outbox.flush(batchId);
+		outbox.flush(false, batchId);
 		assert.equal(state.opsSubmitted, 1);
 		assert.equal(state.batchesSubmitted.length, 1);
 		assert.equal(
@@ -367,17 +367,17 @@ describe("Outbox", () => {
 		outbox.submitIdAllocation(createMessage(ContainerMessageType.IdAllocation, "0")); // Separate batch, batch ID not used
 		outbox.submit(createMessage(ContainerMessageType.FluidDataStoreOp, "1"));
 		outbox.submit(createMessage(ContainerMessageType.FluidDataStoreOp, "2"));
-		outbox.flush("batchId-A");
+		outbox.flush(false, "batchId-A");
 
 		// Flush 2 - resubmit single-message batch
 		outbox.submit(createMessage(ContainerMessageType.FluidDataStoreOp, "3"));
-		outbox.flush("batchId-B");
+		outbox.flush(false, "batchId-B");
 
 		// Flush 3 - resubmit blob attach batch
 		outbox.submitBlobAttach(createMessage(ContainerMessageType.BlobAttach, "4"));
 		outbox.submitBlobAttach(createMessage(ContainerMessageType.BlobAttach, "5"));
 		currentSeqNumbers.referenceSequenceNumber = 0;
-		outbox.flush("batchId-C");
+		outbox.flush(false, "batchId-C");
 
 		// Flush 4 - no batch ID given
 		outbox.submit(createMessage(ContainerMessageType.FluidDataStoreOp, "6"));

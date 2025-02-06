@@ -708,7 +708,12 @@ export class ChannelCollection implements IFluidDataStoreChannel, IDisposable {
 	}
 	public readonly dispose = (): void => this.disposeOnce.value;
 
-	public reSubmit(type: string, content: unknown, localOpMetadata: unknown): void {
+	public reSubmit(
+		type: string,
+		content: unknown,
+		localOpMetadata: unknown,
+		squash: boolean,
+	): void {
 		switch (type) {
 			case ContainerMessageType.Attach:
 			case ContainerMessageType.Alias: {
@@ -716,7 +721,7 @@ export class ChannelCollection implements IFluidDataStoreChannel, IDisposable {
 				return;
 			}
 			case ContainerMessageType.FluidDataStoreOp: {
-				return this.reSubmitChannelOp(type, content, localOpMetadata);
+				return this.reSubmitChannelOp(type, content, localOpMetadata, squash);
 			}
 			default: {
 				assert(false, 0x907 /* unknown op type */);
@@ -724,7 +729,12 @@ export class ChannelCollection implements IFluidDataStoreChannel, IDisposable {
 		}
 	}
 
-	protected reSubmitChannelOp(type: string, content: unknown, localOpMetadata: unknown): void {
+	protected reSubmitChannelOp(
+		type: string,
+		content: unknown,
+		localOpMetadata: unknown,
+		squash: boolean,
+	): void {
 		const envelope = content as IEnvelope;
 		const context = this.contexts.get(envelope.address);
 		// If the data store has been deleted, log an error and throw an error. If there are local changes for a
@@ -739,7 +749,7 @@ export class ChannelCollection implements IFluidDataStoreChannel, IDisposable {
 		}
 		assert(!!context, 0x160 /* "There should be a store context for the op" */);
 		const innerContents = envelope.contents as FluidDataStoreMessage;
-		context.reSubmit(innerContents.type, innerContents.content, localOpMetadata);
+		context.reSubmit(innerContents.type, innerContents.content, localOpMetadata, squash);
 	}
 
 	public rollback(type: string, content: unknown, localOpMetadata: unknown): void {

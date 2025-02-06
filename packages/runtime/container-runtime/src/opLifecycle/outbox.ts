@@ -52,7 +52,7 @@ export interface IOutboxParameters {
 	readonly logger: ITelemetryBaseLogger;
 	readonly groupingManager: OpGroupingManager;
 	readonly getCurrentSequenceNumbers: () => BatchSequenceNumbers;
-	readonly reSubmit: (message: PendingMessageResubmitData) => void;
+	readonly reSubmit: (message: PendingMessageResubmitData, squash: boolean) => void;
 	readonly opReentrancy: () => boolean;
 	readonly closeContainer: (error?: ICriticalContainerError) => void;
 	readonly rollback: (message: BatchMessage) => void;
@@ -184,7 +184,7 @@ export class Outbox {
 	 * last message processed by the ContainerRuntime. In the absence of op reentrancy, this
 	 * pair will remain stable during a single JS turn during which the batch is being built up.
 	 */
-	private maybeFlushPartialBatch(): void {
+	private maybeFlushPartialBatch(squash: boolean): void {
 		const mainBatchSeqNums = this.mainBatch.sequenceNumbers;
 		const blobAttachSeqNums = this.blobAttachBatch.sequenceNumbers;
 		const idAllocSeqNums = this.idAllocationBatch.sequenceNumbers;
@@ -223,24 +223,24 @@ export class Outbox {
 		}
 
 		if (!this.params.config.disablePartialFlush) {
-			this.flushAll();
+			this.flushAll(squash);
 		}
 	}
 
 	public submit(message: BatchMessage): void {
-		this.maybeFlushPartialBatch();
+		this.maybeFlushPartialBatch(false);
 
 		this.addMessageToBatchManager(this.mainBatch, message);
 	}
 
 	public submitBlobAttach(message: BatchMessage): void {
-		this.maybeFlushPartialBatch();
+		this.maybeFlushPartialBatch(false);
 
 		this.addMessageToBatchManager(this.blobAttachBatch, message);
 	}
 
 	public submitIdAllocation(message: BatchMessage): void {
-		this.maybeFlushPartialBatch();
+		this.maybeFlushPartialBatch(false);
 
 		this.addMessageToBatchManager(this.idAllocationBatch, message);
 	}
@@ -268,7 +268,7 @@ export class Outbox {
 	 * @param resubmittingBatchId - If defined, indicates this is a resubmission of a batch
 	 * with the given Batch ID, which must be preserved
 	 */
-	public flush(resubmittingBatchId?: BatchId): void {
+	public flush(squash: boolean = false, resubmittingBatchId?: BatchId): void {
 		if (this.blockFlush) {
 			return;
 		}
@@ -278,10 +278,10 @@ export class Outbox {
 			throw error;
 		}
 
-		this.flushAll(resubmittingBatchId);
+		this.flushAll(squash, resubmittingBatchId);
 	}
 
-	private flushAll(resubmittingBatchId?: BatchId): void {
+	private flushAll(squash: boolean, resubmittingBatchId?: BatchId): void {
 		if (this.blockFlush) {
 			return;
 		}
@@ -298,13 +298,15 @@ export class Outbox {
 		}
 		// Don't use resubmittingBatchId for idAllocationBatch.
 		// ID Allocation messages are not directly resubmitted so we don't want to reuse the batch ID.
-		this.flushInternal(this.idAllocationBatch);
+		this.flushInternal(squash, this.idAllocationBatch);
 		this.flushInternal(
+			squash,
 			this.blobAttachBatch,
 			true /* disableGroupedBatching */,
 			resubmittingBatchId,
 		);
 		this.flushInternal(
+			squash,
 			this.mainBatch,
 			false /* disableGroupedBatching */,
 			resubmittingBatchId,
@@ -337,6 +339,8 @@ export class Outbox {
 	}
 
 	private flushInternal(
+		squash: boolean,
+
 		batchManager: BatchManager,
 		disableGroupedBatching: boolean = false,
 		resubmittingBatchId?: BatchId,
@@ -353,7 +357,7 @@ export class Outbox {
 			// If a batch contains reentrant ops (ops created as a result from processing another op)
 			// it needs to be rebased so that we can ensure consistent reference sequence numbers
 			// and eventual consistency at the DDS level.
-			this.rebase(rawBatch, batchManager);
+			this.rebase(rawBatch, batchManager, squash);
 			return;
 		}
 
@@ -387,18 +391,21 @@ export class Outbox {
 	 *
 	 * @param rawBatch - the batch to be rebased
 	 */
-	private rebase(rawBatch: IBatch, batchManager: BatchManager): void {
+	private rebase(rawBatch: IBatch, batchManager: BatchManager, squash: boolean): void {
 		assert(!this.rebasing, 0x6fb /* Reentrancy */);
 		assert(batchManager.options.canRebase, 0x9a7 /* BatchManager does not support rebase */);
 
 		this.rebasing = true;
 		for (const message of rawBatch.messages) {
-			this.params.reSubmit({
-				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-				content: message.contents!,
-				localOpMetadata: message.localOpMetadata,
-				opMetadata: message.metadata,
-			});
+			this.params.reSubmit(
+				{
+					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+					content: message.contents!,
+					localOpMetadata: message.localOpMetadata,
+					opMetadata: message.metadata,
+				},
+				squash,
+			);
 		}
 
 		if (this.batchRebasesToReport > 0) {
@@ -413,7 +420,7 @@ export class Outbox {
 			this.batchRebasesToReport--;
 		}
 
-		this.flushInternal(batchManager);
+		this.flushInternal(squash, batchManager);
 		this.rebasing = false;
 	}
 

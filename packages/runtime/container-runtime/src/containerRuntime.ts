@@ -2625,7 +2625,7 @@ export class ContainerRuntime
 		this.consecutiveReconnects = 0;
 	}
 
-	private replayPendingStates(): void {
+	private replayPendingStates(squash: boolean): void {
 		// We need to be able to send ops to replay states
 		if (!this.canSendOps()) {
 			return;
@@ -2646,7 +2646,7 @@ export class ContainerRuntime
 		try {
 			this.submitIdAllocationOpIfNeeded(true);
 			// replay the ops
-			this.pendingStateManager.replayPendingStates();
+			this.pendingStateManager.replayPendingStates(squash);
 		} finally {
 			// Save the new start and restore the old state, re-enable event emit
 			newState = this.dirtyContainer;
@@ -2802,7 +2802,7 @@ export class ContainerRuntime
 		// This flush NEEDS to happen before we set the ContainerRuntime to "connected".
 		// We want these ops to get to the PendingStateManager without sending to service and have them return to the Outbox upon calling "replayPendingStates".
 		if (changeOfState && connected) {
-			this.flush();
+			this.flush(false);
 		}
 
 		this._connected = connected;
@@ -2846,7 +2846,7 @@ export class ContainerRuntime
 		}
 
 		if (changeOfState) {
-			this.replayPendingStates();
+			this.replayPendingStates(false);
 		}
 
 		this.channelCollection.setConnectionState(connected, clientId);
@@ -3411,13 +3411,13 @@ export class ContainerRuntime
 	 * @param resubmittingBatchId - If defined, indicates this is a resubmission of a batch
 	 * with the given Batch ID, which must be preserved
 	 */
-	private flush(resubmittingBatchId?: BatchId): void {
+	private flush(squash: boolean, resubmittingBatchId?: BatchId): void {
 		assert(
 			this._orderSequentiallyCalls === 0,
 			0x24c /* "Cannot call `flush()` from `orderSequentially`'s callback" */,
 		);
 
-		this.outbox.flush(resubmittingBatchId);
+		this.outbox.flush(squash, resubmittingBatchId);
 		// assert(this.outbox.isEmpty, 0x3cf /* reentrancy */);
 	}
 
@@ -3475,7 +3475,7 @@ export class ContainerRuntime
 
 		// We don't flush on TurnBased since we expect all messages in the same JS turn to be part of the same batch
 		if (this.flushMode !== FlushMode.TurnBased && this._orderSequentiallyCalls === 0) {
-			this.flush();
+			this.flush(false);
 		}
 		return result;
 	}
@@ -3492,9 +3492,9 @@ export class ContainerRuntime
 				checkpoint.mainBatch.rollback();
 				checkpoint.unblockFlush();
 			},
-			commitChanges: () => {
+			commitChanges: (squash: boolean) => {
 				checkpoint.unblockFlush();
-				this.outbox.flush();
+				this.outbox.flush(squash);
 			},
 		};
 
@@ -4646,7 +4646,7 @@ export class ContainerRuntime
 			// Note: Technically, the system "always" batches - if this case is true we'll just have a single-message batch.
 			const flushImmediatelyOnSubmit = !this.currentlyBatching();
 			if (flushImmediatelyOnSubmit) {
-				this.flush();
+				this.flush(false);
 			} else {
 				this.scheduleFlush();
 			}
@@ -4672,7 +4672,7 @@ export class ContainerRuntime
 		const flush = (): void => {
 			this.flushTaskExists = false;
 			try {
-				this.flush();
+				this.flush(false);
 			} catch (error) {
 				this.closeFn(error as GenericError);
 			}
@@ -4738,22 +4738,31 @@ export class ContainerRuntime
 	 * @remarks - If the "Offline Load" feature is enabled, the batchId is included in the resubmitted messages,
 	 * for correlation to detect container forking.
 	 */
-	private reSubmitBatch(batch: PendingMessageResubmitData[], batchId: BatchId): void {
+	private reSubmitBatch(
+		batch: PendingMessageResubmitData[],
+		batchId: BatchId,
+		squash: boolean,
+	): void {
 		this.orderSequentially(() => {
 			for (const message of batch) {
-				this.reSubmit(message);
+				this.reSubmit(message, squash);
 			}
 		});
 
 		// Only include Batch ID if "Offline Load" feature is enabled
 		// It's only needed to identify batches across container forks arising from misuse of offline load.
-		this.flush(this.offlineEnabled ? batchId : undefined);
+		this.flush(squash, this.offlineEnabled ? batchId : undefined);
 	}
 
-	private reSubmit(message: PendingMessageResubmitData): void {
+	private reSubmit(message: PendingMessageResubmitData, squash: boolean): void {
 		// Need to parse from string for back-compat
 		const containerRuntimeMessage = this.parseLocalOpContent(message.content);
-		this.reSubmitCore(containerRuntimeMessage, message.localOpMetadata, message.opMetadata);
+		this.reSubmitCore(
+			containerRuntimeMessage,
+			message.localOpMetadata,
+			message.opMetadata,
+			squash,
+		);
 	}
 
 	/**
@@ -4767,6 +4776,7 @@ export class ContainerRuntime
 		message: LocalContainerRuntimeMessage,
 		localOpMetadata: unknown,
 		opMetadata: Record<string, unknown> | undefined,
+		squash: boolean,
 	): void {
 		assert(
 			this._summarizer === undefined,
@@ -4778,7 +4788,12 @@ export class ContainerRuntime
 			case ContainerMessageType.Alias: {
 				// For Operations, call resubmitDataStoreOp which will find the right store
 				// and trigger resubmission on it.
-				this.channelCollection.reSubmit(message.type, message.contents, localOpMetadata);
+				this.channelCollection.reSubmit(
+					message.type,
+					message.contents,
+					localOpMetadata,
+					squash,
+				);
 				break;
 			}
 			case ContainerMessageType.IdAllocation: {
@@ -5010,7 +5025,7 @@ export class ContainerRuntime
 		// Flush pending batch.
 		// getPendingLocalState() is only exposed through Container.closeAndGetPendingLocalState(), so it's safe
 		// to close current batch.
-		this.flush();
+		this.flush(false);
 
 		return props?.notifyImminentClosure === true
 			? PerformanceEvent.timedExecAsync(this.mc.logger, perfEvent, async (event) =>

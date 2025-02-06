@@ -149,6 +149,7 @@ export interface IIntervalCollectionOperation<T extends ISerializableInterval> {
 		value: IntervalCollection<T>,
 		op: IIntervalCollectionTypeOperationValue,
 		localOpMetadata: IMapMessageLocalMetadata,
+		squash: boolean,
 	):
 		| {
 				rebasedOp: IIntervalCollectionTypeOperationValue;

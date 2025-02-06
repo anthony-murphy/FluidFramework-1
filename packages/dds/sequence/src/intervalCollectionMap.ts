@@ -103,13 +103,17 @@ export class IntervalCollectionMap<T extends ISerializableInterval> {
 		submit: (op: IMapOperation, localOpMetadata: IMapMessageLocalMetadata) => {
 			this.submitMessage(op, localOpMetadata);
 		},
-		resubmit: (op: IMapOperation, localOpMetadata: IMapMessageLocalMetadata) => {
+		resubmit: (
+			op: IMapOperation,
+			localOpMetadata: IMapMessageLocalMetadata,
+			squash: boolean,
+		) => {
 			const localValue = this.data.get(op.key);
 
 			assert(localValue !== undefined, 0x3f8 /* Local value expected on resubmission */);
 
 			const handler = localValue.getOpHandler(op.value.opName);
-			const rebased = handler.rebase(localValue.value, op.value, localOpMetadata);
+			const rebased = handler.rebase(localValue.value, op.value, localOpMetadata, squash);
 			if (rebased !== undefined) {
 				const { rebasedOp, rebasedLocalOpMetadata } = rebased;
 				this.submitMessage({ ...op, value: rebasedOp }, rebasedLocalOpMetadata);
@@ -231,9 +235,13 @@ export class IntervalCollectionMap<T extends ISerializableInterval> {
 	 * also sent if we are asked to resubmit the message.
 	 * @returns True if the operation was submitted, false otherwise.
 	 */
-	public tryResubmitMessage(op: unknown, localOpMetadata: IMapMessageLocalMetadata): boolean {
+	public tryResubmitMessage(
+		op: unknown,
+		localOpMetadata: IMapMessageLocalMetadata,
+		squash: boolean = false,
+	): boolean {
 		if (isMapOperation(op)) {
-			this.messageHandler.resubmit(op, localOpMetadata);
+			this.messageHandler.resubmit(op, localOpMetadata, squash);
 			return true;
 		}
 		return false;

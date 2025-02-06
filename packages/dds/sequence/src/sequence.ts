@@ -795,11 +795,37 @@ export abstract class SharedSegmentSequence<T extends ISegment>
 				!this.intervalCollections.tryResubmitMessage(
 					content,
 					localOpMetadata as IMapMessageLocalMetadata,
+					false,
 				)
 			) {
 				this.submitSequenceMessage(
-					this.client.regeneratePendingOp(content as IMergeTreeOp, localOpMetadata),
+					this.client.regeneratePendingOp(content as IMergeTreeOp, localOpMetadata, false),
 				);
+			}
+		});
+	}
+	protected squash(content: unknown, localOpMetadata: unknown): void {
+		const originalRefSeq = this.inFlightRefSeqs.shift();
+		assert(
+			originalRefSeq !== undefined,
+			0x8bb /* Expected a recorded refSeq when resubmitting an op */,
+		);
+		this.useResubmitRefSeq(originalRefSeq, () => {
+			if (
+				!this.intervalCollections.tryResubmitMessage(
+					content,
+					localOpMetadata as IMapMessageLocalMetadata,
+					true,
+				)
+			) {
+				const op = this.client.regeneratePendingOp(
+					content as IMergeTreeOp,
+					localOpMetadata,
+					true,
+				);
+				if (op !== undefined) {
+					this.submitSequenceMessage(op);
+				}
 			}
 		});
 	}

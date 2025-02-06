@@ -84,6 +84,10 @@ export class SharedTreeShimDeltaHandler implements IShimDeltaHandler {
 		return this.handler.reSubmit(contents, localOpMetadata);
 	}
 
+	public squash(content: unknown, localOpMetadata: unknown) {
+		throw new Error('not implemented');
+	}
+
 	// We are not capable of applying stashed v1 ops.
 	public applyStashedOp(contents: unknown): void {
 		assert(

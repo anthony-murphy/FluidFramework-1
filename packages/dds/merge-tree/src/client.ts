@@ -889,8 +889,8 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 
 	private resetPendingDeltaToOps(
 		resetOp: IMergeTreeDeltaOp,
-
 		segmentGroup: SegmentGroup,
+		squash: boolean,
 	): IMergeTreeDeltaOp[] {
 		assert(!!segmentGroup, 0x033 /* "Segment group undefined" */);
 		const NACKedSegmentGroup = this.pendingRebase?.shift()?.data;
@@ -930,6 +930,15 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 				segmentGroup.localSeq !== undefined,
 				0x867 /* expected segment group localSeq to be defined */,
 			);
+
+			if (squash && segment.seq === UnassignedSequenceNumber) {
+				if (isRemoved(segment) && segment.removedSeq === UnassignedSequenceNumber) {
+					continue;
+				} else if (isMoved(segment) && segment.movedSeq === UnassignedSequenceNumber) {
+					continue;
+				}
+			}
+
 			const segmentPosition = this.findReconnectionPosition(segment, segmentGroup.localSeq);
 			let newOp: IMergeTreeDeltaOp | undefined;
 			switch (resetOp.type) {
@@ -1212,7 +1221,11 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 	 * @param resetOp - The op to reset
 	 * @param segmentGroup - The segment group associated with the op
 	 */
-	public regeneratePendingOp(resetOp: IMergeTreeOp, localOpMetadata: unknown): IMergeTreeOp {
+	public regeneratePendingOp(
+		resetOp: IMergeTreeOp,
+		localOpMetadata: unknown,
+		squash: boolean = false,
+	): IMergeTreeOp {
 		const segmentGroup = localOpMetadata as SegmentGroup | SegmentGroup[];
 		if (this.pendingRebase === undefined || this.pendingRebase.empty) {
 			let firstGroup: SegmentGroup;
@@ -1252,7 +1265,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 				);
 
 				for (let i = 0; i < resetOp.ops.length; i++) {
-					opList.push(...this.resetPendingDeltaToOps(resetOp.ops[i], segmentGroup[i]));
+					opList.push(...this.resetPendingDeltaToOps(resetOp.ops[i], segmentGroup[i], squash));
 				}
 			} else {
 				// A group op containing a single op will pass a direct reference to 'segmentGroup'
@@ -1261,7 +1274,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 					resetOp.ops.length === 1,
 					0x03b /* "Number of ops in 'resetOp' must match the number of segment groups provided." */,
 				);
-				opList.push(...this.resetPendingDeltaToOps(resetOp.ops[0], segmentGroup));
+				opList.push(...this.resetPendingDeltaToOps(resetOp.ops[0], segmentGroup, squash));
 			}
 		} else {
 			assert(
@@ -1272,7 +1285,7 @@ export class Client extends TypedEventEmitter<IClientEvents> {
 				!Array.isArray(segmentGroup),
 				0x03d /* "segmentGroup is array rather than singleton!" */,
 			);
-			opList.push(...this.resetPendingDeltaToOps(resetOp, segmentGroup));
+			opList.push(...this.resetPendingDeltaToOps(resetOp, segmentGroup, squash));
 		}
 		// eslint-disable-next-line import/no-deprecated
 		return opList.length === 1 ? opList[0] : createGroupOp(...opList);
