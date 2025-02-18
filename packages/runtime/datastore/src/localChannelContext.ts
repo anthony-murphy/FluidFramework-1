@@ -77,7 +77,7 @@ export abstract class LocalChannelContextBase implements IChannelContext {
 	}
 
 	public async branchChannel<T extends IChannel>(
-		branchPendingManager?: BranchPendingManager,
+		branchPendingManager?: BranchPendingManager | undefined,
 	): Promise<T> {
 		const { channel, factory } = await this.channelP;
 

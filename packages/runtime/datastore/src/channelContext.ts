@@ -239,7 +239,7 @@ export async function branchChannel<T extends IChannel>({
 	dataStoreRuntime: IFluidDataStoreRuntime;
 	factory: IChannelFactory;
 	logger: ITelemetryLoggerExt;
-	branchPendingManager?: BranchPendingManager;
+	branchPendingManager?: BranchPendingManager | undefined;
 }): Promise<{ channel: T; services: ChannelServiceEndpoints }> {
 	const services: ChannelServiceEndpoints = toChannelServiceEndpoints(
 		ChannelDeltaConnection.clone(channelServices.deltaConnection, {
