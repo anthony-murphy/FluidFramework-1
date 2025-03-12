@@ -62,6 +62,8 @@ export class FluidDataStoreRuntime extends TypedEventEmitter<IFluidDataStoreRunt
     // (undocumented)
     get IFluidHandleContext(): this;
     // (undocumented)
+    get inStagingMode(): boolean;
+    // (undocumented)
     get isAttached(): boolean;
     // (undocumented)
     get logger(): ITelemetryLoggerExt;
@@ -70,6 +72,7 @@ export class FluidDataStoreRuntime extends TypedEventEmitter<IFluidDataStoreRunt
     get objectsRoutingContext(): this;
     // (undocumented)
     readonly options: Record<string | number, any>;
+    // @deprecated
     process(message: ISequencedDocumentMessage, local: boolean, localOpMetadata: unknown): void;
     processMessages(messageCollection: IRuntimeMessageCollection): void;
     // (undocumented)

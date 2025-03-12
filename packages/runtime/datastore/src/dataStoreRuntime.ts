@@ -135,6 +135,10 @@ export class FluidDataStoreRuntime
 		return this.dataStoreContext.connected;
 	}
 
+	get inStagingMode(): boolean {
+		return this.dataStoreContext.containerRuntime.inStagingMode;
+	}
+
 	public get clientId(): string | undefined {
 		return this.dataStoreContext.clientId;
 	}
@@ -790,8 +794,8 @@ export class FluidDataStoreRuntime
 
 	/**
 	 * back-compat ADO 21575.
-	 * This is still here for back-compat purposes because it exists on IFluidDataStoreChannel. Once it is removed from
-	 * the interface, this method can be removed.
+	 * @deprecated {@link FluidDataStoreRuntime.processMessages} should be used instead to process messages. This is still here for back-compat
+	 * because it exists on IFluidDataStoreChannel. Once it is removed from the interface, this method can be removed.
 	 */
 	public process(
 		message: ISequencedDocumentMessage,
