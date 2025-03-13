@@ -5,15 +5,12 @@
 
 import { AttachState } from "@fluidframework/container-definitions";
 import {
-	FluidObject,
 	IDisposable,
 	IRequest,
 	IResponse,
 	ITelemetryBaseLogger,
 } from "@fluidframework/core-interfaces";
-import type { IFluidHandleInternal } from "@fluidframework/core-interfaces/internal";
-import { assert, Lazy, LazyPromise } from "@fluidframework/core-utils/internal";
-import { FluidObjectHandle } from "@fluidframework/datastore/internal";
+import { assert, Lazy } from "@fluidframework/core-utils/internal";
 import type { ISnapshot } from "@fluidframework/driver-definitions/internal";
 import {
 	ISnapshotTree,
@@ -35,11 +32,8 @@ import {
 	IFluidDataStoreChannel,
 	IFluidDataStoreContext,
 	IFluidDataStoreContextDetached,
-	IFluidDataStoreFactory,
-	IFluidDataStoreRegistry,
 	IFluidParentContext,
 	ISummarizeResult,
-	NamedFluidDataStoreRegistryEntries,
 	channelsTreeName,
 	IInboundSignalMessage,
 	gcDataBlobKey,
@@ -96,7 +90,6 @@ import {
 	createAttributesBlob,
 } from "./dataStoreContext.js";
 import { DataStoreContexts } from "./dataStoreContexts.js";
-import { FluidDataStoreRegistry } from "./dataStoreRegistry.js";
 // eslint-disable-next-line import/no-deprecated
 import { GCNodeType, IGCNodeUpdatedProps, urlToGCNodePath } from "./gc/index.js";
 import { ContainerMessageType, LocalContainerRuntimeMessage } from "./messageTypes.js";
@@ -259,7 +252,9 @@ export function getLocalDataStoreType(localDataStore: LocalFluidDataStoreContext
  * but eventually could be hosted on any channel once we formalize the channel api boundary.
  * @internal
  */
-export class ChannelCollection implements IFluidDataStoreChannel, IDisposable {
+export class ChannelCollection
+	implements Omit<IFluidDataStoreChannel, "entryPoint" | "request">, IDisposable
+{
 	// Stores tracked by the Domain
 	private readonly pendingAttach = new Map<string, IAttachMessage>();
 	// 0.24 back-compat attachingBeforeSummary
@@ -269,8 +264,6 @@ export class ChannelCollection implements IFluidDataStoreChannel, IDisposable {
 
 	// eslint-disable-next-line unicorn/consistent-function-scoping -- Property is defined once; no need to extract inner lambda
 	private readonly disposeOnce = new Lazy<void>(() => this.contexts.dispose());
-
-	public readonly entryPoint: IFluidHandleInternal<FluidObject>;
 
 	public readonly containerLoadStats: {
 		// number of dataStores during loadContainer
@@ -294,15 +287,9 @@ export class ChannelCollection implements IFluidDataStoreChannel, IDisposable {
 		private readonly gcNodeUpdated: (props: IGCNodeUpdatedProps) => void,
 		private readonly isDataStoreDeleted: (nodePath: string) => boolean,
 		private readonly aliasMap: Map<string, string>,
-		provideEntryPoint: (runtime: ChannelCollection) => Promise<FluidObject>,
 	) {
 		this.mc = createChildMonitoringContext({ logger: baseLogger });
 		this.contexts = new DataStoreContexts(baseLogger);
-		this.entryPoint = new FluidObjectHandle<FluidObject>(
-			new LazyPromise(async () => provideEntryPoint(this)),
-			"",
-			this.parentContext.IFluidHandleContext,
-		);
 		this.aliasedDataStores = new Set(aliasMap.values());
 
 		// Extract stores stored inside the snapshot
@@ -1508,7 +1495,7 @@ export class ChannelCollection implements IFluidDataStoreChannel, IDisposable {
 		return this.aliases.get(maybeAlias) ?? maybeAlias;
 	}
 
-	public async request(request: IRequest): Promise<IResponse> {
+	public async resolveHandle(request: IRequest): Promise<IResponse> {
 		const requestParser = RequestParser.create(request);
 		const id = requestParser.pathParts[0];
 
@@ -1632,48 +1619,5 @@ export function detectOutboundReferences(
 	const fromPath = ["", address, ddsAddress].join("/");
 	for (const toPath of outboundPaths) {
 		addedOutboundReference(fromPath, toPath);
-	}
-}
-
-/**
- * @internal
- */
-export class ChannelCollectionFactory<T extends ChannelCollection = ChannelCollection>
-	implements IFluidDataStoreFactory
-{
-	public readonly type = "ChannelCollectionChannel";
-
-	public IFluidDataStoreRegistry: IFluidDataStoreRegistry;
-
-	constructor(
-		registryEntries: NamedFluidDataStoreRegistryEntries,
-		// ADO:7302 We need a better type here
-		private readonly provideEntryPoint: (
-			runtime: IFluidDataStoreChannel,
-		) => Promise<FluidObject>,
-		private readonly ctor: (...args: ConstructorParameters<typeof ChannelCollection>) => T,
-	) {
-		this.IFluidDataStoreRegistry = new FluidDataStoreRegistry(registryEntries);
-	}
-
-	public get IFluidDataStoreFactory(): ChannelCollectionFactory<T> {
-		return this;
-	}
-
-	public async instantiateDataStore(
-		context: IFluidDataStoreContext,
-		_existing: boolean,
-	): Promise<IFluidDataStoreChannel> {
-		const runtime = this.ctor(
-			context.baseSnapshot,
-			context, // parentContext
-			context.baseLogger,
-			() => {}, // gcNodeUpdated
-			(_nodePath: string) => false, // isDataStoreDeleted
-			new Map(), // aliasMap
-			this.provideEntryPoint,
-		);
-
-		return runtime;
 	}
 }

@@ -35,6 +35,8 @@ export class TestFluidHandle extends FluidHandleBase<unknown> {
 	public absolutePath;
 	public isAttached;
 
+	public type: 'blob' | 'entrypoint' | 'channel' | 'unknown' = 'unknown';
+
 	public async get(): Promise<any> {
 		throw new Error('Method not implemented.');
 	}

@@ -125,6 +125,7 @@ export class LocalValueMaker {
 			const handle: ISerializedHandle = {
 				type: "__fluid_handle__",
 				url: serializable.value as string,
+				handleType: "unknown",
 			};
 			// NOTE: here we require the use of `parseHandles` because the roundtrip
 			// through a string is necessary to resolve the absolute path of

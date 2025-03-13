@@ -22,6 +22,8 @@ export class DDSFuzzHandle extends FluidHandleBase<string> {
 
 	public readonly absolutePath: string;
 
+	public readonly type = "unknown";
+
 	constructor(
 		public readonly id: string,
 		public readonly routeContext: IFluidHandleContext,

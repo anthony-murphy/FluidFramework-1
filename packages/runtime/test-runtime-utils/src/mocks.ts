@@ -821,7 +821,8 @@ export class MockFluidDataStoreRuntime
 		super();
 		this.clientId = overrides?.clientId ?? uuid();
 		this.entryPoint = toFluidHandleInternal(
-			overrides?.entryPoint ?? new MockHandle(null as unknown as FluidObject, "", ""),
+			overrides?.entryPoint ??
+				new MockHandle(null as unknown as FluidObject, "", "", "entrypoint"),
 		);
 		this.id = overrides?.id ?? uuid();
 		const childLoggerProps: Parameters<typeof createChildLogger>[0] = {

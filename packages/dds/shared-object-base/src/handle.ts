@@ -39,7 +39,7 @@ export class SharedObjectHandle extends FluidObjectHandle<ISharedObject> {
 		path: string,
 		routeContext: IFluidHandleContext,
 	) {
-		super(value, path, routeContext);
+		super(value, path, routeContext, "channel");
 	}
 
 	/**

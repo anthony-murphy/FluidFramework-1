@@ -17,6 +17,8 @@ export interface ISerializedHandle {
 
 	// URL to the object. Relative URLs are relative to the handle context passed to the stringify.
 	url: string;
+
+	handleType: "blob" | "entrypoint" | "channel" | "unknown" | undefined;
 }
 
 /**
@@ -117,6 +119,7 @@ export abstract class FluidHandleBase<T> implements IFluidHandleInternal<T> {
 	public abstract readonly isAttached: boolean;
 	public abstract get(): Promise<T>;
 
+	public abstract type: "blob" | "entrypoint" | "channel" | "unknown";
 	/**
 	 * {@inheritDoc @fluidframework/core-interfaces#IProvideFluidHandle.IFluidHandle}
 	 */

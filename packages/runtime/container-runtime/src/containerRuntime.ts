@@ -1913,7 +1913,6 @@ export class ContainerRuntime
 				}),
 			(path: string) => this.garbageCollector.isNodeDeleted(path),
 			new Map<string, string>(dataStoreAliasMap),
-			async (runtime: ChannelCollection) => provideEntryPoint,
 		);
 
 		this.blobManager = new BlobManager({
@@ -2472,10 +2471,13 @@ export class ContainerRuntime
 							status: 200,
 							mimeType: "fluid/object",
 							value: blob,
+							headers: {
+								handleType: "blob",
+							},
 						}
 					: create404Response(request);
 			} else if (requestParser.pathParts.length > 0) {
-				return await this.channelCollection.request(request);
+				return await this.channelCollection.resolveHandle(request);
 			}
 
 			return create404Response(request);

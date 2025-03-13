@@ -22,6 +22,7 @@ export class MockHandle<T> extends FluidHandleBase<T> {
 		protected readonly value: T,
 		public readonly path = `mock-handle-${Math.random().toString(36).slice(2)}`,
 		public readonly absolutePath: string = `/${path}`,
+		public readonly type: "blob" | "entrypoint" | "channel" | "unknown",
 	) {
 		super();
 	}

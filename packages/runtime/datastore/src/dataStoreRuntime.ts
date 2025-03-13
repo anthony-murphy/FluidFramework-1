@@ -307,6 +307,7 @@ export class FluidDataStoreRuntime
 			new LazyPromise(async () => provideEntryPoint(this)),
 			"",
 			this.objectsRoutingContext,
+			"entrypoint",
 		);
 
 		this.attachListener();
@@ -372,7 +373,14 @@ export class FluidDataStoreRuntime
 			// Those get serialized and then deserialized into a plain handle, which really just has a path,
 			// resolution walks to the runtime, which calls this, and get the true object off the internal object handle
 			if (parser.pathParts.length === 0 && request.headers?.viaHandle === true) {
-				return { mimeType: "fluid/object", status: 200, value: await this.entryPoint.get() };
+				return {
+					mimeType: "fluid/object",
+					status: 200,
+					value: await this.entryPoint.get(),
+					headers: {
+						handleType: "entrypoint",
+					},
+				};
 			}
 			const id = parser.pathParts[0];
 
@@ -387,7 +395,14 @@ export class FluidDataStoreRuntime
 					try {
 						const channel = await context.getChannel();
 
-						return { mimeType: "fluid/object", status: 200, value: channel };
+						return {
+							mimeType: "fluid/object",
+							status: 200,
+							value: channel,
+							headers: {
+								handleType: "channel",
+							},
+						};
 					} catch (error) {
 						this.mc.logger.sendErrorEvent({ eventName: "GetChannelFailedInRequest" }, error);
 

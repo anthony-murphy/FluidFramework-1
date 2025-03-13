@@ -23,6 +23,11 @@ export class RemoteFluidObjectHandle extends FluidHandleBase<FluidObject> {
 	public readonly isAttached = true;
 	private objectP: Promise<FluidObject> | undefined;
 
+	#type: "blob" | "entrypoint" | "channel" | "unknown";
+	get type(): "blob" | "entrypoint" | "channel" | "unknown" {
+		return this.#type;
+	}
+
 	/**
 	 * Creates a new RemoteFluidObjectHandle when parsing an IFluidHandle.
 	 * @param absolutePath - The absolute path to the handle from the container runtime.
@@ -31,8 +36,10 @@ export class RemoteFluidObjectHandle extends FluidHandleBase<FluidObject> {
 	constructor(
 		public readonly absolutePath: string,
 		public readonly routeContext: IFluidHandleContext,
+		type: "blob" | "entrypoint" | "channel" | "unknown",
 	) {
 		super();
+		this.#type = type;
 		assert(
 			absolutePath.startsWith("/"),
 			0x19d /* "Handles should always have absolute paths" */,
@@ -48,6 +55,11 @@ export class RemoteFluidObjectHandle extends FluidHandleBase<FluidObject> {
 			};
 			this.objectP = this.routeContext.resolveHandle(request).then<FluidObject>((response) => {
 				if (response.mimeType === "fluid/object") {
+					const handleType: unknown = response.headers?.handleType;
+					if (typeof handleType === "string") {
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+						this.#type = handleType as any;
+					}
 					const fluidObject: FluidObject = response.value as FluidObject;
 					return fluidObject;
 				}

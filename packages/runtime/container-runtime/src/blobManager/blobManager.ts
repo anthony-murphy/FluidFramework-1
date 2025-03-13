@@ -70,6 +70,8 @@ export class BlobHandle extends FluidHandleBase<ArrayBufferLike> {
 
 	public readonly absolutePath: string;
 
+	public readonly type = "blob";
+
 	constructor(
 		public readonly path: string,
 		public readonly routeContext: IFluidHandleContext,

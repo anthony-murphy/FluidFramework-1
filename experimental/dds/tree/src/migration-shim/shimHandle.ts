@@ -21,6 +21,10 @@ export class ShimHandle<TShim extends IShim> extends FluidHandleBase<TShim> {
 		super();
 	}
 
+	public get type() {
+		return toFluidHandleInternal(this.shim.currentTree.handle).type;
+	}
+
 	public get absolutePath(): string {
 		return toFluidHandleInternal(this.shim.currentTree.handle).absolutePath;
 	}
