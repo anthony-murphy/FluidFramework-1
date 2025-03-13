@@ -106,7 +106,7 @@ export class FluidDataStoreRuntime extends TypedEventEmitter<IFluidDataStoreRunt
 
 // @alpha
 export class FluidObjectHandle<T extends FluidObject = FluidObject> extends FluidHandleBase<T> {
-    constructor(value: T | Promise<T>, path: string, routeContext: IFluidHandleContext);
+    constructor(value: T | Promise<T>, path: string, routeContext: IFluidHandleContext, type?: "blob" | "entrypoint" | "channel" | "unknown" | undefined);
     readonly absolutePath: string;
     attachGraph(): void;
     bind(handle: IFluidHandleInternal): void;
@@ -116,6 +116,8 @@ export class FluidObjectHandle<T extends FluidObject = FluidObject> extends Flui
     readonly path: string;
     // (undocumented)
     readonly routeContext: IFluidHandleContext;
+    // (undocumented)
+    readonly type: "blob" | "entrypoint" | "channel" | "unknown" | undefined;
     // (undocumented)
     protected readonly value: T | Promise<T>;
 }

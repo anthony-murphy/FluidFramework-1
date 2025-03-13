@@ -69,7 +69,12 @@ export class FluidObjectHandle<
 		protected readonly value: T | Promise<T>,
 		public readonly path: string,
 		public readonly routeContext: IFluidHandleContext,
-		public readonly type: "blob" | "entrypoint" | "channel" | "unknown",
+		public readonly type:
+			| "blob"
+			| "entrypoint"
+			| "channel"
+			| "unknown"
+			| undefined = undefined,
 	) {
 		super();
 		this.absolutePath = generateHandleContextPath(path, this.routeContext);

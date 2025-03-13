@@ -271,6 +271,8 @@ export interface IFluidHandleInternal<out T = unknown> extends IFluidHandle<T>, 
     readonly absolutePath: string;
     attachGraph(): void;
     bind(handle: IFluidHandleInternal): void;
+    // (undocumented)
+    type?: "blob" | "entrypoint" | "channel" | "unknown" | undefined;
 }
 
 // @public (undocumented)

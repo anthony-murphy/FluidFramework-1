@@ -506,7 +506,7 @@ export class MockFluidDataStoreRuntime extends EventEmitter implements IFluidDat
 
 // @alpha
 export class MockHandle<T> extends FluidHandleBase<T> {
-    constructor(value: T, path?: string, absolutePath?: string);
+    constructor(value: T, path?: string, absolutePath?: string, type?: "blob" | "entrypoint" | "channel" | "unknown");
     // (undocumented)
     readonly absolutePath: string;
     // (undocumented)
@@ -519,6 +519,8 @@ export class MockHandle<T> extends FluidHandleBase<T> {
     get isAttached(): boolean;
     // (undocumented)
     readonly path: string;
+    // (undocumented)
+    readonly type: "blob" | "entrypoint" | "channel" | "unknown";
     // (undocumented)
     protected readonly value: T;
 }

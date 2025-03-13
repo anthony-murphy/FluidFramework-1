@@ -1054,6 +1054,7 @@ describe("Data Store Context Tests", () => {
 				}),
 				"",
 				undefined as unknown as IFluidHandleContext,
+				"entrypoint",
 			);
 
 			factory = {

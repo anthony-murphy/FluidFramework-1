@@ -28,6 +28,8 @@ export abstract class FluidHandleBase<T> implements IFluidHandleInternal<T> {
     get IFluidHandle(): IFluidHandleInternal;
     // (undocumented)
     abstract readonly isAttached: boolean;
+    // (undocumented)
+    abstract type: "blob" | "entrypoint" | "channel" | "unknown" | undefined;
 }
 
 // @public

@@ -84,7 +84,7 @@ export interface IFluidHandleInternal<
 	out T = unknown, // FluidObject & IFluidLoadable,
 > extends IFluidHandle<T>,
 		IProvideFluidHandle {
-	type: "blob" | "entrypoint" | "channel" | "unknown";
+	type?: "blob" | "entrypoint" | "channel" | "unknown" | undefined;
 	/**
 	 * The absolute path to the handle context from the root.
 	 */
