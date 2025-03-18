@@ -10,6 +10,7 @@ import { TypedEventEmitter } from "@fluid-internal/client-utils";
 import type {
 	AsyncGenerator,
 	AsyncReducer,
+	Reducer,
 	BaseFuzzTestState,
 	BaseOperation,
 	IRandom,
@@ -242,7 +243,7 @@ export interface DDSFuzzModel<
 	/**
 	 * Reducer capable of updating the test state according to the operations generated.
 	 */
-	reducer: AsyncReducer<TOperation, TState>;
+	reducer: AsyncReducer<TOperation, TState> | Reducer<TOperation, TState>;
 
 	/**
 	 * Equivalence validation function, which should verify that the provided channels contain the same data.

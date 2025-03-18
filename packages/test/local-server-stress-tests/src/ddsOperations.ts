@@ -121,9 +121,12 @@ export const DDSModelOpReducer: AsyncReducer<DDSModelOp, LocalServerStressState>
 		}
 		return value;
 	});
-	await timeoutAwait(baseModel.reducer(await covertLocalServerStateToDdsState(state), subOp), {
-		errorMsg: `Timed out waiting for dds reducer: ${state.channel.attributes.type}`,
-	});
+	await timeoutAwait(
+		Promise.resolve(baseModel.reducer(await covertLocalServerStateToDdsState(state), subOp)),
+		{
+			errorMsg: `Timed out waiting for dds reducer: ${state.channel.attributes.type}`,
+		},
+	);
 };
 
 export const validateConsistencyOfAllDDS = async (clientA: Client, clientB: Client) => {
