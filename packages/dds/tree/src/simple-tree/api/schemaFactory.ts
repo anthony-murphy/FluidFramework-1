@@ -11,7 +11,7 @@ import type { IFluidHandle as _dummyImport } from "@fluidframework/core-interfac
 import { isFluidHandle } from "@fluidframework/runtime-utils/internal";
 
 import type { TreeValue } from "../../core/index.js";
-import type { NodeKeyManager } from "../../feature-libraries/index.js";
+import type { NodeIdentifierManager } from "../../feature-libraries/index.js";
 import {
 	type RestrictiveStringRecord,
 	getOrCreate,
@@ -72,6 +72,7 @@ import type {
 	TreeMapNodeUnsafe,
 	TreeObjectNodeUnsafe,
 	Unenforced,
+	ImplicitAllowedTypesUnsafe,
 } from "./typesUnsafe.js";
 import { createFieldSchemaUnsafe } from "./schemaFactoryRecursive.js";
 import { isLazy } from "../flexList.js";
@@ -142,7 +143,7 @@ export interface SchemaFactoryObjectOptions<TCustomMetadata = unknown>
 	 * ```
 	 *
 	 * If an application wants to be particularly careful to preserve all data on a node when editing it, it can use
-	 * {@link TreeAlpha.(importVerbose:2)|import}/{@link TreeAlpha.(exportVerbose:2)|export} APIs with persistent keys.
+	 * {@link TreeAlpha.importVerbose|import}/{@link TreeAlpha.exportVerbose|export} APIs with persistent keys.
 	 *
 	 * Note that public API methods which operate on entire nodes (such as `moveTo`, `moveToEnd`, etc. on arrays) do not encounter
 	 * this problem as SharedTree's implementation stores the entire node in its lower layers. It's only when application code
@@ -281,7 +282,7 @@ export const schemaStatics = {
 	 * This version of {@link schemaStatics.optional} has fewer type constraints to work around TypeScript limitations, see {@link Unenforced}.
 	 * See {@link ValidateRecursiveSchema} for additional information about using recursive schema.
 	 */
-	optionalRecursive: <const T extends Unenforced<ImplicitAllowedTypes>>(
+	optionalRecursive: <const T extends ImplicitAllowedTypesUnsafe>(
 		t: T,
 		props?: Omit<FieldProps, "defaultProvider">,
 	): FieldSchemaUnsafe<FieldKind.Optional, T> => {
@@ -295,7 +296,7 @@ export const schemaStatics = {
 	 * This version of {@link schemaStatics.required} has fewer type constraints to work around TypeScript limitations, see {@link Unenforced}.
 	 * See {@link ValidateRecursiveSchema} for additional information about using recursive schema.
 	 */
-	requiredRecursive: <const T extends Unenforced<ImplicitAllowedTypes>>(
+	requiredRecursive: <const T extends ImplicitAllowedTypesUnsafe>(
 		t: T,
 		props?: Omit<FieldProps, "defaultProvider">,
 	): FieldSchemaUnsafe<FieldKind.Required, T> => {
@@ -909,8 +910,10 @@ export class SchemaFactory<
 	 */
 	public get identifier(): FieldSchema<FieldKind.Identifier, typeof this.string> {
 		const defaultIdentifierProvider: DefaultProvider = getDefaultProvider(
-			(nodeKeyManager: NodeKeyManager) => {
-				return nodeKeyManager.stabilizeNodeKey(nodeKeyManager.generateLocalNodeKey());
+			(nodeKeyManager: NodeIdentifierManager) => {
+				return nodeKeyManager.stabilizeNodeIdentifier(
+					nodeKeyManager.generateLocalNodeIdentifier(),
+				);
 			},
 		);
 		return createFieldSchema(FieldKind.Identifier, this.string, {
@@ -931,7 +934,7 @@ export class SchemaFactory<
 	 */
 	public objectRecursive<
 		const Name extends TName,
-		const T extends Unenforced<RestrictiveStringRecord<ImplicitFieldSchema>>,
+		const T extends RestrictiveStringRecord<Unenforced<ImplicitFieldSchema>>,
 	>(
 		name: Name,
 		t: T,
@@ -965,10 +968,10 @@ export class SchemaFactory<
 	 * See {@link ValidateRecursiveSchema} for additional information about using recursive schema.
 	 */
 	// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-	public arrayRecursive<
-		const Name extends TName,
-		const T extends Unenforced<ImplicitAllowedTypes>,
-	>(name: Name, allowedTypes: T) {
+	public arrayRecursive<const Name extends TName, const T extends ImplicitAllowedTypesUnsafe>(
+		name: Name,
+		allowedTypes: T,
+	) {
 		const RecursiveArray = this.namedArray(
 			name,
 			allowedTypes as T & ImplicitAllowedTypes,
@@ -1008,7 +1011,7 @@ export class SchemaFactory<
 	 * See {@link ValidateRecursiveSchema} for additional information about using recursive schema.
 	 */
 	// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-	public mapRecursive<Name extends TName, const T extends Unenforced<ImplicitAllowedTypes>>(
+	public mapRecursive<Name extends TName, const T extends ImplicitAllowedTypesUnsafe>(
 		name: Name,
 		allowedTypes: T,
 	) {
