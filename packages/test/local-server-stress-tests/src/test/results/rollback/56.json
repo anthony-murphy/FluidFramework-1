@@ -1,0 +1,173 @@
+[
+	{
+		"type": "createChannel",
+		"channelType": "https://graph.microsoft.com/types/mergeTree",
+		"tag": "channel-1",
+		"clientTag": "client-1",
+		"datastoreTag": "datastore-0",
+		"channelTag": "root"
+	},
+	{
+		"type": "DDSModelOp",
+		"op": {
+			"type": "set",
+			"key": "prop3",
+			"path": "/",
+			"value": {
+				"tag": "channel-1",
+				"absolutePath": "/0bd14e6e-d86c-49f9-a7fb-eaf518fe9f48/channel-1",
+				"isAttached": true
+			}
+		},
+		"clientTag": "client-1",
+		"datastoreTag": "datastore-0",
+		"channelTag": "root"
+	},
+	{
+		"type": "DDSModelOp",
+		"op": {
+			"type": "addText",
+			"index": 0,
+			"content": "1111"
+		},
+		"clientTag": "client-1",
+		"datastoreTag": "datastore-0",
+		"channelTag": "channel-1"
+	},
+	{
+		"type": "orderSequentially",
+		"operations": [
+			{
+				"type": "DDSModelOp",
+				"op": {
+					"type": "addText",
+					"index": 1,
+					"content": "1111111111"
+				}
+			}
+		],
+		"rollback": true,
+		"clientTag": "client-1",
+		"datastoreTag": "datastore-0",
+		"channelTag": "channel-1"
+	},
+	{
+		"type": "DDSModelOp",
+		"op": {
+			"type": "addText",
+			"index": 12,
+			"content": "1111"
+		},
+		"clientTag": "client-1",
+		"datastoreTag": "datastore-0",
+		"channelTag": "channel-1"
+	},
+	{
+		"type": "attach"
+	},
+	{
+		"type": "addClient",
+		"clientTag": "client-2"
+	},
+	{
+		"type": "addClient",
+		"clientTag": "client-3"
+	},
+	{
+		"type": "addClient",
+		"clientTag": "client-4"
+	},
+	{
+		"type": "DDSModelOp",
+		"op": {
+			"type": "addText",
+			"index": 7,
+			"content": "222222222"
+		},
+		"clientTag": "client-2",
+		"datastoreTag": "datastore-0",
+		"channelTag": "channel-1"
+	},
+	{
+		"type": "removeClient",
+		"clientTag": "client-1"
+	},
+	{
+		"type": "DDSModelOp",
+		"op": {
+			"type": "addText",
+			"index": 12,
+			"content": "33333"
+		},
+		"clientTag": "client-3",
+		"datastoreTag": "datastore-0",
+		"channelTag": "channel-1"
+	},
+	{
+		"type": "DDSModelOp",
+		"op": {
+			"type": "addText",
+			"index": 16,
+			"content": "2222222222"
+		},
+		"clientTag": "client-2",
+		"datastoreTag": "datastore-0",
+		"channelTag": "channel-1"
+	},
+	{
+		"type": "DDSModelOp",
+		"op": {
+			"type": "addText",
+			"index": 5,
+			"content": "33"
+		},
+		"clientTag": "client-3",
+		"datastoreTag": "datastore-0",
+		"channelTag": "channel-1"
+	},
+	{
+		"type": "DDSModelOp",
+		"op": {
+			"type": "addText",
+			"index": 17,
+			"content": "444444"
+		},
+		"clientTag": "client-4",
+		"datastoreTag": "datastore-0",
+		"channelTag": "channel-1"
+	},
+	{
+		"type": "synchronize"
+	},
+	{
+		"type": "orderSequentially",
+		"operations": [
+			{
+				"type": "DDSModelOp",
+				"op": {
+					"type": "addText",
+					"index": 20,
+					"content": "3"
+				}
+			}
+		],
+		"rollback": true,
+		"clientTag": "client-3",
+		"datastoreTag": "datastore-0",
+		"channelTag": "channel-1"
+	},
+	{
+		"type": "DDSModelOp",
+		"op": {
+			"type": "addText",
+			"index": 41,
+			"content": "444"
+		},
+		"clientTag": "client-4",
+		"datastoreTag": "datastore-0",
+		"channelTag": "channel-1"
+	},
+	{
+		"type": "synchronize"
+	}
+]
