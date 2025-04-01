@@ -7,6 +7,7 @@ import { IFluidHandle } from "@fluidframework/core-interfaces";
 import {
 	IFluidHandleContext,
 	type IFluidHandleInternal,
+	type IFluidHandleInternalWithMetadata,
 } from "@fluidframework/core-interfaces/internal";
 import { assert, shallowCloneObject } from "@fluidframework/core-utils/internal";
 import {
@@ -142,7 +143,7 @@ export class FluidSerializer implements IFluidSerializer {
 				? value.url
 				: generateHandleContextPath(value.url, this.context);
 
-			return new RemoteFluidObjectHandle(absolutePath, this.root);
+			return new RemoteFluidObjectHandle(absolutePath, this.root, value.metadata);
 		} else {
 			return value;
 		}
@@ -199,10 +200,12 @@ export class FluidSerializer implements IFluidSerializer {
 		handle: IFluidHandleInternal,
 		bind: IFluidHandleInternal,
 	): ISerializedHandle {
+		const hwmd = handle as IFluidHandleInternalWithMetadata;
 		bind.bind(handle);
 		return {
 			type: "__fluid_handle__",
 			url: handle.absolutePath,
+			metadata: hwmd.metadata === undefined ? undefined : { ...hwmd.metadata },
 		};
 	}
 }

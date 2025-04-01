@@ -147,6 +147,7 @@ import {
 import {
 	ChannelCollection,
 	getSummaryForDatastores,
+	RuntimeHeaders,
 	wrapContext,
 } from "./channelCollection.js";
 import { ReportOpPerfTelemetry } from "./connectionTelemetry.js";
@@ -2238,8 +2239,12 @@ export class ContainerRuntime
 			}
 
 			if (id === blobManagerBasePath && requestParser.isLeaf(2)) {
+				// the request might also contain metadate in the header, so could also be passed
+				// to get blob
 				const blob = await this.blobManager.getBlob(requestParser.pathParts[1]);
 				return {
+					// this should probably come as part of get blob
+					headers: { [RuntimeHeaders.metadata]: { type: "blob" } },
 					status: 200,
 					mimeType: "fluid/object",
 					value: blob,

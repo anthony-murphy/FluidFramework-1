@@ -17,6 +17,8 @@ export interface ISerializedHandle {
 
 	// URL to the object. Relative URLs are relative to the handle context passed to the stringify.
 	url: string;
+
+	metadata: Record<string, number | string | boolean> | undefined;
 }
 
 /**

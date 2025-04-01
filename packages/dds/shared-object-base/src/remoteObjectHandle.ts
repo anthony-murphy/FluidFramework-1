@@ -8,6 +8,7 @@ import { FluidObject, IRequest } from "@fluidframework/core-interfaces";
 import {
 	IFluidHandleContext,
 	type IFluidHandleInternal,
+	type IFluidHandleInternalWithMetadata,
 } from "@fluidframework/core-interfaces/internal";
 import { assert } from "@fluidframework/core-utils/internal";
 import { FluidHandleBase, responseToException } from "@fluidframework/runtime-utils/internal";
@@ -19,7 +20,10 @@ import { FluidHandleBase, responseToException } from "@fluidframework/runtime-ut
  * custom objects) that are stored in SharedObjects. The Data Store or SharedObject corresponding to the
  * IFluidHandle can be retrieved by calling `get` on it.
  */
-export class RemoteFluidObjectHandle extends FluidHandleBase<FluidObject> {
+export class RemoteFluidObjectHandle
+	extends FluidHandleBase<FluidObject>
+	implements IFluidHandleInternalWithMetadata<FluidObject>
+{
 	public readonly isAttached = true;
 	private objectP: Promise<FluidObject> | undefined;
 
@@ -31,6 +35,7 @@ export class RemoteFluidObjectHandle extends FluidHandleBase<FluidObject> {
 	constructor(
 		public readonly absolutePath: string,
 		public readonly routeContext: IFluidHandleContext,
+		private _metadata?: Record<string, string | number | boolean> | undefined,
 	) {
 		super();
 		assert(
@@ -39,15 +44,24 @@ export class RemoteFluidObjectHandle extends FluidHandleBase<FluidObject> {
 		);
 	}
 
+	public get metadata(): Record<string, string | number | boolean> | undefined {
+		return this._metadata;
+	}
+
 	public async get(): Promise<FluidObject> {
 		if (this.objectP === undefined) {
 			// Add `viaHandle` header to distinguish from requests from non-handle paths.
 			const request: IRequest = {
 				url: this.absolutePath,
-				headers: { [RuntimeHeaders.viaHandle]: true },
+				headers: {
+					[RuntimeHeaders.viaHandle]: true,
+					[RuntimeHeaders.hasMetadata]: this.metadata,
+				},
 			};
 			this.objectP = this.routeContext.resolveHandle(request).then<FluidObject>((response) => {
 				if (response.mimeType === "fluid/object") {
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+					this._metadata = response.headers?.[RuntimeHeaders.hasMetadata] ?? this.metadata;
 					const fluidObject: FluidObject = response.value as FluidObject;
 					return fluidObject;
 				}

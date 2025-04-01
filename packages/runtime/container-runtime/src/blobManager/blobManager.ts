@@ -18,6 +18,7 @@ import type {
 	IEventProvider,
 	IFluidHandleContext,
 	IFluidHandleInternal,
+	IFluidHandleInternalWithMetadata,
 } from "@fluidframework/core-interfaces/internal";
 import { assert, Deferred } from "@fluidframework/core-utils/internal";
 import {
@@ -62,7 +63,10 @@ import {
  * DataObject.request() recognizes requests in the form of `/blobs/<id>`
  * and loads blob.
  */
-export class BlobHandle extends FluidHandleBase<ArrayBufferLike> {
+export class BlobHandle
+	extends FluidHandleBase<ArrayBufferLike>
+	implements IFluidHandleInternalWithMetadata<ArrayBuffer>
+{
 	private attached: boolean = false;
 
 	public get isAttached(): boolean {
@@ -70,6 +74,8 @@ export class BlobHandle extends FluidHandleBase<ArrayBufferLike> {
 	}
 
 	public readonly absolutePath: string;
+
+	public readonly metadata = { "type": "blob" };
 
 	constructor(
 		public readonly path: string,

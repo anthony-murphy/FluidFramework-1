@@ -118,6 +118,10 @@ export enum RuntimeHeaders {
 	 * True if the request is coming from an IFluidHandle.
 	 */
 	viaHandle = "viaHandle",
+	/**
+	 * Has metadata
+	 */
+	metadata = "metadata",
 }
 
 /**

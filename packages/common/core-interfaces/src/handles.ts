@@ -102,6 +102,16 @@ export interface IFluidHandleInternal<
 }
 
 /**
+ * @internal
+ */
+export interface IFluidHandleInternalWithMetadata<
+	// REVIEW: Constrain `T` to something? How do we support dds and datastores safely?
+	out T = unknown, // FluidObject & IFluidLoadable,
+> extends IFluidHandleInternal<T> {
+	readonly metadata: Record<string, number | boolean | string> | undefined;
+}
+
+/**
  * Symbol which must only be used on an {@link (IFluidHandle:interface)}, and is used to identify such objects.
  *
  * @remarks
