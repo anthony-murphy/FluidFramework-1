@@ -8,7 +8,7 @@
 import {
 	Client,
 	SequencePlace,
-	endpointPosAndSide,
+	endpointPosAndSideRequired,
 } from "@fluidframework/merge-tree/internal";
 
 import { IntervalNode, IntervalTree } from "../intervalTree.js";
@@ -172,7 +172,7 @@ export class OverlappingIntervalsIndex implements ISequenceOverlappingIntervalsI
 		start: SequencePlace,
 		end: SequencePlace,
 	): SequenceInterval[] {
-		const { startPos, endPos } = endpointPosAndSide(start, end);
+		const { startPos, endPos } = endpointPosAndSideRequired(start, end);
 
 		if (
 			startPos === undefined ||

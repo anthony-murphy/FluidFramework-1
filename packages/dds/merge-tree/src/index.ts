@@ -30,6 +30,9 @@ export {
 	RBNodeActions,
 	RedBlackTree,
 	SortedDictionary,
+	DoublyLinkedList,
+	ListNode,
+	ListNodeRange,
 } from "./collections/index.js";
 export { UnassignedSequenceNumber, UniversalSequenceNumber } from "./constants.js";
 export {
@@ -128,6 +131,7 @@ export {
 	Side,
 	SequencePlace,
 	endpointPosAndSide,
+	endpointPosAndSideRequired,
 } from "./sequencePlace.js";
 export { SortedSet } from "./sortedSet.js";
 export { SortedSegmentSet, SortedSegmentSetItem } from "./sortedSegmentSet.js";

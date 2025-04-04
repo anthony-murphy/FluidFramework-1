@@ -60,6 +60,8 @@ export enum Side {
  *
  * @legacy
  * @alpha
+ *
+ * @deprecated why legacy
  */
 export function endpointPosAndSide(
 	start: SequencePlace | undefined,
@@ -79,6 +81,38 @@ export function endpointPosAndSide(
 
 	const startPos = startIsPlainEndpoint ? start : start?.pos;
 	const endPos = endIsPlainEndpoint ? end : end?.pos;
+
+	return {
+		startSide,
+		endSide,
+		startPos,
+		endPos,
+	};
+}
+
+/**
+ * Returns the position and side of the start and end of a sequence.
+ * @internal
+ *
+ */
+export function endpointPosAndSideRequired(
+	start: SequencePlace,
+	end: SequencePlace,
+): {
+	startSide: Side;
+	endSide: Side;
+	startPos: number | "start" | "end";
+	endPos: number | "start" | "end";
+} {
+	const startIsPlainEndpoint =
+		typeof start === "number" || start === "start" || start === "end";
+	const endIsPlainEndpoint = typeof end === "number" || end === "start" || end === "end";
+
+	const startSide = startIsPlainEndpoint ? Side.Before : start.side;
+	const endSide = endIsPlainEndpoint ? Side.Before : end.side;
+
+	const startPos = startIsPlainEndpoint ? start : start.pos;
+	const endPos = endIsPlainEndpoint ? end : end.pos;
 
 	return {
 		startSide,

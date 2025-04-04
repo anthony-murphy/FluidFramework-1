@@ -22,4 +22,5 @@ export {
 	SequenceIntervalClass,
 	createSequenceInterval,
 	createPositionReferenceFromSegoff,
+	setSlideOnRemove,
 } from "./sequenceInterval.js";

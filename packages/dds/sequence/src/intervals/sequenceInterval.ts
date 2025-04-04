@@ -9,6 +9,7 @@ import { assert } from "@fluidframework/core-utils/internal";
 import { ISequencedDocumentMessage } from "@fluidframework/driver-definitions/internal";
 import {
 	Client,
+	DoublyLinkedList,
 	ISegment,
 	LocalReferencePosition,
 	PropertiesManager,
@@ -25,10 +26,13 @@ import {
 	reservedRangeLabelsKey,
 	SequencePlace,
 	Side,
-	endpointPosAndSide,
 	addProperties,
-	copyPropertiesAndManager,
 	type ISegmentInternal,
+	type OperationStamp,
+	endpointPosAndSideRequired,
+	UnassignedSequenceNumber,
+	// eslint-disable-next-line import/no-deprecated
+	endpointPosAndSide,
 } from "@fluidframework/merge-tree/internal";
 import { UsageError } from "@fluidframework/telemetry-utils/internal";
 
@@ -182,7 +186,28 @@ export interface SequenceInterval extends ISerializableInterval {
 	overlapsPos(bstart: number, bend: number): boolean;
 }
 
+interface PositionChange {
+	start: LocalReferencePosition;
+	end: LocalReferencePosition;
+	stamp?: OperationStamp;
+}
+
+interface PositionChanges {
+	msnConsensus: PositionChange;
+	remote: DoublyLinkedList<PositionChange>;
+	local: DoublyLinkedList<PositionChange>;
+}
+
+export function setSlideOnRemove(lref: LocalReferencePosition) {
+	let refType = lref.refType;
+	refType = refType & ~ReferenceType.StayOnRemove;
+	refType = refType | ReferenceType.SlideOnRemove;
+	lref.refType = refType;
+}
+
 export class SequenceIntervalClass implements SequenceInterval {
+	private positionChanges: PositionChanges | undefined;
+
 	/**
 	 * {@inheritDoc ISerializableInterval.properties}
 	 */
@@ -205,23 +230,34 @@ export class SequenceIntervalClass implements SequenceInterval {
 		);
 	}
 
+	#start: LocalReferencePosition;
+	public get start() {
+		return this.#start;
+	}
+	#end: LocalReferencePosition;
+	public get end() {
+		return this.#end;
+	}
+
 	constructor(
 		private readonly client: Client,
 		/**
 		 * Start endpoint of this interval.
 		 * @remarks This endpoint can be resolved into a character position using the SharedString it's a part of.
 		 */
-		public start: LocalReferencePosition,
+		start: LocalReferencePosition,
 		/**
 		 * End endpoint of this interval.
 		 * @remarks This endpoint can be resolved into a character position using the SharedString it's a part of.
 		 */
-		public end: LocalReferencePosition,
+		end: LocalReferencePosition,
 		public intervalType: IntervalType,
 		props?: PropertySet,
 		public readonly startSide: Side = Side.Before,
 		public readonly endSide: Side = Side.Before,
 	) {
+		this.#start = start;
+		this.#end = end;
 		if (props) {
 			this.properties = addProperties(this.properties, props);
 		}
@@ -290,11 +326,27 @@ export class SequenceIntervalClass implements SequenceInterval {
 	/**
 	 * {@inheritDoc IInterval.clone}
 	 */
-	public clone(): SequenceIntervalClass {
+	public clone(cloneEndpoints: boolean = false): SequenceIntervalClass {
+		const cloneRef = (ref: LocalReferencePosition) => {
+			const segment = ref.getSegment();
+			if (segment === undefined) {
+				return createDetachedLocalReferencePosition(ref.slidingPreference, ref.refType);
+			}
+
+			return this.client.createLocalReferencePosition(
+				segment,
+				ref.getOffset(),
+				ReferenceType.Transient,
+				ref.properties,
+				ref.slidingPreference,
+				ref.canSlideToEndpoint,
+			);
+		};
+
 		return new SequenceIntervalClass(
 			this.client,
-			this.start,
-			this.end,
+			cloneEndpoints ? cloneRef(this.start) : this.start,
+			cloneEndpoints ? cloneRef(this.end) : this.end,
 			this.intervalType,
 			this.properties,
 			this.startSide,
@@ -415,9 +467,6 @@ export class SequenceIntervalClass implements SequenceInterval {
 		return endPos > bstart && startPos < bend;
 	}
 
-	/**
-	 * {@inheritDoc IInterval.modify}
-	 */
 	public modify(
 		label: string,
 		start: SequencePlace | undefined,
@@ -425,16 +474,36 @@ export class SequenceIntervalClass implements SequenceInterval {
 		op?: ISequencedDocumentMessage,
 		localSeq?: number,
 		useNewSlidingBehavior: boolean = false,
+	): SequenceInterval {
+		throw new Error("Do not call");
+	}
+
+	/**
+	 * {@inheritDoc IInterval.modify}
+	 */
+	public modify2(
+		start: SequencePlace | undefined,
+		end: SequencePlace | undefined,
+		op?: ISequencedDocumentMessage,
+		localSeq?: number,
+		useNewSlidingBehavior: boolean = false,
 	) {
-		const { startSide, endSide, startPos, endPos } = endpointPosAndSide(start, end);
 		const startSegment: ISegmentInternal | undefined = this.start.getSegment();
 		const endSegment: ISegmentInternal | undefined = this.end.getSegment();
-		const stickiness = computeStickinessFromSide(
-			startPos ?? startSegment?.endpointType,
-			startSide ?? this.startSide,
-			endPos ?? endSegment?.endpointType,
-			endSide ?? this.endSide,
+		const { startSide, endSide, startPos, endPos } = endpointPosAndSideRequired(
+			start ??
+				startSegment?.endpointType ?? {
+					pos: this.client.localReferencePositionToPosition(this.start),
+					side: this.startSide,
+				},
+			end ??
+				endSegment?.endpointType ?? {
+					pos: this.client.localReferencePositionToPosition(this.end),
+					side: this.endSide,
+				},
 		);
+
+		const stickiness = computeStickinessFromSide(startPos, startSide, endPos, endSide);
 		const getRefType = (baseType: ReferenceType): ReferenceType => {
 			let refType = baseType;
 			if (op === undefined) {
@@ -444,53 +513,181 @@ export class SequenceIntervalClass implements SequenceInterval {
 			return refType;
 		};
 
-		let startRef = this.start;
-		if (startPos !== undefined) {
-			startRef = createPositionReference(
-				this.client,
-				startPos,
-				getRefType(this.start.refType),
-				op,
-				undefined,
-				localSeq,
-				startReferenceSlidingPreference(stickiness),
-				startReferenceSlidingPreference(stickiness) === SlidingPreference.BACKWARD,
-				useNewSlidingBehavior,
-			);
-			if (this.start.properties) {
-				startRef.addProperties(this.start.properties);
-			}
-		}
-
-		let endRef = this.end;
-		if (endPos !== undefined) {
-			endRef = createPositionReference(
-				this.client,
-				endPos,
-				getRefType(this.end.refType),
-				op,
-				undefined,
-				localSeq,
-				endReferenceSlidingPreference(stickiness),
-				endReferenceSlidingPreference(stickiness) === SlidingPreference.FORWARD,
-				useNewSlidingBehavior,
-			);
-			if (this.end.properties) {
-				endRef.addProperties(this.end.properties);
-			}
-		}
-
-		const newInterval = new SequenceIntervalClass(
+		const startRef = createPositionReference(
 			this.client,
-			startRef,
-			endRef,
-			this.intervalType,
+			startPos,
+			getRefType(this.start.refType),
+			op,
 			undefined,
-			startSide ?? this.startSide,
-			endSide ?? this.endSide,
+			localSeq,
+			startReferenceSlidingPreference(stickiness),
+			startReferenceSlidingPreference(stickiness) === SlidingPreference.BACKWARD,
+			useNewSlidingBehavior,
 		);
-		copyPropertiesAndManager(this, newInterval);
-		return newInterval;
+		if (this.start.properties) {
+			startRef.addProperties(this.start.properties);
+		}
+
+		const endRef = createPositionReference(
+			this.client,
+			endPos,
+			getRefType(this.end.refType),
+			op,
+			undefined,
+			localSeq,
+			endReferenceSlidingPreference(stickiness),
+			endReferenceSlidingPreference(stickiness) === SlidingPreference.FORWARD,
+			useNewSlidingBehavior,
+		);
+		if (this.end.properties) {
+			endRef.addProperties(this.end.properties);
+		}
+
+		if (localSeq) {
+			const pc = (this.positionChanges ??= {
+				local: new DoublyLinkedList(),
+				remote: new DoublyLinkedList(),
+				msnConsensus: { start: this.start, end: this.end },
+			});
+			pc.local.push({
+				end: endRef,
+				start: startRef,
+				stamp: {
+					seq: UnassignedSequenceNumber,
+					clientId: 0,
+					localSeq,
+				},
+			});
+			this.#start = startRef;
+			this.#end = endRef;
+		} else if (op) {
+			if (this.positionChanges !== undefined) {
+				this.positionChanges.remote.push({
+					end: endRef,
+					start: startRef,
+					stamp: {
+						clientId: 1,
+						seq: op.sequenceNumber,
+					},
+				});
+			} else {
+				this.#start = startRef;
+				this.#end = endRef;
+			}
+		}
+	}
+
+	public ackInterval(
+		op: ISequencedDocumentMessage,
+	): { changed: true; previous: SequenceIntervalClass } | undefined {
+		assert(this.positionChanges !== undefined, "must have changes to ack");
+
+		const ackedChange = this.positionChanges.local.shift()?.data;
+		assert(ackedChange !== undefined, "must have local changes to ack");
+
+		const newStart = this.getSlideToSegment(
+			ackedChange.start,
+			startReferenceSlidingPreference(this.stickiness),
+		);
+		const newEnd = this.getSlideToSegment(
+			ackedChange.end,
+			endReferenceSlidingPreference(this.stickiness),
+		);
+
+		setSlideOnRemove(ackedChange.start);
+
+		setSlideOnRemove(ackedChange.end);
+
+		const needsStartUpdate = ackedChange.start.getSegment() !== newStart?.segment;
+		const needsEndUpdate = ackedChange.end.getSegment() !== newEnd?.segment;
+		const previous = needsEndUpdate || needsStartUpdate ? this.clone() : undefined;
+
+		if (needsStartUpdate) {
+			const props = ackedChange.start.properties;
+			this.client.removeLocalReferencePosition(ackedChange.start);
+			ackedChange.start =
+				newStart === undefined
+					? createDetachedLocalReferencePosition(undefined)
+					: createPositionReferenceFromSegoff(
+							this.client,
+							newStart,
+							ackedChange.start.refType,
+							op,
+							undefined,
+							undefined,
+							startReferenceSlidingPreference(this.stickiness),
+							startReferenceSlidingPreference(this.stickiness) === SlidingPreference.BACKWARD,
+						);
+			if (props) {
+				ackedChange.start.addProperties(props);
+			}
+		}
+		if (needsEndUpdate) {
+			const props = ackedChange.end.properties;
+			this.client.removeLocalReferencePosition(ackedChange.end);
+			ackedChange.end =
+				newEnd === undefined
+					? createDetachedLocalReferencePosition(undefined)
+					: createPositionReferenceFromSegoff(
+							this.client,
+							newEnd,
+							ackedChange.end.refType,
+							op,
+							undefined,
+							undefined,
+							endReferenceSlidingPreference(this.stickiness),
+							endReferenceSlidingPreference(this.stickiness) === SlidingPreference.FORWARD,
+						);
+			if (props) {
+				ackedChange.end.addProperties(props);
+			}
+		}
+
+		if (this.positionChanges.local.length !== 0) {
+			this.positionChanges.remote.push({
+				start: ackedChange.start,
+				end: ackedChange.end,
+				stamp: {
+					clientId: 1,
+					seq: op.sequenceNumber,
+				},
+			});
+			return;
+		}
+		for (const remote of this.positionChanges.remote) {
+			this.client.removeLocalReferencePosition(remote.data.start);
+			this.client.removeLocalReferencePosition(remote.data.end);
+		}
+		this.#start = ackedChange.start;
+		this.#end = ackedChange.end;
+
+		if (previous) {
+			return { changed: true, previous };
+		}
+		return undefined;
+	}
+
+	private getSlideToSegment(
+		lref: LocalReferencePosition,
+		slidingPreference: SlidingPreference,
+	): { segment: ISegment | undefined; offset: number | undefined } | undefined {
+		const segoff: { segment: ISegmentInternal | undefined; offset: number | undefined } = {
+			segment: lref.getSegment(),
+			offset: lref.getOffset(),
+		};
+		if (segoff.segment?.localRefs?.has(lref) !== true) {
+			return undefined;
+		}
+		const newSegoff = getSlideToSegoff(
+			segoff,
+			slidingPreference,
+			true, // this.options.mergeTreeReferencesCanSlideToEndpoint,
+		);
+		const value: { segment: ISegment | undefined; offset: number | undefined } | undefined =
+			segoff.segment === newSegoff.segment && segoff.offset === newSegoff.offset
+				? undefined
+				: newSegoff;
+		return value;
 	}
 }
 
@@ -604,6 +801,7 @@ export function createSequenceInterval(
 	fromSnapshot?: boolean,
 	useNewSlidingBehavior: boolean = false,
 ): SequenceIntervalClass {
+	// eslint-disable-next-line import/no-deprecated
 	const { startPos, startSide, endPos, endSide } = endpointPosAndSide(
 		start ?? "start",
 		end ?? "end",
