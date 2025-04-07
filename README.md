@@ -5,6 +5,8 @@ applications using JavaScript or TypeScript.
 
 ## Getting started using the Fluid Framework
 
+a nice little readme up.
+
 You may be here because you want to...
 
 -   Learn more about the Fluid Framework
