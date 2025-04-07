@@ -7,6 +7,8 @@ applications using JavaScript or TypeScript.
 
 a nice little readme up.
 
+something very very bad
+
 You may be here because you want to...
 
 -   Learn more about the Fluid Framework
