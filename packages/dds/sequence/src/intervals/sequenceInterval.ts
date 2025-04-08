@@ -724,6 +724,7 @@ export class SequenceIntervalClass implements SequenceInterval {
 		const newSegoff = getSlideToSegoff(
 			segoff,
 			slidingPreference,
+			undefined,
 			true, // this.options.mergeTreeReferencesCanSlideToEndpoint,
 		);
 		const value: { segment: ISegment | undefined; offset: number | undefined } | undefined =
@@ -809,7 +810,7 @@ function createPositionReference(
 				referenceSequenceNumber: op.referenceSequenceNumber,
 				clientId: op.clientId,
 			});
-			segoff = getSlideToSegoff(segoff, slidingPreference, useNewSlidingBehavior);
+			segoff = getSlideToSegoff(segoff, slidingPreference, undefined, useNewSlidingBehavior);
 		}
 	} else {
 		assert(
