@@ -1464,6 +1464,7 @@ export class IntervalCollection
 					},
 					{
 						localSeq: this.getNextLocalSeq(),
+						previous: interval.serialize(),
 					},
 				);
 			} else {
