@@ -1802,13 +1802,17 @@ export class IntervalCollection
 			return undefined;
 		}
 
-		if (localInterval !== undefined) {
+		if (
+			localInterval !== undefined &&
+			startRebased !== undefined &&
+			endRebased !== undefined
+		) {
 			// The rebased op may place this interval's endpoints on different segments. Calling `changeInterval` here
 			// updates the local client's state to be consistent with the emitted op.
 			this.localCollection?.changeInterval(
 				localInterval,
-				toSequencePlace(startRebased ?? -1, startSide),
-				toSequencePlace(endRebased ?? -1, endSide),
+				toSequencePlace(startRebased, startSide),
+				toSequencePlace(endRebased, endSide),
 				undefined,
 				localSeq,
 			);
