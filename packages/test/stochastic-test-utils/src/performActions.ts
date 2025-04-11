@@ -116,6 +116,11 @@ export async function performFuzzActionsAsync<
 		) {
 			operations.push(operation);
 			if ("debug" in operation && operation.debug === true) {
+				// you can step into apply operation, but there tend to be quite
+				// a few layer of code to step through.
+				// i've found setting a breakpoint here, and then using triggered
+				// breakpoint after this one a good way to quick get to
+				// the code of interest.
 				debugger;
 			}
 			state = (await applyOperation(operation)) ?? state;

@@ -91,8 +91,10 @@ describe("Local Server Stress with rollback", () => {
 		saveFailures,
 		// saveSuccesses,
 		configurations: { "Fluid.ContainerRuntime.EnableRollback": true },
-		skip: [
+		only: [
 			...[23, 28, 52], // interval rollback bugs
+		],
+		skip: [
 			...[
 				3, 4, 9, 10, 13, 21, 27, 35, 37, 28, 38, 39, 40, 47, 48, 49, 63, 68, 71, 74, 87, 90,
 				92, 96, 98,

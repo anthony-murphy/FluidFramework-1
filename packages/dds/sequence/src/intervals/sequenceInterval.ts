@@ -27,7 +27,6 @@ import {
 	Side,
 	endpointPosAndSide,
 	addProperties,
-	copyPropertiesAndManager,
 	type ISegmentInternal,
 	UnassignedSequenceNumber,
 	UniversalSequenceNumber,
@@ -267,8 +266,8 @@ export class SequenceIntervalClass implements SequenceInterval {
 		public end: LocalReferencePosition,
 		public intervalType: IntervalType,
 		props?: PropertySet,
-		public readonly startSide: Side = Side.Before,
-		public readonly endSide: Side = Side.Before,
+		public startSide: Side = Side.Before,
+		public endSide: Side = Side.Before,
 	) {
 		if (props) {
 			this.#props.properties = addProperties(this.#props.properties, props);
@@ -485,21 +484,21 @@ export class SequenceIntervalClass implements SequenceInterval {
 	 */
 	public modify(
 		label: string,
-		start: SequencePlace | undefined,
-		end: SequencePlace | undefined,
+		start: SequencePlace,
+		end: SequencePlace,
 		op?: ISequencedDocumentMessage,
 		localSeq?: number,
 		useNewSlidingBehavior: boolean = false,
 	) {
 		const { startSide, endSide, startPos, endPos } = endpointPosAndSide(start, end);
-		const startSegment: ISegmentInternal | undefined = this.start.getSegment();
-		const endSegment: ISegmentInternal | undefined = this.end.getSegment();
-		const stickiness = computeStickinessFromSide(
-			startPos ?? startSegment?.endpointType,
-			startSide ?? this.startSide,
-			endPos ?? endSegment?.endpointType,
-			endSide ?? this.endSide,
+		assert(
+			startSide !== undefined &&
+				endSide !== undefined &&
+				startPos !== undefined &&
+				endPos !== undefined,
+			"must exits",
 		);
+		const stickiness = computeStickinessFromSide(startPos, startSide, endPos, endSide);
 		const getRefType = (baseType: ReferenceType): ReferenceType => {
 			let refType = baseType;
 			if (op === undefined) {
@@ -509,55 +508,41 @@ export class SequenceIntervalClass implements SequenceInterval {
 			return refType;
 		};
 
-		let startRef = this.start;
-		if (startPos !== undefined) {
-			startRef = createPositionReference(
-				this.client,
-				startPos,
-				getRefType(this.start.refType),
-				op,
-				undefined,
-				localSeq,
-				startReferenceSlidingPreference(stickiness),
-				startReferenceSlidingPreference(stickiness) === SlidingPreference.BACKWARD,
-				useNewSlidingBehavior,
-			);
-			if (this.start.properties) {
-				startRef.addProperties(this.start.properties);
-			}
-		}
-
-		let endRef = this.end;
-		if (endPos !== undefined) {
-			endRef = createPositionReference(
-				this.client,
-				endPos,
-				getRefType(this.end.refType),
-				op,
-				undefined,
-				localSeq,
-				endReferenceSlidingPreference(stickiness),
-				endReferenceSlidingPreference(stickiness) === SlidingPreference.FORWARD,
-				useNewSlidingBehavior,
-			);
-			if (this.end.properties) {
-				endRef.addProperties(this.end.properties);
-			}
-		}
-
-		const newInterval = new SequenceIntervalClass(
+		const startRef = createPositionReference(
 			this.client,
-			this.id,
-			this.label,
-			startRef,
-			endRef,
-			this.intervalType,
+			startPos,
+			getRefType(this.start.refType),
+			op,
 			undefined,
-			startSide ?? this.startSide,
-			endSide ?? this.endSide,
+			localSeq,
+			startReferenceSlidingPreference(stickiness),
+			startReferenceSlidingPreference(stickiness) === SlidingPreference.BACKWARD,
+			useNewSlidingBehavior,
 		);
-		copyPropertiesAndManager(this.#props, newInterval.#props);
-		return newInterval;
+		if (this.start.properties) {
+			startRef.addProperties(this.start.properties);
+		}
+		this.start = startRef;
+		this.startSide = startSide;
+
+		const endRef = createPositionReference(
+			this.client,
+			endPos,
+			getRefType(this.end.refType),
+			op,
+			undefined,
+			localSeq,
+			endReferenceSlidingPreference(stickiness),
+			endReferenceSlidingPreference(stickiness) === SlidingPreference.FORWARD,
+			useNewSlidingBehavior,
+		);
+		if (this.end.properties) {
+			endRef.addProperties(this.end.properties);
+		}
+		this.end = endRef;
+		this.endSide = endSide;
+
+		return this;
 	}
 
 	public ackPropertiesChange(newProps: PropertySet, op: ISequencedDocumentMessage) {

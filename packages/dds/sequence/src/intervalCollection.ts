@@ -263,11 +263,12 @@ export class LocalIntervalCollection {
 
 	public changeInterval(
 		interval: SequenceIntervalClass,
-		start: SequencePlace | undefined,
-		end: SequencePlace | undefined,
+		start: SequencePlace,
+		end: SequencePlace,
 		op?: ISequencedDocumentMessage,
 		localSeq?: number,
 	) {
+		this.removeExistingInterval(interval);
 		const newInterval = interval.modify(
 			this.label,
 			start,
@@ -276,10 +277,7 @@ export class LocalIntervalCollection {
 			localSeq,
 			this.options.mergeTreeReferencesCanSlideToEndpoint,
 		);
-		if (newInterval) {
-			this.removeExistingInterval(interval);
-			this.add(newInterval);
-		}
+		this.add(newInterval);
 		return newInterval;
 	}
 
@@ -1527,29 +1525,29 @@ export class IntervalCollection
 		}
 
 		const interval = this.getIntervalById(id);
+		const changeEndpoints = start !== undefined && end !== undefined;
 		if (interval) {
-			let deltaProps: PropertySet | undefined;
-			let newInterval: SequenceIntervalClass | undefined;
-			if (props !== undefined) {
-				deltaProps = interval.changeProperties(props, undefined, rollback);
-			}
-			const changeEndpoints = start !== undefined && end !== undefined;
+			let changedInterval: SequenceIntervalClass = interval;
+			const clone = interval.clone();
+			const deltaProps =
+				props === undefined
+					? undefined
+					: interval.changeProperties(props, undefined, rollback);
 			if (changeEndpoints) {
-				newInterval = this.localCollection.changeInterval(interval, start, end);
-				if (!this.isCollaborating && newInterval !== undefined) {
-					setSlideOnRemove(newInterval.start);
-					setSlideOnRemove(newInterval.end);
+				changedInterval = this.localCollection.changeInterval(interval, start, end);
+				if (!this.isCollaborating && changedInterval !== undefined) {
+					setSlideOnRemove(changedInterval.start);
+					setSlideOnRemove(changedInterval.end);
 				}
 			}
 
 			if (this.isCollaborating && rollback !== true) {
 				// Emit a property bag containing the ID and the other (if any) properties changed
-				const serializedInterval: SerializedIntervalDelta = (
-					newInterval ?? interval
-				).serializeDelta({
+				const serializedInterval: SerializedIntervalDelta = changedInterval.serializeDelta({
 					props,
 					includeEndpoints: changeEndpoints,
 				});
+
 				const localSeq = this.getNextLocalSeq();
 
 				this.localSeqToSerializedInterval.set(localSeq, serializedInterval);
@@ -1562,27 +1560,20 @@ export class IntervalCollection
 					},
 					{
 						localSeq,
-						previous: interval.serialize(),
+						previous: clone.serialize(),
 					},
 				);
 			}
 			if (deltaProps !== undefined) {
-				this.emit("propertyChanged", interval, deltaProps, true, undefined);
-				this.emit(
-					"changed",
-					newInterval ?? interval,
-					deltaProps,
-					newInterval ? interval : undefined,
-					true,
-					false,
-				);
+				this.emit("propertyChanged", changedInterval, deltaProps, true, undefined);
+				this.emit("changed", changedInterval, deltaProps, clone, true, false);
 			}
-			if (newInterval) {
-				this.emitChange(newInterval, interval, true, false);
-				this.client?.removeLocalReferencePosition(interval.start);
-				this.client?.removeLocalReferencePosition(interval.end);
+			if (changeEndpoints) {
+				this.emitChange(changedInterval, clone, true, false);
+				this.client?.removeLocalReferencePosition(clone.start);
+				this.client?.removeLocalReferencePosition(clone.end);
 			}
-			return newInterval;
+			return changedInterval;
 		}
 		// No interval to change
 		return undefined;
@@ -1706,26 +1697,26 @@ export class IntervalCollection
 				end = serializedInterval.end;
 			}
 
-			let newInterval = interval;
-			if (start !== undefined || end !== undefined) {
+			let changedInterval = interval;
+			if (start !== undefined && end !== undefined) {
 				// If changeInterval gives us a new interval, work with that one. Otherwise keep working with
 				// the one we originally found in the tree.
-				newInterval =
+				changedInterval =
 					this.localCollection.changeInterval(
 						interval,
-						toOptionalSequencePlace(start, serializedInterval.startSide ?? Side.Before),
-						toOptionalSequencePlace(end, serializedInterval.endSide ?? Side.Before),
+						toSequencePlace(start, serializedInterval.startSide ?? Side.Before),
+						toSequencePlace(end, serializedInterval.endSide ?? Side.Before),
 						op,
 					) ?? interval;
 			}
-			const deltaProps = newInterval.changeProperties(properties, op);
+			const deltaProps = changedInterval.changeProperties(properties, op);
 
 			if (this.onDeserialize) {
-				this.onDeserialize(newInterval);
+				this.onDeserialize(changedInterval);
 			}
 
-			if (newInterval !== interval) {
-				this.emitChange(newInterval, interval, local, false, op);
+			if (changedInterval) {
+				this.emitChange(changedInterval, interval, local, false, op);
 			}
 
 			const changedProperties = Object.keys(properties).length > 0;
@@ -1816,8 +1807,8 @@ export class IntervalCollection
 			// updates the local client's state to be consistent with the emitted op.
 			this.localCollection?.changeInterval(
 				localInterval,
-				toOptionalSequencePlace(startRebased, startSide ?? Side.Before),
-				toOptionalSequencePlace(endRebased, endSide ?? Side.Before),
+				toSequencePlace(startRebased ?? -1, startSide),
+				toSequencePlace(endRebased ?? -1, endSide),
 				undefined,
 				localSeq,
 			);
