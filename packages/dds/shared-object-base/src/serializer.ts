@@ -12,14 +12,14 @@ import { assert, shallowCloneObject } from "@fluidframework/core-utils/internal"
 // eslint-disable-next-line import/no-deprecated
 import type { IFluidDataStoreRuntimeExperimental } from "@fluidframework/datastore-definitions/internal";
 import {
+	encodeHandleForSerialization,
 	generateHandleContextPath,
 	isSerializedHandle,
 	isFluidHandle,
 	toFluidHandleInternal,
 	type ISerializedHandle,
+	RemoteFluidObjectHandle,
 } from "@fluidframework/runtime-utils/internal";
-
-import { RemoteFluidObjectHandle } from "./remoteObjectHandle.js";
 
 /**
  * @legacy
@@ -118,18 +118,27 @@ export class FluidSerializer implements IFluidSerializer {
 			: input;
 	}
 
+	/**
+	 * Serializes the input object into a JSON string.
+	 * Any IFluidHandles in the object will be replaced with their serialized form before stringify,
+	 * being bound to the given bind context in the process.
+	 */
 	public stringify(input: unknown, bind: IFluidHandle): string {
 		const bindInternal = toFluidHandleInternal(bind);
 		return JSON.stringify(input, (key, value) => this.encodeValue(value, bindInternal));
 	}
 
-	// Parses the serialized data - context must match the context with which the JSON was stringified
+	/**
+	 * Parses the serialized data - context must match the context with which the JSON was stringified
+	 */
 	public parse(input: string): unknown {
 		return JSON.parse(input, (key, value) => this.decodeValue(value));
 	}
 
-	// If the given 'value' is an IFluidHandle, returns the encoded IFluidHandle.
-	// Otherwise returns the original 'value'.  Used by 'encode()' and 'stringify()'.
+	/**
+	 * If the given 'value' is an IFluidHandle, returns the encoded IFluidHandle.
+	 * Otherwise returns the original 'value'.  Used by 'encode()' and 'stringify()'.
+	 */
 	private readonly encodeValue = (value: unknown, bind?: IFluidHandleInternal): unknown => {
 		let result = value;
 		if (isSerializedHandle(result)) {
@@ -139,18 +148,19 @@ export class FluidSerializer implements IFluidSerializer {
 				result = deferred;
 			}
 		}
-
 		// If 'value' is an IFluidHandle return its encoded form.
-		if (isFluidHandle(result)) {
+		if (isFluidHandle(value)) {
 			assert(bind !== undefined, 0xa93 /* Cannot encode a handle without a bind context */);
-			return this.serializeHandle(toFluidHandleInternal(result), bind);
+			return this.bindAndEncodeHandle(toFluidHandleInternal(value), bind);
 		}
 
 		return result;
 	};
 
-	// If the given 'value' is an encoded IFluidHandle, returns the decoded IFluidHandle.
-	// Otherwise returns the original 'value'.  Used by 'decode()' and 'parse()'.
+	/**
+	 * If the given 'value' is an encoded IFluidHandle, returns the decoded IFluidHandle.
+	 * Otherwise returns the original 'value'.  Used by 'decode()' and 'parse()'.
+	 */
 	private readonly decodeValue = (value: unknown): unknown => {
 		// If 'value' is a serialized IFluidHandle return the deserialized result.
 		if (isSerializedHandle(value)) {
@@ -166,9 +176,11 @@ export class FluidSerializer implements IFluidSerializer {
 		}
 	};
 
-	// Invoked for non-null objects to recursively replace references to IFluidHandles.
-	// Clones as-needed to avoid mutating the `input` object.  If no IFluidHandes are present,
-	// returns the original `input`.
+	/**
+	 * Invoked for non-null objects to recursively replace references to IFluidHandles.
+	 * Clones as-needed to avoid mutating the `input` object.  If no IFluidHandles are present,
+	 * returns the original `input`.
+	 */
 	private recursivelyReplace<TContext = unknown>(
 		input: object,
 		replacer: (input: unknown, context?: TContext) => unknown,
@@ -215,7 +227,14 @@ export class FluidSerializer implements IFluidSerializer {
 
 	private readonly deferedHandleMap = new Map<string, IFluidHandleInternal>();
 
-	protected serializeHandle(
+	/**
+	 * Encodes the given IFluidHandle into a JSON-serializable form,
+	 * also binding it to another node to ensure it attaches at the right time.
+	 * @param handle - The IFluidHandle to serialize.
+	 * @param bind - The binding context for the handle (the handle will become attached whenever this context is attached).
+	 * @returns The serialized handle.
+	 */
+	protected bindAndEncodeHandle(
 		handle: IFluidHandleInternal,
 		bind: IFluidHandleInternal,
 	): ISerializedHandle {
@@ -232,9 +251,7 @@ export class FluidSerializer implements IFluidSerializer {
 		} else {
 			bind.bind(handle);
 		}
-		return {
-			type: "__fluid_handle__",
-			url: handle.absolutePath,
-		};
+
+		return encodeHandleForSerialization(handle);
 	}
 }
