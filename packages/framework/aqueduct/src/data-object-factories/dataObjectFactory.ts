@@ -11,7 +11,10 @@ import {
 	MapFactory,
 	SharedDirectory,
 } from "@fluidframework/map/internal";
-import type { NamedFluidDataStoreRegistryEntries } from "@fluidframework/runtime-definitions/internal";
+import type {
+	IFluidDataStorePolicies,
+	NamedFluidDataStoreRegistryEntries,
+} from "@fluidframework/runtime-definitions/internal";
 import type { FluidObjectSymbolProvider } from "@fluidframework/synthesize/internal";
 
 import type {
@@ -43,6 +46,7 @@ export class DataObjectFactory<
 		optionalProviders: FluidObjectSymbolProvider<I["OptionalProviders"]>,
 		registryEntries?: NamedFluidDataStoreRegistryEntries,
 		runtimeFactory: typeof FluidDataStoreRuntime = FluidDataStoreRuntime,
+		policies?: IFluidDataStorePolicies,
 	) {
 		const mergedObjects = [...sharedObjects];
 
@@ -58,6 +62,14 @@ export class DataObjectFactory<
 			mergedObjects.push(SharedMap.getFactory());
 		}
 
-		super(type, ctor, mergedObjects, optionalProviders, registryEntries, runtimeFactory);
+		super(
+			type,
+			ctor,
+			mergedObjects,
+			optionalProviders,
+			registryEntries,
+			runtimeFactory,
+			policies,
+		);
 	}
 }

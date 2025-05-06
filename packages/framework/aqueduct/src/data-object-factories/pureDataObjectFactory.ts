@@ -23,6 +23,7 @@ import type {
 	IFluidDataStoreContext,
 	IFluidDataStoreContextDetached,
 	IFluidDataStoreFactory,
+	IFluidDataStorePolicies,
 	IFluidDataStoreRegistry,
 	IProvideFluidDataStoreRegistry,
 	NamedFluidDataStoreRegistryEntries,
@@ -48,6 +49,7 @@ interface CreateDataObjectProps<TObj extends PureDataObject, I extends DataObjec
 	runtimeClassArg: typeof FluidDataStoreRuntime;
 	existing: boolean;
 	initialState?: I["InitialState"];
+	policies?: Partial<IFluidDataStorePolicies>;
 }
 /**
  * Proxy over PureDataObject
@@ -64,6 +66,7 @@ async function createDataObject<
 	runtimeClassArg,
 	existing,
 	initialState: initProps,
+	policies,
 }: CreateDataObjectProps<TObj, I>): Promise<{
 	instance: TObj;
 	runtime: FluidDataStoreRuntime;
@@ -101,7 +104,7 @@ async function createDataObject<
 			await instance.finishInitialization(true);
 			return instance;
 		} /* provideEntryPoint */,
-		ctor.policies,
+		policies,
 	);
 
 	// Create object right away.
@@ -164,6 +167,7 @@ export class PureDataObjectFactory<
 		optionalProviders: FluidObjectSymbolProvider<I["OptionalProviders"]>,
 		registryEntries?: NamedFluidDataStoreRegistryEntries,
 		runtimeClass: typeof FluidDataStoreRuntime = FluidDataStoreRuntime,
+		policies?: IFluidDataStorePolicies,
 	) {
 		if (this.type === "") {
 			throw new Error("undefined type member");
@@ -174,6 +178,7 @@ export class PureDataObjectFactory<
 			optionalProviders,
 			sharedObjectRegistry: new Map(sharedObjects.map((ext) => [ext.type, ext])),
 			runtimeClassArg: runtimeClass,
+			policies,
 		};
 
 		if (registryEntries !== undefined) {

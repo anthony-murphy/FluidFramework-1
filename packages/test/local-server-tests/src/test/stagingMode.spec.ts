@@ -17,10 +17,7 @@ import {
 import { loadContainerRuntime } from "@fluidframework/container-runtime/internal";
 import { type FluidObject } from "@fluidframework/core-interfaces/internal";
 import { SharedMap } from "@fluidframework/map/internal";
-import type {
-	IContainerRuntimeBaseExperimental,
-	IFluidDataStorePolicies,
-} from "@fluidframework/runtime-definitions/internal";
+import type { IContainerRuntimeBaseExperimental } from "@fluidframework/runtime-definitions/internal";
 import {
 	encodeHandleForSerialization,
 	isFluidHandle,
@@ -38,8 +35,6 @@ import { createLoader } from "../utils.js";
  * Supports entering staging mode, adding new DDSes, and concisely enumerating the data store's data.
  */
 class DataObjectWithStagingMode extends DataObject {
-	public static policies: Partial<IFluidDataStorePolicies> = { readonlyInStagingMode: false };
-
 	private static instanceCount: number = 0;
 	private readonly instanceNumber =
 		this.context.containerRuntime.clientDetails.capabilities.interactive === false
@@ -105,6 +100,9 @@ const dataObjectFactory = new DataObjectFactory(
 	DataObjectWithStagingMode,
 	undefined,
 	{},
+	undefined,
+	undefined,
+	{ readonlyInStagingMode: false },
 );
 
 // a simple container runtime factory with a single datastore aliased as default.
