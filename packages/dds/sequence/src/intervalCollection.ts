@@ -1471,14 +1471,19 @@ export class IntervalCollection
 			}
 			this.client.removeLocalReferencePosition(old.start);
 			this.client.removeLocalReferencePosition(old.end);
+			return {
+				...original,
+				sequenceNumber: this.client.getCollabWindow().currentSeq,
+				start:
+					typeof rebasedInfo.start.segOff?.segment === "string"
+						? rebasedInfo.start.segOff?.segment
+						: rebasedInfo.start.pos,
+				end:
+					typeof rebasedInfo.end.segOff?.segment === "string"
+						? rebasedInfo.end.segOff?.segment
+						: rebasedInfo.end.pos,
+			};
 		}
-
-		return {
-			...original,
-			sequenceNumber: this.client.getCollabWindow().currentSeq,
-			start: rebasedInfo.start.pos,
-			end: rebasedInfo.end.pos,
-		};
 	}
 
 	private getSlideToSegment(

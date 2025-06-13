@@ -6,6 +6,7 @@ import {
 	getSlideToSegoff,
 	createLocalReconnectingPerspective,
 	type LocalReferencePosition,
+	SlidingPreference,
 } from "@fluidframework/merge-tree/internal";
 import { LoggingError } from "@fluidframework/telemetry-utils/internal";
 
@@ -24,8 +25,8 @@ export function hasEndpointChanges(
 }
 
 export interface RebasedIntervalPosition {
-	pos: number | "start" | "end";
-	segOff?: { segment: ISegment; offset: number };
+	pos: number;
+	segOff?: { segment: ISegment | "start" | "end"; offset: number };
 }
 
 export function computeRebasedPositions(
@@ -75,6 +76,15 @@ function rebasePositionWithSegmentSlide(
 
 	// case happens when rebasing op, but concurrently entire string has been deleted
 	if (segOff === undefined) {
+		if (localRef.slidingPreference !== undefined) {
+			return {
+				pos: DetachedReferencePosition,
+				segOff: {
+					offset: 0,
+					segment: localRef.slidingPreference === SlidingPreference.FORWARD ? "end" : "start",
+				},
+			};
+		}
 		return { pos: DetachedReferencePosition };
 	}
 
