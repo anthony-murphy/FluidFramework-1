@@ -26,6 +26,7 @@ import {
 	type ISegmentInternal,
 	DoublyLinkedList,
 	type ListNode,
+	createDetachedLocalReferencePosition,
 } from "@fluidframework/merge-tree/internal";
 import { LoggingError, UsageError } from "@fluidframework/telemetry-utils/internal";
 import { v4 as uuid } from "uuid";
@@ -1422,10 +1423,6 @@ export class IntervalCollection
 		}
 
 		const latestInterval = this.getIntervalById(interval.getIntervalId());
-		// the interval is deleted, so don't send more ops
-		if (latestInterval === undefined) {
-			return undefined;
-		}
 
 		const rebasedInfo = (localOpMetadata.rebased ??= computeRebasedPositions(
 			this.client,
@@ -1441,38 +1438,46 @@ export class IntervalCollection
 		) {
 			this.localCollection?.removeExistingInterval(interval);
 
-			// if the interval slid off the string, rebase the op to be a noop and delete the interval.
+			const old = interval.clone();
+
 			if (
 				!this.options.mergeTreeReferencesCanSlideToEndpoint &&
 				(rebasedInfo.start.pos === DetachedReferencePosition ||
 					rebasedInfo.end.pos === DetachedReferencePosition)
 			) {
-				return undefined;
+				interval.start = createDetachedLocalReferencePosition(
+					interval.start.slidingPreference,
+					interval.start.refType,
+				);
+				interval.end = createDetachedLocalReferencePosition(
+					interval.end.slidingPreference,
+					interval.end.refType,
+				);
+			} else {
+				interval.start = this.client.createLocalReferencePosition(
+					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+					rebasedInfo.start.segOff!.segment,
+					rebasedInfo.start.segOff?.offset,
+					interval.start.refType,
+					interval.start.properties,
+					interval.start.slidingPreference,
+				);
+
+				interval.end = this.client.createLocalReferencePosition(
+					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+					rebasedInfo.end.segOff!.segment,
+					rebasedInfo.end.segOff?.offset,
+					interval.end.refType,
+					interval.end.properties,
+					interval.end.slidingPreference,
+				);
 			}
-
-			const old = interval.clone();
-			interval.start = this.client.createLocalReferencePosition(
-				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-				rebasedInfo.start.segOff!.segment,
-				rebasedInfo.start.segOff?.offset,
-				interval.start.refType,
-				interval.start.properties,
-				interval.start.slidingPreference,
-			);
-
-			interval.end = this.client.createLocalReferencePosition(
-				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-				rebasedInfo.end.segOff!.segment,
-				rebasedInfo.end.segOff?.offset,
-				interval.end.refType,
-				interval.end.properties,
-				interval.end.slidingPreference,
-			);
-
 			if (interval === latestInterval) {
 				this.localCollection?.add(interval);
 				this.emitChange(interval, old, true, true);
 			}
+			this.client.removeLocalReferencePosition(old.start);
+			this.client.removeLocalReferencePosition(old.end);
 		}
 
 		return {
