@@ -15,7 +15,6 @@ import {
 	ISerializedInterval,
 	IntervalDeltaOpType,
 	SerializedIntervalDelta,
-	type RebasedIntervalPosition,
 	type SequenceIntervalClass,
 } from "./intervals/index.js";
 
@@ -24,7 +23,6 @@ export interface IntervalAddLocalMetadata {
 	localSeq: number;
 	endpointChangesNode?: ListNode<IntervalAddLocalMetadata | IntervalChangeLocalMetadata>;
 	interval: SequenceIntervalClass;
-	rebased?: Record<"start" | "end", RebasedIntervalPosition> | undefined;
 }
 export interface IntervalChangeLocalMetadata {
 	type: typeof IntervalDeltaOpType.CHANGE;
@@ -32,7 +30,6 @@ export interface IntervalChangeLocalMetadata {
 	previous: ISerializedInterval;
 	endpointChangesNode?: ListNode<IntervalChangeLocalMetadata | IntervalChangeLocalMetadata>;
 	interval: SequenceIntervalClass;
-	rebased?: Record<"start" | "end", RebasedIntervalPosition> | undefined;
 }
 export interface IntervalDeleteLocalMetadata {
 	type: typeof IntervalDeltaOpType.DELETE;

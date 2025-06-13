@@ -778,7 +778,6 @@ export class IntervalCollection
 			if (md.type === "add" || (md.type === "change" && hasEndpointChanges(op.value))) {
 				const endpointChanges = (pending.endpointChanges ??= new DoublyLinkedList());
 				md.endpointChangesNode = endpointChanges.push(md).last;
-				md.rebased = undefined;
 			}
 			submitDelta(op, pending.local.push(md).last);
 		};
@@ -984,17 +983,6 @@ export class IntervalCollection
 
 		// Instantiate the local interval collection based on the saved intervals
 		this.client = client;
-		if (client) {
-			client.on("normalize", () => {
-				for (const pending of Object.values(this.pending)) {
-					if (pending?.endpointChanges !== undefined) {
-						for (const local of pending.endpointChanges) {
-							local.data.rebased = computeRebasedPositions(client, this.options, local.data);
-						}
-					}
-				}
-			});
-		}
 
 		this.localCollection = new LocalIntervalCollection(
 			client,
@@ -1425,11 +1413,7 @@ export class IntervalCollection
 
 		const latestInterval = this.getIntervalById(interval.getIntervalId());
 
-		const rebasedInfo = (localOpMetadata.rebased ??= computeRebasedPositions(
-			this.client,
-			this.options,
-			localOpMetadata,
-		));
+		const rebasedInfo = computeRebasedPositions(this.client, this.options, localOpMetadata);
 
 		if (
 			!(
