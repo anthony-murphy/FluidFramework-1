@@ -3,10 +3,15 @@
  * Licensed under the MIT License.
  */
 
-import { createDDSFuzzSuite } from "@fluid-private/test-dds-utils";
+import { createDDSFuzzSuite, type DDSFuzzSuiteOptions } from "@fluid-private/test-dds-utils";
 import { FlushMode } from "@fluidframework/runtime-definitions/internal";
 
 import { defaultFuzzOptions, baseIntervalModel } from "./fuzzUtils.js";
+
+const defaultIntervalFuzzOptions: Partial<DDSFuzzSuiteOptions> = {
+	...defaultFuzzOptions,
+	testSquashResubmit: undefined,
+};
 
 describe("IntervalCollection fuzz testing", () => {
 	const model = {
@@ -15,7 +20,7 @@ describe("IntervalCollection fuzz testing", () => {
 	};
 
 	createDDSFuzzSuite(model, {
-		...defaultFuzzOptions,
+		...defaultIntervalFuzzOptions,
 		forceGlobalSeed: true,
 		skip: [79],
 		// Note: there are some known eventual consistency issues which the tests don't currently reproduce.
@@ -33,7 +38,7 @@ describe("IntervalCollection with stashing", () => {
 	};
 
 	createDDSFuzzSuite(model, {
-		...defaultFuzzOptions,
+		...defaultIntervalFuzzOptions,
 		clientJoinOptions: {
 			clientAddProbability: 0.1,
 			maxNumberOfClients: Number.MAX_SAFE_INTEGER,
@@ -54,7 +59,7 @@ describe("IntervalCollection no reconnect fuzz testing", () => {
 	};
 
 	const options = {
-		...defaultFuzzOptions,
+		...defaultIntervalFuzzOptions,
 		forceGlobalSeed: true,
 		skip: [79],
 		reconnectProbability: 0.0,
@@ -78,7 +83,7 @@ describe("IntervalCollection fuzz testing with rebased batches", () => {
 	};
 
 	createDDSFuzzSuite(noReconnectWithRebaseModel, {
-		...defaultFuzzOptions,
+		...defaultIntervalFuzzOptions,
 		// Interval collection and obliterate with reconnect+rebase have bugs in the case of repeatedly
 		// resubmitting operations. This likely boils down to bugs in normalization which are known (see AB#6552 and AB#34898),
 		// but any additional fixes necessary are tracked by AB#31001.
