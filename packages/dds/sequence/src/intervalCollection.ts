@@ -1426,38 +1426,44 @@ export class IntervalCollection
 			}
 
 			const old = interval.clone();
-
+			const detachedStart = createDetachedLocalReferencePosition(
+				interval.start.slidingPreference,
+				interval.start.refType,
+			);
+			const detachedEnd = createDetachedLocalReferencePosition(
+				interval.end.slidingPreference,
+				interval.end.refType,
+			);
 			if (
 				!this.options.mergeTreeReferencesCanSlideToEndpoint &&
 				(rebasedInfo.start.pos === DetachedReferencePosition ||
 					rebasedInfo.end.pos === DetachedReferencePosition)
 			) {
-				interval.start = createDetachedLocalReferencePosition(
-					interval.start.slidingPreference,
-					interval.start.refType,
-				);
-				interval.end = createDetachedLocalReferencePosition(
-					interval.end.slidingPreference,
-					interval.end.refType,
-				);
+				interval.start = detachedStart;
+				interval.end = detachedEnd;
+				return undefined;
 			} else {
-				interval.start = this.client.createLocalReferencePosition(
-					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-					rebasedInfo.start.segOff!.segment,
-					rebasedInfo.start.segOff?.offset,
-					interval.start.refType,
-					interval.start.properties,
-					interval.start.slidingPreference,
-				);
+				interval.start =
+					rebasedInfo.start.segOff === undefined
+						? detachedStart
+						: this.client.createLocalReferencePosition(
+								rebasedInfo.start.segOff.segment,
+								rebasedInfo.start.segOff.offset,
+								interval.start.refType,
+								interval.start.properties,
+								interval.start.slidingPreference,
+							);
 
-				interval.end = this.client.createLocalReferencePosition(
-					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-					rebasedInfo.end.segOff!.segment,
-					rebasedInfo.end.segOff?.offset,
-					interval.end.refType,
-					interval.end.properties,
-					interval.end.slidingPreference,
-				);
+				interval.end =
+					rebasedInfo.end.segOff === undefined
+						? detachedStart
+						: this.client.createLocalReferencePosition(
+								rebasedInfo.end.segOff.segment,
+								rebasedInfo.end.segOff.offset,
+								interval.end.refType,
+								interval.end.properties,
+								interval.end.slidingPreference,
+							);
 			}
 			if (interval === latestInterval) {
 				this.localCollection?.add(interval);
