@@ -483,6 +483,13 @@ export const baseModel: Omit<
 					break;
 				case "removeRange":
 				case "annotateRange":
+					if (op.start > 0) {
+						op.start--;
+					}
+					if (op.end > 0) {
+						op.end--;
+					}
+					break;
 				case "addInterval":
 				case "changeInterval": {
 					const { startPos, endPos, startSide, endSide } = endpointPosAndSide(
@@ -502,18 +509,23 @@ export const baseModel: Omit<
 			}
 		},
 		(op) => {
-			if (
-				op.type !== "removeRange" &&
-				op.type !== "annotateRange" &&
-				op.type !== "addInterval" &&
-				op.type !== "changeInterval"
-			) {
-				return;
-			}
-			const { endPos, endSide } = endpointPosAndSide(op.start, op.end);
-
-			if (typeof endPos === "number" && endPos > 0) {
-				op.end = toSequencePlace(endPos - 1, endSide);
+			switch (op.type) {
+				case "removeRange":
+				case "annotateRange":
+					if (op.end > 0) {
+						op.end--;
+					}
+					break;
+				case "addInterval":
+				case "changeInterval": {
+					const { endPos, endSide } = endpointPosAndSide(op.start, op.end);
+					if (typeof endPos === "number" && endPos > 0) {
+						op.end = toSequencePlace(endPos - 1, endSide);
+					}
+					break;
+				}
+				default:
+					break;
 			}
 		},
 	],

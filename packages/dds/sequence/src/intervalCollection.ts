@@ -24,7 +24,6 @@ import {
 	SequencePlace,
 	endpointPosAndSide,
 	type ISegmentInternal,
-	createLocalReconnectingPerspective,
 	DoublyLinkedList,
 	type ListNode,
 } from "@fluidframework/merge-tree/internal";
@@ -55,10 +54,12 @@ import {
 	SequenceInterval,
 	SequenceIntervalClass,
 	SerializedIntervalDelta,
+	computeRebasedPositions,
 	createPositionReferenceFromSegoff,
 	createSequenceInterval,
 	endReferenceSlidingPreference,
 	getSerializedProperties,
+	hasEndpointChanges,
 	startReferenceSlidingPreference,
 } from "./intervals/index.js";
 
@@ -738,11 +739,6 @@ function clearEmptyPendingEntry(pendingChanges: PendingChanges, id: string) {
 		delete pendingChanges[id];
 	}
 }
-
-function hasEndpointChanges(serialized: SerializedIntervalDelta) {
-	return serialized.start !== undefined && serialized.end !== undefined;
-}
-
 /**
  * {@inheritdoc IIntervalCollection}
  */
@@ -974,71 +970,6 @@ export class IntervalCollection
 		}
 	}
 
-	private rebasePositionWithSegmentSlide(
-		pos: number | "start" | "end",
-		seqNumberFrom: number,
-		localSeq: number,
-	): number | "start" | "end" | undefined {
-		if (!this.client) {
-			throw new LoggingError("mergeTree client must exist");
-		}
-
-		if (pos === "start" || pos === "end") {
-			return pos;
-		}
-
-		const { clientId } = this.client.getCollabWindow();
-		const { segment, offset } =
-			this.client.getContainingSegment(
-				pos,
-				{
-					referenceSequenceNumber: seqNumberFrom,
-					clientId: this.client.getLongClientId(clientId),
-				},
-				localSeq,
-			) ?? {};
-
-		// if segment is undefined, it slid off the string
-		assert(segment !== undefined && offset !== undefined, 0x54e /* No segment found */);
-
-		const segoff = getSlideToSegoff(
-			{ segment, offset },
-			undefined,
-			createLocalReconnectingPerspective(this.client.getCurrentSeq(), clientId, localSeq),
-			this.options.mergeTreeReferencesCanSlideToEndpoint,
-		);
-
-		// case happens when rebasing op, but concurrently entire string has been deleted
-		if (segoff?.segment === undefined || segoff.offset === undefined) {
-			return DetachedReferencePosition;
-		}
-
-		assert(
-			offset !== undefined && 0 <= offset && offset < segment.cachedLength,
-			0x54f /* Invalid offset */,
-		);
-		return this.client.findReconnectionPosition(segoff.segment, localSeq) + segoff.offset;
-	}
-
-	private computeRebasedPositions(
-		localOpMetadata: IntervalAddLocalMetadata | IntervalChangeLocalMetadata,
-	): ISerializedInterval | SerializedIntervalDelta {
-		assert(
-			this.client !== undefined,
-			0x550 /* Client should be defined when computing rebased position */,
-		);
-		const { localSeq, original } = localOpMetadata;
-		const rebased = { ...original };
-		const { start, end, sequenceNumber } = original;
-		if (start !== undefined) {
-			rebased.start = this.rebasePositionWithSegmentSlide(start, sequenceNumber, localSeq);
-		}
-		if (end !== undefined) {
-			rebased.end = this.rebasePositionWithSegmentSlide(end, sequenceNumber, localSeq);
-		}
-		return rebased;
-	}
-
 	public attachGraph(client: Client, label: string) {
 		if (this.attached) {
 			throw new LoggingError("Only supports one Sequence attach");
@@ -1055,7 +986,7 @@ export class IntervalCollection
 				for (const pending of Object.values(this.pending)) {
 					if (pending?.endpointChanges !== undefined) {
 						for (const local of pending.endpointChanges) {
-							local.data.rebased = this.computeRebasedPositions(local.data);
+							local.data.rebased = computeRebasedPositions(client, this.options, local.data);
 						}
 					}
 				}
@@ -1217,6 +1148,7 @@ export class IntervalCollection
 						type: "add",
 						localSeq,
 						original: serializedInterval,
+						interval,
 					},
 				);
 			}
@@ -1346,6 +1278,7 @@ export class IntervalCollection
 					localSeq,
 					previous: interval.serialize(),
 					original: serializedInterval,
+					interval: newInterval ?? interval,
 				};
 
 				this.submitDelta(
@@ -1479,7 +1412,7 @@ export class IntervalCollection
 	public rebaseLocalInterval(
 		localOpMetadata: IntervalAddLocalMetadata | IntervalChangeLocalMetadata,
 	): SerializedIntervalDelta | undefined {
-		const original = localOpMetadata.original;
+		const { original, interval } = localOpMetadata;
 		if (!this.client) {
 			// If there's no associated mergeTree client, the originally submitted op is still correct.
 			return original;
@@ -1488,49 +1421,65 @@ export class IntervalCollection
 			throw new LoggingError("attachSequence must be called");
 		}
 
-		const { localSeq } = localOpMetadata;
-		const { intervalType, properties, stickiness, startSide, endSide } = original;
-		const { id } = getSerializedProperties(original);
-		const { start: startRebased, end: endRebased } = (localOpMetadata.rebased ??=
-			this.computeRebasedPositions(localOpMetadata));
-
-		const localInterval = this.localCollection?.idIntervalIndex.getIntervalById(id);
-
-		const rebased: SerializedIntervalDelta = {
-			start: startRebased,
-			end: endRebased,
-			intervalType,
-			sequenceNumber: this.client?.getCurrentSeq() ?? 0,
-			properties,
-			stickiness,
-			startSide,
-			endSide,
-		};
-
-		// if the interval slid off the string, rebase the op to be a noop and delete the interval.
-		if (
-			!this.options.mergeTreeReferencesCanSlideToEndpoint &&
-			(startRebased === DetachedReferencePosition || endRebased === DetachedReferencePosition)
-		) {
-			if (localInterval) {
-				this.localCollection?.removeExistingInterval(localInterval);
-			}
+		const latestInterval = this.getIntervalById(interval.getIntervalId());
+		// the interval is deleted, so don't send more ops
+		if (latestInterval === undefined) {
 			return undefined;
 		}
 
-		if (localInterval !== undefined) {
-			// The rebased op may place this interval's endpoints on different segments. Calling `changeInterval` here
-			// updates the local client's state to be consistent with the emitted op.
-			this.localCollection?.changeInterval(
-				localInterval,
-				toOptionalSequencePlace(startRebased, startSide ?? Side.Before),
-				toOptionalSequencePlace(endRebased, endSide ?? Side.Before),
-				undefined,
-				localSeq,
+		const rebasedInfo = (localOpMetadata.rebased ??= computeRebasedPositions(
+			this.client,
+			this.options,
+			localOpMetadata,
+		));
+
+		if (
+			!(
+				rebasedInfo.start.segOff?.segment === interval.start.getSegment() &&
+				rebasedInfo.end.segOff?.segment === interval.end.getSegment()
+			)
+		) {
+			this.localCollection?.removeExistingInterval(interval);
+
+			// if the interval slid off the string, rebase the op to be a noop and delete the interval.
+			if (
+				!this.options.mergeTreeReferencesCanSlideToEndpoint &&
+				(rebasedInfo.start.pos === DetachedReferencePosition ||
+					rebasedInfo.end.pos === DetachedReferencePosition)
+			) {
+				return undefined;
+			}
+
+			const old = interval.clone();
+			interval.start = this.client.createLocalReferencePosition(
+				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+				rebasedInfo.start.segOff!.segment,
+				rebasedInfo.start.segOff?.offset,
+				interval.start.refType,
+				interval.start.properties,
+				interval.start.slidingPreference,
 			);
+
+			interval.end = this.client.createLocalReferencePosition(
+				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+				rebasedInfo.end.segOff!.segment,
+				rebasedInfo.end.segOff?.offset,
+				interval.end.refType,
+				interval.end.properties,
+				interval.end.slidingPreference,
+			);
+
+			if (interval === latestInterval) {
+				this.localCollection?.add(interval);
+				this.emitChange(interval, old, true, true);
+			}
 		}
 
-		return rebased;
+		return {
+			...original,
+			start: rebasedInfo.start.pos,
+			end: rebasedInfo.end.pos,
+		};
 	}
 
 	private getSlideToSegment(

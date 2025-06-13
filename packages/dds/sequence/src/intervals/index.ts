@@ -24,3 +24,9 @@ export {
 	createTransientInterval,
 	getSerializedProperties,
 } from "./sequenceInterval.js";
+
+export {
+	computeRebasedPositions,
+	hasEndpointChanges,
+	RebasedIntervalPosition,
+} from "./rebasing.js";
