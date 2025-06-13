@@ -778,6 +778,7 @@ export class IntervalCollection
 			if (md.type === "add" || (md.type === "change" && hasEndpointChanges(op.value))) {
 				const endpointChanges = (pending.endpointChanges ??= new DoublyLinkedList());
 				md.endpointChangesNode = endpointChanges.push(md).last;
+				md.rebased = undefined;
 			}
 			submitDelta(op, pending.local.push(md).last);
 		};
@@ -929,16 +930,14 @@ export class IntervalCollection
 			this.submitDelta(op, localOpMetadata);
 			return;
 		}
-
-		const rebasedValue = this.rebaseLocalInterval(localOpMetadata);
+		assert(hasEndpointChanges(value), "must have endpoint specified");
+		const rebasedValue = this.rebaseLocalInterval(value, localOpMetadata);
 
 		if (rebasedValue === undefined) {
 			const { id } = getSerializedProperties(value);
 			clearEmptyPendingEntry(this.pending, id);
 			return;
 		}
-		localOpMetadata.original = rebasedValue;
-		localOpMetadata.rebased = undefined;
 
 		this.submitDelta({ opName, value: rebasedValue as any }, localOpMetadata);
 	}
@@ -1151,7 +1150,6 @@ export class IntervalCollection
 					{
 						type: "add",
 						localSeq,
-						original: serializedInterval,
 						interval,
 					},
 				);
@@ -1281,7 +1279,6 @@ export class IntervalCollection
 					type: "change",
 					localSeq,
 					previous: interval.serialize(),
-					original: serializedInterval,
 					interval: newInterval ?? interval,
 				};
 
@@ -1414,9 +1411,10 @@ export class IntervalCollection
 	 *
 	 */
 	public rebaseLocalInterval(
+		original: ISerializedInterval,
 		localOpMetadata: IntervalAddLocalMetadata | IntervalChangeLocalMetadata,
-	): SerializedIntervalDelta | undefined {
-		const { original, interval } = localOpMetadata;
+	): ISerializedInterval | undefined {
+		const { interval } = localOpMetadata;
 		if (!this.client) {
 			// If there's no associated mergeTree client, the originally submitted op is still correct.
 			return original;
@@ -1487,6 +1485,7 @@ export class IntervalCollection
 
 		return {
 			...original,
+			sequenceNumber: this.client.getCollabWindow().currentSeq,
 			start: rebasedInfo.start.pos,
 			end: rebasedInfo.end.pos,
 		};
