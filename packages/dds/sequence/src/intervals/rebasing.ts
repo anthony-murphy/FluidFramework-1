@@ -5,6 +5,7 @@ import {
 	ISegment,
 	getSlideToSegoff,
 	createLocalReconnectingPerspective,
+	type LocalReferencePosition,
 } from "@fluidframework/merge-tree/internal";
 import { LoggingError } from "@fluidframework/telemetry-utils/internal";
 
@@ -32,23 +33,14 @@ export function computeRebasedPositions(
 	options: Partial<SequenceOptions>,
 	localOpMetadata: IntervalAddLocalMetadata | IntervalChangeLocalMetadata,
 ): Record<"start" | "end", RebasedIntervalPosition> {
-	const { localSeq, original } = localOpMetadata;
-	assert(hasEndpointChanges(original), "must have endpoint to rebase");
-	const { start, end, sequenceNumber } = original;
+	const { localSeq, interval } = localOpMetadata;
 	const rebasedStart = rebasePositionWithSegmentSlide(
 		client,
 		options,
-		start,
-		sequenceNumber,
+		interval.start,
 		localSeq,
 	);
-	const rebasedEnd = rebasePositionWithSegmentSlide(
-		client,
-		options,
-		end,
-		sequenceNumber,
-		localSeq,
-	);
+	const rebasedEnd = rebasePositionWithSegmentSlide(client, options, interval.end, localSeq);
 	return {
 		start: rebasedStart,
 		end: rebasedEnd,
@@ -58,31 +50,21 @@ export function computeRebasedPositions(
 function rebasePositionWithSegmentSlide(
 	client: Client,
 	options: Partial<SequenceOptions>,
-	pos: number | "start" | "end",
-	seqNumberFrom: number,
+	localRef: LocalReferencePosition,
 	localSeq: number,
 ): RebasedIntervalPosition {
 	if (!client) {
 		throw new LoggingError("mergeTree client must exist");
 	}
 
-	if (pos === "start" || pos === "end") {
-		return { pos };
-	}
-
 	const { clientId } = client.getCollabWindow();
-	const { segment, offset } =
-		client.getContainingSegment(
-			pos,
-			{
-				referenceSequenceNumber: seqNumberFrom,
-				clientId: client.getLongClientId(clientId),
-			},
-			localSeq,
-		) ?? {};
+	const segment = localRef.getSegment();
+	const offset = localRef.getOffset();
 
 	// if segment is undefined, it slid off the string
-	assert(segment !== undefined && offset !== undefined, 0x54e /* No segment found */);
+	if (segment === undefined) {
+		return { pos: DetachedReferencePosition };
+	}
 
 	const segOff = getSlideToSegoff(
 		{ segment, offset },
