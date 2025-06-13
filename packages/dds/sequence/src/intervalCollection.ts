@@ -925,17 +925,20 @@ export class IntervalCollection
 		const { opName, value } = op;
 
 		const localOpMetadata = removeMetadataFromPendingChanges(maybeMetadata);
+		if (localOpMetadata.endpointChangesNode === undefined) {
+			this.submitDelta(op, localOpMetadata);
+			return;
+		}
 
-		const rebasedValue =
-			localOpMetadata.endpointChangesNode === undefined
-				? value
-				: this.rebaseLocalInterval(localOpMetadata);
+		const rebasedValue = this.rebaseLocalInterval(localOpMetadata);
 
 		if (rebasedValue === undefined) {
 			const { id } = getSerializedProperties(value);
 			clearEmptyPendingEntry(this.pending, id);
 			return;
 		}
+		localOpMetadata.original = rebasedValue;
+		localOpMetadata.rebased = undefined;
 
 		this.submitDelta({ opName, value: rebasedValue as any }, localOpMetadata);
 	}
@@ -1436,7 +1439,9 @@ export class IntervalCollection
 				rebasedInfo.end.segOff?.segment === interval.end.getSegment()
 			)
 		) {
-			this.localCollection?.removeExistingInterval(interval);
+			if (interval === latestInterval) {
+				this.localCollection?.removeExistingInterval(interval);
+			}
 
 			const old = interval.clone();
 
