@@ -8,7 +8,12 @@ import {
 	stringToBuffer,
 	Uint8ArrayToArrayBuffer,
 } from "@fluid-internal/client-utils";
-import { assert, compareArrays, unreachableCase } from "@fluidframework/core-utils/internal";
+import {
+	assert,
+	compareArrays,
+	ObjectValidator,
+	unreachableCase,
+} from "@fluidframework/core-utils/internal";
 import { type ISummaryTree, SummaryType } from "@fluidframework/driver-definitions";
 import {
 	DriverErrorTypes,
@@ -377,15 +382,34 @@ export function getDetachedContainerStateFromSerializedContainer(
 }
 
 /**
- * Blindly parses the given string into {@link IPendingContainerState} format.
+ * Parses and validates the given string into {@link IPendingContainerState} format.
  * This is the inverse of the JSON.stringify call in {@link SerializedStateManager.getPendingLocalState}
  */
 export function getAttachedContainerStateFromSerializedContainer(
-	serializedContainer: string | undefined,
+	pendingState: string,
+): IPendingContainerState;
+export function getAttachedContainerStateFromSerializedContainer(
+	pendingState: string | undefined,
+): IPendingContainerState | undefined;
+export function getAttachedContainerStateFromSerializedContainer(
+	pendingState: string | undefined,
 ): IPendingContainerState | undefined {
-	return serializedContainer === undefined
-		? undefined
-		: (JSON.parse(serializedContainer) as IPendingContainerState);
+	if (pendingState === undefined) return undefined;
+	const parsed = ObjectValidator.from<IPendingContainerState>(JSON.parse(pendingState))
+		?.propIsValue("attached", true as const)
+		?.hasProp("url", "string")
+		?.hasProp("baseSnapshot", "object")
+		?.unsafeCast("baseSnapshot")
+		?.hasProp("pendingRuntimeState", "object")
+		?.hasProp("savedOps", "array")
+		?.unsafeCast("savedOps")
+		?.hasProp("snapshotBlobs", "object")
+		?.unsafeCast("snapshotBlobs")?.obj;
+
+	if (parsed !== undefined) {
+		return parsed;
+	}
+	throw new Error("Invalid pendingState.");
 }
 
 /**

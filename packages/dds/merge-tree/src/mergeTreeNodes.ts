@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { assert } from "@fluidframework/core-utils/internal";
+import { assert, hasProp } from "@fluidframework/core-utils/internal";
 import type { AttributionKey } from "@fluidframework/runtime-definitions/internal";
 
 import type { IAttributionCollection } from "./attributionCollection.js";
@@ -23,7 +23,6 @@ import { type PropertySet, clone, createMap, type MapLike } from "./properties.j
 import type { ReferencePosition } from "./referencePositions.js";
 import type { SegmentGroupCollection } from "./segmentGroupCollection.js";
 import {
-	hasProp,
 	isInserted,
 	isMergeNodeInfo as isMergeNode,
 	isRemoved,

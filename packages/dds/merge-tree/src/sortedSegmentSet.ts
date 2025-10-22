@@ -3,9 +3,11 @@
  * Licensed under the MIT License.
  */
 
+import { hasProp } from "@fluidframework/core-utils/internal";
+
 import type { LocalReferencePosition } from "./localReference.js";
 import type { ISegmentInternal } from "./mergeTreeNodes.js";
-import { hasProp, toMergeNodeInfo } from "./segmentInfos.js";
+import { toMergeNodeInfo } from "./segmentInfos.js";
 import { SortedSet } from "./sortedSet.js";
 
 /**

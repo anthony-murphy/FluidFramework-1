@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { assert, isObject } from "@fluidframework/core-utils/internal";
+import { assert, hasProp, propInstanceOf } from "@fluidframework/core-utils/internal";
 
 import { UnassignedSequenceNumber } from "./constants.js";
 import {
@@ -13,40 +13,6 @@ import {
 	type ObliterateInfo,
 } from "./mergeTreeNodes.js";
 import type { InsertOperationStamp, OperationStamp, RemoveOperationStamp } from "./stamps.js";
-
-export interface StringToType {
-	"string": string;
-	"number": number;
-	"object": object;
-	"array": unknown[];
-	"boolean": boolean;
-}
-
-export function propExists<P extends string>(
-	thing: unknown,
-	prop: P,
-): thing is Record<P, unknown> {
-	return isObject(thing) && prop in thing;
-}
-
-export function hasProp<P extends string, T extends keyof StringToType>(
-	thing: unknown,
-	prop: P,
-	type: T,
-): thing is Record<P, StringToType[typeof type]> {
-	return (
-		propExists(thing, prop) &&
-		(type === "array" ? Array.isArray(thing[prop]) : typeof thing[prop] === type)
-	);
-}
-
-export function propInstanceOf<P extends string, T>(
-	thing: unknown,
-	prop: P,
-	type: new (...args: any[]) => T,
-): thing is Record<P, T> {
-	return propExists(thing, prop) && thing[prop] instanceof type;
-}
 
 /**
  * Contains insertion information associated to an {@link ISegment}.

@@ -31,5 +31,14 @@ export { shallowCloneObject } from "./shallowClone.js";
 export type { IPromiseTimer, IPromiseTimerResult, ITimer } from "./timer.js";
 export { PromiseTimer, setLongTimeout, Timer } from "./timer.js";
 export { unreachableCase } from "./unreachable.js";
-export { isObject, isPromiseLike } from "./typesGuards.js";
+export {
+	isObject,
+	isPromiseLike,
+	type StringToType,
+	hasProp,
+	propExists,
+	propInstanceOf,
+	propIsValue,
+	ObjectValidator,
+} from "./typesGuards.js";
 export { oob } from "./oob.js";
