@@ -121,6 +121,238 @@ get(target, prop, receiver) {
 
 ---
 
+### 15. Proxy Handler Implementation Differences
+
+**Current (Schema's proxy.ts):**
+```ts
+const handler: ProxyHandler<SchematizedObjectView<TSchema>> = {
+    get(_target, prop, _receiver) {
+        if (prop === "root") {
+            return dataProxy;  // Returns another proxy
+        }
+        if (prop === "disposed") {
+            return view.disposed;
+        }
+        // Manual dispatch for each property...
+    },
+    // ...
+};
+```
+
+**Tree's objectNode.ts pattern:**
+```ts
+return {
+    get: (target, propertyKey, proxy): unknown => {
+        // Check if it's a schema-defined property
+        const fieldInfo = flexObjectNodeSchema.fields.get(propertyKey);
+        if (fieldInfo !== undefined) {
+            // Access the flex-tree field
+            return getProxyForField(getKernel(target).getField(fieldInfo.storedKey));
+        }
+        // Fall through to Reflect for other properties
+        return Reflect.get(target, propertyKey, proxy);
+    },
+    // ...
+};
+```
+
+**Key Differences:**
+1. **Schema uses nested proxies** - `viewProxy` contains `dataProxy`
+2. **Tree uses single handler** - One proxy handler handles everything via Reflect fallback
+3. **Schema manually dispatches** - Each property type has explicit `if` checks
+4. **Tree uses closure over schema** - Handler is created with schema info in closure
+
+**Why Reflect Matters:**
+- `Reflect.get(target, propertyKey, receiver)` - receiver is the PROXY, not target
+- This is critical for correct prototype chain behavior
+- Without proper receiver, inherited getters see wrong `this`
+
+**Decision:** [ ] TBD - Major refactor, evaluate cost/benefit
+
+---
+
+### 16. View Class vs Proxy Only Architecture
+
+**Schema has 3 layers:**
+1. `SchematizedObjectView` class - manages storage, compatibility, initialize, dispose
+2. `createObjectViewProxy()` - creates dataProxy for field access
+3. Outer proxy (`viewProxy`) - wraps view with root property returning dataProxy
+
+**Tree has 2 layers:**
+1. `SchematizingSimpleTreeView` class - similar to Schema's view (compatibility, initialize, dispose, root getter)
+2. For nodes: Only proxies, no intermediate classes - `createProxyHandler()` directly accesses flex-tree
+
+**Analysis:**
+- Schema's `SchematizedObjectView.getFieldValue()` duplicates what the proxy does
+- Tree's nodes are proxies directly accessing the flex-tree
+- Tree's TreeView class is similar to Schema's view class (both manage lifecycle)
+
+**Key Insight:** Schema's duplication is at the node level:
+- Schema: View class has `getFieldValue()` → Proxy calls `getFieldValue()` → redundant
+- Tree: Proxy handler directly accesses flex-tree → no intermediate class for nodes
+
+**Possible Simplification:**
+```ts
+// Option A: Remove view classes, put logic in proxy
+function createObjectViewProxy(storage, schema, persistence) {
+    const handler: ProxyHandler<{root: unknown}> = {
+        get(target, prop) {
+            if (prop === "compatibility") return checkSchemaCompatibility(...)
+            if (prop === "initialize") return (content) => { /* logic here */ }
+            if (prop === "root") return createDataProxy(storage, schema)
+            // ...
+        }
+    };
+    return new Proxy({}, handler);
+}
+
+// Option B: Keep views, simplify proxy to pure delegation
+// Current architecture is fine, just cleaner
+```
+
+**Decision:** [ ] TBD - Current architecture works, optimization opportunity
+
+---
+
+### 17. Storage Interface Design
+
+**Current `ISchemaStorage` interface:**
+```ts
+interface ISchemaStorage {
+    getField(key: string, fieldSchema: NodeSchema): StorageResult | undefined;
+    setField(key: string, fieldSchema: NodeSchema, value: unknown): void;
+    deleteField(key: string): boolean;
+    hasField(key: string): boolean;
+    keys?(): IterableIterator<string>;
+    readonly size?: number;
+}
+```
+
+**Pros:**
+- Clean abstraction over SharedMap/SharedDirectory
+- Schema-aware - DDS knows if field should be value or nested storage
+- Consistent interface for both flat and hierarchical DDSes
+
+**Concerns:**
+- `StorageResult` union type adds complexity
+- Every access requires schema parameter
+- Tree doesn't have equivalent - uses flex-tree directly
+
+**Alternative (Tree-style):**
+- Views could access DDS directly without abstraction
+- Trade-off: Less reusability, more DDS-specific code
+
+**Decision:** [ ] Keep current - abstraction valuable for DDS reuse
+
+---
+
+### 18. Initialize API Comparison
+
+**Schema's initialize:**
+```ts
+public initialize(content: NodeFromSchema<TSchema>): void {
+    this.ensureNotDisposed();
+    if (!this.compatibility.canInitialize) {
+        throw new UsageError("Cannot initialize - schema already stored");
+    }
+    // Persist schema
+    if (this.persistence) {
+        const encoded = encodeSchema(this.schema);
+        this.persistence.setPersistedSchema(encoded);
+    }
+    // Store content field by field
+    for (const [fieldName, fieldSchema] of this.fields) {
+        const value = (content as Record<string, unknown>)[fieldName];
+        // ... validation and storage
+    }
+}
+```
+
+**Tree's initialize:**
+```ts
+public initialize(content: InsertableField<TRootSchema>): void {
+    this.ensureUndisposed();
+    if (!this.compatibility.canInitialize) {
+        throw new UsageError("Tree cannot be initialized more than once.");
+    }
+    this.runSchemaEdit(() => {
+        const schema = toInitialSchema(this.config.schema);
+        const mapTree = prepareForInsertionContextless(content, ...);
+        this.checkout.transaction.start();
+        initialize(this.checkout, schema, initializerFromChunk(...));
+        this.checkout.transaction.commit();
+    });
+}
+```
+
+**Differences:**
+1. Tree uses transactions - Schema doesn't (SharedMap doesn't have transactions yet)
+2. Tree has `runSchemaEdit()` wrapper that handles events
+3. Tree prepares MapTree before insertion for hydration
+4. Schema validates and stores field-by-field
+
+**Observation:** Schema's approach is simpler but loses atomicity. If initialize fails mid-way, partial state could exist.
+
+**Decision:** [ ] Future - Add transaction support when SharedMap supports it
+
+---
+
+### 19. API Visibility and Export Organization
+
+**Schema package export visibility:**
+- Most types are `@internal` or `@alpha`
+- Public API surface is smaller than Tree's
+
+**Exports organized by category:**
+
+| Category | Schema Exports | Notes |
+|----------|---------------|-------|
+| Factory | `SchemaFactory`, primitive schemas | Similar to Tree |
+| Types | Field types, schema types | `@internal` mostly |
+| Core | `FieldKind`, `NodeKind`, schema guards | Public |
+| Serialization | `encodeSchema`, `decodeSchema`, compatibility | Internal |
+| Storage | `ISchemaStorage`, `ISchemaPersistence`, adapters | For DDS authors |
+| Validation | `validateData`, `buildSchemaRegistry` | Public utility |
+| View | Classes, proxies, factory functions | Mixed visibility |
+
+**Tree exports by contrast:**
+- Much larger API surface (361+ lines in index.ts)
+- Multiple stability levels (`@alpha`, `@beta`, `@public`)
+- Versioned configs (`TreeViewConfiguration`, `TreeViewConfigurationAlpha`)
+- Extensive node types and utilities
+
+**Observation:** Schema's smaller API is intentional - it's meant to be simpler. But some internal types may need to become public for DDS authors:
+- `ISchemaStorage`, `ISchemaPersistence` - needed to implement viewWith()
+- `createSchematizedView` - main helper for DDSes
+- `SchemaViewConfiguration` - for config objects
+
+**Decision:** [ ] Review visibility after initial adoption
+
+---
+
+### 20. Naming Consistency
+
+**Schema uses:**
+- `NodeFromSchema<T>` - infer TypeScript type from schema
+- `SchematizedView<T>` - view type
+- `SchematizedObject<T>` - object view result
+- `ObjectNodeSchema`, `MapNodeSchema` - schema kinds
+
+**Tree uses:**
+- `NodeFromSchema<T>` - ✅ Same
+- `TreeView<T>` - different naming
+- `TreeNode` - vs Schema's proxy types
+- `ObjectNodeSchema`, `MapNodeSchema` - ✅ Same
+
+**Possible renames for consistency:**
+- `SchematizedView` → `SchemaView` (shorter)
+- `SchematizedObject` → `ObjectSchemaView`
+- But: "Schematized" emphasizes the schema aspect, which is the point
+
+**Decision:** [ ] Keep current naming - distinctive for schema package
+
+---
+
 ## Execution Instructions
 
 
