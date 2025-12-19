@@ -7,6 +7,7 @@
  * SchematizedMapView - typed Map-like view over schema storage.
  */
 
+import type { IDisposable } from "@fluidframework/core-interfaces";
 import { UsageError } from "@fluidframework/telemetry-utils/internal";
 
 import type { NodeSchema, MapNodeSchema } from "../core/index.js";
@@ -68,9 +69,10 @@ export interface SchematizedMapViewOptions {
  * @internal
  */
 export class SchematizedMapView<TSchema extends MapNodeSchema>
-	implements Iterable<[string, InferValueSchema<TSchema>]>
+	implements Iterable<[string, InferValueSchema<TSchema>]>, IDisposable
 {
 	private readonly enableSchemaValidation: boolean;
+	private _disposed = false;
 
 	/**
 	 * Creates a new SchematizedMapView.
@@ -87,6 +89,32 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 		options?: SchematizedMapViewOptions,
 	) {
 		this.enableSchemaValidation = options?.enableSchemaValidation ?? false;
+	}
+
+	/**
+	 * Whether this view has been disposed.
+	 */
+	public get disposed(): boolean {
+		return this._disposed;
+	}
+
+	/**
+	 * Dispose this view, releasing resources.
+	 *
+	 * @remarks
+	 * After disposing, accessing the view will throw an error.
+	 */
+	public dispose(): void {
+		this._disposed = true;
+	}
+
+	/**
+	 * Throws if this view has been disposed.
+	 */
+	private ensureNotDisposed(): void {
+		if (this._disposed) {
+			throw new UsageError("Accessed a disposed SchematizedView.");
+		}
 	}
 
 	/**
@@ -112,6 +140,7 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	 * @throws SchemaValidationError if any value fails validation
 	 */
 	public initialize(content: Map<string, InferValueSchema<TSchema>>): void {
+		this.ensureNotDisposed();
 		const compat = this.compatibility;
 		if (!compat.canInitialize) {
 			throw new UsageError("Cannot initialize - schema already stored");
@@ -145,6 +174,7 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	 * @throws UsageError if schemas are not compatible for upgrade
 	 */
 	public upgradeSchema(): void {
+		this.ensureNotDisposed();
 		const compat = this.compatibility;
 		if (!compat.canUpgrade) {
 			throw new UsageError("Cannot upgrade - schemas incompatible");
@@ -322,9 +352,10 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	}
 
 	/**
-	 * Ensure the view can be used (schema is compatible).
+	 * Ensure the view can be used (not disposed and schema is compatible).
 	 */
 	private ensureCanView(): void {
+		this.ensureNotDisposed();
 		if (!this.compatibility.canView) {
 			throw new UsageError(
 				"Cannot use view - schema incompatible. Check view.compatibility first.",

@@ -10,6 +10,8 @@
  * They provide typed property/Map access plus schema lifecycle methods.
  */
 
+import type { IDisposable } from "@fluidframework/core-interfaces";
+
 import type { ObjectNodeSchema, MapNodeSchema, RootSchema } from "../core/index.js";
 import type { SchemaCompatibilityStatus } from "../serialization/index.js";
 import type { NodeFromSchema, InferValueSchema } from "../types/index.js";
@@ -51,27 +53,33 @@ import type { NodeFromSchema, InferValueSchema } from "../types/index.js";
  * @legacy
  * @alpha
  */
-export type SchematizedObject<TSchema extends ObjectNodeSchema> = NodeFromSchema<TSchema> & {
-	/**
-	 * Schema compatibility status for this view.
-	 */
-	readonly compatibility: SchemaCompatibilityStatus;
+export type SchematizedObject<TSchema extends ObjectNodeSchema> = NodeFromSchema<TSchema> &
+	IDisposable & {
+		/**
+		 * Whether this view has been disposed.
+		 */
+		readonly disposed: boolean;
 
-	/**
-	 * Initialize the storage with schema and initial content.
-	 *
-	 * @param content - The initial content matching the schema
-	 * @throws If schema is already stored or content is invalid
-	 */
-	initialize: (content: NodeFromSchema<TSchema>) => void;
+		/**
+		 * Schema compatibility status for this view.
+		 */
+		readonly compatibility: SchemaCompatibilityStatus;
 
-	/**
-	 * Upgrade the stored schema to this view's schema.
-	 *
-	 * @throws If schemas are not compatible for upgrade
-	 */
-	upgradeSchema: () => void;
-};
+		/**
+		 * Initialize the storage with schema and initial content.
+		 *
+		 * @param content - The initial content matching the schema
+		 * @throws If schema is already stored or content is invalid
+		 */
+		initialize: (content: NodeFromSchema<TSchema>) => void;
+
+		/**
+		 * Upgrade the stored schema to this view's schema.
+		 *
+		 * @throws If schemas are not compatible for upgrade
+		 */
+		upgradeSchema: () => void;
+	};
 
 /**
  * A typed Map view returned by DDSes for map schemas.
@@ -114,27 +122,33 @@ export type SchematizedObject<TSchema extends ObjectNodeSchema> = NodeFromSchema
 export type SchematizedMap<TSchema extends MapNodeSchema> = Map<
 	string,
 	InferValueSchema<TSchema>
-> & {
-	/**
-	 * Schema compatibility status for this view.
-	 */
-	readonly compatibility: SchemaCompatibilityStatus;
+> &
+	IDisposable & {
+		/**
+		 * Whether this view has been disposed.
+		 */
+		readonly disposed: boolean;
 
-	/**
-	 * Initialize the storage with schema and initial content.
-	 *
-	 * @param content - The initial map content
-	 * @throws If schema is already stored or content is invalid
-	 */
-	initialize: (content: Map<string, InferValueSchema<TSchema>>) => void;
+		/**
+		 * Schema compatibility status for this view.
+		 */
+		readonly compatibility: SchemaCompatibilityStatus;
 
-	/**
-	 * Upgrade the stored schema to this view's schema.
-	 *
-	 * @throws If schemas are not compatible for upgrade
-	 */
-	upgradeSchema: () => void;
-};
+		/**
+		 * Initialize the storage with schema and initial content.
+		 *
+		 * @param content - The initial map content
+		 * @throws If schema is already stored or content is invalid
+		 */
+		initialize: (content: Map<string, InferValueSchema<TSchema>>) => void;
+
+		/**
+		 * Upgrade the stored schema to this view's schema.
+		 *
+		 * @throws If schemas are not compatible for upgrade
+		 */
+		upgradeSchema: () => void;
+	};
 
 /**
  * Maps a root schema type to its corresponding user-facing view type.

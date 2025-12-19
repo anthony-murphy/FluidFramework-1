@@ -7,6 +7,7 @@
  * SchematizedObjectView - typed view over object data in schema storage.
  */
 
+import type { IDisposable } from "@fluidframework/core-interfaces";
 import { UsageError } from "@fluidframework/telemetry-utils/internal";
 
 import type { NodeSchema, ObjectNodeSchema, FieldSchema } from "../core/index.js";
@@ -71,8 +72,9 @@ export interface SchematizedObjectViewOptions {
  *
  * @internal
  */
-export class SchematizedObjectView<TSchema extends ObjectNodeSchema> {
+export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements IDisposable {
 	private readonly enableSchemaValidation: boolean;
+	private _disposed = false;
 
 	/**
 	 * Creates a new SchematizedObjectView.
@@ -89,6 +91,32 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> {
 		options?: SchematizedObjectViewOptions,
 	) {
 		this.enableSchemaValidation = options?.enableSchemaValidation ?? false;
+	}
+
+	/**
+	 * Whether this view has been disposed.
+	 */
+	public get disposed(): boolean {
+		return this._disposed;
+	}
+
+	/**
+	 * Dispose this view, releasing resources.
+	 *
+	 * @remarks
+	 * After disposing, accessing the view will throw an error.
+	 */
+	public dispose(): void {
+		this._disposed = true;
+	}
+
+	/**
+	 * Throws if this view has been disposed.
+	 */
+	private ensureNotDisposed(): void {
+		if (this._disposed) {
+			throw new UsageError("Accessed a disposed SchematizedView.");
+		}
 	}
 
 	/**
@@ -116,6 +144,7 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> {
 	 * @throws SchemaValidationError if content is invalid
 	 */
 	public initialize(content: NodeFromSchema<TSchema>): void {
+		this.ensureNotDisposed();
 		const compat = this.compatibility;
 		if (!compat.canInitialize) {
 			throw new UsageError("Cannot initialize - schema already stored");
@@ -147,6 +176,7 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> {
 	 * @throws UsageError if schemas are not compatible for upgrade
 	 */
 	public upgradeSchema(): void {
+		this.ensureNotDisposed();
 		const compat = this.compatibility;
 		if (!compat.canUpgrade) {
 			throw new UsageError("Cannot upgrade - schemas incompatible");
@@ -165,6 +195,7 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> {
 	 * @throws SchemaValidationError if a required field is missing
 	 */
 	public getFieldValue<K extends keyof TSchema["fields"] & string>(fieldName: K): unknown {
+		this.ensureNotDisposed();
 		const fieldSchema = this.schema.fields[fieldName];
 		if (fieldSchema === undefined) {
 			throw new UsageError(`Unknown field: ${fieldName}`);
@@ -195,6 +226,7 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> {
 		fieldName: K,
 		value: unknown,
 	): void {
+		this.ensureNotDisposed();
 		const fieldSchema = this.schema.fields[fieldName];
 		if (fieldSchema === undefined) {
 			throw new UsageError(`Unknown field: ${fieldName}`);
@@ -233,6 +265,7 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> {
 	 * @returns True if the field has a value
 	 */
 	public hasField(fieldName: string): boolean {
+		this.ensureNotDisposed();
 		return this.storage.hasField(fieldName);
 	}
 

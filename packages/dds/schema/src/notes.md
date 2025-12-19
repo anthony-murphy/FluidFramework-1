@@ -1,6 +1,6 @@
 # Schema Package API Review
 
-<!-- 
+<!--
   This is the primary working document for API decisions and implementation tasks.
   For historical notes and earlier review items, see ../notes.md
 -->
@@ -345,12 +345,12 @@ TODO:
 ### #2 - IDisposable Implementation
 
 TODO:
-- [ ] Import `IDisposable` from `@fluidframework/core-interfaces`
-- [ ] Add `dispose()` method to `SchematizedObjectView` and `SchematizedMapView`
-- [ ] Track disposed state
-- [ ] Throw on access after dispose
-- [ ] Update proxy handlers to check disposed state
-- [ ] Update `SchematizedView` type to extend `IDisposable`
+- [DONE] Import `IDisposable` from `@fluidframework/core-interfaces`
+- [DONE] Add `dispose()` method to `SchematizedObjectView` and `SchematizedMapView`
+- [DONE] Track disposed state
+- [DONE] Throw on access after dispose
+- [DONE] Update proxy handlers to check disposed state
+- [DONE] Update `SchematizedView` type to extend `IDisposable`
 
 ### #4 - Root Property Implementation
 

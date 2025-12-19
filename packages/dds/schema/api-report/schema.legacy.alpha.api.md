@@ -191,14 +191,16 @@ export class SchemaFactory<TScope extends string = string> {
 export type SchemaKind<T> = T extends TypedLeafNodeSchema ? typeof NodeKind.Leaf : T extends TypedObjectNodeSchema ? typeof NodeKind.Object : T extends TypedMapNodeSchema ? typeof NodeKind.Map : never;
 
 // @alpha @legacy
-export type SchematizedMap<TSchema extends MapNodeSchema> = Map<string, InferValueSchema<TSchema>> & {
+export type SchematizedMap<TSchema extends MapNodeSchema> = Map<string, InferValueSchema<TSchema>> & IDisposable & {
+    readonly disposed: boolean;
     readonly compatibility: SchemaCompatibilityStatus;
     initialize: (content: Map<string, InferValueSchema<TSchema>>) => void;
     upgradeSchema: () => void;
 };
 
 // @alpha @legacy
-export type SchematizedObject<TSchema extends ObjectNodeSchema> = NodeFromSchema<TSchema> & {
+export type SchematizedObject<TSchema extends ObjectNodeSchema> = NodeFromSchema<TSchema> & IDisposable & {
+    readonly disposed: boolean;
     readonly compatibility: SchemaCompatibilityStatus;
     initialize: (content: NodeFromSchema<TSchema>) => void;
     upgradeSchema: () => void;

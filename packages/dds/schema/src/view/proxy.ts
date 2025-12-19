@@ -7,12 +7,19 @@
  * Proxy creation utilities for schema views.
  */
 
+import { UsageError } from "@fluidframework/telemetry-utils/internal";
+
 import type { ObjectNodeSchema, MapNodeSchema } from "../core/index.js";
 import type { SchemaCompatibilityStatus } from "../serialization/index.js";
 import type { NodeFromSchema, InferValueSchema } from "../types/index.js";
 
 import type { SchematizedMapView } from "./mapView.js";
 import type { SchematizedObjectView } from "./objectView.js";
+
+/**
+ * Error message thrown when accessing a disposed view.
+ */
+const disposedErrorMessage = "Accessed a disposed SchematizedView.";
 
 /**
  * Create a Proxy that provides property access to a {@link SchematizedObjectView}.
@@ -52,6 +59,17 @@ export function createObjectViewProxy<TSchema extends ObjectNodeSchema>(
 	const proxyTarget: NodeFromSchema<TSchema> = {} as NodeFromSchema<TSchema>;
 	return new Proxy(proxyTarget, {
 		get(_target, prop) {
+			// Allow disposed/dispose access even on disposed view
+			if (prop === "disposed") {
+				return view.disposed;
+			}
+			if (prop === "dispose") {
+				return view.dispose.bind(view);
+			}
+			// Check disposed state for all other accesses
+			if (view.disposed) {
+				throw new UsageError(disposedErrorMessage);
+			}
 			if (prop === "compatibility") {
 				return view.compatibility;
 			}
@@ -67,6 +85,9 @@ export function createObjectViewProxy<TSchema extends ObjectNodeSchema>(
 			return undefined;
 		},
 		set(_target, prop, value) {
+			if (view.disposed) {
+				throw new UsageError(disposedErrorMessage);
+			}
 			if (typeof prop === "string" && prop in schema.fields) {
 				view.setFieldValue(prop, value);
 				return true;
@@ -141,6 +162,17 @@ export function createMapViewProxy<TSchema extends MapNodeSchema>(
 	const proxyTarget = {} as Map<string, InferValueSchema<TSchema>>;
 	return new Proxy(proxyTarget, {
 		get(_target, prop) {
+			// Allow disposed/dispose access even on disposed view
+			if (prop === "disposed") {
+				return view.disposed;
+			}
+			if (prop === "dispose") {
+				return view.dispose.bind(view);
+			}
+			// Check disposed state for all other accesses
+			if (view.disposed) {
+				throw new UsageError(disposedErrorMessage);
+			}
 			// View properties
 			if (prop === "compatibility") {
 				return view.compatibility;
