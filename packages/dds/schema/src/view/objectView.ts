@@ -19,7 +19,6 @@ import {
 	type SchemaCompatibilityStatus,
 } from "../serialization/index.js";
 import { validateData } from "../validation/index.js";
-import type { NodeFromSchema } from "../types/index.js";
 
 import { SchemaValidationError } from "./errors.js";
 import { SchematizedMapView } from "./mapView.js";
@@ -62,8 +61,10 @@ export interface SchematizedObjectViewOptions {
  *
  * const view = new SchematizedObjectView(storage, UserSchema, persistence);
  *
- * // Initialize with data
- * view.initialize({ name: "Alice", age: 30 });
+ * // Initialize (persist schema) and set data
+ * view.initialize();
+ * view.setFieldValue("name", "Alice");
+ * view.setFieldValue("age", 30);
  *
  * // Access fields
  * const name = view.getFieldValue("name"); // "Alice"
@@ -137,36 +138,25 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 	}
 
 	/**
-	 * Initialize the storage with schema and initial content.
+	 * Initialize the storage by persisting the schema.
 	 *
-	 * @param content - The initial content to store
+	 * @remarks
+	 * This method persists the schema to enable cross-client enforcement.
+	 * Setting data is a separate concern - use the `root` property or `setFieldValue()` after initializing.
+	 * Calling `initialize()` is optional - only call when you want schema persistence.
+	 *
 	 * @throws UsageError if a schema is already stored
-	 * @throws SchemaValidationError if content is invalid
 	 */
-	public initialize(content: NodeFromSchema<TSchema>): void {
+	public initialize(): void {
 		this.ensureNotDisposed();
 		const compat = this.compatibility;
 		if (!compat.canInitialize) {
 			throw new UsageError("Cannot initialize - schema already stored");
 		}
 
-		// Validate content
-		const validation = validateData(this.schema, content);
-		if (!validation.valid) {
-			throw new SchemaValidationError("Invalid initial content", validation.errors);
-		}
-
 		// Store schema
 		if (this.persistence !== undefined) {
 			this.persistence.setPersistedSchema(encodeSchema(this.schema));
-		}
-
-		// Set all fields
-		for (const [fieldName, fieldSchema] of Object.entries(this.schema.fields)) {
-			const value = (content as Record<string, unknown>)[fieldName];
-			if (value !== undefined) {
-				this.storage.setField(fieldName, this.getFieldNodeSchema(fieldSchema), value);
-			}
 		}
 	}
 

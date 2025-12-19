@@ -30,7 +30,7 @@ import type { NodeFromSchema, InferValueSchema } from "../types/index.js";
  * The view separates metadata/methods from data access:
  * - `view.root` - The typed data proxy (read/write)
  * - `view.compatibility` - Schema status
- * - `view.initialize()` - Set initial data
+ * - `view.initialize()` - Persist schema
  * - `view.dispose()` - Cleanup
  *
  * @typeParam TSchema - The object node schema type
@@ -46,9 +46,10 @@ import type { NodeFromSchema, InferValueSchema } from "../types/index.js";
  * // Get typed view from DDS
  * const view = map.viewWith(UserSchema);
  *
- * // Initialize if needed
+ * // Initialize if needed (persists schema)
  * if (view.compatibility.canInitialize) {
- *   view.initialize({ name: "Alice", age: 30 });
+ *   view.initialize();
+ *   view.root = { name: "Alice", age: 30 };
  * }
  *
  * // Property access through root - fully typed!
@@ -83,12 +84,16 @@ export type ObjectView<TSchema extends ObjectNodeSchema> = IDisposable & {
 	readonly compatibility: SchemaCompatibilityStatus;
 
 	/**
-	 * Initialize the storage with schema and initial content.
+	 * Initialize the storage by persisting the schema.
 	 *
-	 * @param content - The initial content matching the schema
-	 * @throws If schema is already stored or content is invalid
+	 * @remarks
+	 * This method persists the schema to enable cross-client enforcement.
+	 * Setting data is a separate concern - use the `root` property after initializing.
+	 * Calling `initialize()` is optional - only call when you want schema persistence.
+	 *
+	 * @throws If schema is already stored
 	 */
-	initialize: (content: NodeFromSchema<TSchema>) => void;
+	initialize: () => void;
 
 	/**
 	 * Upgrade the stored schema to this view's schema.
@@ -112,7 +117,7 @@ export type ObjectView<TSchema extends ObjectNodeSchema> = IDisposable & {
  * The view separates metadata/methods from data access:
  * - `view.root` - The typed Map proxy (read/write)
  * - `view.compatibility` - Schema status
- * - `view.initialize()` - Set initial data
+ * - `view.initialize()` - Persist schema
  * - `view.dispose()` - Cleanup
  *
  * @typeParam TSchema - The map node schema type
@@ -125,9 +130,10 @@ export type ObjectView<TSchema extends ObjectNodeSchema> = IDisposable & {
  * // Get typed view from DDS
  * const view = map.viewWith(ConfigSchema);
  *
- * // Initialize if needed
+ * // Initialize if needed (persists schema)
  * if (view.compatibility.canInitialize) {
- *   view.initialize(new Map([["setting1", "value1"]]));
+ *   view.initialize();
+ *   view.root = new Map([["setting1", "value1"]]);
  * }
  *
  * // Map operations through root - fully typed!
@@ -166,12 +172,16 @@ export type MapView<TSchema extends MapNodeSchema> = IDisposable & {
 	readonly compatibility: SchemaCompatibilityStatus;
 
 	/**
-	 * Initialize the storage with schema and initial content.
+	 * Initialize the storage by persisting the schema.
 	 *
-	 * @param content - The initial map content
-	 * @throws If schema is already stored or content is invalid
+	 * @remarks
+	 * This method persists the schema to enable cross-client enforcement.
+	 * Setting data is a separate concern - use the `root` property after initializing.
+	 * Calling `initialize()` is optional - only call when you want schema persistence.
+	 *
+	 * @throws If schema is already stored
 	 */
-	initialize: (content: Map<string, InferValueSchema<TSchema>>) => void;
+	initialize: () => void;
 
 	/**
 	 * Upgrade the stored schema to this view's schema.

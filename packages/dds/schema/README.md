@@ -71,7 +71,8 @@ const view = map.viewWith(UserMap);
 
 // Check compatibility and initialize if needed
 if (view.compatibility.canInitialize) {
-  view.initialize(new Map([["alice", { name: "Alice", email: "alice@example.com" }]]));
+  view.initialize();  // Persist schema
+  view.root = new Map([["alice", { name: "Alice", email: "alice@example.com" }]]);
 }
 
 // Access data through the root property (breaking change in v2.x)

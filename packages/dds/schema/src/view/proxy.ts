@@ -60,7 +60,7 @@ export function createObjectViewProxy<TSchema extends ObjectNodeSchema>(
 ): {
 	root: NodeFromSchema<TSchema>;
 	compatibility: SchemaCompatibilityStatus;
-	initialize: (content: NodeFromSchema<TSchema>) => void;
+	initialize: () => void;
 	upgradeSchema: () => void;
 	dispose: () => void;
 	disposed: boolean;
@@ -132,11 +132,11 @@ export function createObjectViewProxy<TSchema extends ObjectNodeSchema>(
 			}
 			return view.compatibility;
 		},
-		initialize: (content: NodeFromSchema<TSchema>): void => {
+		initialize: (): void => {
 			if (view.disposed) {
 				throw new UsageError(disposedErrorMessage);
 			}
-			view.initialize(content);
+			view.initialize();
 		},
 		upgradeSchema: (): void => {
 			if (view.disposed) {
@@ -201,7 +201,7 @@ export function createMapViewProxy<TSchema extends MapNodeSchema>(
 ): {
 	root: Map<string, InferValueSchema<TSchema>>;
 	compatibility: SchemaCompatibilityStatus;
-	initialize: (content: Map<string, InferValueSchema<TSchema>>) => void;
+	initialize: () => void;
 	upgradeSchema: () => void;
 	dispose: () => void;
 	disposed: boolean;
@@ -311,11 +311,11 @@ export function createMapViewProxy<TSchema extends MapNodeSchema>(
 			}
 			return view.compatibility;
 		},
-		initialize: (content: Map<string, InferValueSchema<TSchema>>): void => {
+		initialize: (): void => {
 			if (view.disposed) {
 				throw new UsageError(disposedErrorMessage);
 			}
-			view.initialize(content);
+			view.initialize();
 		},
 		upgradeSchema: (): void => {
 			if (view.disposed) {

@@ -13,7 +13,6 @@ import {
 	SchematizedObjectView,
 	SchematizedMapView,
 	createObjectViewProxy,
-	SchemaValidationError,
 	UsageError,
 } from "../view/index.js";
 
@@ -36,7 +35,9 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				view.initialize({ name: "Alice", age: 30 });
+				view.initialize();
+				view.setFieldValue("name", "Alice");
+				view.setFieldValue("age", 30);
 
 				assert.equal(view.getFieldValue("name"), "Alice");
 				assert.equal(view.getFieldValue("age"), 30);
@@ -55,7 +56,9 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				view.initialize({ name: "Alice", nickname: "Ali" });
+				view.initialize();
+				view.setFieldValue("name", "Alice");
+				view.setFieldValue("nickname", "Ali");
 
 				assert.equal(view.getFieldValue("nickname"), "Ali");
 			});
@@ -70,7 +73,8 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				view.initialize({ name: "Alice" });
+				view.initialize();
+				view.setFieldValue("name", "Alice");
 
 				assert.equal(view.getFieldValue("nickname"), undefined);
 			});
@@ -85,7 +89,9 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				view.initialize({ name: "Alice", nickname: "Ali" });
+				view.initialize();
+				view.setFieldValue("name", "Alice");
+				view.setFieldValue("nickname", "Ali");
 				assert.equal(view.getFieldValue("nickname"), "Ali");
 
 				view.setFieldValue("nickname", undefined);
@@ -102,7 +108,8 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				view.initialize({ name: "Alice" });
+				view.initialize();
+				view.setFieldValue("name", "Alice");
 
 				assert.equal(view.hasField("name"), true);
 				assert.equal(view.hasField("nickname"), false);
@@ -117,7 +124,8 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				view.initialize({ name: "Alice" });
+				view.initialize();
+				view.setFieldValue("name", "Alice");
 
 				assert.throws(
 					() => view.getFieldValue("unknownField" as keyof typeof PersonSchema.fields),
@@ -134,7 +142,8 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				view.initialize({ name: "Alice" });
+				view.initialize();
+				view.setFieldValue("name", "Alice");
 
 				assert.throws(
 					() =>
@@ -152,7 +161,8 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				view.initialize({ name: "Alice" });
+				view.initialize();
+				view.setFieldValue("name", "Alice");
 
 				assert.throws(() => view.setFieldValue("name", undefined), UsageError);
 			});
@@ -174,7 +184,9 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				view.initialize({ name: "Alice", age: 30 });
+				view.initialize();
+				view.setFieldValue("name", "Alice");
+				view.setFieldValue("age", 30);
 
 				// Should not throw for valid values
 				view.setFieldValue("age", 31);
@@ -183,7 +195,7 @@ describe("View", () => {
 		});
 
 		describe("initialize()", () => {
-			it("initializes storage with valid content", () => {
+			it("persists schema on initialize", () => {
 				const PersonSchema = sf.object("PersonInit", {
 					name: sf.string,
 					age: sf.number,
@@ -193,30 +205,12 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				view.initialize({ name: "Alice", age: 30 });
+				view.initialize();
+				view.setFieldValue("name", "Alice");
+				view.setFieldValue("age", 30);
 
 				assert.equal(view.getFieldValue("name"), "Alice");
 				assert.equal(view.getFieldValue("age"), 30);
-			});
-
-			it("throws SchemaValidationError for invalid initial content", () => {
-				const PersonSchema = sf.object("PersonInitInvalid", {
-					name: sf.string,
-					age: sf.number,
-				});
-
-				const storage = new MockStorage();
-				const persistence = new MockPersistence();
-				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
-
-				assert.throws(
-					() =>
-						view.initialize({ name: "Alice", age: "not a number" } as unknown as {
-							name: string;
-							age: number;
-						}),
-					SchemaValidationError,
-				);
 			});
 
 			it("throws UsageError when initializing twice", () => {
@@ -228,9 +222,9 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				view.initialize({ name: "Alice" });
+				view.initialize();
 
-				assert.throws(() => view.initialize({ name: "Bob" }), UsageError);
+				assert.throws(() => view.initialize(), UsageError);
 			});
 
 			it("sets persisted schema on initialize", () => {
@@ -244,7 +238,7 @@ describe("View", () => {
 
 				assert.equal(persistence.getPersistedSchema(), undefined);
 
-				view.initialize({ name: "Alice" });
+				view.initialize();
 
 				assert.notEqual(persistence.getPersistedSchema(), undefined);
 			});
@@ -264,7 +258,8 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 
 				const viewV1 = new SchematizedObjectView(storage, PersonSchemaV1, persistence);
-				viewV1.initialize({ name: "Alice" });
+				viewV1.initialize();
+				viewV1.setFieldValue("name", "Alice");
 
 				const viewV2 = new SchematizedObjectView(storage, PersonSchemaV2, persistence);
 				assert.equal(viewV2.compatibility.canUpgrade, true);
@@ -285,7 +280,8 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 
 				const viewV1 = new SchematizedObjectView(storage, PersonSchemaV1, persistence);
-				viewV1.initialize({ name: "Alice" });
+				viewV1.initialize();
+				viewV1.setFieldValue("name", "Alice");
 
 				const viewV2 = new SchematizedObjectView(storage, PersonSchemaV2, persistence);
 
@@ -315,7 +311,7 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				view.initialize({ name: "Alice" });
+				view.initialize();
 
 				assert.equal(view.compatibility.canInitialize, false);
 			});
@@ -348,7 +344,8 @@ describe("View", () => {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
-				view.initialize(new Map([["key1", "value1"]]));
+				view.initialize();
+				view.set("key1", "value1");
 
 				assert.equal(view.get("key1"), "value1");
 
@@ -364,7 +361,7 @@ describe("View", () => {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
-				view.initialize(new Map());
+				view.initialize();
 
 				assert.equal(view.get("nonexistent"), undefined);
 			});
@@ -377,7 +374,8 @@ describe("View", () => {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
-				view.initialize(new Map([["key1", "value1"]]));
+				view.initialize();
+				view.set("key1", "value1");
 				assert.equal(view.has("key1"), true);
 
 				const deleted = view.delete("key1");
@@ -393,7 +391,7 @@ describe("View", () => {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
-				view.initialize(new Map());
+				view.initialize();
 
 				const deleted = view.delete("nonexistent");
 				assert.equal(deleted, false);
@@ -407,7 +405,8 @@ describe("View", () => {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
-				view.initialize(new Map([["exists", "value"]]));
+				view.initialize();
+				view.set("exists", "value");
 
 				assert.equal(view.has("exists"), true);
 				assert.equal(view.has("notExists"), false);
@@ -423,7 +422,7 @@ describe("View", () => {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
-				view.initialize(new Map());
+				view.initialize();
 				assert.equal(view.size, 0);
 
 				view.set("key1", "value1");
@@ -446,12 +445,9 @@ describe("View", () => {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
-				view.initialize(
-					new Map([
-						["key1", "value1"],
-						["key2", "value2"],
-					]),
-				);
+				view.initialize();
+				view.set("key1", "value1");
+				view.set("key2", "value2");
 
 				const keys = [...view.keys()];
 				assert.deepEqual(keys.sort(), ["key1", "key2"]);
@@ -465,12 +461,9 @@ describe("View", () => {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
-				view.initialize(
-					new Map([
-						["key1", "value1"],
-						["key2", "value2"],
-					]),
-				);
+				view.initialize();
+				view.set("key1", "value1");
+				view.set("key2", "value2");
 
 				const values = [...view.values()];
 				assert.deepEqual(values.sort(), ["value1", "value2"]);
@@ -484,12 +477,9 @@ describe("View", () => {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
-				view.initialize(
-					new Map([
-						["key1", "value1"],
-						["key2", "value2"],
-					]),
-				);
+				view.initialize();
+				view.set("key1", "value1");
+				view.set("key2", "value2");
 
 				const entries = [...view.entries()];
 				assert.equal(entries.length, 2);
@@ -506,12 +496,9 @@ describe("View", () => {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
-				view.initialize(
-					new Map([
-						["key1", "value1"],
-						["key2", "value2"],
-					]),
-				);
+				view.initialize();
+				view.set("key1", "value1");
+				view.set("key2", "value2");
 
 				const collected: [string, string][] = [];
 				for (const entry of view) {
@@ -531,12 +518,9 @@ describe("View", () => {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
-				view.initialize(
-					new Map([
-						["key1", "value1"],
-						["key2", "value2"],
-					]),
-				);
+				view.initialize();
+				view.set("key1", "value1");
+				view.set("key2", "value2");
 
 				const collected: [string, string][] = [];
 				view.forEach((value: string, key: string) => {
@@ -556,7 +540,8 @@ describe("View", () => {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
-				view.initialize(new Map([["key1", "value1"]]));
+				view.initialize();
+				view.set("key1", "value1");
 
 				const context = { count: 0 };
 				view.forEach(function (this: typeof context) {
@@ -576,12 +561,9 @@ describe("View", () => {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
-				view.initialize(
-					new Map([
-						["key1", "value1"],
-						["key2", "value2"],
-					]),
-				);
+				view.initialize();
+				view.set("key1", "value1");
+				view.set("key2", "value2");
 
 				assert.equal(view.size, 2);
 
@@ -606,7 +588,7 @@ describe("View", () => {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
-				view.initialize(new Map());
+				view.initialize();
 
 				// Should not throw for valid string values
 				view.set("key", "valid string");
@@ -617,7 +599,7 @@ describe("View", () => {
 		describe("initialize()", () => {
 			// Note: Validation in initialize also uses simplified schema resolution.
 
-			it("accepts valid initial content", () => {
+			it("persists schema on initialize", () => {
 				const ConfigSchema = sf.map("ConfigMapInitValid", sf.string);
 
 				const storage = new MockStorage();
@@ -625,8 +607,9 @@ describe("View", () => {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
-				// Should not throw for valid content
-				view.initialize(new Map([["key", "value"]]));
+				// Should not throw
+				view.initialize();
+				view.set("key", "value");
 				assert.equal(view.get("key"), "value");
 			});
 
@@ -638,9 +621,9 @@ describe("View", () => {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
-				view.initialize(new Map());
+				view.initialize();
 
-				assert.throws(() => view.initialize(new Map()), UsageError);
+				assert.throws(() => view.initialize(), UsageError);
 			});
 		});
 
@@ -655,7 +638,7 @@ describe("View", () => {
 				assert.equal(view.compatibility.canInitialize, true);
 
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				(view as any).initialize(new Map());
+				(view as any).initialize();
 
 				assert.equal(view.compatibility.canInitialize, false);
 			});
@@ -679,7 +662,7 @@ describe("View", () => {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
-				view.initialize(new Map());
+				view.initialize();
 
 				const result = view.set("key1", "value1").set("key2", "value2");
 
@@ -702,7 +685,9 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				view.initialize({ name: "Alice", age: 30 });
+				view.initialize();
+				view.setFieldValue("name", "Alice");
+				view.setFieldValue("age", 30);
 
 				const proxy = createObjectViewProxy(view, PersonSchema);
 
@@ -720,7 +705,8 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				view.initialize({ name: "Alice" });
+				view.initialize();
+				view.setFieldValue("name", "Alice");
 
 				const proxy = createObjectViewProxy(view, PersonSchema);
 
@@ -739,7 +725,9 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				view.initialize({ name: "Alice", age: 30 });
+				view.initialize();
+				view.setFieldValue("name", "Alice");
+				view.setFieldValue("age", 30);
 
 				const proxy = createObjectViewProxy(view, PersonSchema);
 
@@ -759,7 +747,8 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				view.initialize({ name: "Alice" });
+				view.initialize();
+				view.setFieldValue("name", "Alice");
 
 				const proxy = createObjectViewProxy(view, PersonSchema);
 
@@ -780,7 +769,9 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				view.initialize({ name: "Alice", age: 30 });
+				view.initialize();
+				view.setFieldValue("name", "Alice");
+				view.setFieldValue("age", 30);
 
 				const proxy = createObjectViewProxy(view, PersonSchema);
 
@@ -799,7 +790,9 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				view.initialize({ name: "Alice", age: 30 });
+				view.initialize();
+				view.setFieldValue("name", "Alice");
+				view.setFieldValue("age", 30);
 
 				const proxy = createObjectViewProxy(view, PersonSchema);
 
@@ -834,7 +827,8 @@ describe("View", () => {
 
 				const proxy = createObjectViewProxy(view, PersonSchema);
 
-				proxy.initialize({ name: "Bob" });
+				proxy.initialize();
+				proxy.root = { name: "Bob" };
 
 				assert.equal(proxy.root.name, "Bob");
 			});
@@ -850,7 +844,8 @@ describe("View", () => {
 
 				const proxy = createObjectViewProxy(view, PersonSchema);
 
-				proxy.initialize({ name: "Alice" });
+				proxy.initialize();
+				proxy.root = { name: "Alice" };
 
 				// Should not throw (same schema)
 				proxy.upgradeSchema();
@@ -868,7 +863,9 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				view.initialize({ name: "Alice", age: 30 });
+				view.initialize();
+				view.setFieldValue("name", "Alice");
+				view.setFieldValue("age", 30);
 
 				const proxy = createObjectViewProxy(view, PersonSchema);
 

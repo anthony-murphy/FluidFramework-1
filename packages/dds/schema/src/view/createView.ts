@@ -70,11 +70,12 @@ export interface ObjectViewResult<TSchema extends ObjectNodeSchema> {
 	readonly compatibility: SchemaCompatibilityStatus;
 
 	/**
-	 * Initialize the storage with schema and initial content.
+	 * Initialize the storage by persisting the schema.
 	 *
-	 * @param content - The initial content to store
+	 * @remarks
+	 * Setting data is a separate concern - use the `root` property after initializing.
 	 */
-	initialize(content: NodeFromSchema<TSchema>): void;
+	initialize(): void;
 
 	/**
 	 * Upgrade the stored schema to this view's schema.
@@ -113,11 +114,12 @@ export interface MapViewResult<TSchema extends MapNodeSchema> {
 	readonly compatibility: SchemaCompatibilityStatus;
 
 	/**
-	 * Initialize the storage with schema and initial content.
+	 * Initialize the storage by persisting the schema.
 	 *
-	 * @param content - The initial map content
+	 * @remarks
+	 * Setting data is a separate concern - use the `root` property after initializing.
 	 */
-	initialize(content: Map<string, InferValueSchema<TSchema>>): void;
+	initialize(): void;
 
 	/**
 	 * Upgrade the stored schema to this view's schema.
@@ -165,7 +167,8 @@ export interface MapViewResult<TSchema extends MapNodeSchema> {
  * console.log(view.root.name); // "Alice"
  *
  * // View methods
- * view.initialize({ name: "Bob", age: 30 });
+ * view.initialize();  // Persist schema
+ * view.root = { name: "Bob", age: 30 };  // Set content
  * console.log(view.compatibility.canView); // true
  * ```
  *
@@ -212,7 +215,8 @@ export function createSchematizedObjectView<TSchema extends ObjectNodeSchema>(
  * console.log(view.root.get("key1")); // "value1"
  *
  * // View methods
- * view.initialize(new Map([["a", "1"]]));
+ * view.initialize();  // Persist schema
+ * view.root = new Map([["a", "1"]]);  // Set content
  * ```
  *
  * @internal

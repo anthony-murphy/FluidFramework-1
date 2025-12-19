@@ -119,7 +119,7 @@ export type MapView<TSchema extends MapNodeSchema> = IDisposable & {
     root: Map<string, InferValueSchema<TSchema>>;
     readonly disposed: boolean;
     readonly compatibility: SchemaCompatibilityStatus;
-    initialize: (content: Map<string, InferValueSchema<TSchema>>) => void;
+    initialize: () => void;
     upgradeSchema: () => void;
 };
 
@@ -180,7 +180,7 @@ export type ObjectView<TSchema extends ObjectNodeSchema> = IDisposable & {
     root: NodeFromSchema<TSchema>;
     readonly disposed: boolean;
     readonly compatibility: SchemaCompatibilityStatus;
-    initialize: (content: NodeFromSchema<TSchema>) => void;
+    initialize: () => void;
     upgradeSchema: () => void;
 };
 

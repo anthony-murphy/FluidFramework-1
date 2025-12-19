@@ -58,8 +58,9 @@ export interface SchematizedMapViewOptions {
  *
  * const view = new SchematizedMapView(storage, ConfigMap, persistence);
  *
- * // Initialize with data
- * view.initialize(new Map([["key1", "value1"]]));
+ * // Initialize (persist schema) and set data
+ * view.initialize();
+ * view.set("key1", "value1");
  *
  * // Map operations
  * view.set("key2", "value2");
@@ -133,38 +134,25 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	}
 
 	/**
-	 * Initialize the storage with schema and initial content.
+	 * Initialize the storage by persisting the schema.
 	 *
-	 * @param content - The initial map content
+	 * @remarks
+	 * This method persists the schema to enable cross-client enforcement.
+	 * Setting data is a separate concern - use the `root` property or `set()` after initializing.
+	 * Calling `initialize()` is optional - only call when you want schema persistence.
+	 *
 	 * @throws UsageError if a schema is already stored
-	 * @throws SchemaValidationError if any value fails validation
 	 */
-	public initialize(content: Map<string, InferValueSchema<TSchema>>): void {
+	public initialize(): void {
 		this.ensureNotDisposed();
 		const compat = this.compatibility;
 		if (!compat.canInitialize) {
 			throw new UsageError("Cannot initialize - schema already stored");
 		}
 
-		// Get the value schema for validation
-		const valueSchema = this.getValueNodeSchema();
-
-		// Validate all content
-		for (const [key, value] of content) {
-			const validation = validateData(valueSchema, value);
-			if (!validation.valid) {
-				throw new SchemaValidationError(`Invalid value for key "${key}"`, validation.errors);
-			}
-		}
-
 		// Store schema
 		if (this.persistence !== undefined) {
 			this.persistence.setPersistedSchema(encodeSchema(this.schema));
-		}
-
-		// Set all values
-		for (const [key, value] of content) {
-			this.storage.setField(key, valueSchema, value);
 		}
 	}
 
