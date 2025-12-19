@@ -121,6 +121,7 @@ export {
 	SchematizedObjectView,
 	SchematizedMapView,
 	SchemaValidationError,
+	isSchemaValidationError,
 	createObjectViewProxy,
 	createMapViewProxy,
 	createSchematizedView,
@@ -129,6 +130,7 @@ export {
 	normalizeViewConfig,
 } from "./view/index.js";
 export type {
+	ISchemaValidationError,
 	ViewFor,
 	SchematizedObject,
 	SchematizedMap,

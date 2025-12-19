@@ -71,6 +71,12 @@ export type InferValueSchema<T> = T extends TypedMapNodeSchema<string, infer TVa
 export function isArraySchema(schema: NodeSchema): schema is ArrayNodeSchema;
 
 // @alpha @legacy
+export interface ISchemaValidationError extends IErrorBase {
+    readonly errors: readonly ValidationError[];
+    readonly errorType: "schemaValidation";
+}
+
+// @alpha @legacy
 export type IsLeafSchema<T> = T extends TypedLeafNodeSchema ? true : false;
 
 // @alpha @legacy
@@ -87,6 +93,9 @@ export type IsObjectSchema<T> = T extends TypedObjectNodeSchema ? true : false;
 
 // @alpha @legacy
 export function isObjectSchema(schema: NodeSchema): schema is ObjectNodeSchema;
+
+// @alpha @legacy
+export function isSchemaValidationError(error: unknown): error is ISchemaValidationError;
 
 // @alpha @legacy
 export type LeafKind = "string" | "number" | "boolean" | "null" | "handle";
@@ -210,12 +219,6 @@ export type SchematizedObject<TSchema extends ObjectNodeSchema> = IDisposable & 
 
 // @alpha @legacy
 export type SchematizedView<TSchema extends RootSchema> = TSchema extends ObjectNodeSchema ? SchematizedObject<TSchema> : TSchema extends MapNodeSchema ? SchematizedMap<TSchema> : never;
-
-// @alpha @legacy
-export class SchemaValidationError extends Error {
-    constructor(message: string, errors?: readonly ValidationError[]);
-    readonly errors: readonly ValidationError[];
-}
 
 // @alpha @legacy
 export interface SchemaViewConfiguration<TSchema extends RootSchema> {

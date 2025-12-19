@@ -13,7 +13,8 @@
 // Re-export UsageError for use by consumers of this module
 export { UsageError } from "@fluidframework/telemetry-utils/internal";
 
-export { SchemaValidationError } from "./errors.js";
+export { SchemaValidationError, isSchemaValidationError } from "./errors.js";
+export type { ISchemaValidationError } from "./errors.js";
 
 export { SchematizedObjectView } from "./objectView.js";
 export type { SchematizedObjectViewOptions } from "./objectView.js";
