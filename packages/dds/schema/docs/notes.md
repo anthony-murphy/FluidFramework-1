@@ -1,15 +1,128 @@
-# Schema Package API Review
+# Schema Package Notes
 
 <!--
-  This is the primary working document for API decisions and implementation tasks.
-  For historical notes and earlier review items, see ../notes.md
+  Active development notes and open questions.
+  For historical design documents, see ./archive/
 -->
 
 Comparing `@fluidframework/schema` with `@fluidframework/tree` to ensure API consistency and identify gaps.
 
 ---
 
+## New Open Questions (December 2025)
+
+### 10. Should `initialize()` take content?
+
+**Current:**
+```ts
+view.initialize({ name: "Alice", age: 30 })
+```
+
+**Concern:** Is having `initialize()` take content the right pattern?
+
+**Alternatives:**
+1. Separate initialization from content setting:
+   ```ts
+   view.initialize()  // Just marks as initialized
+   view.root = { name: "Alice", age: 30 }  // Set content separately
+   ```
+2. Only allow initialization via root setter:
+   ```ts
+   view.root = { name: "Alice", age: 30 }  // Auto-initializes if needed
+   ```
+
+**Decision:** [ ] TBD
+
+---
+
+### 11. SchemaValidationError handling
+
+**Current:** `SchemaValidationError extends Error` with structured `errors: ValidationError[]`
+
+**Problem:** #7 was skipped because `UsageError` is `@internal`, forcing derived classes to be `@internal` too.
+
+**Options:**
+1. **FluidError composition** - Use `FluidError` base class via composition rather than inheritance
+2. **Logging error** - Just log errors with telemetry, don't throw special type
+3. **Keep plain Error** - Keep current pattern with plain Error base class
+4. **New error base** - Create public error base class for schema package
+
+**Considerations:**
+- Users need to catch `SchemaValidationError` specifically
+- Telemetry integration is valuable
+- Tree package pattern?
+
+**Decision:** [ ] TBD
+
+---
+
+### 12. Proxy architecture - Views vs Proxies redundancy
+
+**Current architecture:**
+- `SchematizedObjectView` class - internal view with all logic
+- `createObjectViewProxy()` - creates Proxy that wraps the view
+- Similar for `SchematizedMapView` and `createMapViewProxy()`
+
+**Concern:** Is having both internal views AND proxies redundant?
+
+**Options:**
+1. **Simplify proxies** - Make proxies use views more directly, less wrapper code
+2. **Merge into proxies** - Put all logic in proxy handlers, eliminate view classes
+3. **Keep separate** - Views handle storage, proxies handle property access
+
+**Related:** How do Tree's proxies work? Do they have separate view classes?
+
+**Decision:** [ ] TBD - needs investigation of Tree proxy implementation
+
+---
+
+### 13. Proxies should use Reflect
+
+**Current:** Proxy handlers use manual lambdas for property access
+
+**Tree pattern:** Tree proxies use `Reflect` methods
+
+**Example of change:**
+```ts
+// Current
+get(target, prop) {
+  if (prop === "name") return view.getField("name")
+  // ... manual dispatch
+}
+
+// Tree pattern
+get(target, prop, receiver) {
+  return Reflect.get(target, prop, receiver)
+}
+```
+
+**Benefits of Reflect:**
+- More correct prototype chain handling
+- Better handling of inherited properties
+- More standard proxy pattern
+- Matches Tree implementation
+
+**Decision:** [ ] Refactor proxies to use Reflect
+
+---
+
+### 14. Test location - local-server-tests vs end-to-end-tests
+
+**Current:** Tests added to `test-end-to-end-tests` package
+
+**Better location:** `local-server-tests` package
+
+**Rationale:**
+- Schema tests don't need real service connectivity
+- local-server-tests is faster to run
+- More appropriate for unit/integration level tests
+
+**Action:** [ ] Move schema integration tests from e2e to local-server-tests
+
+---
+
 ## Execution Instructions
+
 
 **For each implementation task:**
 
