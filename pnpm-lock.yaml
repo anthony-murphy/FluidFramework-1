@@ -8315,6 +8315,9 @@ importers:
       '@fluidframework/runtime-utils':
         specifier: workspace:~
         version: link:../../runtime/runtime-utils
+      '@fluidframework/schema':
+        specifier: workspace:~
+        version: link:../schema
       '@fluidframework/shared-object-base':
         specifier: workspace:~
         version: link:../shared-object-base

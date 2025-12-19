@@ -136,10 +136,7 @@ describe("View", () => {
 
 				assert.throws(
 					() =>
-						view.setFieldValue(
-							"unknownField" as keyof typeof PersonSchema.fields,
-							"value",
-						),
+						view.setFieldValue("unknownField" as keyof typeof PersonSchema.fields, "value"),
 					UsageError,
 				);
 			});

@@ -19,10 +19,25 @@ import type {
 	ISequencedMessageEnvelope,
 } from "@fluidframework/runtime-definitions/internal";
 import { SummaryTreeBuilder } from "@fluidframework/runtime-utils/internal";
+import type {
+	NodeSchema,
+	ObjectNodeSchema,
+	MapNodeSchema,
+	ISchemaStorage,
+	ISchemaPersistence,
+	EncodedSchema,
+	StorageResult,
+} from "@fluidframework/schema";
+import {
+	SchematizedObjectView,
+	SchematizedMapView,
+	isObjectSchema,
+	isMapSchema,
+} from "@fluidframework/schema";
 import type { IFluidSerializer } from "@fluidframework/shared-object-base/internal";
 import { SharedObject } from "@fluidframework/shared-object-base/internal";
 
-import type { ISharedMap, ISharedMapEvents } from "./interfaces.js";
+import type { ISharedMap, ISharedMapEvents, SchematizedView } from "./interfaces.js";
 import {
 	type IMapDataObjectSerializable,
 	type IMapOperation,
@@ -32,6 +47,10 @@ import {
 interface IMapSerializationFormat {
 	blobs?: string[];
 	content: IMapDataObjectSerializable;
+	/**
+	 * Schema for schema-based views (Modality 2).
+	 */
+	schema?: EncodedSchema;
 }
 
 const snapshotFileName = "header";
@@ -49,6 +68,11 @@ export class SharedMap extends SharedObject<ISharedMapEvents> implements IShared
 	 * MapKernel which manages actual map operations.
 	 */
 	private readonly kernel: MapKernel;
+
+	/**
+	 * Persisted schema for schema-based views (Modality 2).
+	 */
+	private _persistedSchema: EncodedSchema | undefined;
 
 	/**
 	 * Do not call the constructor. Instead, you should use the {@link SharedMap.create | create method}.
@@ -171,6 +195,76 @@ export class SharedMap extends SharedObject<ISharedMapEvents> implements IShared
 	}
 
 	/**
+	 * Creates a storage adapter for schema-based views.
+	 */
+	private createSchemaStorage(): ISchemaStorage {
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
+		const map = this;
+		return {
+			getField: (key: string, _fieldSchema: NodeSchema): StorageResult | undefined => {
+				const value = map.kernel.get(key);
+				if (value === undefined && !map.kernel.has(key)) {
+					return undefined;
+				}
+				return { type: "value", value };
+			},
+			setField: (key: string, _fieldSchema: NodeSchema, value: unknown): void => {
+				map.set(key, value);
+			},
+			deleteField: (key: string): boolean => map.delete(key),
+			hasField: (key: string): boolean => map.has(key),
+			keys: (): IterableIterator<string> => map.keys(),
+			get size(): number {
+				return map.size;
+			},
+		};
+	}
+
+	/**
+	 * Creates a persistence adapter for schema storage.
+	 */
+	private createSchemaPersistence(): ISchemaPersistence {
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
+		const map = this;
+		return {
+			getPersistedSchema: (): EncodedSchema | undefined => map._persistedSchema,
+			setPersistedSchema: (schema: EncodedSchema): void => {
+				if (map._persistedSchema !== undefined) {
+					throw new Error("Cannot initialize - schema already stored");
+				}
+				map._persistedSchema = schema;
+			},
+			upgradePersistedSchema: (schema: EncodedSchema): void => {
+				map._persistedSchema = schema;
+			},
+		};
+	}
+
+	/**
+	 * Get a typed, schematized view of this map.
+	 * @param schema - The schema to use for the view (ObjectNodeSchema or MapNodeSchema)
+	 * @returns A view with typed access and compatibility status
+	 */
+	public viewWith<TSchema extends ObjectNodeSchema | MapNodeSchema>(
+		schema: TSchema,
+	): SchematizedView<TSchema> {
+		const storage = this.createSchemaStorage();
+		const persistence = this.createSchemaPersistence();
+
+		if (isObjectSchema(schema)) {
+			return new SchematizedObjectView(
+				storage,
+				schema,
+				persistence,
+			) as SchematizedView<TSchema>;
+		}
+		if (isMapSchema(schema)) {
+			return new SchematizedMapView(storage, schema, persistence) as SchematizedView<TSchema>;
+		}
+		throw new Error("Schema must be an ObjectNodeSchema or MapNodeSchema");
+	}
+
+	/**
 	 * {@inheritDoc @fluidframework/shared-object-base#SharedObject.summarizeCore}
 	 */
 	protected summarizeCore(
@@ -239,6 +333,7 @@ export class SharedMap extends SharedObject<ISharedMapEvents> implements IShared
 		const header: IMapSerializationFormat = {
 			blobs,
 			content: headerBlob,
+			schema: this._persistedSchema,
 		};
 		builder.addBlob(snapshotFileName, JSON.stringify(header));
 
@@ -263,6 +358,10 @@ export class SharedMap extends SharedObject<ISharedMapEvents> implements IShared
 			}
 		} else {
 			this.kernel.populateFromSerializable(json as IMapDataObjectSerializable);
+		}
+		// Load persisted schema if present
+		if (newFormat.schema !== undefined) {
+			this._persistedSchema = newFormat.schema;
 		}
 	}
 

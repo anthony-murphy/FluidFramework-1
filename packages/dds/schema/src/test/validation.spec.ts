@@ -269,8 +269,7 @@ describe("Validation", () => {
 				// The validation happens at the field level (address) because the nested object
 				// doesn't match the allowed type after checking its internal structure
 				assert.ok(
-					result.errors[0]?.path === "address" ||
-						result.errors[0]?.path === "address.city",
+					result.errors[0]?.path === "address" || result.errors[0]?.path === "address.city",
 					`Expected path to be "address" or "address.city", got "${result.errors[0]?.path}"`,
 				);
 			});

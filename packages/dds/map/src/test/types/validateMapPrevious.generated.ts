@@ -223,6 +223,7 @@ declare type current_as_old_for_TypeAlias_SharedDirectory = requireAssignableTo<
  * typeValidation.broken:
  * "TypeAlias_SharedMap": {"forwardCompat": false}
  */
+// @ts-expect-error compatibility expected to be broken
 declare type old_as_current_for_TypeAlias_SharedMap = requireAssignableTo<TypeOnly<old.SharedMap>, TypeOnly<current.SharedMap>>
 
 /*

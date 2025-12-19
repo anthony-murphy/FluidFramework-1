@@ -10,6 +10,12 @@ import type {
 	IEventThisPlaceHolder,
 } from "@fluidframework/core-interfaces";
 import type {
+	ObjectNodeSchema,
+	MapNodeSchema,
+	SchematizedObjectView,
+	SchematizedMapView,
+} from "@fluidframework/schema";
+import type {
 	ISharedObject,
 	ISharedObjectEvents,
 } from "@fluidframework/shared-object-base/internal";
@@ -401,4 +407,29 @@ export interface ISharedMap extends ISharedObject<ISharedMapEvents>, Map<string,
 	 * @returns The {@link ISharedMap} itself
 	 */
 	set<T = unknown>(key: string, value: T): this;
+
+	/**
+	 * Get a typed, schematized view of this map.
+	 * @param schema - The schema to use for the view (ObjectNodeSchema or MapNodeSchema)
+	 * @returns A view with typed access and compatibility status
+	 */
+	viewWith<TSchema extends ObjectNodeSchema | MapNodeSchema>(
+		schema: TSchema,
+	): SchematizedView<TSchema>;
 }
+
+/**
+ * A schematized view of a SharedMap.
+ *
+ * @remarks
+ * This type represents the typed view returned by {@link ISharedMap.viewWith}.
+ * The concrete type depends on the schema provided:
+ * - For {@link ObjectNodeSchema}: Returns a {@link SchematizedObjectView}
+ * - For {@link MapNodeSchema}: Returns a {@link SchematizedMapView}
+ */
+export type SchematizedView<TSchema extends ObjectNodeSchema | MapNodeSchema> =
+	TSchema extends ObjectNodeSchema
+		? SchematizedObjectView<TSchema>
+		: TSchema extends MapNodeSchema
+			? SchematizedMapView<TSchema>
+			: never;
