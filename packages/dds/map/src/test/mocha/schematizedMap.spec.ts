@@ -51,8 +51,8 @@ describe("SharedMap.viewWith", () => {
 
 				view.initialize({ name: "Alice", age: 30 });
 
-				assert.equal(view.name, "Alice");
-				assert.equal(view.age, 30);
+				assert.equal(view.root.name, "Alice");
+				assert.equal(view.root.age, 30);
 			});
 
 			it("sets and retrieves updated field values", () => {
@@ -65,9 +65,9 @@ describe("SharedMap.viewWith", () => {
 				const view = map.viewWith(PersonSchema);
 
 				view.initialize({ name: "Alice", age: 30 });
-				(view as { age: number }).age = 31;
+				(view.root as { age: number }).age = 31;
 
-				assert.equal(view.age, 31);
+				assert.equal(view.root.age, 31);
 			});
 
 			it("handles optional fields when present", () => {
@@ -81,7 +81,7 @@ describe("SharedMap.viewWith", () => {
 
 				view.initialize({ name: "Alice", nickname: "Ali" });
 
-				assert.equal(view.nickname, "Ali");
+				assert.equal(view.root.nickname, "Ali");
 			});
 
 			it("handles optional fields when absent", () => {
@@ -95,7 +95,7 @@ describe("SharedMap.viewWith", () => {
 
 				view.initialize({ name: "Alice" });
 
-				assert.equal(view.nickname, undefined);
+				assert.equal(view.root.nickname, undefined);
 			});
 
 			it("allows setting optional fields to undefined", () => {
@@ -108,10 +108,10 @@ describe("SharedMap.viewWith", () => {
 				const view = map.viewWith(PersonSchema);
 
 				view.initialize({ name: "Alice", nickname: "Ali" });
-				assert.equal(view.nickname, "Ali");
+				assert.equal(view.root.nickname, "Ali");
 
-				(view as { nickname: string | undefined }).nickname = undefined;
-				assert.equal(view.nickname, undefined);
+				(view.root as { nickname: string | undefined }).nickname = undefined;
+				assert.equal(view.root.nickname, undefined);
 			});
 
 			it("checks field existence with 'in' operator", () => {
@@ -125,8 +125,8 @@ describe("SharedMap.viewWith", () => {
 
 				view.initialize({ name: "Alice" });
 
-				assert.equal("name" in view, true);
-				assert.equal("nickname" in view, false);
+				assert.equal("name" in view.root, true);
+				assert.equal("nickname" in view.root, false);
 			});
 		});
 
@@ -265,10 +265,10 @@ describe("SharedMap.viewWith", () => {
 				assert.ok(view, "viewWith should return a view");
 				/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 				assert.ok(typeof view.initialize === "function", "view should have initialize method");
-				assert.ok(typeof view.get === "function", "view should have get method");
-				assert.ok(typeof view.set === "function", "view should have set method");
-				assert.ok(typeof view.delete === "function", "view should have delete method");
-				assert.ok(typeof view.has === "function", "view should have has method");
+				assert.ok(typeof view.root.get === "function", "view should have get method");
+				assert.ok(typeof view.root.set === "function", "view should have set method");
+				assert.ok(typeof view.root.delete === "function", "view should have delete method");
+				assert.ok(typeof view.root.has === "function", "view should have has method");
 				/* eslint-enable @typescript-eslint/no-unsafe-member-access */
 			});
 
@@ -282,10 +282,10 @@ describe("SharedMap.viewWith", () => {
 				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 				view.initialize(new Map([["key1", "value1"]]));
 
-				assert.equal(view.get("key1"), "value1");
+				assert.equal(view.root.get("key1"), "value1");
 
-				view.set("key2", "value2");
-				assert.equal(view.get("key2"), "value2");
+				view.root.set("key2", "value2");
+				assert.equal(view.root.get("key2"), "value2");
 				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 			});
 
@@ -299,7 +299,7 @@ describe("SharedMap.viewWith", () => {
 				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 				view.initialize(new Map());
 
-				assert.equal(view.get("nonexistent"), undefined);
+				assert.equal(view.root.get("nonexistent"), undefined);
 				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 			});
 
@@ -312,11 +312,11 @@ describe("SharedMap.viewWith", () => {
 
 				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 				view.initialize(new Map([["key1", "value1"]]));
-				assert.equal(view.has("key1"), true);
+				assert.equal(view.root.has("key1"), true);
 
-				const deleted = view.delete("key1");
+				const deleted = view.root.delete("key1");
 				assert.equal(deleted, true);
-				assert.equal(view.has("key1"), false);
+				assert.equal(view.root.has("key1"), false);
 				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 			});
 
@@ -330,7 +330,7 @@ describe("SharedMap.viewWith", () => {
 				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 				view.initialize(new Map());
 
-				const deleted = view.delete("nonexistent");
+				const deleted = view.root.delete("nonexistent");
 				assert.equal(deleted, false);
 				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 			});
@@ -345,8 +345,8 @@ describe("SharedMap.viewWith", () => {
 				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 				view.initialize(new Map([["exists", "value"]]));
 
-				assert.equal(view.has("exists"), true);
-				assert.equal(view.has("notExists"), false);
+				assert.equal(view.root.has("exists"), true);
+				assert.equal(view.root.has("notExists"), false);
 				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 			});
 		});
@@ -361,16 +361,16 @@ describe("SharedMap.viewWith", () => {
 
 				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 				view.initialize(new Map());
-				assert.equal(view.size, 0);
+				assert.equal(view.root.size, 0);
 
-				view.set("key1", "value1");
-				assert.equal(view.size, 1);
+				view.root.set("key1", "value1");
+				assert.equal(view.root.size, 1);
 
-				view.set("key2", "value2");
-				assert.equal(view.size, 2);
+				view.root.set("key2", "value2");
+				assert.equal(view.root.size, 2);
 
-				view.delete("key1");
-				assert.equal(view.size, 1);
+				view.root.delete("key1");
+				assert.equal(view.root.size, 1);
 				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 			});
 		});
@@ -391,7 +391,7 @@ describe("SharedMap.viewWith", () => {
 					]),
 				);
 
-				const keys = [...view.keys()];
+				const keys = [...view.root.keys()];
 				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 				assert.deepEqual(keys.sort(), ["key1", "key2"]);
 			});
@@ -411,7 +411,7 @@ describe("SharedMap.viewWith", () => {
 					]),
 				);
 
-				const values = [...view.values()];
+				const values = [...view.root.values()];
 				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 				assert.deepEqual(values.sort(), ["value1", "value2"]);
 			});
@@ -431,7 +431,7 @@ describe("SharedMap.viewWith", () => {
 					]),
 				);
 
-				const entries = [...view.entries()];
+				const entries = [...view.root.entries()];
 				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 				assert.equal(entries.length, 2);
 				const entryMap = new Map(entries);
@@ -455,7 +455,8 @@ describe("SharedMap.viewWith", () => {
 				);
 
 				const collected: [string, string][] = [];
-				for (const entry of view) {
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+				for (const entry of view.root) {
 					// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 					collected.push(entry);
 				}
@@ -479,7 +480,8 @@ describe("SharedMap.viewWith", () => {
 				);
 
 				const collected: [string, string][] = [];
-				for (const [key, value] of view) {
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+				for (const [key, value] of view.root) {
 					collected.push([key as string, value as string]);
 				}
 
@@ -541,7 +543,7 @@ describe("SharedMap.viewWith", () => {
 				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 				// Should not throw for valid content
 				view.initialize(new Map([["key", "value"]]));
-				assert.equal(view.get("key"), "value");
+				assert.equal(view.root.get("key"), "value");
 				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 			});
 
@@ -592,7 +594,7 @@ describe("SharedMap.viewWith", () => {
 			assert.equal(map.get("age"), 30);
 
 			// Update via view
-			(view as { age: number }).age = 31;
+			(view.root as { age: number }).age = 31;
 			assert.equal(map.get("age"), 31);
 		});
 
@@ -611,7 +613,7 @@ describe("SharedMap.viewWith", () => {
 			map.set("age", 32);
 
 			// View should see the change
-			assert.equal(view.age, 32);
+			assert.equal(view.root.age, 32);
 		});
 	});
 
@@ -635,10 +637,10 @@ describe("SharedMap.viewWith", () => {
 					email: "alice@example.com",
 				});
 
-				assert.equal(view.username, "alice123");
-				assert.equal(view.age, 30);
-				assert.equal(view.isActive, true);
-				assert.equal(view.email, "alice@example.com");
+				assert.equal(view.root.username, "alice123");
+				assert.equal(view.root.age, 30);
+				assert.equal(view.root.isActive, true);
+				assert.equal(view.root.email, "alice@example.com");
 			});
 
 			it("handles mixed required and optional fields", () => {
@@ -658,10 +660,10 @@ describe("SharedMap.viewWith", () => {
 					nickname: "Bobby",
 				});
 
-				assert.equal(view.name, "Bob");
-				assert.equal(view.age, 25);
-				assert.equal(view.nickname, "Bobby");
-				assert.equal(view.bio, undefined);
+				assert.equal(view.root.name, "Bob");
+				assert.equal(view.root.age, 25);
+				assert.equal(view.root.nickname, "Bobby");
+				assert.equal(view.root.bio, undefined);
 			});
 
 			it("updates multiple fields independently", () => {
@@ -682,13 +684,13 @@ describe("SharedMap.viewWith", () => {
 
 				// Update each field independently
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-				(view as any).firstName = "Charles";
+				(view.root as any).firstName = "Charles";
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-				(view as any).age = 36;
+				(view.root as any).age = 36;
 
-				assert.equal(view.firstName, "Charles");
-				assert.equal(view.lastName, "Brown"); // unchanged
-				assert.equal(view.age, 36);
+				assert.equal(view.root.firstName, "Charles");
+				assert.equal(view.root.lastName, "Brown"); // unchanged
+				assert.equal(view.root.age, 36);
 			});
 		});
 
@@ -709,9 +711,9 @@ describe("SharedMap.viewWith", () => {
 					booleanField: true,
 				});
 
-				assert.equal(view.stringField, "hello");
-				assert.equal(view.numberField, 42);
-				assert.equal(view.booleanField, true);
+				assert.equal(view.root.stringField, "hello");
+				assert.equal(view.root.numberField, 42);
+				assert.equal(view.root.booleanField, true);
 			});
 
 			it("updates all leaf types correctly", () => {
@@ -732,15 +734,15 @@ describe("SharedMap.viewWith", () => {
 
 				// Update each field
 				/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
-				const mutableView = view as any;
+				const mutableView = view.root as any;
 				mutableView.stringField = "updated";
 				mutableView.numberField = 100;
 				mutableView.booleanField = true;
 				/* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 
-				assert.equal(view.stringField, "updated");
-				assert.equal(view.numberField, 100);
-				assert.equal(view.booleanField, true);
+				assert.equal(view.root.stringField, "updated");
+				assert.equal(view.root.numberField, 100);
+				assert.equal(view.root.booleanField, true);
 			});
 		});
 	});
@@ -762,7 +764,10 @@ describe("SharedMap.viewWith", () => {
 				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 				view.initialize(new Map([["user1", { name: "Alice", email: "alice@example.com" }]]));
 
-				assert.deepEqual(view.get("user1"), { name: "Alice", email: "alice@example.com" });
+				assert.deepEqual(view.root.get("user1"), {
+					name: "Alice",
+					email: "alice@example.com",
+				});
 				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 			});
 
@@ -781,11 +786,11 @@ describe("SharedMap.viewWith", () => {
 				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 				view.initialize(new Map());
 
-				view.set("prod1", { name: "Widget", price: 9.99 });
-				view.set("prod2", { name: "Gadget", price: 19.99 });
+				view.root.set("prod1", { name: "Widget", price: 9.99 });
+				view.root.set("prod2", { name: "Gadget", price: 19.99 });
 
-				assert.deepEqual(view.get("prod1"), { name: "Widget", price: 9.99 });
-				assert.deepEqual(view.get("prod2"), { name: "Gadget", price: 19.99 });
+				assert.deepEqual(view.root.get("prod1"), { name: "Widget", price: 9.99 });
+				assert.deepEqual(view.root.get("prod2"), { name: "Gadget", price: 19.99 });
 				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 			});
 
@@ -809,13 +814,13 @@ describe("SharedMap.viewWith", () => {
 					]),
 				);
 
-				assert.equal(view.has("item1"), true);
-				assert.equal(view.size, 2);
+				assert.equal(view.root.has("item1"), true);
+				assert.equal(view.root.size, 2);
 
-				const deleted = view.delete("item1");
+				const deleted = view.root.delete("item1");
 				assert.equal(deleted, true);
-				assert.equal(view.has("item1"), false);
-				assert.equal(view.size, 1);
+				assert.equal(view.root.has("item1"), false);
+				assert.equal(view.root.size, 1);
 				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 			});
 
@@ -839,7 +844,7 @@ describe("SharedMap.viewWith", () => {
 					]),
 				);
 
-				const values = [...view.values()];
+				const values = [...view.root.values()];
 				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 
 				assert.equal(values.length, 3);
@@ -863,7 +868,7 @@ describe("SharedMap.viewWith", () => {
 
 			view.initialize({ firstName: "John", lastName: "Doe", age: 25 });
 
-			const keys = Object.keys(view);
+			const keys = Object.keys(view.root);
 			assert.deepEqual(keys.sort(), ["age", "firstName", "lastName"]);
 		});
 
@@ -878,7 +883,7 @@ describe("SharedMap.viewWith", () => {
 
 			view.initialize({ a: "hello", b: 42 });
 
-			const values = Object.values(view);
+			const values = Object.values(view.root);
 			assert.deepEqual(values.sort(), [42, "hello"]);
 		});
 
@@ -893,7 +898,7 @@ describe("SharedMap.viewWith", () => {
 
 			view.initialize({ x: "test", y: 100 });
 
-			const entries = Object.entries(view);
+			const entries = Object.entries(view.root);
 			const entryMap = new Map(entries);
 
 			assert.equal(entryMap.get("x"), "test");
@@ -914,7 +919,7 @@ describe("SharedMap.viewWith", () => {
 
 			// Using Object.keys as a proxy to verify enumerable properties work correctly
 			// This tests the same underlying proxy enumeration behavior as for...in
-			const keys = Object.keys(view);
+			const keys = Object.keys(view.root);
 
 			assert.deepEqual(keys.sort(), ["prop1", "prop2", "prop3"]);
 		});
@@ -967,12 +972,12 @@ describe("SharedMap.viewWith", () => {
 			viewV2.upgradeSchema();
 
 			// New optional field should be undefined
-			assert.equal(viewV2.nickname, undefined);
+			assert.equal(viewV2.root.nickname, undefined);
 
 			// Should be able to set the new optional field
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-			(viewV2 as any).nickname = "Bobby";
-			assert.equal(viewV2.nickname, "Bobby");
+			(viewV2.root as any).nickname = "Bobby";
+			assert.equal(viewV2.root.nickname, "Bobby");
 		});
 
 		it("cannot upgrade to incompatible schema", () => {
