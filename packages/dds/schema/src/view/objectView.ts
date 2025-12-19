@@ -13,6 +13,7 @@ import { UsageError } from "@fluidframework/telemetry-utils/internal";
 import type { NodeSchema, ObjectNodeSchema, FieldSchema } from "../core/index.js";
 import { FieldKind, isObjectSchema, isMapSchema } from "../core/index.js";
 import type { ISchemaStorage, ISchemaPersistence, StorageResult } from "../storage/index.js";
+import type { NodeFromSchema } from "../types/index.js";
 import {
 	encodeSchema,
 	checkSchemaCompatibility,
@@ -87,6 +88,12 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 	private readonly enableSchemaValidation: boolean;
 	private readonly ignoreStoredSchema: readonly string[] | undefined;
 	private _disposed = false;
+	private readonly rootProxy: NodeFromSchema<TSchema>;
+
+	/**
+	 * Error message thrown when accessing a disposed view.
+	 */
+	private static readonly disposedErrorMessage = "Accessed a disposed SchemaView.";
 
 	/**
 	 * Creates a new SchematizedObjectView.
@@ -104,6 +111,7 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 	) {
 		this.enableSchemaValidation = options?.enableSchemaValidation ?? false;
 		this.ignoreStoredSchema = options?.ignoreStoredSchema;
+		this.rootProxy = this.createRootProxy();
 	}
 
 	/**
@@ -195,6 +203,83 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 		}
 		if (this.persistence !== undefined) {
 			this.persistence.upgradePersistedSchema(encodeSchema(this.schema));
+		}
+	}
+
+	/**
+	 * Creates the root proxy for typed property access to schema fields.
+	 */
+	private createRootProxy(): NodeFromSchema<TSchema> {
+		const schema = this.schema;
+		const getFieldValue = (prop: string): unknown => this.getFieldValue(prop);
+		const setFieldValue = (prop: string, value: unknown): void =>
+			this.setFieldValue(prop, value);
+		const hasField = (prop: string): boolean => this.hasField(prop);
+		const isDisposed = (): boolean => this.disposed;
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+		return new Proxy({} as NodeFromSchema<TSchema>, {
+			get(_target, prop) {
+				if (isDisposed()) {
+					throw new UsageError(SchematizedObjectView.disposedErrorMessage);
+				}
+				if (typeof prop === "string" && prop in schema.fields) {
+					return getFieldValue(prop);
+				}
+				return undefined;
+			},
+			set(_target, prop, value) {
+				if (isDisposed()) {
+					throw new UsageError(SchematizedObjectView.disposedErrorMessage);
+				}
+				if (typeof prop === "string" && prop in schema.fields) {
+					setFieldValue(prop, value);
+					return true;
+				}
+				return false;
+			},
+			has(_target, prop) {
+				// Check if the field has a value (like hasField), not just if it's in the schema
+				if (typeof prop === "string" && prop in schema.fields) {
+					return hasField(prop);
+				}
+				return false;
+			},
+			ownKeys() {
+				return Object.keys(schema.fields);
+			},
+			getOwnPropertyDescriptor(_target, prop) {
+				if (typeof prop === "string" && prop in schema.fields) {
+					return { enumerable: true, configurable: true };
+				}
+				return undefined;
+			},
+		});
+	}
+
+	/**
+	 * The typed data root providing property access to schema fields.
+	 *
+	 * @remarks
+	 * Access fields directly through this property:
+	 * ```ts
+	 * view.root.name = "Alice";
+	 * console.log(view.root.age);
+	 * ```
+	 *
+	 * Setting root replaces all field values:
+	 * ```ts
+	 * view.root = { name: "Bob", age: 30 };
+	 * ```
+	 */
+	public get root(): NodeFromSchema<TSchema> {
+		this.ensureNotDisposed();
+		return this.rootProxy;
+	}
+
+	public set root(value: NodeFromSchema<TSchema>) {
+		this.ensureNotDisposed();
+		for (const fieldName of Object.keys(this.schema.fields)) {
+			this.setFieldValue(fieldName, (value as Record<string, unknown>)[fieldName]);
 		}
 	}
 

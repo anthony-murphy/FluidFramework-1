@@ -9,12 +9,7 @@ import { strict as assert } from "node:assert";
 
 import { SchemaFactory } from "../factory/index.js";
 import { MockStorage, MockPersistence } from "./mockStorage.js";
-import {
-	SchematizedObjectView,
-	SchematizedMapView,
-	createObjectViewProxy,
-	UsageError,
-} from "../view/index.js";
+import { SchematizedObjectView, SchematizedMapView, UsageError } from "../view/index.js";
 
 // Note: The SchematizedMapView uses InferValueSchema which extracts the schema type,
 // not the value type. The tests use type assertions to work around this and test
@@ -804,7 +799,7 @@ describe("View", () => {
 		});
 	});
 
-	describe("createObjectViewProxy", () => {
+	describe("SchematizedObjectView root property", () => {
 		describe("property access through root", () => {
 			it("gets property values through root", () => {
 				const PersonSchema = sf.object("PersonProxy", {
@@ -820,10 +815,8 @@ describe("View", () => {
 				view.setFieldValue("name", "Alice");
 				view.setFieldValue("age", 30);
 
-				const proxy = createObjectViewProxy(view, PersonSchema);
-
-				assert.equal(proxy.root.name, "Alice");
-				assert.equal(proxy.root.age, 30);
+				assert.equal(view.root.name, "Alice");
+				assert.equal(view.root.age, 30);
 			});
 
 			it("returns undefined for schema fields without values", () => {
@@ -839,9 +832,7 @@ describe("View", () => {
 				view.initialize();
 				view.setFieldValue("name", "Alice");
 
-				const proxy = createObjectViewProxy(view, PersonSchema);
-
-				assert.equal(proxy.root.nickname, undefined);
+				assert.equal(view.root.nickname, undefined);
 			});
 		});
 
@@ -860,12 +851,10 @@ describe("View", () => {
 				view.setFieldValue("name", "Alice");
 				view.setFieldValue("age", 30);
 
-				const proxy = createObjectViewProxy(view, PersonSchema);
-
 				// Use direct assignment via the root proxy
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				(proxy.root as any).age = 31;
-				assert.equal(proxy.root.age, 31);
+				(view.root as any).age = 31;
+				assert.equal(view.root.age, 31);
 				assert.equal(view.getFieldValue("age"), 31);
 			});
 
@@ -881,10 +870,8 @@ describe("View", () => {
 				view.initialize();
 				view.setFieldValue("name", "Alice");
 
-				const proxy = createObjectViewProxy(view, PersonSchema);
-
 				// Setting unknown property on root returns false (strict mode would throw)
-				const result = Reflect.set(proxy.root, "unknownProp", "value");
+				const result = Reflect.set(view.root, "unknownProp", "value");
 				assert.equal(result, false);
 			});
 		});
@@ -904,11 +891,9 @@ describe("View", () => {
 				view.setFieldValue("name", "Alice");
 				view.setFieldValue("age", 30);
 
-				const proxy = createObjectViewProxy(view, PersonSchema);
-
-				assert.equal("name" in proxy.root, true);
-				assert.equal("age" in proxy.root, true);
-				assert.equal("unknownField" in proxy.root, false);
+				assert.equal("name" in view.root, true);
+				assert.equal("age" in view.root, true);
+				assert.equal("unknownField" in view.root, false);
 			});
 
 			it("Object.keys on root returns field names", () => {
@@ -925,9 +910,7 @@ describe("View", () => {
 				view.setFieldValue("name", "Alice");
 				view.setFieldValue("age", 30);
 
-				const proxy = createObjectViewProxy(view, PersonSchema);
-
-				const keys = Object.keys(proxy.root);
+				const keys = Object.keys(view.root);
 				assert.deepEqual(keys.sort(), ["age", "name"]);
 			});
 		});
@@ -942,9 +925,7 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				const proxy = createObjectViewProxy(view, PersonSchema);
-
-				assert.equal(proxy.compatibility.canInitialize, true);
+				assert.equal(view.compatibility.canInitialize, true);
 			});
 
 			it("exposes initialize method", () => {
@@ -956,12 +937,10 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				const proxy = createObjectViewProxy(view, PersonSchema);
+				view.initialize();
+				view.root = { name: "Bob" };
 
-				proxy.initialize();
-				proxy.root = { name: "Bob" };
-
-				assert.equal(proxy.root.name, "Bob");
+				assert.equal(view.root.name, "Bob");
 			});
 
 			it("exposes upgradeSchema method", () => {
@@ -973,13 +952,11 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
-				const proxy = createObjectViewProxy(view, PersonSchema);
-
-				proxy.initialize();
-				proxy.root = { name: "Alice" };
+				view.initialize();
+				view.root = { name: "Alice" };
 
 				// Should not throw (same schema)
-				proxy.upgradeSchema();
+				view.upgradeSchema();
 			});
 		});
 
@@ -998,13 +975,11 @@ describe("View", () => {
 				view.setFieldValue("name", "Alice");
 				view.setFieldValue("age", 30);
 
-				const proxy = createObjectViewProxy(view, PersonSchema);
-
 				// Replace all data via root setter
-				proxy.root = { name: "Bob", age: 25 };
+				view.root = { name: "Bob", age: 25 };
 
-				assert.equal(proxy.root.name, "Bob");
-				assert.equal(proxy.root.age, 25);
+				assert.equal(view.root.name, "Bob");
+				assert.equal(view.root.age, 25);
 			});
 		});
 	});

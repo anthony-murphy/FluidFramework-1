@@ -85,6 +85,12 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	private readonly enableSchemaValidation: boolean;
 	private readonly ignoreStoredSchema: readonly string[] | undefined;
 	private _disposed = false;
+	private readonly rootProxy: Map<string, InferValueSchema<TSchema>>;
+
+	/**
+	 * Error message thrown when accessing a disposed view.
+	 */
+	private static readonly disposedErrorMessage = "Accessed a disposed SchemaView.";
 
 	/**
 	 * Creates a new SchematizedMapView.
@@ -102,6 +108,7 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	) {
 		this.enableSchemaValidation = options?.enableSchemaValidation ?? false;
 		this.ignoreStoredSchema = options?.ignoreStoredSchema;
+		this.rootProxy = this.createRootProxy();
 	}
 
 	/**
@@ -191,6 +198,136 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 		}
 		if (this.persistence !== undefined) {
 			this.persistence.upgradePersistedSchema(encodeSchema(this.schema));
+		}
+	}
+
+	/**
+	 * Creates the root Map proxy for typed map operations.
+	 */
+	private createRootProxy(): Map<string, InferValueSchema<TSchema>> {
+		const getRootProxy = (): Map<string, InferValueSchema<TSchema>> => this.rootProxy;
+		const getVal = (key: string): InferValueSchema<TSchema> | undefined => this.get(key);
+		const setVal = (key: string, value: InferValueSchema<TSchema>): this =>
+			this.set(key, value);
+		const hasKey = (key: string): boolean => this.has(key);
+		const deleteKey = (key: string): boolean => this.delete(key);
+		const clearAll = (): void => this.clear();
+		const getKeys = (): IterableIterator<string> => this.keys();
+		const getValues = (): IterableIterator<InferValueSchema<TSchema>> => this.values();
+		const getEntries = (): IterableIterator<[string, InferValueSchema<TSchema>]> =>
+			this.entries();
+		const getSize = (): number => this.size;
+		const getIterator = (): IterableIterator<[string, InferValueSchema<TSchema>]> =>
+			this[Symbol.iterator]();
+		const isDisposed = (): boolean => this.disposed;
+		// We need an empty object to serve as the proxy target, typed as Map
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+		const mapProxyTarget = {} as unknown as Map<string, InferValueSchema<TSchema>>;
+		const proxy = new Proxy(mapProxyTarget, {
+			get(_target, prop) {
+				if (isDisposed()) {
+					throw new UsageError(SchematizedMapView.disposedErrorMessage);
+				}
+				// Map methods
+				if (prop === "get") {
+					return (key: string) => getVal(key);
+				}
+				if (prop === "set") {
+					return (key: string, value: InferValueSchema<TSchema>) => {
+						setVal(key, value);
+						return getRootProxy(); // Return proxy for chaining like Map
+					};
+				}
+				if (prop === "has") {
+					return (key: string) => hasKey(key);
+				}
+				if (prop === "delete") {
+					return (key: string) => deleteKey(key);
+				}
+				if (prop === "clear") {
+					return () => clearAll();
+				}
+				if (prop === "keys") {
+					return () => getKeys();
+				}
+				if (prop === "values") {
+					return () => getValues();
+				}
+				if (prop === "entries") {
+					return () => getEntries();
+				}
+				if (prop === "forEach") {
+					return (
+						callback: (
+							value: InferValueSchema<TSchema>,
+							key: string,
+							map: Map<string, InferValueSchema<TSchema>>,
+						) => void,
+						thisArg?: unknown,
+					) => {
+						for (const [key, value] of getIterator()) {
+							callback.call(thisArg, value, key, getRootProxy());
+						}
+					};
+				}
+				if (prop === "size") {
+					return getSize();
+				}
+				if (prop === Symbol.iterator) {
+					return () => getIterator();
+				}
+				if (prop === Symbol.toStringTag) {
+					return "Map";
+				}
+				return undefined;
+			},
+			has(_target, prop) {
+				const mapProps = [
+					"get",
+					"set",
+					"has",
+					"delete",
+					"clear",
+					"keys",
+					"values",
+					"entries",
+					"forEach",
+					"size",
+					Symbol.iterator,
+					Symbol.toStringTag,
+				];
+				return mapProps.includes(prop);
+			},
+		});
+		return proxy;
+	}
+
+	/**
+	 * The typed Map root providing map operations on schema data.
+	 *
+	 * @remarks
+	 * Use Map operations through this property:
+	 * ```ts
+	 * view.root.set("key", "value");
+	 * console.log(view.root.get("key"));
+	 * ```
+	 *
+	 * Setting root replaces all entries:
+	 * ```ts
+	 * view.root = new Map([["a", "1"], ["b", "2"]]);
+	 * ```
+	 */
+	public get root(): Map<string, InferValueSchema<TSchema>> {
+		this.ensureNotDisposed();
+		return this.rootProxy;
+	}
+
+	public set root(value: Map<string, InferValueSchema<TSchema>>) {
+		this.ensureNotDisposed();
+		// Clear existing entries and add new ones
+		this.clear();
+		for (const [key, val] of value) {
+			this.set(key, val);
 		}
 	}
 

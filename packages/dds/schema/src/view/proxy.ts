@@ -25,32 +25,14 @@ const disposedErrorMessage = "Accessed a disposed SchemaView.";
  * Create a Proxy that provides property access to a {@link SchematizedObjectView}.
  *
  * @remarks
- * This function creates a JavaScript Proxy that provides a view with:
- * - `root` property: A proxy for typed property access to schema fields
- * - View methods: `compatibility`, `initialize`, `upgradeSchema`, `dispose`
+ * This function is deprecated. The view classes now have `root` property built-in.
+ * Use the view's `root` property directly instead.
  *
- * The `root` property can be read to access data fields, or written to
- * replace all data via `initialize()`.
+ * @deprecated Use SchematizedObjectView directly - it now has a `root` property built-in.
  *
  * @param view - The view to wrap
  * @param schema - The schema defining available fields
  * @returns A proxy providing view structure with root data access
- *
- * @example
- * ```typescript
- * const view = new SchematizedObjectView(storage, UserSchema);
- * const proxy = createObjectViewProxy(view, UserSchema);
- *
- * // Property access through root
- * proxy.root.name = "Alice";
- * console.log(proxy.root.name); // "Alice"
- *
- * // Full replacement
- * proxy.root = { name: "Bob", age: 30 };
- *
- * // View methods still available
- * console.log(proxy.compatibility);
- * ```
  *
  * @internal
  */
@@ -159,39 +141,14 @@ export function createObjectViewProxy<TSchema extends ObjectNodeSchema>(
  * Create a Proxy that provides Map-like access to a {@link SchematizedMapView}.
  *
  * @remarks
- * This function creates a view with:
- * - `root` property: A Map proxy for typed map operations
- * - View methods: `compatibility`, `initialize`, `upgradeSchema`, `dispose`
+ * This function is deprecated. The view classes now have `root` property built-in.
+ * Use the view's `root` property directly instead.
  *
- * The `root` property provides standard Map interface with typed values.
- * Writing to `root` replaces all data via reinitialization.
+ * @deprecated Use SchematizedMapView directly - it now has a `root` property built-in.
  *
  * @param view - The view to wrap
  * @param schema - The schema defining the map value type
  * @returns A view providing root Map access
- *
- * @example
- * ```typescript
- * const view = new SchematizedMapView(storage, ConfigMap);
- * const proxy = createMapViewProxy(view, ConfigMap);
- *
- * // Map operations through root
- * proxy.root.set("key1", "value1");
- * console.log(proxy.root.get("key1")); // "value1"
- * console.log(proxy.root.has("key1")); // true
- * proxy.root.delete("key1");
- *
- * // Iteration through root
- * for (const [key, value] of proxy.root) {
- *   console.log(key, value);
- * }
- *
- * // Full replacement
- * proxy.root = new Map([["newKey", "newValue"]]);
- *
- * // View methods still available
- * console.log(proxy.compatibility);
- * ```
  *
  * @internal
  */

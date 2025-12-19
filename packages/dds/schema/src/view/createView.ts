@@ -20,7 +20,6 @@ import type { SchemaCompatibilityStatus } from "../serialization/index.js";
 
 import { SchematizedObjectView } from "./objectView.js";
 import { SchematizedMapView } from "./mapView.js";
-import { createObjectViewProxy, createMapViewProxy } from "./proxy.js";
 import type { SchemaView } from "./proxyTypes.js";
 import { normalizeViewConfig, type SchemaViewConfiguration } from "./configuration.js";
 
@@ -185,7 +184,7 @@ export function createSchematizedObjectView<TSchema extends ObjectNodeSchema>(
 		enableSchemaValidation: config.enableSchemaValidation,
 		ignoreStoredSchema: config.ignoreStoredSchema,
 	});
-	return createObjectViewProxy(view, config.schema) as ObjectViewResult<TSchema>;
+	return view as unknown as ObjectViewResult<TSchema>;
 }
 
 /**
@@ -233,7 +232,7 @@ export function createSchematizedMapView<TSchema extends MapNodeSchema>(
 		enableSchemaValidation: config.enableSchemaValidation,
 		ignoreStoredSchema: config.ignoreStoredSchema,
 	});
-	return createMapViewProxy(view, config.schema) as MapViewResult<TSchema>;
+	return view as unknown as MapViewResult<TSchema>;
 }
 
 /**
@@ -273,7 +272,7 @@ export function createSchematizedView<TSchema extends RootSchema>(
 	storage: ISchemaStorage,
 	schemaOrConfig: TSchema | SchemaViewConfiguration<TSchema>,
 	persistence?: ISchemaPersistence,
-	options?: CreateViewOptions,
+	_options?: CreateViewOptions,
 ): SchemaView<TSchema> {
 	const config = normalizeViewConfig(schemaOrConfig);
 
@@ -282,7 +281,7 @@ export function createSchematizedView<TSchema extends RootSchema>(
 			enableSchemaValidation: config.enableSchemaValidation,
 			ignoreStoredSchema: config.ignoreStoredSchema,
 		});
-		return createObjectViewProxy(view, config.schema) as unknown as SchemaView<TSchema>;
+		return view as unknown as SchemaView<TSchema>;
 	}
 
 	if (isMapSchema(config.schema)) {
@@ -290,7 +289,7 @@ export function createSchematizedView<TSchema extends RootSchema>(
 			enableSchemaValidation: config.enableSchemaValidation,
 			ignoreStoredSchema: config.ignoreStoredSchema,
 		});
-		return createMapViewProxy(view, config.schema) as unknown as SchemaView<TSchema>;
+		return view as unknown as SchemaView<TSchema>;
 	}
 
 	// For leaf schemas, we can't create a view directly
