@@ -205,7 +205,8 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	 * Creates the root Map proxy for typed map operations.
 	 */
 	private createRootProxy(): Map<string, InferValueSchema<TSchema>> {
-		const getRootProxy = (): Map<string, InferValueSchema<TSchema>> => this.rootProxy;
+		// Capture references to avoid `this` aliasing in proxy handlers
+		const isDisposed = (): boolean => this.disposed;
 		const getVal = (key: string): InferValueSchema<TSchema> | undefined => this.get(key);
 		const setVal = (key: string, value: InferValueSchema<TSchema>): this =>
 			this.set(key, value);
@@ -219,12 +220,12 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 		const getSize = (): number => this.size;
 		const getIterator = (): IterableIterator<[string, InferValueSchema<TSchema>]> =>
 			this[Symbol.iterator]();
-		const isDisposed = (): boolean => this.disposed;
-		// We need an empty object to serve as the proxy target, typed as Map
+
+		// Use object type for the target to enable Reflect fallback
+		const target: object = {};
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-		const mapProxyTarget = {} as unknown as Map<string, InferValueSchema<TSchema>>;
-		const proxy = new Proxy(mapProxyTarget, {
-			get(_target, prop) {
+		const proxy = new Proxy(target, {
+			get(proxyTarget, prop, receiver): unknown {
 				if (isDisposed()) {
 					throw new UsageError(SchematizedMapView.disposedErrorMessage);
 				}
@@ -235,7 +236,7 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 				if (prop === "set") {
 					return (key: string, value: InferValueSchema<TSchema>) => {
 						setVal(key, value);
-						return getRootProxy(); // Return proxy for chaining like Map
+						return proxy; // Return proxy for chaining like Map
 					};
 				}
 				if (prop === "has") {
@@ -266,7 +267,7 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 						thisArg?: unknown,
 					) => {
 						for (const [key, value] of getIterator()) {
-							callback.call(thisArg, value, key, getRootProxy());
+							callback.call(thisArg, value, key, proxy);
 						}
 					};
 				}
@@ -279,9 +280,11 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 				if (prop === Symbol.toStringTag) {
 					return "Map";
 				}
-				return undefined;
+				// Reflect fallback for non-Map properties
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+				return Reflect.get(proxyTarget, prop, receiver);
 			},
-			has(_target, prop) {
+			has(proxyTarget, prop) {
 				const mapProps = [
 					"get",
 					"set",
@@ -296,9 +299,12 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 					Symbol.iterator,
 					Symbol.toStringTag,
 				];
-				return mapProps.includes(prop);
+				if (mapProps.includes(prop)) {
+					return true;
+				}
+				return Reflect.has(proxyTarget, prop);
 			},
-		});
+		}) as Map<string, InferValueSchema<TSchema>>;
 		return proxy;
 	}
 

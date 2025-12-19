@@ -84,9 +84,9 @@ Implementation tasks from decisions #10-21, ordered by dependency:
 
    - [DONE] Move `root` property (with proxy) into view classes directly
    - [DONE] `viewWith()` returns view class instance, not wrapper object
-   - [ ] Remove `createObjectViewProxy()` / `createMapViewProxy()` functions (currently deprecated)
+   - [DONE] Remove `createObjectViewProxy()` / `createMapViewProxy()` functions (proxy.ts deleted)
+   - [DONE] Refactor proxy handlers to use Reflect fallback (get uses Reflect.get for non-fields)
    - [ ] Change `sf.object()` to return a class (for Reflect/inheritance)
-   - [ ] Refactor proxy handlers to use Reflect fallback
    - [ ] Change proxy target to be schema class instance
    - [ ] Ensure `receiver` passed correctly for `this` binding
    - [ ] Remove `getFieldValue()` / `setFieldValue()` from view classes

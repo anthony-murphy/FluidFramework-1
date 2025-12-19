@@ -210,24 +210,30 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 	 * Creates the root proxy for typed property access to schema fields.
 	 */
 	private createRootProxy(): NodeFromSchema<TSchema> {
+		// Capture references to avoid `this` aliasing in proxy handlers
 		const schema = this.schema;
+		const isDisposed = (): boolean => this.disposed;
 		const getFieldValue = (prop: string): unknown => this.getFieldValue(prop);
 		const setFieldValue = (prop: string, value: unknown): void =>
 			this.setFieldValue(prop, value);
 		const hasField = (prop: string): boolean => this.hasField(prop);
-		const isDisposed = (): boolean => this.disposed;
+
+		// Use object type for the target to avoid type instantiation issues with Reflect
+		const target: object = {};
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-		return new Proxy({} as NodeFromSchema<TSchema>, {
-			get(_target, prop) {
+		return new Proxy(target, {
+			get(proxyTarget, prop, receiver): unknown {
 				if (isDisposed()) {
 					throw new UsageError(SchematizedObjectView.disposedErrorMessage);
 				}
 				if (typeof prop === "string" && prop in schema.fields) {
 					return getFieldValue(prop);
 				}
-				return undefined;
+				// Reflect fallback for non-schema properties (enables custom methods/getters when target has prototype)
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+				return Reflect.get(proxyTarget, prop, receiver);
 			},
-			set(_target, prop, value) {
+			set(proxyTarget, prop, value, _receiver) {
 				if (isDisposed()) {
 					throw new UsageError(SchematizedObjectView.disposedErrorMessage);
 				}
@@ -235,25 +241,45 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 					setFieldValue(prop, value);
 					return true;
 				}
+				// Don't allow setting unknown properties on schema-backed objects
+				// This matches the original behavior and prevents accidental property pollution
 				return false;
 			},
-			has(_target, prop) {
+			has(proxyTarget, prop) {
 				// Check if the field has a value (like hasField), not just if it's in the schema
 				if (typeof prop === "string" && prop in schema.fields) {
 					return hasField(prop);
 				}
-				return false;
+				return Reflect.has(proxyTarget, prop);
 			},
-			ownKeys() {
-				return Object.keys(schema.fields);
+			ownKeys(proxyTarget) {
+				return [
+					...Object.keys(schema.fields),
+					...Reflect.ownKeys(proxyTarget).filter(
+						(k) => typeof k !== "string" || !(k in schema.fields),
+					),
+				];
 			},
-			getOwnPropertyDescriptor(_target, prop) {
+			getOwnPropertyDescriptor(proxyTarget, prop) {
 				if (typeof prop === "string" && prop in schema.fields) {
-					return { enumerable: true, configurable: true };
+					return { enumerable: true, configurable: true, writable: true };
 				}
-				return undefined;
+				return Reflect.getOwnPropertyDescriptor(proxyTarget, prop);
 			},
-		});
+			deleteProperty(proxyTarget, prop) {
+				if (typeof prop === "string" && prop in schema.fields) {
+					// For schema fields, setting to undefined clears optional fields
+					// For required fields, this will throw in setFieldValue
+					const fieldSchema = schema.fields[prop];
+					if (fieldSchema !== undefined && fieldSchema.kind === FieldKind.Optional) {
+						setFieldValue(prop, undefined);
+						return true;
+					}
+					return false; // Cannot delete required fields
+				}
+				return Reflect.deleteProperty(proxyTarget, prop);
+			},
+		}) as NodeFromSchema<TSchema>;
 	}
 
 	/**

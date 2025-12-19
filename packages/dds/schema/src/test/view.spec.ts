@@ -959,5 +959,39 @@ describe("View", () => {
 				view.upgradeSchema();
 			});
 		});
+
+		describe("Reflect fallback for prototype methods", () => {
+			it("Reflect.get on non-schema properties returns undefined on plain proxy", () => {
+				const PersonSchema = sf.object("PersonReflect", {
+					name: sf.string,
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
+
+				view.initialize();
+				view.setFieldValue("name", "Alice");
+
+				// Non-schema property should return undefined (since target is {})
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				assert.equal((view.root as any).nonExistentProp, undefined);
+			});
+
+			it("Reflect.has on non-schema properties returns false on plain proxy", () => {
+				const PersonSchema = sf.object("PersonReflectHas", {
+					name: sf.string,
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
+
+				view.initialize();
+
+				// Non-schema property should not be "in" the proxy
+				assert.equal("nonExistentProp" in view.root, false);
+			});
+		});
 	});
 });
