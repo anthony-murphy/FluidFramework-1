@@ -19,6 +19,7 @@ export type {
 	IDirectory,
 	IDirectoryEvents,
 	IDirectoryValueChanged,
+	ISchematizedSharedMap,
 	ISharedDirectory,
 	ISharedDirectoryEvents,
 	ISharedMap,

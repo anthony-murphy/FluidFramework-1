@@ -9,11 +9,14 @@ import type {
 	IEventProvider,
 	IEventThisPlaceHolder,
 } from "@fluidframework/core-interfaces";
-import type { RootSchema, ViewFor } from "@fluidframework/schema/internal";
+import type { RootSchema, SchematizedView } from "@fluidframework/schema/internal";
 import type {
 	ISharedObject,
 	ISharedObjectEvents,
 } from "@fluidframework/shared-object-base/internal";
+
+// Re-export SchematizedView for consumers
+export type { SchematizedView } from "@fluidframework/schema/internal";
 
 /**
  * Type of "valueChanged" event parameter.
@@ -402,24 +405,23 @@ export interface ISharedMap extends ISharedObject<ISharedMapEvents>, Map<string,
 	 * @returns The {@link ISharedMap} itself
 	 */
 	set<T = unknown>(key: string, value: T): this;
+}
 
+/**
+ * Extension of {@link ISharedMap} with schematized view support.
+ *
+ * @remarks
+ * This interface adds the experimental {@link ISchematizedSharedMap.viewWith} method
+ * for typed, schema-based access to map data.
+ *
+ * @sealed
+ * @legacy @alpha
+ */
+export interface ISchematizedSharedMap extends ISharedMap {
 	/**
 	 * Get a typed, schematized view of this map.
 	 * @param schema - The schema to use for the view (ObjectNodeSchema or MapNodeSchema)
 	 * @returns A view with typed access and compatibility status
 	 */
-	viewWith<TSchema extends RootSchema>(schema: TSchema): ViewFor<TSchema>;
+	viewWith<TSchema extends RootSchema>(schema: TSchema): SchematizedView<TSchema>;
 }
-
-/**
- * A schematized view of a SharedMap.
- *
- * @remarks
- * This type represents the typed view returned by {@link ISharedMap.viewWith}.
- * The concrete type depends on the schema provided:
- * - For ObjectNodeSchema: Returns a SchematizedObjectView
- * - For MapNodeSchema: Returns a SchematizedMapView
- *
- * @deprecated Use {@link ViewFor} from `@fluidframework/schema` instead.
- */
-export type SchematizedView<TSchema extends RootSchema> = ViewFor<TSchema>;

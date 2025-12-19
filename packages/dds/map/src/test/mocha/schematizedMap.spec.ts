@@ -7,17 +7,17 @@ import { strict as assert } from "node:assert";
 
 import { MockFluidDataStoreRuntime } from "@fluidframework/test-runtime-utils/internal";
 
-import { SharedMap } from "../../index.js";
+import { ISchematizedSharedMap, SharedMap } from "../../index.js";
 import { SchemaFactory, SchemaValidationError } from "@fluidframework/schema/internal";
 
 /**
  * Creates a local SharedMap for testing.
  */
-function createLocalMap(id: string): SharedMap {
+function createLocalMap(id: string): ISchematizedSharedMap {
 	const dataStoreRuntime = new MockFluidDataStoreRuntime({
 		registry: [SharedMap.getFactory()],
 	});
-	const map = SharedMap.create(dataStoreRuntime, id);
+	const map = SharedMap.create(dataStoreRuntime, id) as ISchematizedSharedMap;
 	return map;
 }
 
@@ -26,7 +26,7 @@ describe("SharedMap.viewWith", () => {
 
 	describe("ObjectNodeSchema views", () => {
 		describe("basic operations", () => {
-			it("returns a SchematizedObjectView for ObjectNodeSchema", () => {
+			it("returns a proxy view for ObjectNodeSchema", () => {
 				const PersonSchema = sf.object("Person", {
 					name: sf.string,
 					age: sf.number,
@@ -38,14 +38,6 @@ describe("SharedMap.viewWith", () => {
 				// View should have the expected interface
 				assert.ok(view, "viewWith should return a view");
 				assert.ok(typeof view.initialize === "function", "view should have initialize method");
-				assert.ok(
-					typeof view.getFieldValue === "function",
-					"view should have getFieldValue method",
-				);
-				assert.ok(
-					typeof view.setFieldValue === "function",
-					"view should have setFieldValue method",
-				);
 			});
 
 			it("initializes and retrieves field values", () => {
@@ -59,8 +51,8 @@ describe("SharedMap.viewWith", () => {
 
 				view.initialize({ name: "Alice", age: 30 });
 
-				assert.equal(view.getFieldValue("name"), "Alice");
-				assert.equal(view.getFieldValue("age"), 30);
+				assert.equal(view.name, "Alice");
+				assert.equal(view.age, 30);
 			});
 
 			it("sets and retrieves updated field values", () => {
@@ -73,9 +65,9 @@ describe("SharedMap.viewWith", () => {
 				const view = map.viewWith(PersonSchema);
 
 				view.initialize({ name: "Alice", age: 30 });
-				view.setFieldValue("age", 31);
+				(view as { age: number }).age = 31;
 
-				assert.equal(view.getFieldValue("age"), 31);
+				assert.equal(view.age, 31);
 			});
 
 			it("handles optional fields when present", () => {
@@ -89,7 +81,7 @@ describe("SharedMap.viewWith", () => {
 
 				view.initialize({ name: "Alice", nickname: "Ali" });
 
-				assert.equal(view.getFieldValue("nickname"), "Ali");
+				assert.equal(view.nickname, "Ali");
 			});
 
 			it("handles optional fields when absent", () => {
@@ -103,7 +95,7 @@ describe("SharedMap.viewWith", () => {
 
 				view.initialize({ name: "Alice" });
 
-				assert.equal(view.getFieldValue("nickname"), undefined);
+				assert.equal(view.nickname, undefined);
 			});
 
 			it("allows setting optional fields to undefined", () => {
@@ -116,13 +108,13 @@ describe("SharedMap.viewWith", () => {
 				const view = map.viewWith(PersonSchema);
 
 				view.initialize({ name: "Alice", nickname: "Ali" });
-				assert.equal(view.getFieldValue("nickname"), "Ali");
+				assert.equal(view.nickname, "Ali");
 
-				view.setFieldValue("nickname", undefined);
-				assert.equal(view.getFieldValue("nickname"), undefined);
+				(view as { nickname: string | undefined }).nickname = undefined;
+				assert.equal(view.nickname, undefined);
 			});
 
-			it("checks field existence with hasField", () => {
+			it("checks field existence with 'in' operator", () => {
 				const PersonSchema = sf.object("PersonHasField", {
 					name: sf.string,
 					nickname: sf.optional(sf.string),
@@ -133,8 +125,8 @@ describe("SharedMap.viewWith", () => {
 
 				view.initialize({ name: "Alice" });
 
-				assert.equal(view.hasField("name"), true);
-				assert.equal(view.hasField("nickname"), false);
+				assert.equal("name" in view, true);
+				assert.equal("nickname" in view, false);
 			});
 		});
 
@@ -258,19 +250,6 @@ describe("SharedMap.viewWith", () => {
 				assert.equal(viewV2.compatibility.canUpgrade, false);
 			});
 		});
-
-		describe("nodeSchema property", () => {
-			it("returns the schema", () => {
-				const PersonSchema = sf.object("PersonNodeSchema", {
-					name: sf.string,
-				});
-
-				const map = createLocalMap("testMap");
-				const view = map.viewWith(PersonSchema);
-
-				assert.strictEqual(view.nodeSchema, PersonSchema);
-			});
-		});
 	});
 
 	describe("MapNodeSchema views", () => {
@@ -279,84 +258,96 @@ describe("SharedMap.viewWith", () => {
 				const ConfigSchema = sf.map("Config", sf.string);
 
 				const map = createLocalMap("testMap");
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
 				const view = map.viewWith(ConfigSchema) as any;
 
 				// View should have Map-like interface
 				assert.ok(view, "viewWith should return a view");
+				/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 				assert.ok(typeof view.initialize === "function", "view should have initialize method");
 				assert.ok(typeof view.get === "function", "view should have get method");
 				assert.ok(typeof view.set === "function", "view should have set method");
 				assert.ok(typeof view.delete === "function", "view should have delete method");
 				assert.ok(typeof view.has === "function", "view should have has method");
+				/* eslint-enable @typescript-eslint/no-unsafe-member-access */
 			});
 
 			it("gets and sets values", () => {
 				const ConfigSchema = sf.map("ConfigGetSet", sf.string);
 
 				const map = createLocalMap("testMap");
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
 				const view = map.viewWith(ConfigSchema) as any;
 
+				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 				view.initialize(new Map([["key1", "value1"]]));
 
 				assert.equal(view.get("key1"), "value1");
 
 				view.set("key2", "value2");
 				assert.equal(view.get("key2"), "value2");
+				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 			});
 
 			it("returns undefined for missing keys", () => {
 				const ConfigSchema = sf.map("ConfigMissing", sf.string);
 
 				const map = createLocalMap("testMap");
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
 				const view = map.viewWith(ConfigSchema) as any;
 
+				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 				view.initialize(new Map());
 
 				assert.equal(view.get("nonexistent"), undefined);
+				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 			});
 
 			it("deletes entries", () => {
 				const ConfigSchema = sf.map("ConfigDelete", sf.string);
 
 				const map = createLocalMap("testMap");
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
 				const view = map.viewWith(ConfigSchema) as any;
 
+				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 				view.initialize(new Map([["key1", "value1"]]));
 				assert.equal(view.has("key1"), true);
 
 				const deleted = view.delete("key1");
 				assert.equal(deleted, true);
 				assert.equal(view.has("key1"), false);
+				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 			});
 
 			it("delete returns false for non-existent keys", () => {
 				const ConfigSchema = sf.map("ConfigDeleteNonExist", sf.string);
 
 				const map = createLocalMap("testMap");
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
 				const view = map.viewWith(ConfigSchema) as any;
 
+				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 				view.initialize(new Map());
 
 				const deleted = view.delete("nonexistent");
 				assert.equal(deleted, false);
+				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 			});
 
 			it("has returns correct boolean", () => {
 				const ConfigSchema = sf.map("ConfigHas", sf.string);
 
 				const map = createLocalMap("testMap");
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
 				const view = map.viewWith(ConfigSchema) as any;
 
+				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 				view.initialize(new Map([["exists", "value"]]));
 
 				assert.equal(view.has("exists"), true);
 				assert.equal(view.has("notExists"), false);
+				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 			});
 		});
 
@@ -365,9 +356,10 @@ describe("SharedMap.viewWith", () => {
 				const ConfigSchema = sf.map("ConfigSize", sf.string);
 
 				const map = createLocalMap("testMap");
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
 				const view = map.viewWith(ConfigSchema) as any;
 
+				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 				view.initialize(new Map());
 				assert.equal(view.size, 0);
 
@@ -379,6 +371,7 @@ describe("SharedMap.viewWith", () => {
 
 				view.delete("key1");
 				assert.equal(view.size, 1);
+				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 			});
 		});
 
@@ -387,9 +380,10 @@ describe("SharedMap.viewWith", () => {
 				const ConfigSchema = sf.map("ConfigKeys", sf.string);
 
 				const map = createLocalMap("testMap");
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
 				const view = map.viewWith(ConfigSchema) as any;
 
+				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 				view.initialize(
 					new Map([
 						["key1", "value1"],
@@ -398,6 +392,7 @@ describe("SharedMap.viewWith", () => {
 				);
 
 				const keys = [...view.keys()];
+				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 				assert.deepEqual(keys.sort(), ["key1", "key2"]);
 			});
 
@@ -405,9 +400,10 @@ describe("SharedMap.viewWith", () => {
 				const ConfigSchema = sf.map("ConfigValues", sf.string);
 
 				const map = createLocalMap("testMap");
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
 				const view = map.viewWith(ConfigSchema) as any;
 
+				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 				view.initialize(
 					new Map([
 						["key1", "value1"],
@@ -416,6 +412,7 @@ describe("SharedMap.viewWith", () => {
 				);
 
 				const values = [...view.values()];
+				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 				assert.deepEqual(values.sort(), ["value1", "value2"]);
 			});
 
@@ -423,9 +420,10 @@ describe("SharedMap.viewWith", () => {
 				const ConfigSchema = sf.map("ConfigEntries", sf.string);
 
 				const map = createLocalMap("testMap");
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
 				const view = map.viewWith(ConfigSchema) as any;
 
+				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 				view.initialize(
 					new Map([
 						["key1", "value1"],
@@ -434,6 +432,7 @@ describe("SharedMap.viewWith", () => {
 				);
 
 				const entries = [...view.entries()];
+				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 				assert.equal(entries.length, 2);
 				const entryMap = new Map(entries);
 				assert.equal(entryMap.get("key1"), "value1");
@@ -444,9 +443,10 @@ describe("SharedMap.viewWith", () => {
 				const ConfigSchema = sf.map("ConfigIterable", sf.string);
 
 				const map = createLocalMap("testMap");
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
 				const view = map.viewWith(ConfigSchema) as any;
 
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
 				view.initialize(
 					new Map([
 						["key1", "value1"],
@@ -454,8 +454,9 @@ describe("SharedMap.viewWith", () => {
 					]),
 				);
 
-				const collected: Array<[string, string]> = [];
+				const collected: [string, string][] = [];
 				for (const entry of view) {
+					// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 					collected.push(entry);
 				}
 
@@ -466,9 +467,10 @@ describe("SharedMap.viewWith", () => {
 				const ConfigSchema = sf.map("ConfigForEach", sf.string);
 
 				const map = createLocalMap("testMap");
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
 				const view = map.viewWith(ConfigSchema) as any;
 
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
 				view.initialize(
 					new Map([
 						["key1", "value1"],
@@ -476,10 +478,10 @@ describe("SharedMap.viewWith", () => {
 					]),
 				);
 
-				const collected: Array<[string, string]> = [];
-				view.forEach((value: string, key: string) => {
-					collected.push([key, value]);
-				});
+				const collected: [string, string][] = [];
+				for (const [key, value] of view) {
+					collected.push([key as string, value as string]);
+				}
 
 				assert.equal(collected.length, 2);
 				const entryMap = new Map(collected);
@@ -492,9 +494,10 @@ describe("SharedMap.viewWith", () => {
 				const ConfigSchema = sf.map("ConfigCanInit", sf.string);
 
 				const map = createLocalMap("testMap");
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
 				const view = map.viewWith(ConfigSchema) as any;
 
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 				assert.equal(view.compatibility.canInitialize, true);
 			});
 
@@ -502,11 +505,13 @@ describe("SharedMap.viewWith", () => {
 				const ConfigSchema = sf.map("ConfigCanInitAfter", sf.string);
 
 				const map = createLocalMap("testMap");
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
 				const view = map.viewWith(ConfigSchema) as any;
 
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
 				view.initialize(new Map());
 
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 				assert.equal(view.compatibility.canInitialize, false);
 			});
 
@@ -514,24 +519,14 @@ describe("SharedMap.viewWith", () => {
 				const ConfigSchema = sf.map("ConfigCanView", sf.string);
 
 				const map = createLocalMap("testMap");
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
 				const view = map.viewWith(ConfigSchema) as any;
 
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
 				view.initialize(new Map([["key", "value"]]));
 
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 				assert.equal(view.compatibility.canView, true);
-			});
-		});
-
-		describe("nodeSchema property", () => {
-			it("returns the schema", () => {
-				const ConfigSchema = sf.map("ConfigNodeSchema", sf.string);
-
-				const map = createLocalMap("testMap");
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				const view = map.viewWith(ConfigSchema) as any;
-
-				assert.strictEqual(view.nodeSchema, ConfigSchema);
 			});
 		});
 
@@ -540,23 +535,27 @@ describe("SharedMap.viewWith", () => {
 				const ConfigSchema = sf.map("ConfigValid", sf.string);
 
 				const map = createLocalMap("testMap");
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
 				const view = map.viewWith(ConfigSchema) as any;
 
+				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 				// Should not throw for valid content
 				view.initialize(new Map([["key", "value"]]));
 				assert.equal(view.get("key"), "value");
+				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 			});
 
 			it("throws when initializing twice", () => {
 				const ConfigSchema = sf.map("ConfigTwice", sf.string);
 
 				const map = createLocalMap("testMap");
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
 				const view = map.viewWith(ConfigSchema) as any;
 
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
 				view.initialize(new Map());
 
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
 				assert.throws(() => view.initialize(new Map()));
 			});
 		});
@@ -569,11 +568,10 @@ describe("SharedMap.viewWith", () => {
 
 			const map = createLocalMap("testMap");
 
-			assert.throws(
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				() => map.viewWith(LeafSchema as any),
-				/Schema must be an ObjectNodeSchema or MapNodeSchema/,
-			);
+			assert.throws(() => {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+				(map as any).viewWith(LeafSchema);
+			}, /Schema must be an ObjectNodeSchema or MapNodeSchema/);
 		});
 	});
 
@@ -594,7 +592,7 @@ describe("SharedMap.viewWith", () => {
 			assert.equal(map.get("age"), 30);
 
 			// Update via view
-			view.setFieldValue("age", 31);
+			(view as { age: number }).age = 31;
 			assert.equal(map.get("age"), 31);
 		});
 
@@ -613,7 +611,7 @@ describe("SharedMap.viewWith", () => {
 			map.set("age", 32);
 
 			// View should see the change
-			assert.equal(view.getFieldValue("age"), 32);
+			assert.equal(view.age, 32);
 		});
 	});
 });

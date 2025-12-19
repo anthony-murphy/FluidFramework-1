@@ -175,11 +175,7 @@
 		"typescript": "~5.4.5"
 	},
 	"typeValidation": {
-		"broken": {
-			"TypeAlias_SharedMap": {
-				"forwardCompat": false
-			}
-		},
+		"broken": {},
 		"entrypoint": "legacy"
 	}
 }

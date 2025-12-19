@@ -52,7 +52,7 @@ export function createConnectedDirectory(
 
 function createLocalMap(id: string): SharedMapInternal {
 	const factory = SharedMap.getFactory();
-	return factory.create(new MockFluidDataStoreRuntime(), id) as SharedMapInternal;
+	return factory.create(new MockFluidDataStoreRuntime(), id) as unknown as SharedMapInternal;
 }
 
 async function populate(content: unknown): Promise<ISharedDirectory> {

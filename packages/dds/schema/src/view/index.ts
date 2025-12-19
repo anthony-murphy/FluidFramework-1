@@ -19,6 +19,8 @@ export { SchematizedObjectView } from "./objectView.js";
 
 export { SchematizedMapView } from "./mapView.js";
 
-export { createObjectViewProxy } from "./proxy.js";
+export { createObjectViewProxy, createMapViewProxy } from "./proxy.js";
 
 export type { ViewFor } from "./viewFor.js";
+
+export type { SchematizedObject, SchematizedMap, SchematizedView } from "./proxyTypes.js";

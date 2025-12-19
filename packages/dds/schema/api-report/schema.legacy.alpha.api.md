@@ -24,6 +24,13 @@ export function buildSchemaRegistry(rootSchema: NodeSchema): SchemaRegistry;
 export function checkSchemaCompatibility(stored: EncodedSchema | undefined, view: NodeSchema): SchemaCompatibilityStatus;
 
 // @alpha @legacy
+export function createMapViewProxy<TSchema extends MapNodeSchema>(view: SchematizedMapView<TSchema>, _schema: TSchema): Map<string, InferValueSchema<TSchema>> & {
+    compatibility: SchemaCompatibilityStatus;
+    initialize: (content: Map<string, InferValueSchema<TSchema>>) => void;
+    upgradeSchema: () => void;
+};
+
+// @alpha @legacy
 export function createObjectViewProxy<TSchema extends ObjectNodeSchema>(view: SchematizedObjectView<TSchema>, schema: TSchema): NodeFromSchema<TSchema> & {
     compatibility: SchemaCompatibilityStatus;
     initialize: (content: NodeFromSchema<TSchema>) => void;
@@ -271,6 +278,13 @@ export type SchemaKind<T> = T extends TypedLeafNodeSchema ? typeof NodeKind.Leaf
 export type SchemaRegistry = ReadonlyMap<string, NodeSchema>;
 
 // @alpha @legacy
+export type SchematizedMap<TSchema extends MapNodeSchema> = Map<string, InferValueSchema<TSchema>> & {
+    readonly compatibility: SchemaCompatibilityStatus;
+    initialize: (content: Map<string, InferValueSchema<TSchema>>) => void;
+    upgradeSchema: () => void;
+};
+
+// @alpha @legacy
 export class SchematizedMapView<TSchema extends MapNodeSchema> implements Iterable<[string, InferValueSchema<TSchema>]> {
     [Symbol.iterator](): IterableIterator<[string, InferValueSchema<TSchema>]>;
     constructor(storage: ISchemaStorage, schema: TSchema, persistence?: ISchemaPersistence | undefined);
@@ -291,6 +305,13 @@ export class SchematizedMapView<TSchema extends MapNodeSchema> implements Iterab
 }
 
 // @alpha @legacy
+export type SchematizedObject<TSchema extends ObjectNodeSchema> = NodeFromSchema<TSchema> & {
+    readonly compatibility: SchemaCompatibilityStatus;
+    initialize: (content: NodeFromSchema<TSchema>) => void;
+    upgradeSchema: () => void;
+};
+
+// @alpha @legacy
 export class SchematizedObjectView<TSchema extends ObjectNodeSchema> {
     constructor(storage: ISchemaStorage, schema: TSchema, persistence?: ISchemaPersistence | undefined);
     get compatibility(): SchemaCompatibilityStatus;
@@ -301,6 +322,9 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> {
     setFieldValue<K extends keyof TSchema["fields"] & string>(fieldName: K, value: unknown): void;
     upgradeSchema(): void;
 }
+
+// @alpha @legacy
+export type SchematizedView<TSchema extends RootSchema> = TSchema extends ObjectNodeSchema ? SchematizedObject<TSchema> : TSchema extends MapNodeSchema ? SchematizedMap<TSchema> : never;
 
 // @alpha @legacy
 export class SchemaValidationError extends Error {

@@ -119,5 +119,11 @@ export {
 	SchematizedMapView,
 	SchemaValidationError,
 	createObjectViewProxy,
+	createMapViewProxy,
 } from "./view/index.js";
-export type { ViewFor } from "./view/index.js";
+export type {
+	ViewFor,
+	SchematizedObject,
+	SchematizedMap,
+	SchematizedView,
+} from "./view/index.js";

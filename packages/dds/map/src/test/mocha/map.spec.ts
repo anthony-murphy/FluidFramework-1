@@ -44,7 +44,7 @@ function createLocalMap(id: string): SharedMapInternal {
 		registry: [SharedMap.getFactory()],
 	});
 	const map = SharedMap.create(dataStoreRuntime, id);
-	return map as SharedMapInternal;
+	return map as unknown as SharedMapInternal;
 }
 
 describe("Map", () => {
