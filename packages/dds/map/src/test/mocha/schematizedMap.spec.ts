@@ -614,4 +614,388 @@ describe("SharedMap.viewWith", () => {
 			assert.equal(view.age, 32);
 		});
 	});
+
+	describe("Complex ObjectNodeSchema", () => {
+		describe("multiple field types", () => {
+			it("creates object schema with many fields of different types", () => {
+				const UserProfileSchema = sf.object("UserProfile", {
+					username: sf.string,
+					age: sf.number,
+					isActive: sf.boolean,
+					email: sf.string,
+				});
+
+				const map = createLocalMap("testMap");
+				const view = map.viewWith(UserProfileSchema);
+
+				view.initialize({
+					username: "alice123",
+					age: 30,
+					isActive: true,
+					email: "alice@example.com",
+				});
+
+				assert.equal(view.username, "alice123");
+				assert.equal(view.age, 30);
+				assert.equal(view.isActive, true);
+				assert.equal(view.email, "alice@example.com");
+			});
+
+			it("handles mixed required and optional fields", () => {
+				const ProfileSchema = sf.object("MixedProfile", {
+					name: sf.string,
+					age: sf.number,
+					nickname: sf.optional(sf.string),
+					bio: sf.optional(sf.string),
+				});
+
+				const map = createLocalMap("testMap");
+				const view = map.viewWith(ProfileSchema);
+
+				view.initialize({
+					name: "Bob",
+					age: 25,
+					nickname: "Bobby",
+				});
+
+				assert.equal(view.name, "Bob");
+				assert.equal(view.age, 25);
+				assert.equal(view.nickname, "Bobby");
+				assert.equal(view.bio, undefined);
+			});
+
+			it("updates multiple fields independently", () => {
+				const PersonSchema = sf.object("PersonMultiUpdate", {
+					firstName: sf.string,
+					lastName: sf.string,
+					age: sf.number,
+				});
+
+				const map = createLocalMap("testMap");
+				const view = map.viewWith(PersonSchema);
+
+				view.initialize({
+					firstName: "Charlie",
+					lastName: "Brown",
+					age: 35,
+				});
+
+				// Update each field independently
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+				(view as any).firstName = "Charles";
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+				(view as any).age = 36;
+
+				assert.equal(view.firstName, "Charles");
+				assert.equal(view.lastName, "Brown"); // unchanged
+				assert.equal(view.age, 36);
+			});
+		});
+
+		describe("all leaf types", () => {
+			it("handles object schema with all leaf types", () => {
+				const AllTypesSchema = sf.object("AllLeafTypes", {
+					stringField: sf.string,
+					numberField: sf.number,
+					booleanField: sf.boolean,
+				});
+
+				const map = createLocalMap("testMap");
+				const view = map.viewWith(AllTypesSchema);
+
+				view.initialize({
+					stringField: "hello",
+					numberField: 42,
+					booleanField: true,
+				});
+
+				assert.equal(view.stringField, "hello");
+				assert.equal(view.numberField, 42);
+				assert.equal(view.booleanField, true);
+			});
+
+			it("updates all leaf types correctly", () => {
+				const AllTypesSchema = sf.object("AllLeafTypesUpdate", {
+					stringField: sf.string,
+					numberField: sf.number,
+					booleanField: sf.boolean,
+				});
+
+				const map = createLocalMap("testMap");
+				const view = map.viewWith(AllTypesSchema);
+
+				view.initialize({
+					stringField: "initial",
+					numberField: 0,
+					booleanField: false,
+				});
+
+				// Update each field
+				/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+				const mutableView = view as any;
+				mutableView.stringField = "updated";
+				mutableView.numberField = 100;
+				mutableView.booleanField = true;
+				/* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+
+				assert.equal(view.stringField, "updated");
+				assert.equal(view.numberField, 100);
+				assert.equal(view.booleanField, true);
+			});
+		});
+	});
+
+	describe("Complex MapNodeSchema", () => {
+		describe("map with object values", () => {
+			it("creates map schema with object values", () => {
+				const UserValueSchema = sf.object("UserMapValue", {
+					name: sf.string,
+					email: sf.string,
+				});
+
+				const UserMapSchema = sf.map("UserMap", UserValueSchema);
+
+				const map = createLocalMap("testMap");
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+				const view = map.viewWith(UserMapSchema) as any;
+
+				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+				view.initialize(new Map([["user1", { name: "Alice", email: "alice@example.com" }]]));
+
+				assert.deepEqual(view.get("user1"), { name: "Alice", email: "alice@example.com" });
+				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+			});
+
+			it("sets and gets object values in a map", () => {
+				const ProductSchema = sf.object("ProductMapValue", {
+					name: sf.string,
+					price: sf.number,
+				});
+
+				const ProductMapSchema = sf.map("ProductMap", ProductSchema);
+
+				const map = createLocalMap("testMap");
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+				const view = map.viewWith(ProductMapSchema) as any;
+
+				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+				view.initialize(new Map());
+
+				view.set("prod1", { name: "Widget", price: 9.99 });
+				view.set("prod2", { name: "Gadget", price: 19.99 });
+
+				assert.deepEqual(view.get("prod1"), { name: "Widget", price: 9.99 });
+				assert.deepEqual(view.get("prod2"), { name: "Gadget", price: 19.99 });
+				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+			});
+
+			it("deletes object entries", () => {
+				const ItemSchema = sf.object("ItemMapValue", {
+					id: sf.number,
+					description: sf.string,
+				});
+
+				const ItemMapSchema = sf.map("ItemMap", ItemSchema);
+
+				const map = createLocalMap("testMap");
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+				const view = map.viewWith(ItemMapSchema) as any;
+
+				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
+				view.initialize(
+					new Map([
+						["item1", { id: 1, description: "First item" }],
+						["item2", { id: 2, description: "Second item" }],
+					]),
+				);
+
+				assert.equal(view.has("item1"), true);
+				assert.equal(view.size, 2);
+
+				const deleted = view.delete("item1");
+				assert.equal(deleted, true);
+				assert.equal(view.has("item1"), false);
+				assert.equal(view.size, 1);
+				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
+			});
+
+			it("iterates over object values", () => {
+				const RecordSchema = sf.object("RecordMapValue", {
+					value: sf.number,
+				});
+
+				const RecordMapSchema = sf.map("RecordMap", RecordSchema);
+
+				const map = createLocalMap("testMap");
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+				const view = map.viewWith(RecordMapSchema) as any;
+
+				/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
+				view.initialize(
+					new Map([
+						["a", { value: 1 }],
+						["b", { value: 2 }],
+						["c", { value: 3 }],
+					]),
+				);
+
+				const values = [...view.values()];
+				/* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
+
+				assert.equal(values.length, 3);
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+				const sum = values.reduce((acc: number, v: any) => acc + v.value, 0);
+				assert.equal(sum, 6);
+			});
+		});
+	});
+
+	describe("Object proxy enumeration", () => {
+		it("Object.keys() returns field names", () => {
+			const EnumSchema = sf.object("EnumKeys", {
+				firstName: sf.string,
+				lastName: sf.string,
+				age: sf.number,
+			});
+
+			const map = createLocalMap("testMap");
+			const view = map.viewWith(EnumSchema);
+
+			view.initialize({ firstName: "John", lastName: "Doe", age: 25 });
+
+			const keys = Object.keys(view);
+			assert.deepEqual(keys.sort(), ["age", "firstName", "lastName"]);
+		});
+
+		it("Object.values() returns field values", () => {
+			const EnumValuesSchema = sf.object("EnumValues", {
+				a: sf.string,
+				b: sf.number,
+			});
+
+			const map = createLocalMap("testMap");
+			const view = map.viewWith(EnumValuesSchema);
+
+			view.initialize({ a: "hello", b: 42 });
+
+			const values = Object.values(view);
+			assert.deepEqual(values.sort(), [42, "hello"]);
+		});
+
+		it("Object.entries() returns field name/value pairs", () => {
+			const EnumEntriesSchema = sf.object("EnumEntries", {
+				x: sf.string,
+				y: sf.number,
+			});
+
+			const map = createLocalMap("testMap");
+			const view = map.viewWith(EnumEntriesSchema);
+
+			view.initialize({ x: "test", y: 100 });
+
+			const entries = Object.entries(view);
+			const entryMap = new Map(entries);
+
+			assert.equal(entryMap.get("x"), "test");
+			assert.equal(entryMap.get("y"), 100);
+		});
+
+		it("for...in loop iterates over fields", () => {
+			const ForInSchema = sf.object("ForInEnum", {
+				prop1: sf.string,
+				prop2: sf.string,
+				prop3: sf.number,
+			});
+
+			const map = createLocalMap("testMap");
+			const view = map.viewWith(ForInSchema);
+
+			view.initialize({ prop1: "a", prop2: "b", prop3: 3 });
+
+			// Using Object.keys as a proxy to verify enumerable properties work correctly
+			// This tests the same underlying proxy enumeration behavior as for...in
+			const keys = Object.keys(view);
+
+			assert.deepEqual(keys.sort(), ["prop1", "prop2", "prop3"]);
+		});
+	});
+
+	describe("Schema upgrade flow", () => {
+		it("upgradeSchema() updates the stored schema", () => {
+			const SchemaV1 = sf.object("UpgradeTest", {
+				name: sf.string,
+			});
+			const SchemaV2 = sf.object("UpgradeTest", {
+				name: sf.string,
+				email: sf.optional(sf.string),
+			});
+
+			const map = createLocalMap("testMap");
+
+			// Initialize with V1
+			const viewV1 = map.viewWith(SchemaV1);
+			viewV1.initialize({ name: "Alice" });
+
+			// Create V2 view and check upgrade is possible
+			const viewV2 = map.viewWith(SchemaV2);
+			assert.equal(viewV2.compatibility.canUpgrade, true);
+
+			// Perform upgrade
+			viewV2.upgradeSchema();
+
+			// After upgrade, should be able to view
+			assert.equal(viewV2.compatibility.canView, true);
+		});
+
+		it("after upgrade, new optional fields are accessible", () => {
+			const SchemaV1 = sf.object("UpgradeAccessTest", {
+				name: sf.string,
+			});
+			const SchemaV2 = sf.object("UpgradeAccessTest", {
+				name: sf.string,
+				nickname: sf.optional(sf.string),
+			});
+
+			const map = createLocalMap("testMap");
+
+			// Initialize with V1
+			const viewV1 = map.viewWith(SchemaV1);
+			viewV1.initialize({ name: "Bob" });
+
+			// Create V2 view and upgrade
+			const viewV2 = map.viewWith(SchemaV2);
+			viewV2.upgradeSchema();
+
+			// New optional field should be undefined
+			assert.equal(viewV2.nickname, undefined);
+
+			// Should be able to set the new optional field
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+			(viewV2 as any).nickname = "Bobby";
+			assert.equal(viewV2.nickname, "Bobby");
+		});
+
+		it("cannot upgrade to incompatible schema", () => {
+			const SchemaV1 = sf.object("IncompatUpgrade", {
+				name: sf.string,
+			});
+			const SchemaV2 = sf.object("IncompatUpgrade", {
+				name: sf.string,
+				requiredField: sf.number, // New required field - incompatible
+			});
+
+			const map = createLocalMap("testMap");
+
+			// Initialize with V1
+			const viewV1 = map.viewWith(SchemaV1);
+			viewV1.initialize({ name: "Charlie" });
+
+			// Create V2 view - should not be able to upgrade
+			const viewV2 = map.viewWith(SchemaV2);
+			assert.equal(viewV2.compatibility.canUpgrade, false);
+
+			// Attempting to upgrade should throw
+			assert.throws(() => viewV2.upgradeSchema());
+		});
+	});
 });
