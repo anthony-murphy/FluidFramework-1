@@ -94,6 +94,12 @@ export type IsObjectSchema<T> = T extends TypedObjectNodeSchema ? true : false;
 // @alpha @legacy
 export function isObjectSchema(schema: NodeSchema): schema is ObjectNodeSchema;
 
+// @alpha
+export const isSchemaClass: unique symbol;
+
+// @alpha
+export function isSchemaClassConstructor(value: unknown): value is SchemaClassConstructor;
+
 // @alpha @legacy
 export function isSchemaValidationError(error: unknown): error is ISchemaValidationError;
 
@@ -190,6 +196,20 @@ export type ReadonlyNodeFromSchema<T> = DeepReadonly<NodeFromSchema<T>>;
 // @alpha @legacy
 export type RootSchema = ObjectNodeSchema | MapNodeSchema;
 
+// @alpha
+export interface SchemaClassConstructor extends SchemaClassStatics {
+    new (): object;
+    readonly prototype: object;
+}
+
+// @alpha
+export interface SchemaClassStatics {
+    readonly [isSchemaClass]: true;
+    readonly fields: Readonly<Record<string, FieldSchema>>;
+    readonly identifier: string;
+    readonly kind: typeof NodeKind.Object;
+}
+
 // @alpha @legacy
 export interface SchemaCompatibilityStatus {
     canInitialize: boolean;
@@ -207,7 +227,7 @@ export class SchemaFactory<TScope extends string = string> {
     map<const TName extends string, const TValueSchema extends ImplicitAllowedTypes>(name: TName, valueSchema: TValueSchema): TypedMapNodeSchema<ScopedSchemaName<TScope, TName>, TValueSchema>;
     get null(): TypedLeafNodeSchema<"com.fluidframework.leaf.null", "null", null>;
     get number(): TypedLeafNodeSchema<"com.fluidframework.leaf.number", "number", number>;
-    object<const TName extends string, const TFields extends ObjectSchemaFields>(name: TName, fields: TFields): TypedObjectNodeSchema<ScopedSchemaName<TScope, TName>, TFields>;
+    object<const TName extends string, const TFields extends ObjectSchemaFields>(name: TName, fields: TFields): TypedObjectNodeSchema<ScopedSchemaName<TScope, TName>, TFields> & SchemaClassConstructor;
     optional<const T extends ImplicitAllowedTypes>(allowedTypes: T, props?: FieldProps): TypedFieldSchema<typeof FieldKind.Optional, T>;
     required<const T extends ImplicitAllowedTypes>(allowedTypes: T, props?: FieldProps): TypedFieldSchema<typeof FieldKind.Required, T>;
     readonly scope: TScope;

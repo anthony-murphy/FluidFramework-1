@@ -30,6 +30,8 @@ import {
 	handleSchema,
 } from "./leafSchemas.js";
 
+import { createSchemaClass, type SchemaClassConstructor } from "./schemaObjectBase.js";
+
 // Re-export TypedLeafNodeSchema from leafSchemas
 export type { TypedLeafNodeSchema } from "./leafSchemas.js";
 
@@ -341,25 +343,6 @@ interface PhantomTypeInfo<T> {
 }
 
 /**
- * Brands an ObjectNodeSchema with phantom type information for field inference.
- *
- * @remarks
- * This function takes a runtime ObjectNodeSchema and returns it typed as a
- * TypedObjectNodeSchema with the specified identifier and field types preserved
- * for compile-time inference.
- *
- * @param schema - The runtime schema object (must have identifier, kind, and fields)
- * @returns The same schema branded with phantom type information
- */
-function brandObjectSchema<TIdentifier extends string, TFields extends ObjectSchemaFields>(
-	schema: ObjectNodeSchema & { readonly identifier: TIdentifier },
-): TypedObjectNodeSchema<TIdentifier, TFields> {
-	return schema as ObjectNodeSchema & { readonly identifier: TIdentifier } & PhantomTypeInfo<{
-			readonly fields: TFields;
-		}>;
-}
-
-/**
  * Brands a MapNodeSchema with phantom type information for value type inference.
  *
  * @param schema - The runtime schema object (must have identifier, kind, and allowedTypes)
@@ -611,12 +594,19 @@ export class SchemaFactory<TScope extends string = string> {
 	 *
 	 * // PersonSchema.identifier === "myApp.Person"
 	 * // NodeFromSchema<typeof PersonSchema> === { name: string; age: number; email?: string }
+	 *
+	 * // Custom methods via subclassing:
+	 * class Person extends sf.object("Person", { name: sf.string, age: sf.number }) {
+	 *   get displayName() {
+	 *     return `${this.name} (${this.age})`;
+	 *   }
+	 * }
 	 * ```
 	 */
 	public object<const TName extends string, const TFields extends ObjectSchemaFields>(
 		name: TName,
 		fields: TFields,
-	): TypedObjectNodeSchema<ScopedSchemaName<TScope, TName>, TFields> {
+	): TypedObjectNodeSchema<ScopedSchemaName<TScope, TName>, TFields> & SchemaClassConstructor {
 		const identifier = `${this.scope}.${name}`;
 
 		// Convert fields to the runtime FieldSchema format
@@ -625,11 +615,18 @@ export class SchemaFactory<TScope extends string = string> {
 			normalizedFields[fieldName] = normalizeFieldSchema(fieldSchema);
 		}
 
-		return brandObjectSchema<ScopedSchemaName<TScope, TName>, TFields>({
-			identifier: identifier as ScopedSchemaName<TScope, TName>,
-			kind: NodeKind.Object,
-			fields: normalizedFields,
-		});
+		// Create a class with the schema as static properties
+		const SchemaClass = createSchemaClass(
+			identifier as ScopedSchemaName<TScope, TName>,
+			normalizedFields,
+		);
+
+		// Brand with phantom type info for TypeScript inference
+		return SchemaClass as unknown as TypedObjectNodeSchema<
+			ScopedSchemaName<TScope, TName>,
+			TFields
+		> &
+			SchemaClassConstructor;
 	}
 
 	/**

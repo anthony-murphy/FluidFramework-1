@@ -31,3 +31,10 @@ export {
 	type NodeFromSchema,
 	SchemaFactory,
 } from "./schemaFactory.js";
+
+export {
+	isSchemaClass,
+	isSchemaClassConstructor,
+	type SchemaClassConstructor,
+	type SchemaClassStatics,
+} from "./schemaObjectBase.js";

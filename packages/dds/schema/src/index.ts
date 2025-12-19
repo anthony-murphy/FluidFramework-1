@@ -19,6 +19,8 @@ export {
 	booleanSchema,
 	nullSchema,
 	handleSchema,
+	isSchemaClass,
+	isSchemaClassConstructor,
 } from "./factory/index.js";
 export type {
 	ScopedSchemaName,
@@ -30,6 +32,8 @@ export type {
 	ImplicitFieldSchema,
 	ObjectSchemaFields,
 	FieldProps,
+	SchemaClassConstructor,
+	SchemaClassStatics,
 } from "./factory/index.js";
 export {
 	FieldKind,

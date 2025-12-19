@@ -12,6 +12,7 @@ import { UsageError } from "@fluidframework/telemetry-utils/internal";
 
 import type { NodeSchema, ObjectNodeSchema, FieldSchema } from "../core/index.js";
 import { FieldKind, isObjectSchema, isMapSchema } from "../core/index.js";
+import { isSchemaClassConstructor } from "../factory/index.js";
 import type { ISchemaStorage, ISchemaPersistence, StorageResult } from "../storage/index.js";
 import type { NodeFromSchema } from "../types/index.js";
 import {
@@ -218,8 +219,13 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 			this.setFieldValue(prop, value);
 		const hasField = (prop: string): boolean => this.hasField(prop);
 
-		// Use object type for the target to avoid type instantiation issues with Reflect
-		const target: object = {};
+		// If the schema is a class (created with sf.object()), use its prototype as the target.
+		// This enables custom methods and getters on schema subclasses to work via Reflect.
+		// For plain object schemas, use an empty object.
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+		const target: object = isSchemaClassConstructor(schema)
+			? Object.create(schema.prototype)
+			: {};
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		return new Proxy(target, {
 			get(proxyTarget, prop, receiver): unknown {

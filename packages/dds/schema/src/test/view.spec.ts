@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, unicorn/no-array-for-each, unicorn/no-array-method-this-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any, unicorn/no-array-for-each, unicorn/no-array-method-this-argument */
 
 import { strict as assert } from "node:assert";
 
@@ -422,7 +422,6 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
 				view.initialize();
@@ -439,7 +438,6 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
 				view.initialize();
@@ -452,7 +450,6 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
 				view.initialize();
@@ -469,7 +466,6 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
 				view.initialize();
@@ -483,7 +479,6 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
 				view.initialize();
@@ -500,7 +495,6 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
 				view.initialize();
@@ -523,7 +517,6 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
 				view.initialize();
@@ -539,7 +532,6 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
 				view.initialize();
@@ -555,7 +547,6 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
 				view.initialize();
@@ -574,7 +565,6 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
 				view.initialize();
@@ -596,7 +586,6 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
 				view.initialize();
@@ -618,7 +607,6 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
 				view.initialize();
@@ -639,7 +627,6 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
 				view.initialize();
@@ -666,7 +653,6 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
 				view.initialize();
@@ -685,7 +671,6 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
 				// Should not throw
@@ -699,7 +684,6 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
 				view.initialize();
@@ -717,8 +701,6 @@ describe("View", () => {
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
 
 				assert.equal(view.compatibility.canInitialize, true);
-
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				(view as any).initialize();
 
 				assert.equal(view.compatibility.canInitialize, false);
@@ -740,7 +722,6 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
 
 				view.initialize();
@@ -762,7 +743,6 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 
 				// Initialize with V1
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const viewV1 = new SchematizedMapView(storage, ConfigSchemaV1, persistence) as any;
 				viewV1.initialize();
 				viewV1.set("key1", "value1");
@@ -786,7 +766,6 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 
 				// Initialize with V1
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const viewV1 = new SchematizedMapView(storage, ConfigSchemaV1, persistence) as any;
 				viewV1.initialize();
 
@@ -852,7 +831,6 @@ describe("View", () => {
 				view.setFieldValue("age", 30);
 
 				// Use direct assignment via the root proxy
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				(view.root as any).age = 31;
 				assert.equal(view.root.age, 31);
 				assert.equal(view.getFieldValue("age"), 31);
@@ -974,7 +952,6 @@ describe("View", () => {
 				view.setFieldValue("name", "Alice");
 
 				// Non-schema property should return undefined (since target is {})
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				assert.equal((view.root as any).nonExistentProp, undefined);
 			});
 
@@ -991,6 +968,127 @@ describe("View", () => {
 
 				// Non-schema property should not be "in" the proxy
 				assert.equal("nonExistentProp" in view.root, false);
+			});
+		});
+
+		describe("custom methods via schema subclassing", () => {
+			it("custom getter works on schema subclass", () => {
+				// Create a schema class and subclass it with a custom getter
+				const UserSchemaBase = sf.object("UserWithGetter", {
+					firstName: sf.string,
+					lastName: sf.string,
+				});
+
+				// Subclass to add custom getter
+				class UserSchema extends UserSchemaBase {
+					public get fullName(): string {
+						return `${(this as any).firstName} ${(this as any).lastName}`;
+					}
+				}
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, UserSchema, persistence);
+
+				view.initialize();
+				view.setFieldValue("firstName", "John");
+				view.setFieldValue("lastName", "Doe");
+
+				// Access the custom getter through the proxy
+				const fullName = (view.root as any).fullName;
+				assert.equal(fullName, "John Doe");
+			});
+
+			it("custom method works on schema subclass", () => {
+				// Create a schema class and subclass it with a custom method
+				const CounterSchemaBase = sf.object("CounterWithMethod", {
+					value: sf.number,
+				});
+
+				// Subclass to add custom method
+				class CounterSchema extends CounterSchemaBase {
+					public increment(): void {
+						const current = (this as any).value as number;
+						(this as any).value = current + 1;
+					}
+					public double(): number {
+						return ((this as any).value as number) * 2;
+					}
+				}
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, CounterSchema, persistence);
+
+				view.initialize();
+				view.setFieldValue("value", 5);
+
+				// Access the custom method through the proxy
+				const root = view.root as any;
+				assert.equal(root.double(), 10);
+
+				// Call increment method which modifies the field
+				root.increment();
+				assert.equal(view.getFieldValue("value"), 6);
+			});
+
+			it("schema class can be subclassed multiple times", () => {
+				// Create a base schema class
+				const PersonSchemaBase = sf.object("PersonMultiSubclass", {
+					name: sf.string,
+					age: sf.number,
+				});
+
+				// First subclass
+				class Adult extends PersonSchemaBase {
+					public canVote(): boolean {
+						return ((this as any).age as number) >= 18;
+					}
+				}
+
+				// Second subclass
+				class Child extends PersonSchemaBase {
+					public canVote(): boolean {
+						return false;
+					}
+				}
+
+				// Test Adult subclass
+				const adultStorage = new MockStorage();
+				const adultPersistence = new MockPersistence();
+				const adultView = new SchematizedObjectView(adultStorage, Adult, adultPersistence);
+				adultView.initialize();
+				adultView.setFieldValue("name", "Alice");
+				adultView.setFieldValue("age", 25);
+				assert.equal((adultView.root as any).canVote(), true);
+
+				// Test Child subclass
+				const childStorage = new MockStorage();
+				const childPersistence = new MockPersistence();
+				const childView = new SchematizedObjectView(childStorage, Child, childPersistence);
+				childView.initialize();
+				childView.setFieldValue("name", "Bob");
+				childView.setFieldValue("age", 10);
+				assert.equal((childView.root as any).canVote(), false);
+			});
+
+			it("instanceof works correctly with schema subclasses", () => {
+				const SchemaBase = sf.object("InstanceOfTest", {
+					value: sf.string,
+				});
+
+				class MySchema extends SchemaBase {}
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, MySchema, persistence);
+
+				view.initialize();
+				view.setFieldValue("value", "test");
+
+				// The proxy target is Object.create(MySchema.prototype), so instanceof should work
+				assert(view.root instanceof MySchema);
+				assert(view.root instanceof SchemaBase);
 			});
 		});
 	});

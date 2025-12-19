@@ -78,7 +78,7 @@ Implementation tasks from decisions #10-21, ordered by dependency:
 
 ### Phase 3: Proxy/Reflect refactor (#13, #15, #16)
 
-6. **#13/#15/#16 - Proxy architecture refactor** [PARTIAL]
+6. **#13/#15/#16 - Proxy architecture refactor** [DONE]
 
    **Key change: View is NOT proxied, only `root` is proxied**
 
@@ -86,13 +86,20 @@ Implementation tasks from decisions #10-21, ordered by dependency:
    - [DONE] `viewWith()` returns view class instance, not wrapper object
    - [DONE] Remove `createObjectViewProxy()` / `createMapViewProxy()` functions (proxy.ts deleted)
    - [DONE] Refactor proxy handlers to use Reflect fallback (get uses Reflect.get for non-fields)
-   - [ ] Change `sf.object()` to return a class (for Reflect/inheritance)
-   - [ ] Change proxy target to be schema class instance
-   - [ ] Ensure `receiver` passed correctly for `this` binding
-   - [ ] Remove `getFieldValue()` / `setFieldValue()` from view classes
-   - [ ] Proxy handler accesses storage directly
-   - [ ] Test with schema classes that have custom methods/getters
-   - [ ] Update all existing tests for new pattern
+   - [DONE] Change `sf.object()` to return a class (for Reflect/inheritance)
+     - Created `schemaObjectBase.ts` with `createSchemaClass()` factory
+     - Schema classes have static `identifier`, `kind`, `fields` properties
+     - Marked with `[isSchemaClass]` symbol for identification
+   - [DONE] Change proxy target to be schema class instance
+     - `Object.create(schema.prototype)` used when schema is a class
+     - Enables `instanceof` to work correctly
+   - [DONE] Test with schema classes that have custom methods/getters
+     - Custom getters work (e.g., `get fullName()`)
+     - Custom methods work (e.g., `increment()`, `canVote()`)
+     - Multiple subclasses of same schema work independently
+     - `instanceof` correctly identifies schema class instances
+   - [ ] Remove `getFieldValue()` / `setFieldValue()` from view classes (future optimization)
+   - [ ] Proxy handler accesses storage directly (future optimization)
 
 ### Phase 4: Test relocation (#14)
 
