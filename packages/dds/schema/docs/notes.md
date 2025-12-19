@@ -9,6 +9,98 @@ Comparing `@fluidframework/schema` with `@fluidframework/tree` to ensure API con
 
 ---
 
+## Execution Instructions
+
+**For each implementation task:**
+
+1. **Use agents** to execute tasks autonomously
+2. **Build after every task**: `npm run build` in the schema package
+3. **Fix errors** before proceeding - don't leave broken builds
+4. **Run tests**: `npm test` to catch regressions
+5. **Git commit** after each completed task with message: `schema: <brief description>`
+6. **Update task status** in this document as you progress:
+   - `[ ]` → `[CODED]` - Implementation written
+   - `[CODED]` → `[BUILT]` - Compiles without errors
+   - `[BUILT]` → `[TESTED]` - Tests pass
+   - `[TESTED]` → `[DONE]` - Committed
+   - `[SKIP]` - Skipped with reason noted
+7. **If a task is too complex or needs input**: Mark `[SKIP]`, note why, move to next
+8. **Don't stop** until all tasks are either `[DONE]` or `[SKIP]`
+
+**Skip criteria:**
+- Needs design decision not covered in this document
+- Scope is unclear or larger than expected
+- Blocked by external dependency
+
+**Before starting:** Review task order for dependencies - reorder if needed so dependent tasks come after their prerequisites.
+
+**After completion:** Report summary of:
+- ✅ Tasks completed (with commit hashes if available)
+- ⏭️ Tasks skipped (with reason)
+- 🔄 Tasks partially done (what remains)
+
+---
+
+## Task List (Consolidated)
+
+Implementation tasks from decisions #10-21, ordered by dependency:
+
+### Phase 1: Foundation (no dependencies)
+
+1. **#11 - SchemaValidationError**
+   - [ ] Create `ISchemaValidationError` interface
+   - [ ] Create `isSchemaValidationError()` type guard
+   - [ ] Change class to extend `LoggingError`
+   - [ ] Export interface and guard, not class
+
+2. **#20 - Rename types**
+   - [ ] Rename `SchematizedView` → `SchemaView`
+   - [ ] Rename `SchematizedObject` → `ObjectView`
+   - [ ] Update all references
+
+3. **#19 - API visibility audit**
+   - [ ] Audit exports - remove any unnecessary ones
+   - [ ] Ensure DDS-author APIs are `@internal`
+   - [ ] Keep user-facing APIs at `@alpha` until stable
+
+### Phase 2: Initialize API (#10, #21)
+
+4. **#10 - Simplify initialize()**
+   - [ ] Change `initialize(content)` to `initialize()` (no parameter)
+   - [ ] Update README and docs
+   - [ ] Update tests
+
+5. **#21 - Add ignoreStoredSchema escape hatch**
+   - [ ] Add `ignoreStoredSchema?: string[]` to `SchemaViewConfiguration`
+   - [ ] Update README to clarify initialize is optional
+   - [ ] Document that this is an unsafe escape hatch
+   - [ ] Validate against `ScopedSchemaName` of stored schema
+
+### Phase 3: Proxy/Reflect refactor (#13, #15, #16)
+
+6. **#13/#15/#16 - Proxy architecture refactor** (largest change)
+   - [ ] Change `sf.object()` to return a class
+   - [ ] Refactor proxy handlers to use Reflect fallback
+   - [ ] Change proxy target to be schema class instance
+   - [ ] Ensure `receiver` passed correctly for `this` binding
+   - [ ] Remove `getFieldValue()` / `setFieldValue()` from view classes
+   - [ ] Proxy handler accesses storage directly
+   - [ ] Single proxy instead of viewProxy/dataProxy
+   - [ ] Test with schema classes that have custom methods/getters
+   - [ ] Update all existing tests for new pattern
+
+### Phase 4: Test relocation (#14)
+
+7. **#14 - Move tests to local-server-tests**
+   - [ ] Add `@fluidframework/schema` dependency to local-server-tests
+   - [ ] Add `@fluidframework/map` dependency if not present
+   - [ ] Create test file in local-server-tests
+   - [ ] Move/adapt test cases from e2e
+   - [ ] Remove tests from e2e package
+   - [ ] Verify tests pass in new location
+
+---
+
 ## New Open Questions (December 2025)
 
 ### 10. Should `initialize()` take content?
@@ -31,7 +123,28 @@ view.initialize({ name: "Alice", age: 30 })
    view.root = { name: "Alice", age: 30 }  // Auto-initializes if needed
    ```
 
-**Decision:** [ ] TBD
+**Decision:** [x] Remove content parameter - `initialize()` only persists schema
+
+**Rationale:**
+- `initialize()` means "persist the schema to enable cross-client enforcement"
+- Setting data is a separate concern (use `view.root = ...`)
+- Clearer separation of concerns
+- `initialize()` is optional - only call when you want schema persistence
+
+**Implementation:**
+```ts
+// New API
+view.initialize()  // Persists schema only
+view.root = { name: "Alice", age: 30 }  // Set content separately
+
+// Or if you don't need cross-client schema enforcement:
+view.root = { name: "Alice", age: 30 }  // Just use it, no initialize needed
+```
+
+**TODO:**
+- [ ] Change `initialize(content)` to `initialize()` (no parameter)
+- [ ] Update README and docs
+- [ ] Update tests
 
 ---
 
@@ -52,27 +165,124 @@ view.initialize({ name: "Alice", age: 30 })
 - Telemetry integration is valuable
 - Tree package pattern?
 
-**Decision:** [ ] TBD
+**Decision:** [x] Extend `LoggingError`, expose interface only
+
+**Pattern:**
+- Class extends `LoggingError` (`@internal`) - gets all telemetry infrastructure
+- Export `ISchemaValidationError` interface (`@alpha`) - public API
+- Export `isSchemaValidationError()` type guard (`@alpha`) - for catching
+- Class itself is `@internal`
+
+**Implementation:**
+```ts
+import { LoggingError } from "@fluidframework/telemetry-utils/internal";
+import type { IFluidErrorBase } from "@fluidframework/telemetry-utils";
+
+// Public interface (@alpha)
+export interface ISchemaValidationError extends IFluidErrorBase {
+  readonly errorType: "schemaValidation";
+  readonly errors: readonly ValidationError[];
+}
+
+// Type guard (@alpha)
+export function isSchemaValidationError(error: unknown): error is ISchemaValidationError {
+  return (
+    error instanceof Error &&
+    (error as Partial<ISchemaValidationError>).errorType === "schemaValidation" &&
+    Array.isArray((error as Partial<ISchemaValidationError>).errors)
+  );
+}
+
+// Class (@internal) - extends LoggingError for telemetry
+class SchemaValidationError extends LoggingError implements ISchemaValidationError {
+  readonly errorType = "schemaValidation" as const;
+
+  constructor(
+    message: string,
+    public readonly errors: readonly ValidationError[]
+  ) {
+    super(message, {
+      errorCount: errors.length,
+      paths: errors.map(e => e.path).join(","),
+    });
+    this.name = "SchemaValidationError";
+  }
+}
+```
+
+**Usage:**
+```ts
+try {
+  view.initialize();
+} catch (e) {
+  if (isSchemaValidationError(e)) {
+    console.log(e.errors);  // ValidationError[]
+  }
+}
+```
+
+**Benefits:**
+- Full telemetry integration via `LoggingError`
+- Public interface for users to check errors
+- Class can change without breaking public API
+- Follows telemetry-utils pattern
+
+**TODO:**
+- [ ] Create `ISchemaValidationError` interface
+- [ ] Create `isSchemaValidationError()` type guard
+- [ ] Change class to extend `LoggingError`
+- [ ] Export interface and guard, not class
 
 ---
 
 ### 12. Proxy architecture - Views vs Proxies redundancy
+
+**Status:** [x] Resolved by #16
 
 **Current architecture:**
 - `SchematizedObjectView` class - internal view with all logic
 - `createObjectViewProxy()` - creates Proxy that wraps the view
 - Similar for `SchematizedMapView` and `createMapViewProxy()`
 
-**Concern:** Is having both internal views AND proxies redundant?
+**Resolution:** Simplify to 2 layers like Tree:
+- View class handles lifecycle only (dispose, compatibility, initialize)
+- Proxy accesses storage directly via Reflect pattern
+- See #13, #15, #16 for implementation details
 
 **Options:**
 1. **Simplify proxies** - Make proxies use views more directly, less wrapper code
 2. **Merge into proxies** - Put all logic in proxy handlers, eliminate view classes
 3. **Keep separate** - Views handle storage, proxies handle property access
 
-**Related:** How do Tree's proxies work? Do they have separate view classes?
+**Tree's pattern (for reference):**
+```ts
+// Tree proxy handler accesses flex-tree directly:
+get(target, propertyKey, proxy) {
+    const fieldInfo = schema.flexKeyMap.get(propertyKey);
+    if (fieldInfo !== undefined) {
+        const flexNode = getInnerNode(proxy);  // Direct access
+        const field = flexNode.tryGetField(fieldInfo.storedKey);
+        return tryGetTreeNodeForField(field);
+    }
+    return Reflect.get(target, propertyKey, proxy);
+}
 
-**Decision:** [ ] TBD - needs investigation of Tree proxy implementation
+// Schema's current pattern has extra layer:
+get(target, prop) {
+    return view.getFieldValue(prop);  // Via view class
+}
+```
+
+**Key difference:**
+- Tree: Proxy → `getInnerNode()` → FlexTreeNode (direct)
+- Schema: Proxy → View class → Storage interface (extra layer)
+
+**Decision:** [x] Resolved by #16 - simplify to 2 layers
+
+**Notes:**
+- Current works, but may have unnecessary indirection
+- Could simplify by having proxy access storage directly
+- View class still valuable for lifecycle (dispose, compatibility, initialize)
 
 ---
 
@@ -102,7 +312,41 @@ get(target, prop, receiver) {
 - More standard proxy pattern
 - Matches Tree implementation
 
-**Decision:** [ ] Refactor proxies to use Reflect
+**Example why Reflect is needed:**
+```ts
+class Dog extends sf.object("Dog", { name: sf.string }) {
+    get greeting() { return `Hi, I'm ${this.name}`; }  // uses this.name
+}
+
+// Without Reflect: this.name inside greeting fails (wrong "this")
+// With Reflect: receiver (the proxy) becomes "this", so this.name works
+```
+
+**Decision:** [x] Match Tree - both changes needed
+
+**Changes required:**
+
+1. **Schema factory returns classes** (not plain objects)
+   - `sf.object("Dog", {...})` returns a class that can be extended
+   - Enables `class Dog extends sf.object(...)` pattern
+   - Matches Tree's API
+
+2. **Proxy handlers use Reflect**
+   - Check schema fields first, fall through to Reflect
+   - Pass `receiver` (the proxy) so `this` works in getters/methods
+   - Matches Tree's implementation
+
+3. **Proxy target is schema class instance**
+   - Not `{}` or view instance
+   - Enables prototype chain to work correctly
+
+**TODO:**
+- [ ] Change `sf.object()` to return a class (major change)
+- [ ] Refactor proxy handlers to use Reflect fallback
+- [ ] Change proxy target to be schema class instance
+- [ ] Ensure `receiver` passed correctly for `this` binding
+- [ ] Test with schema classes that have custom methods/getters
+- [ ] Update all existing tests for new pattern
 
 ---
 
@@ -117,7 +361,15 @@ get(target, prop, receiver) {
 - local-server-tests is faster to run
 - More appropriate for unit/integration level tests
 
-**Action:** [ ] Move schema integration tests from e2e to local-server-tests
+**Decision:** [x] Move to local-server-tests
+
+**TODO:**
+- [ ] Add `@fluidframework/schema` dependency to local-server-tests
+- [ ] Add `@fluidframework/map` dependency if not present
+- [ ] Create test file in local-server-tests
+- [ ] Move/adapt test cases from e2e
+- [ ] Remove tests from e2e package
+- [ ] Verify tests pass in new location
 
 ---
 
@@ -167,7 +419,13 @@ return {
 - This is critical for correct prototype chain behavior
 - Without proper receiver, inherited getters see wrong `this`
 
-**Decision:** [ ] TBD - Major refactor, evaluate cost/benefit
+**Decision:** [x] Match Tree - consolidate with #13
+
+**Changes (part of #13 refactor):**
+- Single handler instead of nested viewProxy/dataProxy
+- Schema map lookup instead of if/else chain
+- Always use Reflect fallback for non-schema properties
+- Pass receiver correctly for `this` binding
 
 ---
 
@@ -191,26 +449,32 @@ return {
 - Schema: View class has `getFieldValue()` → Proxy calls `getFieldValue()` → redundant
 - Tree: Proxy handler directly accesses flex-tree → no intermediate class for nodes
 
-**Possible Simplification:**
-```ts
-// Option A: Remove view classes, put logic in proxy
-function createObjectViewProxy(storage, schema, persistence) {
-    const handler: ProxyHandler<{root: unknown}> = {
-        get(target, prop) {
-            if (prop === "compatibility") return checkSchemaCompatibility(...)
-            if (prop === "initialize") return (content) => { /* logic here */ }
-            if (prop === "root") return createDataProxy(storage, schema)
-            // ...
-        }
-    };
-    return new Proxy({}, handler);
-}
+**Decision:** [x] Match Tree - simplify to 2 layers
 
-// Option B: Keep views, simplify proxy to pure delegation
-// Current architecture is fine, just cleaner
-```
+**New architecture:**
+1. **View class (lifecycle only):**
+   - `dispose()`, `disposed`
+   - `compatibility`
+   - `initialize()`
+   - Holds reference to storage/persistence
+   - NO `getFieldValue()` / `setFieldValue()`
 
-**Decision:** [ ] TBD - Current architecture works, optimization opportunity
+2. **Single proxy (direct storage access):**
+   - Schema map lookup for fields
+   - Accesses storage directly
+   - Reflect fallback for inherited methods/getters
+   - Returns view for lifecycle properties
+
+**Benefits:**
+- Matches Tree architecture
+- Less code, less indirection
+- Proxy accesses storage directly
+- Still in development, OK to refactor
+
+**TODO (part of #13 refactor):**
+- [ ] Remove `getFieldValue()` / `setFieldValue()` from view classes
+- [ ] Proxy handler accesses storage directly
+- [ ] Single proxy instead of viewProxy/dataProxy
 
 ---
 
@@ -228,25 +492,35 @@ interface ISchemaStorage {
 }
 ```
 
+**Why Schema differs from Tree here:**
+```
+Tree:      TreeView → Proxy → flex-tree (ONE DDS, controls its own storage)
+
+Schema:    View → Proxy → ISchemaStorage → SharedMap
+                                        → SharedDirectory
+                                        → SharedString
+                                        → (any DDS that implements interface)
+```
+
 **Pros:**
-- Clean abstraction over SharedMap/SharedDirectory
+- Clean abstraction over SharedMap/SharedDirectory/etc.
 - Schema-aware - DDS knows if field should be value or nested storage
-- Consistent interface for both flat and hierarchical DDSes
+- Consistent interface for all DDSes
+- Enables schema reuse across DDSes
 
-**Concerns:**
-- `StorageResult` union type adds complexity
-- Every access requires schema parameter
-- Tree doesn't have equivalent - uses flex-tree directly
+**Decision:** [x] Keep - required for multi-DDS support
 
-**Alternative (Tree-style):**
-- Views could access DDS directly without abstraction
-- Trade-off: Less reusability, more DDS-specific code
-
-**Decision:** [ ] Keep current - abstraction valuable for DDS reuse
+**Notes:**
+- This is intentionally different from Tree
+- Tree is one DDS; Schema serves many DDSes
+- Proxy refactor (#13, #15, #16) changes caller (proxy vs view), not the interface
+- Each DDS implements `ISchemaStorage` to adapt its storage model
 
 ---
 
 ### 18. Initialize API Comparison
+
+**Status:** [x] Resolved by #10
 
 **Schema's initialize:**
 ```ts
@@ -285,13 +559,11 @@ public initialize(content: InsertableField<TRootSchema>): void {
 }
 ```
 
-**Differences:**
-1. Tree uses transactions - Schema doesn't (SharedMap doesn't have transactions yet)
-2. Tree has `runSchemaEdit()` wrapper that handles events
-3. Tree prepares MapTree before insertion for hydration
-4. Schema validates and stores field-by-field
+**Original concern:** Schema stores field-by-field without transactions, risking partial state on failure.
 
-**Observation:** Schema's approach is simpler but loses atomicity. If initialize fails mid-way, partial state could exist.
+**Resolution:** #10 removes content parameter from `initialize()`. Now it only persists schema (single operation), eliminating atomicity concern. Content is set separately via normal field access.
+
+**Future note:** If SharedMap gains transaction support, consider using it.
 
 **Decision:** [ ] Future - Add transaction support when SharedMap supports it
 
@@ -299,94 +571,110 @@ public initialize(content: InsertableField<TRootSchema>): void {
 
 ### 19. API Visibility and Export Organization
 
-**Schema package export visibility:**
-- Most types are `@internal` or `@alpha`
-- Public API surface is smaller than Tree's
+**Status:** [x] Decided
 
-**Exports organized by category:**
+**Guiding principles:**
+1. **DDS authors are internal** - `ISchemaStorage`, `ISchemaPersistence`, etc. stay `@internal`
+2. **Only DDS consumers need public/alpha** - `SchemaFactory`, `viewWith()` result types
+3. **Minimize exports** - don't export unless necessary
+4. **Lowest visibility possible** - prefer `@internal` → `@alpha` → `@beta` → `@public`
 
-| Category | Schema Exports | Notes |
-|----------|---------------|-------|
-| Factory | `SchemaFactory`, primitive schemas | Similar to Tree |
-| Types | Field types, schema types | `@internal` mostly |
-| Core | `FieldKind`, `NodeKind`, schema guards | Public |
-| Serialization | `encodeSchema`, `decodeSchema`, compatibility | Internal |
-| Storage | `ISchemaStorage`, `ISchemaPersistence`, adapters | For DDS authors |
-| Validation | `validateData`, `buildSchemaRegistry` | Public utility |
-| View | Classes, proxies, factory functions | Mixed visibility |
+**Visibility tiers:**
 
-**Tree exports by contrast:**
-- Much larger API surface (361+ lines in index.ts)
-- Multiple stability levels (`@alpha`, `@beta`, `@public`)
-- Versioned configs (`TreeViewConfiguration`, `TreeViewConfigurationAlpha`)
-- Extensive node types and utilities
+| Audience | Visibility | Examples |
+|----------|------------|----------|
+| DDS authors (us) | `@internal` | `ISchemaStorage`, `ISchemaPersistence`, `createSchematizedView` |
+| Early adopters | `@alpha` | `SchemaFactory`, `SchematizedView`, user-facing types |
+| Stable API | `@public` | (future, after validation) |
 
-**Observation:** Schema's smaller API is intentional - it's meant to be simpler. But some internal types may need to become public for DDS authors:
-- `ISchemaStorage`, `ISchemaPersistence` - needed to implement viewWith()
-- `createSchematizedView` - main helper for DDSes
-- `SchemaViewConfiguration` - for config objects
+**Current state is correct:**
+- Most types `@internal` - good
+- User-facing types `@alpha` - appropriate for new package
+- Small API surface - intentional
 
-**Decision:** [ ] Review visibility after initial adoption
+**TODO:**
+- [ ] Audit exports - remove any unnecessary ones
+- [ ] Ensure DDS-author APIs are `@internal`
+- [ ] Keep user-facing APIs at `@alpha` until stable
 
 ---
 
 ### 20. Naming Consistency
 
-**Schema uses:**
-- `NodeFromSchema<T>` - infer TypeScript type from schema
-- `SchematizedView<T>` - view type
-- `SchematizedObject<T>` - object view result
-- `ObjectNodeSchema`, `MapNodeSchema` - schema kinds
+**Status:** [x] Decided - shorten names
 
-**Tree uses:**
-- `NodeFromSchema<T>` - ✅ Same
-- `TreeView<T>` - different naming
-- `TreeNode` - vs Schema's proxy types
-- `ObjectNodeSchema`, `MapNodeSchema` - ✅ Same
+**Current → New:**
+- `SchematizedView` → `SchemaView`
+- `SchematizedObject` → `ObjectView` (or similar)
+- `SchemaViewConfiguration` - already short, keep
 
-**Possible renames for consistency:**
-- `SchematizedView` → `SchemaView` (shorter)
-- `SchematizedObject` → `ObjectSchemaView`
-- But: "Schematized" emphasizes the schema aspect, which is the point
+**Rationale:**
+- Shorter is better for frequently used types
+- "Schema" prefix already clear in context
+- Matches Tree's concise naming (`TreeView`, not `TreeifiedView`)
 
-**Decision:** [ ] Keep current naming - distinctive for schema package
+**TODO:**
+- [ ] Rename `SchematizedView` → `SchemaView`
+- [ ] Rename `SchematizedObject` → `ObjectView`
+- [ ] Update all references
 
 ---
 
-## Execution Instructions
+### 21. Clarify `initialize()` is Optional + Add Escape Hatch
 
+**Current:** README shows `initialize()` as if always needed
 
-**For each implementation task:**
+**Reality:** `initialize()` is only needed when you want to:
+1. Persist the schema to the document
+2. Enforce schema across all clients
+3. Enable schema compatibility checks
 
-1. **Use agents** to execute tasks autonomously
-2. **Build after every task**: `npm run build` in the schema package
-3. **Fix errors** before proceeding - don't leave broken builds
-4. **Run tests**: `npm test` to catch regressions
-5. **Git commit** after each completed task with message: `schema: <brief description>`
-6. **Update task status** in this document as you progress:
-   - `[ ]` → `[CODED]` - Implementation written
-   - `[CODED]` → `[BUILT]` - Compiles without errors
-   - `[BUILT]` → `[TESTED]` - Tests pass
-   - `[TESTED]` → `[DONE]` - Committed
-   - `[SKIP]` - Skipped with reason noted
-7. **If a task is too complex or needs input**: Mark `[SKIP]`, note why, move to next
-8. **Don't stop** until all tasks are either `[DONE]` or `[SKIP]`
+**Without initialize:**
+- View works fine for local typed access
+- No cross-client schema enforcement
+- No persisted schema in document
 
-**Skip criteria:**
-- Needs design decision not covered in this document
-- Risk of breaking changes that need review
-- Scope is unclear or larger than expected
+**Escape hatch: `ignoreStoredSchema` config option**
 
-**Before starting:** Review task order for dependencies - reorder if needed so dependent tasks come after their prerequisites.
+Users who accidentally initialized a schema they want to change incompatibly need a way out.
 
-**After completion:** Report summary of:
-- ✅ Tasks completed (with commit hashes if available)
-- ⏭️ Tasks skipped (with reason)
-- 🔄 Tasks partially done (what remains)
+```ts
+// User initialized with SchemaV1, now wants incompatible SchemaV2
+const view = map.viewWith({
+  schema: SchemaV2,
+  ignoreStoredSchema: ["com.example.myapp.SchemaV1"]  // Ignore specific stored schemas
+})
+
+// Can list multiple schemas to ignore (useful during migrations)
+const view = map.viewWith({
+  schema: SchemaV3,
+  ignoreStoredSchema: [
+    "com.example.myapp.SchemaV1",
+    "com.example.myapp.SchemaV2"
+  ]
+})
+```
+
+**Behavior:**
+- If stored schema identifier is in the list, ignore it
+- Acts as if no schema was ever initialized (for those schemas)
+- Existing data remains (may not match new schema!)
+- User is responsible for data migration
+- Intentionally unsafe - escape hatch for development/mistakes
+- Explicit list makes intent clear and limits scope
+- Empty array or omitted = normal validation
+
+**Decision:** [x] Do both - update docs + add config option with list of identifiers
+
+**TODO:**
+- [ ] Update README to clarify initialize is optional
+- [ ] Add `ignoreStoredSchema?: string[]` to `SchemaViewConfiguration`
+- [ ] Document that this is an unsafe escape hatch
+- [ ] Validate against `ScopedSchemaName` of stored schema
 
 ---
 
-## Open Questions
+## Open Questions (Legacy)
 
 ### 1. Should `viewWith()` take a config object like Tree?
 
