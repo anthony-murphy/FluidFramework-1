@@ -70,7 +70,11 @@ export type {
 } from "./types/index.js";
 
 // Serialization
-export { encodeSchema, decodeSchema, checkSchemaCompatibility } from "./serialization/index.js";
+export {
+	encodeSchema,
+	decodeSchema,
+	checkSchemaCompatibility,
+} from "./serialization/index.js";
 export type {
 	// Encoded schema types
 	EncodedSchema,
@@ -96,3 +100,18 @@ export type {
 export { MockStorage, MockPersistence } from "./storage/index.js";
 export type { StorageResult, ISchemaStorage, ISchemaPersistence } from "./storage/index.js";
 
+// Validation
+export { validateData, buildSchemaRegistry } from "./validation/index.js";
+export type {
+	ValidationError,
+	ValidationResult,
+	SchemaRegistry,
+} from "./validation/index.js";
+
+// View
+export {
+	SchematizedObjectView,
+	SchematizedMapView,
+	SchemaValidationError,
+	createObjectViewProxy,
+} from "./view/index.js";
