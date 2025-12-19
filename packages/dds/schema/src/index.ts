@@ -92,3 +92,7 @@ export type {
 	SchemaCompatibilityStatus,
 } from "./serialization/index.js";
 
+// Storage
+export { MockStorage, MockPersistence } from "./storage/index.js";
+export type { StorageResult, ISchemaStorage, ISchemaPersistence } from "./storage/index.js";
+
