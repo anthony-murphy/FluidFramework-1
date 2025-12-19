@@ -3,6 +3,8 @@
  * Licensed under the MIT License.
  */
 
+/* eslint-disable unicorn/no-null, no-void */
+
 import { strict as assert } from "node:assert";
 
 import {

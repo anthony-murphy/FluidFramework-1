@@ -3,6 +3,8 @@
  * Licensed under the MIT License.
  */
 
+/* eslint-disable unicorn/no-null */
+
 /**
  * Type inference tests for the schema package.
  *

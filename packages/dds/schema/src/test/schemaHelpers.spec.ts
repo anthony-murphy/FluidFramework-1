@@ -3,6 +3,8 @@
  * Licensed under the MIT License.
  */
 
+/* eslint-disable unicorn/no-array-callback-reference */
+
 import { strict as assert } from "node:assert";
 
 import {

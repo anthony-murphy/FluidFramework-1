@@ -3,6 +3,8 @@
  * Licensed under the MIT License.
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, unicorn/no-array-for-each, unicorn/no-array-method-this-argument */
+
 import { strict as assert } from "node:assert";
 
 import { SchemaFactory } from "../factory/index.js";

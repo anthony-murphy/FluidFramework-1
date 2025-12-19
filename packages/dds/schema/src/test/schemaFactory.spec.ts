@@ -3,6 +3,8 @@
  * Licensed under the MIT License.
  */
 
+/* eslint-disable @typescript-eslint/no-shadow */
+
 import { strict as assert } from "node:assert";
 
 import { FieldKind, NodeKind } from "../core/index.js";
