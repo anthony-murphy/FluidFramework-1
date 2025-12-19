@@ -53,7 +53,17 @@ export interface CreateViewOptions {
  *
  * @internal
  */
-export type ObjectViewResult<TSchema extends ObjectNodeSchema> = NodeFromSchema<TSchema> & {
+export interface ObjectViewResult<TSchema extends ObjectNodeSchema> {
+	/**
+	 * The typed data root providing property access to schema fields.
+	 */
+	root: NodeFromSchema<TSchema>;
+
+	/**
+	 * Whether this view has been disposed.
+	 */
+	readonly disposed: boolean;
+
 	/**
 	 * The schema compatibility status.
 	 */
@@ -70,7 +80,12 @@ export type ObjectViewResult<TSchema extends ObjectNodeSchema> = NodeFromSchema<
 	 * Upgrade the stored schema to this view's schema.
 	 */
 	upgradeSchema(): void;
-};
+
+	/**
+	 * Dispose this view and release resources.
+	 */
+	dispose(): void;
+}
 
 // #endregion
 
@@ -81,10 +96,17 @@ export type ObjectViewResult<TSchema extends ObjectNodeSchema> = NodeFromSchema<
  *
  * @internal
  */
-export type MapViewResult<TSchema extends MapNodeSchema> = Map<
-	string,
-	InferValueSchema<TSchema>
-> & {
+export interface MapViewResult<TSchema extends MapNodeSchema> {
+	/**
+	 * The typed Map root providing map operations on schema data.
+	 */
+	root: Map<string, InferValueSchema<TSchema>>;
+
+	/**
+	 * Whether this view has been disposed.
+	 */
+	readonly disposed: boolean;
+
 	/**
 	 * The schema compatibility status.
 	 */
@@ -101,7 +123,12 @@ export type MapViewResult<TSchema extends MapNodeSchema> = Map<
 	 * Upgrade the stored schema to this view's schema.
 	 */
 	upgradeSchema(): void;
-};
+
+	/**
+	 * Dispose this view and release resources.
+	 */
+	dispose(): void;
+}
 
 // #endregion
 
@@ -114,7 +141,7 @@ export type MapViewResult<TSchema extends MapNodeSchema> = Map<
  * @param schemaOrConfig - The object schema or configuration object
  * @param persistence - Optional persistence layer for schema storage
  * @param options - Optional view creation options
- * @returns A proxied view with property access
+ * @returns A proxied view with property access through root
  *
  * @example
  * ```typescript
@@ -133,9 +160,9 @@ export type MapViewResult<TSchema extends MapNodeSchema> = Map<
  *   enableSchemaValidation: true,
  * }, persistence);
  *
- * // Property access
- * view.name = "Alice";
- * console.log(view.name); // "Alice"
+ * // Property access through root
+ * view.root.name = "Alice";
+ * console.log(view.root.name); // "Alice"
  *
  * // View methods
  * view.initialize({ name: "Bob", age: 30 });
@@ -164,7 +191,7 @@ export function createSchematizedObjectView<TSchema extends ObjectNodeSchema>(
  * @param schemaOrConfig - The map schema or configuration object
  * @param persistence - Optional persistence layer for schema storage
  * @param options - Optional view creation options
- * @returns A proxied view with Map-like access
+ * @returns A proxied view with Map-like access through root
  *
  * @example
  * ```typescript
@@ -180,9 +207,9 @@ export function createSchematizedObjectView<TSchema extends ObjectNodeSchema>(
  *   enableSchemaValidation: true,
  * }, persistence);
  *
- * // Map operations
- * view.set("key1", "value1");
- * console.log(view.get("key1")); // "value1"
+ * // Map operations through root
+ * view.root.set("key1", "value1");
+ * console.log(view.root.get("key1")); // "value1"
  *
  * // View methods
  * view.initialize(new Map([["a", "1"]]));

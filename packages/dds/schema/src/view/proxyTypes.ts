@@ -22,10 +22,16 @@ import type { NodeFromSchema, InferValueSchema } from "../types/index.js";
  * @remarks
  * This type represents a schematized view over object data in a DDS.
  * It provides:
- * - Typed property access based on the schema fields
+ * - Typed property access through the `root` property
  * - Schema compatibility checking via `compatibility`
  * - Initialization via `initialize()`
  * - Schema upgrade via `upgradeSchema()`
+ *
+ * The view separates metadata/methods from data access:
+ * - `view.root` - The typed data proxy (read/write)
+ * - `view.compatibility` - Schema status
+ * - `view.initialize()` - Set initial data
+ * - `view.dispose()` - Cleanup
  *
  * @typeParam TSchema - The object node schema type
  *
@@ -38,48 +44,59 @@ import type { NodeFromSchema, InferValueSchema } from "../types/index.js";
  * });
  *
  * // Get typed view from DDS
- * const user = map.viewWith(UserSchema);
+ * const view = map.viewWith(UserSchema);
  *
  * // Initialize if needed
- * if (user.compatibility.canInitialize) {
- *   user.initialize({ name: "Alice", age: 30 });
+ * if (view.compatibility.canInitialize) {
+ *   view.initialize({ name: "Alice", age: 30 });
  * }
  *
- * // Property access - fully typed!
- * user.name = "Bob";
- * console.log(user.age); // number | undefined
+ * // Property access through root - fully typed!
+ * view.root.name = "Bob";
+ * console.log(view.root.age); // number | undefined
+ *
+ * // Full replacement via root setter
+ * view.root = { name: "Charlie", age: 25 };
  * ```
  *
  * @legacy
  * @alpha
  */
-export type SchematizedObject<TSchema extends ObjectNodeSchema> = NodeFromSchema<TSchema> &
-	IDisposable & {
-		/**
-		 * Whether this view has been disposed.
-		 */
-		readonly disposed: boolean;
+export type SchematizedObject<TSchema extends ObjectNodeSchema> = IDisposable & {
+	/**
+	 * The typed data root providing property access to schema fields.
+	 *
+	 * @remarks
+	 * Reading returns the current field values.
+	 * Writing to `root` replaces all data (calls initialize internally).
+	 */
+	root: NodeFromSchema<TSchema>;
 
-		/**
-		 * Schema compatibility status for this view.
-		 */
-		readonly compatibility: SchemaCompatibilityStatus;
+	/**
+	 * Whether this view has been disposed.
+	 */
+	readonly disposed: boolean;
 
-		/**
-		 * Initialize the storage with schema and initial content.
-		 *
-		 * @param content - The initial content matching the schema
-		 * @throws If schema is already stored or content is invalid
-		 */
-		initialize: (content: NodeFromSchema<TSchema>) => void;
+	/**
+	 * Schema compatibility status for this view.
+	 */
+	readonly compatibility: SchemaCompatibilityStatus;
 
-		/**
-		 * Upgrade the stored schema to this view's schema.
-		 *
-		 * @throws If schemas are not compatible for upgrade
-		 */
-		upgradeSchema: () => void;
-	};
+	/**
+	 * Initialize the storage with schema and initial content.
+	 *
+	 * @param content - The initial content matching the schema
+	 * @throws If schema is already stored or content is invalid
+	 */
+	initialize: (content: NodeFromSchema<TSchema>) => void;
+
+	/**
+	 * Upgrade the stored schema to this view's schema.
+	 *
+	 * @throws If schemas are not compatible for upgrade
+	 */
+	upgradeSchema: () => void;
+};
 
 /**
  * A typed Map view returned by DDSes for map schemas.
@@ -87,10 +104,16 @@ export type SchematizedObject<TSchema extends ObjectNodeSchema> = NodeFromSchema
  * @remarks
  * This type represents a schematized view over map data in a DDS.
  * It provides:
- * - Standard Map interface with typed values
+ * - Standard Map interface through the `root` property
  * - Schema compatibility checking via `compatibility`
  * - Initialization via `initialize()`
  * - Schema upgrade via `upgradeSchema()`
+ *
+ * The view separates metadata/methods from data access:
+ * - `view.root` - The typed Map proxy (read/write)
+ * - `view.compatibility` - Schema status
+ * - `view.initialize()` - Set initial data
+ * - `view.dispose()` - Cleanup
  *
  * @typeParam TSchema - The map node schema type
  *
@@ -100,55 +123,63 @@ export type SchematizedObject<TSchema extends ObjectNodeSchema> = NodeFromSchema
  * const ConfigSchema = sf.map("Config", sf.string);
  *
  * // Get typed view from DDS
- * const config = map.viewWith(ConfigSchema);
+ * const view = map.viewWith(ConfigSchema);
  *
  * // Initialize if needed
- * if (config.compatibility.canInitialize) {
- *   config.initialize(new Map([["setting1", "value1"]]));
+ * if (view.compatibility.canInitialize) {
+ *   view.initialize(new Map([["setting1", "value1"]]));
  * }
  *
- * // Map operations - fully typed!
- * config.set("setting2", "value2");
- * const value = config.get("setting1"); // string | undefined
+ * // Map operations through root - fully typed!
+ * view.root.set("setting2", "value2");
+ * const value = view.root.get("setting1"); // string | undefined
  *
- * for (const [key, val] of config) {
+ * for (const [key, val] of view.root) {
  *   console.log(key, val);
  * }
+ *
+ * // Full replacement via root setter
+ * view.root = new Map([["newKey", "newValue"]]);
  * ```
  *
  * @legacy
  * @alpha
  */
-export type SchematizedMap<TSchema extends MapNodeSchema> = Map<
-	string,
-	InferValueSchema<TSchema>
-> &
-	IDisposable & {
-		/**
-		 * Whether this view has been disposed.
-		 */
-		readonly disposed: boolean;
+export type SchematizedMap<TSchema extends MapNodeSchema> = IDisposable & {
+	/**
+	 * The typed Map root providing map operations on schema data.
+	 *
+	 * @remarks
+	 * Provides standard Map interface with typed values.
+	 * Writing to `root` replaces all data (calls initialize internally).
+	 */
+	root: Map<string, InferValueSchema<TSchema>>;
 
-		/**
-		 * Schema compatibility status for this view.
-		 */
-		readonly compatibility: SchemaCompatibilityStatus;
+	/**
+	 * Whether this view has been disposed.
+	 */
+	readonly disposed: boolean;
 
-		/**
-		 * Initialize the storage with schema and initial content.
-		 *
-		 * @param content - The initial map content
-		 * @throws If schema is already stored or content is invalid
-		 */
-		initialize: (content: Map<string, InferValueSchema<TSchema>>) => void;
+	/**
+	 * Schema compatibility status for this view.
+	 */
+	readonly compatibility: SchemaCompatibilityStatus;
 
-		/**
-		 * Upgrade the stored schema to this view's schema.
-		 *
-		 * @throws If schemas are not compatible for upgrade
-		 */
-		upgradeSchema: () => void;
-	};
+	/**
+	 * Initialize the storage with schema and initial content.
+	 *
+	 * @param content - The initial map content
+	 * @throws If schema is already stored or content is invalid
+	 */
+	initialize: (content: Map<string, InferValueSchema<TSchema>>) => void;
+
+	/**
+	 * Upgrade the stored schema to this view's schema.
+	 *
+	 * @throws If schemas are not compatible for upgrade
+	 */
+	upgradeSchema: () => void;
+};
 
 /**
  * Maps a root schema type to its corresponding user-facing view type.

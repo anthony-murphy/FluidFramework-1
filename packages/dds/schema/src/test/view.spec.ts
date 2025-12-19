@@ -691,8 +691,8 @@ describe("View", () => {
 	});
 
 	describe("createObjectViewProxy", () => {
-		describe("property access", () => {
-			it("gets property values", () => {
+		describe("property access through root", () => {
+			it("gets property values through root", () => {
 				const PersonSchema = sf.object("PersonProxy", {
 					name: sf.string,
 					age: sf.number,
@@ -706,8 +706,8 @@ describe("View", () => {
 
 				const proxy = createObjectViewProxy(view, PersonSchema);
 
-				assert.equal(proxy.name, "Alice");
-				assert.equal(proxy.age, 30);
+				assert.equal(proxy.root.name, "Alice");
+				assert.equal(proxy.root.age, 30);
 			});
 
 			it("returns undefined for schema fields without values", () => {
@@ -724,12 +724,12 @@ describe("View", () => {
 
 				const proxy = createObjectViewProxy(view, PersonSchema);
 
-				assert.equal(proxy.nickname, undefined);
+				assert.equal(proxy.root.nickname, undefined);
 			});
 		});
 
-		describe("property assignment", () => {
-			it("sets property values", () => {
+		describe("property assignment through root", () => {
+			it("sets property values through root", () => {
 				const PersonSchema = sf.object("PersonProxySet", {
 					name: sf.string,
 					age: sf.number,
@@ -743,14 +743,14 @@ describe("View", () => {
 
 				const proxy = createObjectViewProxy(view, PersonSchema);
 
-				// Use direct assignment via the proxy handler
+				// Use direct assignment via the root proxy
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				(proxy as any).age = 31;
-				assert.equal(proxy.age, 31);
+				(proxy.root as any).age = 31;
+				assert.equal(proxy.root.age, 31);
 				assert.equal(view.getFieldValue("age"), 31);
 			});
 
-			it("returns false for unknown properties", () => {
+			it("returns false for unknown properties on root", () => {
 				const PersonSchema = sf.object("PersonProxyUnknown", {
 					name: sf.string,
 				});
@@ -763,14 +763,14 @@ describe("View", () => {
 
 				const proxy = createObjectViewProxy(view, PersonSchema);
 
-				// Setting unknown property returns false (strict mode would throw)
-				const result = Reflect.set(proxy, "unknownProp", "value");
+				// Setting unknown property on root returns false (strict mode would throw)
+				const result = Reflect.set(proxy.root, "unknownProp", "value");
 				assert.equal(result, false);
 			});
 		});
 
-		describe("hasOwnProperty behavior", () => {
-			it("returns true for schema fields", () => {
+		describe("hasOwnProperty behavior on root", () => {
+			it("returns true for schema fields in root", () => {
 				const PersonSchema = sf.object("PersonProxyHas", {
 					name: sf.string,
 					age: sf.number,
@@ -784,12 +784,12 @@ describe("View", () => {
 
 				const proxy = createObjectViewProxy(view, PersonSchema);
 
-				assert.equal("name" in proxy, true);
-				assert.equal("age" in proxy, true);
-				assert.equal("unknownField" in proxy, false);
+				assert.equal("name" in proxy.root, true);
+				assert.equal("age" in proxy.root, true);
+				assert.equal("unknownField" in proxy.root, false);
 			});
 
-			it("Object.keys returns field names", () => {
+			it("Object.keys on root returns field names", () => {
 				const PersonSchema = sf.object("PersonProxyKeys", {
 					name: sf.string,
 					age: sf.number,
@@ -803,7 +803,7 @@ describe("View", () => {
 
 				const proxy = createObjectViewProxy(view, PersonSchema);
 
-				const keys = Object.keys(proxy);
+				const keys = Object.keys(proxy.root);
 				assert.deepEqual(keys.sort(), ["age", "name"]);
 			});
 		});
@@ -836,7 +836,7 @@ describe("View", () => {
 
 				proxy.initialize({ name: "Bob" });
 
-				assert.equal(proxy.name, "Bob");
+				assert.equal(proxy.root.name, "Bob");
 			});
 
 			it("exposes upgradeSchema method", () => {
@@ -854,6 +854,29 @@ describe("View", () => {
 
 				// Should not throw (same schema)
 				proxy.upgradeSchema();
+			});
+		});
+
+		describe("root setter", () => {
+			it("allows full replacement via root setter", () => {
+				const PersonSchema = sf.object("PersonProxyRootSet", {
+					name: sf.string,
+					age: sf.number,
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
+
+				view.initialize({ name: "Alice", age: 30 });
+
+				const proxy = createObjectViewProxy(view, PersonSchema);
+
+				// Replace all data via root setter
+				proxy.root = { name: "Bob", age: 25 };
+
+				assert.equal(proxy.root.name, "Bob");
+				assert.equal(proxy.root.age, 25);
 			});
 		});
 	});

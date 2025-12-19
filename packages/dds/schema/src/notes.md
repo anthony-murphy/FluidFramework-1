@@ -354,13 +354,18 @@ TODO:
 
 ### #4 - Root Property Implementation
 
-TODO:
-- [ ] Change view structure: view has `root` property, not direct data access
-- [ ] `root` getter returns the typed proxy (ObjectProxy or MapProxy)
-- [ ] `root` setter allows full replacement
-- [ ] Update `SchematizedObject` and `SchematizedMap` types
-- [ ] Update tests to use `view.root.field` pattern
-- [ ] **Breaking change** - update all existing usage
+[DONE] **Completed December 19, 2025**
+
+Implementation summary:
+- ✅ Changed view structure: view has `root` property for data access
+- ✅ `root` getter returns the typed proxy (ObjectProxy or MapProxy)
+- ✅ `root` setter allows full replacement of data
+- ✅ Updated `SchematizedObject` and `SchematizedMap` types in `proxyTypes.ts`
+- ✅ Updated `ObjectViewResult` and `MapViewResult` interfaces in `createView.ts`
+- ✅ Updated `createObjectViewProxy` and `createMapViewProxy` in `proxy.ts`
+- ✅ Updated all tests in `view.spec.ts` to use `view.root.field` pattern
+- ✅ **Breaking change** - API changed from `view.field` to `view.root.field`
+- ✅ Build passes, all 253 tests pass
 
 ### #6 - Field Props Implementation
 

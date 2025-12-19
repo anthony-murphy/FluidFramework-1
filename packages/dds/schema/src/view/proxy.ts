@@ -25,21 +25,28 @@ const disposedErrorMessage = "Accessed a disposed SchematizedView.";
  * Create a Proxy that provides property access to a {@link SchematizedObjectView}.
  *
  * @remarks
- * This function creates a JavaScript Proxy that enables property-style access
- * to the fields defined in the schema. It combines data access with view methods.
+ * This function creates a JavaScript Proxy that provides a view with:
+ * - `root` property: A proxy for typed property access to schema fields
+ * - View methods: `compatibility`, `initialize`, `upgradeSchema`, `dispose`
+ *
+ * The `root` property can be read to access data fields, or written to
+ * replace all data via `initialize()`.
  *
  * @param view - The view to wrap
  * @param schema - The schema defining available fields
- * @returns A proxy providing property access
+ * @returns A proxy providing view structure with root data access
  *
  * @example
  * ```typescript
  * const view = new SchematizedObjectView(storage, UserSchema);
  * const proxy = createObjectViewProxy(view, UserSchema);
  *
- * // Property access
- * proxy.name = "Alice";
- * console.log(proxy.name); // "Alice"
+ * // Property access through root
+ * proxy.root.name = "Alice";
+ * console.log(proxy.root.name); // "Alice"
+ *
+ * // Full replacement
+ * proxy.root = { name: "Bob", age: 30 };
  *
  * // View methods still available
  * console.log(proxy.compatibility);
@@ -50,34 +57,21 @@ const disposedErrorMessage = "Accessed a disposed SchematizedView.";
 export function createObjectViewProxy<TSchema extends ObjectNodeSchema>(
 	view: SchematizedObjectView<TSchema>,
 	schema: TSchema,
-): NodeFromSchema<TSchema> & {
+): {
+	root: NodeFromSchema<TSchema>;
 	compatibility: SchemaCompatibilityStatus;
 	initialize: (content: NodeFromSchema<TSchema>) => void;
 	upgradeSchema: () => void;
+	dispose: () => void;
+	disposed: boolean;
 } {
+	// Create the data proxy for the root property
 	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-	const proxyTarget: NodeFromSchema<TSchema> = {} as NodeFromSchema<TSchema>;
-	return new Proxy(proxyTarget, {
+	const dataProxyTarget: NodeFromSchema<TSchema> = {} as NodeFromSchema<TSchema>;
+	const dataProxy = new Proxy(dataProxyTarget, {
 		get(_target, prop) {
-			// Allow disposed/dispose access even on disposed view
-			if (prop === "disposed") {
-				return view.disposed;
-			}
-			if (prop === "dispose") {
-				return view.dispose.bind(view);
-			}
-			// Check disposed state for all other accesses
 			if (view.disposed) {
 				throw new UsageError(disposedErrorMessage);
-			}
-			if (prop === "compatibility") {
-				return view.compatibility;
-			}
-			if (prop === "initialize") {
-				return view.initialize.bind(view);
-			}
-			if (prop === "upgradeSchema") {
-				return view.upgradeSchema.bind(view);
 			}
 			if (typeof prop === "string" && prop in schema.fields) {
 				return view.getFieldValue(prop);
@@ -110,39 +104,90 @@ export function createObjectViewProxy<TSchema extends ObjectNodeSchema>(
 			}
 			return undefined;
 		},
-	}) as unknown as NodeFromSchema<TSchema> & {
-		compatibility: SchemaCompatibilityStatus;
-		initialize: (content: NodeFromSchema<TSchema>) => void;
-		upgradeSchema: () => void;
+	}) as unknown as NodeFromSchema<TSchema>;
+
+	// Create the view proxy with root property
+	const viewProxy = {
+		get root(): NodeFromSchema<TSchema> {
+			if (view.disposed) {
+				throw new UsageError(disposedErrorMessage);
+			}
+			return dataProxy;
+		},
+		set root(value: NodeFromSchema<TSchema>) {
+			if (view.disposed) {
+				throw new UsageError(disposedErrorMessage);
+			}
+			// Setting root reinitializes the view with new data
+			// First clear existing data, then set new values
+			// For simplicity, we set each field from the new value
+			for (const fieldName of Object.keys(schema.fields)) {
+				const fieldValue = (value as Record<string, unknown>)[fieldName];
+				view.setFieldValue(fieldName, fieldValue);
+			}
+		},
+		get compatibility(): SchemaCompatibilityStatus {
+			if (view.disposed) {
+				throw new UsageError(disposedErrorMessage);
+			}
+			return view.compatibility;
+		},
+		initialize: (content: NodeFromSchema<TSchema>): void => {
+			if (view.disposed) {
+				throw new UsageError(disposedErrorMessage);
+			}
+			view.initialize(content);
+		},
+		upgradeSchema: (): void => {
+			if (view.disposed) {
+				throw new UsageError(disposedErrorMessage);
+			}
+			view.upgradeSchema();
+		},
+		get disposed(): boolean {
+			return view.disposed;
+		},
+		dispose: (): void => {
+			view.dispose();
+		},
 	};
+
+	return viewProxy;
 }
 
 /**
  * Create a Proxy that provides Map-like access to a {@link SchematizedMapView}.
  *
  * @remarks
- * This function creates a JavaScript Proxy that enables Map-style access
- * to the entries defined in the schema. It combines data access with view methods.
+ * This function creates a view with:
+ * - `root` property: A Map proxy for typed map operations
+ * - View methods: `compatibility`, `initialize`, `upgradeSchema`, `dispose`
+ *
+ * The `root` property provides standard Map interface with typed values.
+ * Writing to `root` replaces all data via reinitialization.
  *
  * @param view - The view to wrap
  * @param schema - The schema defining the map value type
- * @returns A proxy providing Map-like access
+ * @returns A view providing root Map access
  *
  * @example
  * ```typescript
  * const view = new SchematizedMapView(storage, ConfigMap);
  * const proxy = createMapViewProxy(view, ConfigMap);
  *
- * // Map operations
- * proxy.set("key1", "value1");
- * console.log(proxy.get("key1")); // "value1"
- * console.log(proxy.has("key1")); // true
- * proxy.delete("key1");
+ * // Map operations through root
+ * proxy.root.set("key1", "value1");
+ * console.log(proxy.root.get("key1")); // "value1"
+ * console.log(proxy.root.has("key1")); // true
+ * proxy.root.delete("key1");
  *
- * // Iteration
- * for (const [key, value] of proxy) {
+ * // Iteration through root
+ * for (const [key, value] of proxy.root) {
  *   console.log(key, value);
  * }
+ *
+ * // Full replacement
+ * proxy.root = new Map([["newKey", "newValue"]]);
  *
  * // View methods still available
  * console.log(proxy.compatibility);
@@ -153,35 +198,21 @@ export function createObjectViewProxy<TSchema extends ObjectNodeSchema>(
 export function createMapViewProxy<TSchema extends MapNodeSchema>(
 	view: SchematizedMapView<TSchema>,
 	_schema: TSchema,
-): Map<string, InferValueSchema<TSchema>> & {
+): {
+	root: Map<string, InferValueSchema<TSchema>>;
 	compatibility: SchemaCompatibilityStatus;
 	initialize: (content: Map<string, InferValueSchema<TSchema>>) => void;
 	upgradeSchema: () => void;
+	dispose: () => void;
+	disposed: boolean;
 } {
+	// Create a Map-like proxy for the root property
 	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-	const proxyTarget = {} as Map<string, InferValueSchema<TSchema>>;
-	return new Proxy(proxyTarget, {
+	const mapProxyTarget = {} as Map<string, InferValueSchema<TSchema>>;
+	const mapProxy = new Proxy(mapProxyTarget, {
 		get(_target, prop) {
-			// Allow disposed/dispose access even on disposed view
-			if (prop === "disposed") {
-				return view.disposed;
-			}
-			if (prop === "dispose") {
-				return view.dispose.bind(view);
-			}
-			// Check disposed state for all other accesses
 			if (view.disposed) {
 				throw new UsageError(disposedErrorMessage);
-			}
-			// View properties
-			if (prop === "compatibility") {
-				return view.compatibility;
-			}
-			if (prop === "initialize") {
-				return view.initialize.bind(view);
-			}
-			if (prop === "upgradeSchema") {
-				return view.upgradeSchema.bind(view);
 			}
 			// Map methods
 			if (prop === "get") {
@@ -190,7 +221,7 @@ export function createMapViewProxy<TSchema extends MapNodeSchema>(
 			if (prop === "set") {
 				return (key: string, value: InferValueSchema<TSchema>) => {
 					view.set(key, value);
-					return proxyTarget; // Return proxy for chaining like Map
+					return mapProxy; // Return proxy for chaining like Map
 				};
 			}
 			if (prop === "has") {
@@ -221,7 +252,7 @@ export function createMapViewProxy<TSchema extends MapNodeSchema>(
 					thisArg?: unknown,
 				) => {
 					for (const [key, value] of view) {
-						callback.call(thisArg, value, key, proxyTarget);
+						callback.call(thisArg, value, key, mapProxy);
 					}
 				};
 			}
@@ -251,12 +282,54 @@ export function createMapViewProxy<TSchema extends MapNodeSchema>(
 				Symbol.iterator,
 				Symbol.toStringTag,
 			];
-			const viewProps = ["compatibility", "initialize", "upgradeSchema"];
-			return mapProps.includes(prop) || viewProps.includes(prop as string);
+			return mapProps.includes(prop);
 		},
-	}) as unknown as Map<string, InferValueSchema<TSchema>> & {
-		compatibility: SchemaCompatibilityStatus;
-		initialize: (content: Map<string, InferValueSchema<TSchema>>) => void;
-		upgradeSchema: () => void;
+	}) as unknown as Map<string, InferValueSchema<TSchema>>;
+
+	// Create the view with root property
+	const viewProxy = {
+		get root(): Map<string, InferValueSchema<TSchema>> {
+			if (view.disposed) {
+				throw new UsageError(disposedErrorMessage);
+			}
+			return mapProxy;
+		},
+		set root(value: Map<string, InferValueSchema<TSchema>>) {
+			if (view.disposed) {
+				throw new UsageError(disposedErrorMessage);
+			}
+			// Setting root replaces all data
+			// Clear existing entries and add new ones
+			view.clear();
+			for (const [key, val] of value) {
+				view.set(key, val);
+			}
+		},
+		get compatibility(): SchemaCompatibilityStatus {
+			if (view.disposed) {
+				throw new UsageError(disposedErrorMessage);
+			}
+			return view.compatibility;
+		},
+		initialize: (content: Map<string, InferValueSchema<TSchema>>): void => {
+			if (view.disposed) {
+				throw new UsageError(disposedErrorMessage);
+			}
+			view.initialize(content);
+		},
+		upgradeSchema: (): void => {
+			if (view.disposed) {
+				throw new UsageError(disposedErrorMessage);
+			}
+			view.upgradeSchema();
+		},
+		get disposed(): boolean {
+			return view.disposed;
+		},
+		dispose: (): void => {
+			view.dispose();
+		},
 	};
+
+	return viewProxy;
 }
