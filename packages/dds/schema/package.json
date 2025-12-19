@@ -1,0 +1,71 @@
+{
+	"name": "@fluidframework/schema",
+	"version": "2.80.0",
+	"description": "Shared schema system for Fluid Framework DDSes",
+	"homepage": "https://fluidframework.com",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/microsoft/FluidFramework.git",
+		"directory": "packages/dds/schema"
+	},
+	"license": "MIT",
+	"author": "Microsoft and contributors",
+	"sideEffects": false,
+	"type": "module",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./lib/index.d.ts",
+				"default": "./lib/index.js"
+			}
+		},
+		"./internal": {
+			"import": {
+				"types": "./lib/index.d.ts",
+				"default": "./lib/index.js"
+			}
+		}
+	},
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
+	"scripts": {
+		"build": "fluid-build . --task build",
+		"build:compile": "fluid-build . --task compile",
+		"build:docs": "api-extractor run --local",
+		"build:esnext": "tsc --project ./tsconfig.json",
+		"build:test": "tsc --project ./src/test/tsconfig.json",
+		"check:biome": "biome check .",
+		"check:format": "npm run check:biome",
+		"clean": "rimraf --glob dist lib \"**/*.tsbuildinfo\" \"**/*.build.log\" _api-extractor-temp",
+		"format": "npm run format:biome",
+		"format:biome": "biome check . --write",
+		"lint": "fluid-build . --task lint",
+		"test": "npm run test:mocha",
+		"test:mocha": "mocha --recursive lib/test/**/*.spec.js",
+		"tsc": "fluid-tsc commonjs --project ./tsconfig.json"
+	},
+	"dependencies": {
+		"@fluidframework/core-interfaces": "workspace:~",
+		"@fluidframework/core-utils": "workspace:~"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "~1.9.3",
+		"@fluid-internal/mocha-test-setup": "workspace:~",
+		"@fluid-tools/build-cli": "^0.61.0",
+		"@fluidframework/build-common": "^2.0.3",
+		"@fluidframework/build-tools": "^0.61.0",
+		"@microsoft/api-extractor": "^7.52.8",
+		"@types/mocha": "^10.0.10",
+		"@types/node": "~18.19.0",
+		"mocha": "^10.8.2",
+		"rimraf": "^4.4.1",
+		"typescript": "~5.8.2"
+	},
+	"fluidBuild": {
+		"tasks": {
+			"tsc": [
+				"../**:build:compile"
+			]
+		}
+	}
+}
