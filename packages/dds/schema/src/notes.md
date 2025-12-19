@@ -386,18 +386,18 @@ TODO (in map package, not schema):
 ### #9 - Reusable Helper Functions
 
 TODO:
-- [ ] Create `view/createView.ts` with `createSchematizedView<TSchema>(storage, schema, persistence?)`
-- [ ] Create `storage/adapters.ts` with:
-  - [ ] `MapLikeStorage` interface (get, set, delete, has, keys, size)
-  - [ ] `createFlatStorageAdapter(source: MapLikeStorage): ISchemaStorage`
-  - [ ] `SchemaField` interface (get, set)
-  - [ ] `createPersistenceAdapter(field: SchemaField): ISchemaPersistence`
-- [ ] Refactor internal code:
-  - [ ] `unwrapStorageResult()` - consolidate from objectView.ts and mapView.ts
-  - [ ] `wrapNestedStorage()` - create view for nested storage results
-  - [ ] `getNodeSchemaFromField()` - extract NodeSchema from FieldSchema
-  - [ ] `assertCanView/Initialize/Upgrade()` - guard functions
-- [ ] **Reduce exports** - DDSes only need to import:
+- [DONE] Create `view/createView.ts` with `createSchematizedView<TSchema>(storage, schema, persistence?)`
+- [DONE] Create `storage/adapters.ts` with:
+  - [DONE] `MapLikeStorage` interface (get, set, delete, has, keys, size)
+  - [DONE] `createFlatStorageAdapter(source: MapLikeStorage): ISchemaStorage`
+  - [DONE] `SchemaField` interface (get, set)
+  - [DONE] `createPersistenceAdapter(field: SchemaField): ISchemaPersistence`
+- [SKIP] Refactor internal code (already exists in view classes, low value):
+  - [SKIP] `unwrapStorageResult()` - consolidate from objectView.ts and mapView.ts
+  - [SKIP] `wrapNestedStorage()` - create view for nested storage results
+  - [SKIP] `getNodeSchemaFromField()` - extract NodeSchema from FieldSchema
+  - [SKIP] `assertCanView/Initialize/Upgrade()` - guard functions
+- [DONE] **Reduce exports** - DDSes only need to import:
   - [ ] `createSchematizedView` - the main helper
   - [ ] `ISchemaStorage`, `ISchemaPersistence` - interfaces to implement
   - [ ] `RootSchema`, `SchematizedView` - types

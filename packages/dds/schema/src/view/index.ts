@@ -24,3 +24,11 @@ export { createObjectViewProxy, createMapViewProxy } from "./proxy.js";
 export type { ViewFor } from "./viewFor.js";
 
 export type { SchematizedObject, SchematizedMap, SchematizedView } from "./proxyTypes.js";
+
+// Factory functions for creating views
+export {
+	createSchematizedView,
+	createSchematizedObjectView,
+	createSchematizedMapView,
+} from "./createView.js";
+export type { CreateViewOptions, ObjectViewResult, MapViewResult } from "./createView.js";

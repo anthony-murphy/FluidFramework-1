@@ -104,6 +104,8 @@ export type {
 
 // Storage
 export type { StorageResult, ISchemaStorage, ISchemaPersistence } from "./storage/index.js";
+export type { MapLikeStorage, SchemaField } from "./storage/index.js";
+export { createFlatStorageAdapter, createPersistenceAdapter } from "./storage/index.js";
 
 // Validation
 export { validateData, buildSchemaRegistry } from "./validation/index.js";
@@ -120,10 +122,16 @@ export {
 	SchemaValidationError,
 	createObjectViewProxy,
 	createMapViewProxy,
+	createSchematizedView,
+	createSchematizedObjectView,
+	createSchematizedMapView,
 } from "./view/index.js";
 export type {
 	ViewFor,
 	SchematizedObject,
 	SchematizedMap,
 	SchematizedView,
+	CreateViewOptions,
+	ObjectViewResult,
+	MapViewResult,
 } from "./view/index.js";

@@ -12,3 +12,6 @@
  */
 
 export type { StorageResult, ISchemaStorage, ISchemaPersistence } from "./interfaces.js";
+
+export type { MapLikeStorage, SchemaField } from "./adapters.js";
+export { createFlatStorageAdapter, createPersistenceAdapter } from "./adapters.js";
