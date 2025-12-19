@@ -429,59 +429,56 @@ TODO:
 
 ## Documentation Updates
 
-The following design documents need updates to reflect implementation decisions and remove outdated content.
+The following design documents have been updated to reflect implementation decisions.
 
-### Priority 1: Update with Implementation Reality
+### Priority 1: Updated with Implementation Reality
 
-| Document | Updates Needed |
-|----------|----------------|
-| **README.md** | Add real usage examples now that we have working code. Remove placeholder text. |
-| **schema-map-design.md** | ✅ Implementation complete. Add "Implementation Status" section at top. Trim code blocks to reference actual files. Remove speculative "future" sections. |
-| **schema-dds-integration.md** | Update examples to match actual API (config object, root property). Mark Modality 3 as "future consideration". |
+| Document | Updates Made |
+|----------|--------------|
+| **README.md** | [DONE] Added real usage examples with config object, root property, dispose(), and field props |
+| **schema-map-design.md** | [DONE] Added "Implementation Status" banner. Updated code examples for config object and root property. Added dispose() calls. |
+| **schema-dds-integration.md** | [DONE] Added status banner. Updated examples to match actual API (config object, root property, dispose). Updated comparison table. |
 
-### Priority 2: Archive or Mark as Historical
+### Priority 2: Marked as Historical
 
 | Document | Action |
 |----------|--------|
-| **schema-implementation-plan.md** | Add "HISTORICAL" header - this was the plan, implementation is done. Link to actual code. |
-| **schema-extraction-plan.md** | Add "HISTORICAL" header - extraction complete. Keep for context on why decisions were made. |
-| **schema-open-items.md** | Review each item - mark resolved ones, move unresolved to notes.md or GitHub issues. |
+| **schema-implementation-plan.md** | [DONE] Added "HISTORICAL" header noting implementation is complete. Links to actual code. |
+| **schema-extraction-plan.md** | Defer - still relevant as architecture reference |
+| **schema-open-items.md** | [DONE] Added status banner. Marked SharedMap Q5-6 as resolved. |
 
 ### Priority 3: Future Work Documents
 
 | Document | Action |
 |----------|--------|
-| **schema-directory-design.md** | Mark as "FUTURE" - not yet implemented. Review for consistency with decisions here. |
-| **schema-string-design.md** | Mark as "FUTURE" - not yet implemented. Very speculative, may need major revision. |
+| **schema-directory-design.md** | Unchanged - marked as "future" in related docs links |
+| **schema-string-design.md** | Unchanged - marked as "future" in related docs links |
 
-### Specific Updates
+### Specific Updates Completed
 
 #### README.md
-- [ ] Add working example from actual tests
-- [ ] Document `viewWith()` API with config object
-- [ ] Show ObjectNodeSchema vs MapNodeSchema patterns
-- [ ] Add link to API docs
+- [DONE] Add working example from actual tests
+- [DONE] Document `viewWith()` API with config object
+- [DONE] Show ObjectNodeSchema vs MapNodeSchema patterns
+- [DONE] Show field props usage
 
 #### schema-map-design.md
-- [ ] Add status banner: "✅ Implemented in v2.x"
-- [ ] Update viewWith signature to use config object (Decision #1)
-- [ ] Update view access pattern to use `view.root.field` (Decision #4)
-- [ ] Remove 900+ lines of implementation detail - link to actual source instead
-- [ ] Keep high-level patterns and compatibility matrix
+- [DONE] Add status banner: "✅ Implementation complete"
+- [DONE] Update viewWith signature to use config object (Decision #1)
+- [DONE] Update view access pattern to use `view.root.field` (Decision #4)
+- [DONE] Add dispose() calls to examples
 
 #### schema-dds-integration.md
-- [ ] Update config object signature
-- [ ] Update root property access pattern
-- [ ] Add note about `createSchematizedView` helper (Decision #9)
-- [ ] Mark Modality 3 sections as "Future Consideration"
+- [DONE] Add status banner
+- [DONE] Update config object signature
+- [DONE] Update root property access pattern
+- [DONE] Update comparison table with dispose()
+- [DONE] Add note about `createSchematizedView` helper
 
 #### schema-open-items.md
-- [ ] SharedMap Q5-6: Mark resolved (we support both Object and Map schemas)
-- [ ] SharedDirectory Q7-11: Move to directory-design.md
-- [ ] General Q12-13: Keep as future work
-- [ ] Update Risks section with actual mitigations taken
+- [DONE] Add status banner
+- [DONE] SharedMap Q5-6: Mark resolved (we support both Object and Map schemas)
 
 #### schema-implementation-plan.md
-- [ ] Add header: "# HISTORICAL: Implementation Plan (Completed)"
-- [ ] Add link to actual implementation
-- [ ] Keep phases for historical reference on how we got here
+- [DONE] Add header: "📜 HISTORICAL: Implementation Plan (Completed)"
+- [DONE] Add link to actual implementation

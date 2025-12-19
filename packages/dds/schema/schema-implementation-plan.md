@@ -1,5 +1,16 @@
 # Schema Package Implementation Plan
 
+> **📜 HISTORICAL DOCUMENT**
+>
+> This document was the implementation plan for `@fluidframework/schema`. The implementation is now complete (December 2025).
+>
+> **For current implementation:**
+> - See [src/](./src/) for the actual code
+> - See [src/notes.md](./src/notes.md) for API decisions and remaining work items
+> - See [README.md](./README.md) for usage examples
+>
+> This plan is preserved for historical reference on how we approached the implementation.
+
 > **Related Documents**:
 > - [Schema Extraction Plan](./schema-extraction-plan.md) - Architecture and scope
 > - [Schema Map Design](./schema-map-design.md) - SharedMap detailed design

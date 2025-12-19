@@ -37,14 +37,87 @@ This schema system allows you to define the structure and types of data stored i
 
 ## Usage
 
+### Define Schemas
+
 ```typescript
-import { SchemaFactory, NodeKind, FieldKind } from "@fluidframework/schema";
+import { SchemaFactory } from "@fluidframework/schema";
 
 // Create a schema factory with a unique scope
-const factory = new SchemaFactory("com.example.myapp");
+const sf = new SchemaFactory("com.example.myapp");
 
-// Define schemas for your data structures
-// (API details to be added as the package develops)
+// Define an object schema with typed fields
+class UserProfile extends sf.object("UserProfile", {
+  name: sf.string,
+  email: sf.string,
+  age: sf.optional(sf.number),  // Optional field
+}) {}
+
+// Define a map schema for dynamic keys
+const UserMap = sf.map("UserMap", UserProfile);
+```
+
+### Use with DDSes
+
+DDSes that support schema (like SharedMap) provide a `viewWith()` method:
+
+```typescript
+import type { ISharedMap } from "@fluidframework/map";
+
+const map: ISharedMap = /* from container */;
+
+// Create a typed view - accepts schema directly or config object
+const view = map.viewWith(UserMap);
+// Or with config: map.viewWith({ schema: UserMap, enableSchemaValidation: true })
+
+// Check compatibility and initialize if needed
+if (view.compatibility.canInitialize) {
+  view.initialize(new Map([["alice", { name: "Alice", email: "alice@example.com" }]]));
+}
+
+// Access data through the root property (breaking change in v2.x)
+const alice = view.root.get("alice");  // UserProfile | undefined
+alice?.name;  // string
+
+// Typed writes
+view.root.set("bob", { name: "Bob", email: "bob@example.com", age: 30 });
+
+// Clean up when done
+view.dispose();
+```
+
+### Object Schemas (Known Keys)
+
+For maps with fixed keys where each key has a different type:
+
+```typescript
+class AppSettings extends sf.object("AppSettings", {
+  theme: sf.string,
+  fontSize: sf.number,
+  notifications: sf.boolean,
+}) {}
+
+const settings = map.viewWith(AppSettings);
+
+// Property access through root
+settings.root.theme;       // string
+settings.root.fontSize;    // number
+settings.root.theme = "dark";  // Typed setter
+```
+
+### Field Options
+
+Fields support additional props:
+
+```typescript
+class Document extends sf.object("Document", {
+  title: sf.required(sf.string, {
+    key: "doc_title",  // Storage key override
+    metadata: { description: "Document title" }
+  }),
+  author: sf.optional(sf.string, {
+    metadata: { description: "Optional author name" }
+  }),
+}) {}
 ```
 
 ## API Documentation

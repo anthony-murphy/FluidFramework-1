@@ -1,11 +1,15 @@
 # Schema Integration - Open Items & Notes
 
+> **✅ Core Implementation Complete (December 2025)**
+>
+> Many items in this document have been resolved during implementation. See the Decision Log section below for resolved items.
+
 > **Related Documents**:
 > - [Schema Extraction Plan](./schema-extraction-plan.md) - Core schema package extraction
 > - [Schema DDS Integration Patterns](./schema-dds-integration.md) - General modality patterns
-> - [SharedMap Schema Design](./schema-map-design.md) - SharedMap implementation
-> - [SharedDirectory Schema Design](./schema-directory-design.md) - SharedDirectory implementation
-> - [SharedString Schema Design](./schema-string-design.md) - SharedString implementation
+> - [SharedMap Schema Design](./schema-map-design.md) - SharedMap implementation (complete)
+> - [SharedDirectory Schema Design](./schema-directory-design.md) - SharedDirectory implementation (future)
+> - [SharedString Schema Design](./schema-string-design.md) - SharedString implementation (future)
 
 This document tracks open questions, design notes, risks, and concerns for the schema extraction and DDS integration work.
 
@@ -37,6 +41,12 @@ This document tracks open questions, design notes, risks, and concerns for the s
 5. **Key constraints**: Should SharedMap schema support key pattern validation (e.g., regex for allowed keys)?
 
 6. **Heterogeneous values**: How do we handle maps where different keys have different value types?
+
+> **✅ RESOLVED (Q5-6):** The implementation supports both patterns:
+> - **ObjectNodeSchema**: For maps with fixed keys where each key can have a different type
+> - **MapNodeSchema**: For maps with dynamic keys where all values have the same type
+>
+> Key pattern validation was deferred as it adds complexity without clear use cases. The two schema patterns cover the vast majority of real-world needs.
 
 ### SharedDirectory
 

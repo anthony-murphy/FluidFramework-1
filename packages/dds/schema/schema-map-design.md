@@ -1,10 +1,20 @@
 # SharedMap Schema Integration Design
 
+> **✅ IMPLEMENTATION STATUS: Core implementation complete (December 2025)**
+>
+> The schema package is implemented and working. Key APIs:
+> - `viewWith()` accepts `SchemaViewConfiguration<TSchema>` or schema directly
+> - Views expose data through `view.root.field` (breaking change from earlier design)
+> - Views implement `IDisposable` with `dispose()` method
+> - Helper functions: `createSchematizedView()`, `createFlatStorageAdapter()`, `createPersistenceAdapter()`
+>
+> See [src/](./src/) for actual implementation.
+
 > **Related Documents**:
 > - [Schema Extraction Plan](./schema-extraction-plan.md) - Core schema package extraction
-> - [Schema Implementation Plan](./schema-implementation-plan.md) - Detailed implementation steps
+> - [Schema Implementation Plan](./schema-implementation-plan.md) - Historical implementation plan
 > - [Schema DDS Integration Patterns](./schema-dds-integration.md) - General modality patterns
-> - [SharedDirectory Schema Design](./schema-directory-design.md) - SharedDirectory implementation
+> - [SharedDirectory Schema Design](./schema-directory-design.md) - SharedDirectory implementation (future)
 > - [Open Items & Notes](./schema-open-items.md) - Open questions, risks, and concerns
 
 This document provides the detailed design for adding schema support to SharedMap using a unified `viewWith` API that follows Tree DDS's proven pattern.
@@ -67,9 +77,10 @@ class UserProfile extends sf.object("UserProfile", {
 
 const UserProfileMap = sf.map("UserProfileMap", UserProfile);
 
-// Get a typed view
+// Get a typed view - accepts schema or config object
 const map: ISharedMap = /* from container */;
 const view = map.viewWith(UserProfileMap);
+// Or with config: map.viewWith({ schema: UserProfileMap, enableSchemaValidation: true })
 
 // Check compatibility status
 if (view.compatibility.canInitialize) {
@@ -77,9 +88,12 @@ if (view.compatibility.canInitialize) {
   view.initialize(new Map([["alice", { name: "Alice", email: "alice@example.com" }]]));
 }
 
-// Typed operations (work whether or not you called initialize)
-view.get("alice")?.name;   // string | undefined
-view.set("bob", { name: "Bob", email: "bob@example.com" });
+// Data is accessed through the root property
+view.root.get("alice")?.name;   // string | undefined
+view.root.set("bob", { name: "Bob", email: "bob@example.com" });
+
+// Clean up when done
+view.dispose();
 ```
 
 ### Pattern A: ObjectNodeSchema - Known Keys
@@ -99,16 +113,19 @@ class AppSettings extends sf.object("AppSettings", {
 const map: ISharedMap = /* from container */;
 const settings = map.viewWith(AppSettings);
 
-// Typed property access for known keys
-settings.theme;                     // string (readonly)
-settings.fontSize;                  // number (readonly)
-settings.theme = "dark";            // ✅ Atomic replacement (setter)
-settings.fontSize = 14;             // ✅ Atomic replacement (setter)
+// Typed property access through root
+settings.root.theme;                     // string (readonly)
+settings.root.fontSize;                  // number (readonly)
+settings.root.theme = "dark";            // ✅ Atomic replacement (setter)
+settings.root.fontSize = 14;             // ✅ Atomic replacement (setter)
 
-// Standard JS object utilities work
-Object.keys(settings);              // ["theme", "fontSize", "notifications", "lastLogin"]
-Object.entries(settings);           // [["theme", "dark"], ...]
-"theme" in settings;                // true
+// Standard JS object utilities work on root
+Object.keys(settings.root);              // ["theme", "fontSize", "notifications", "lastLogin"]
+Object.entries(settings.root);           // [["theme", "dark"], ...]
+"theme" in settings.root;                // true
+
+// Clean up when done
+settings.dispose();
 ```
 
 ### Pattern B: MapNodeSchema - Dynamic Keys
@@ -129,26 +146,29 @@ const UserProfileMap = sf.map("UserProfileMap", UserProfile);
 const map: ISharedMap = /* from container */;
 const view = map.viewWith(UserProfileMap);
 
-// Typed Map interface
-const alice = view.get("alice");   // UserProfile | undefined
-alice?.name;                        // string
-alice?.email;                       // string
+// Typed Map interface through root
+const alice = view.root.get("alice");   // UserProfile | undefined
+alice?.name;                             // string
+alice?.email;                            // string
 
 // Set accepts plain objects (atomic replacement)
-view.set("bob", {
+view.root.set("bob", {
   name: "Bob",
   email: "bob@example.com",
   age: 30,
 });
 
-view.set("charlie", { name: 123 }); // ❌ Compile error: name must be string
+view.root.set("charlie", { name: 123 }); // ❌ Compile error: name must be string
 
-// Standard Map iteration (typed)
-view.size;                          // number
-view.has("alice");                  // boolean
-for (const [key, profile] of view) {
-  console.log(key, profile.name);   // Both typed
+// Standard Map iteration (typed) on root
+view.root.size;                          // number
+view.root.has("alice");                  // boolean
+for (const [key, profile] of view.root) {
+  console.log(key, profile.name);        // Both typed
 }
+
+// Clean up when done
+view.dispose();
 ```
 
 ---
@@ -187,15 +207,18 @@ if (view.compatibility.canInitialize) {
   view.initialize(new Map([["alice", { name: "Alice", email: "a@b.com" }]]));
 } else if (view.compatibility.canView) {
   // Existing document with compatible schema
-  const alice = view.get("alice");
+  const alice = view.root.get("alice");
 } else if (view.compatibility.canUpgrade) {
   // Can extend stored schema
   view.upgradeSchema();
-  const alice = view.get("alice");
+  const alice = view.root.get("alice");
 } else {
   // Incompatible schema
   throw new Error("Schema incompatible with document");
 }
+
+// Clean up when done
+view.dispose();
 ```
 
 ---
@@ -312,14 +335,17 @@ const view = map.viewWith(UserProfileMap);
 // compatibility.canInitialize = true (no stored schema)
 // compatibility.canView = true (can use view immediately)
 
-// WRITES: Compile-time type checking
-view.set("alice", { name: "Alice", email: "a@b.com" });  // ✅
-view.set("bob", { garbage: true });                       // ❌ Compile error
+// WRITES: Compile-time type checking (through root)
+view.root.set("alice", { name: "Alice", email: "a@b.com" });  // ✅
+view.root.set("bob", { garbage: true });                       // ❌ Compile error
 
-// READS: Runtime validation
-const user = view.get("alice");
+// READS: Runtime validation (through root)
+const user = view.root.get("alice");
 // If data is malformed → throws SchemaValidationError
 // If valid → returns UserProfile with guaranteed accurate types
+
+// Clean up when done
+view.dispose();
 ```
 
 **Characteristics**:
@@ -425,9 +451,12 @@ if (!view.compatibility.canView && view.compatibility.canUpgrade) {
   view.upgradeSchema();
 }
 
-// Now we can use the view with the new optional field
-const alice = view.get("alice");
+// Now we can use the view with the new optional field (through root)
+const alice = view.root.get("alice");
 alice?.phone;  // string | undefined
+
+// Clean up when done
+view.dispose();
 ```
 
 ### DDS Implementation
@@ -517,11 +546,11 @@ if (!view.compatibility.canInitialize) {
 
 // 2. Use view when incompatible
 if (!view.compatibility.canView) {
-  view.get("alice");  // ❌ Throws: SchemaCompatibilityError
+  view.root.get("alice");  // ❌ Throws: SchemaCompatibilityError
 }
 
-// 3. Read malformed data
-const user = view.get("alice");  // ❌ Throws SchemaValidationError if data doesn't match
+// 3. Read malformed data (through root)
+const user = view.root.get("alice");  // ❌ Throws SchemaValidationError if data doesn't match
 ```
 
 ---
@@ -593,7 +622,7 @@ When a document is loaded, here's the complete flow:
 │     └─→ if (view.compatibility.canInitialize)                          │
 │          └─→ view.initialize(content)  // First time setup             │
 │     └─→ else if (view.compatibility.canView)                           │
-│          └─→ view.get("key")  // Normal usage                          │
+│          └─→ view.root.get("key")  // Normal usage (through root)      │
 │     └─→ else if (view.compatibility.canUpgrade)                        │
 │          └─→ view.upgradeSchema()  // Extend stored schema             │
 │     └─→ else                                                           │
@@ -657,7 +686,7 @@ if (view.compatibility.canInitialize) {
 
 // Case B: Existing document with compatible schema
 else if (view.compatibility.canView) {
-  const alice = view.get("alice");  // Works!
+  const alice = view.root.get("alice");  // Works! (through root)
 }
 
 // Case C: Existing document, schema can be extended
@@ -670,6 +699,9 @@ else if (view.compatibility.canUpgrade) {
 else {
   throw new Error("Cannot open document - schema incompatible");
 }
+
+// Clean up when done
+view.dispose();
 ```
 
 #### Comparison with Tree's Load Flow
@@ -1205,31 +1237,31 @@ The map stores **serialized JSON**, not proxy objects. This means:
 
 #### Reading Objects
 
-When you call `view.get("alice")`, you receive a **plain object** (copy of stored data):
+When you call `view.root.get("alice")`, you receive a **plain object** (copy of stored data):
 
 ```typescript
 const view = map.viewWith(UserProfileMap);
-const user = view.get("alice");
+const user = view.root.get("alice");
 
 // user is a plain object: { name: "Alice", email: "alice@example.com", age: 30 }
 // Type: { name: string; email: string; age?: number }
 
 // Mutating the returned object does NOT affect the map
 user.name = "Alicia";  // Only changes local variable
-console.log(view.get("alice").name);  // Still "Alice"
+console.log(view.root.get("alice").name);  // Still "Alice"
 ```
 
 #### Writing Objects
 
-To update, you must `set` a new object:
+To update, you must `set` a new object (through root):
 
 ```typescript
 // Read-modify-write pattern
-const user = view.get("alice");
-view.set("alice", { ...user, name: "Alicia" });
+const user = view.root.get("alice");
+view.root.set("alice", { ...user, name: "Alicia" });
 
 // Or set entirely new object
-view.set("charlie", {
+view.root.set("charlie", {
   name: "Charlie",
   email: "charlie@example.com"
 });
@@ -1242,17 +1274,17 @@ The schema provides compile-time type safety:
 ```typescript
 const view = map.viewWith(UserProfileMap);
 
-// ✅ Correct - matches schema
-view.set("alice", { name: "Alice", email: "alice@ex.com" });
+// ✅ Correct - matches schema (through root)
+view.root.set("alice", { name: "Alice", email: "alice@ex.com" });
 
 // ❌ Compile error - missing required field 'email'
-view.set("alice", { name: "Alice" });
+view.root.set("alice", { name: "Alice" });
 
 // ❌ Compile error - wrong type for 'age'
-view.set("alice", { name: "Alice", email: "x@y.com", age: "thirty" });
+view.root.set("alice", { name: "Alice", email: "x@y.com", age: "thirty" });
 
 // ❌ Compile error - extra field not in schema
-view.set("alice", { name: "Alice", email: "x@y.com", role: "admin" });
+view.root.set("alice", { name: "Alice", email: "x@y.com", role: "admin" });
 ```
 
 #### Runtime Validation
@@ -1260,11 +1292,11 @@ view.set("alice", { name: "Alice", email: "x@y.com", role: "admin" });
 The view validates data on read (to catch untyped writes) and optionally on write:
 
 ```typescript
-// On read - validates data matches schema
-const user = view.get("alice");  // Throws SchemaValidationError if stored data is malformed
+// On read - validates data matches schema (through root)
+const user = view.root.get("alice");  // Throws SchemaValidationError if stored data is malformed
 
 // On write - TypeScript catches most issues, runtime validation is defense-in-depth
-view.set("bob", someUntypedValue as any);  // Runtime validates before storing
+view.root.set("bob", someUntypedValue as any);  // Runtime validates before storing
 ```
 
 #### Nested Objects
@@ -1286,8 +1318,8 @@ const UserProfile = sf.object("UserProfile", {
 
 const UserProfileMap = sf.map("UserProfileMap", UserProfile);
 
-// Usage
-view.set("alice", {
+// Usage (through root)
+view.root.set("alice", {
   name: "Alice",
   email: "alice@example.com",
   address: {
@@ -1299,8 +1331,8 @@ view.set("alice", {
 
 // The entire object (including nested address) is stored as one JSON value
 // To update address, you must replace the whole user object
-const user = view.get("alice")!;
-view.set("alice", {
+const user = view.root.get("alice")!;
+view.root.set("alice", {
   ...user,
   address: { ...user.address!, city: "Bellevue" }
 });
@@ -1322,9 +1354,9 @@ const StringOrNumber = sf.union([sf.string, sf.number]);
 const MixedMap = sf.map("MixedMap", StringOrNumber);
 
 const view = map.viewWith(MixedMap);
-view.set("count", 42);           // ✅ number
-view.set("label", "Items");      // ✅ string
-view.set("flag", true);          // ❌ Compile error - boolean not in union
+view.root.set("count", 42);           // ✅ number
+view.root.set("label", "Items");      // ✅ string
+view.root.set("flag", true);          // ❌ Compile error - boolean not in union
 ```
 
 #### Why Plain Objects (Not Proxies)?
@@ -1637,7 +1669,7 @@ const copy = { ...settings };         // { theme: "dark", fontSize: 14, ... }
 |--------|------------------------------|---------------------------|
 | Keys | Fixed, known at compile time | Dynamic, any string |
 | Value types | Different type per key | Same type for all values |
-| Access style | `view.fieldName` | `view.get("key")` |
+| Access style | `view.root.fieldName` | `view.root.get("key")` |
 | TypeScript | Property types per field | Single value type |
 | Map storage | One key per field | One key per entry |
 | Use case | Settings, config objects | Collections, lookups |

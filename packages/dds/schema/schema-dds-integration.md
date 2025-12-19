@@ -1,11 +1,21 @@
 # Schema DDS Integration Patterns
 
+> **✅ IMPLEMENTATION STATUS: Core implementation complete (December 2025)**
+>
+> The schema package provides `viewWith()` integration for DDSes. Key implementation details:
+> - `viewWith()` accepts `SchemaViewConfiguration<TSchema>` or schema directly
+> - Views expose data through `view.root` property (not direct access)
+> - Views implement `IDisposable` with `dispose()` method
+> - Helper function `createSchematizedView()` simplifies DDS integration
+>
+> See [@fluidframework/schema](./src/) for actual implementation.
+
 > **Related Documents**:
 > - [Schema Extraction Plan](./schema-extraction-plan.md) - Core schema package extraction from Tree DDS
-> - [Schema Implementation Plan](./schema-implementation-plan.md) - Detailed implementation steps
+> - [Schema Implementation Plan](./schema-implementation-plan.md) - Historical implementation plan
 > - [SharedMap Schema Design](./schema-map-design.md) - Detailed SharedMap implementation
-> - [SharedDirectory Schema Design](./schema-directory-design.md) - Detailed SharedDirectory implementation
-> - [SharedString Schema Design](./schema-string-design.md) - Detailed SharedString implementation
+> - [SharedDirectory Schema Design](./schema-directory-design.md) - SharedDirectory implementation (future)
+> - [SharedString Schema Design](./schema-string-design.md) - SharedString implementation (future)
 > - [Open Items & Notes](./schema-open-items.md) - Open questions, risks, and concerns
 
 This document describes the general patterns for how DDSes can adopt the shared `@fluidframework/schema` package.
@@ -52,14 +62,19 @@ Modalities 1 and 2 share the same `viewWith()` API - the difference is whether y
 DDSes that support schema provide a `viewWith` method that follows Tree DDS's proven pattern:
 
 ```typescript
+// Accepts schema directly or config object
 const view = map.viewWith(schema);
+// Or with config:
+const view = map.viewWith({ schema, enableSchemaValidation: true });
 ```
 
 This returns a view with:
 - **`compatibility`** - Status of view schema vs stored schema
+- **`root`** - Typed accessor for data (object properties or map operations)
 - **`initialize(content)`** - Set schema and initial content (when `canInitialize` is true)
 - **`upgradeSchema()`** - Extend stored schema (when `canUpgrade` is true)
-- **Typed accessors** - `get()`, `set()`, etc. with schema-derived types
+- **`dispose()`** - Clean up resources (implements `IDisposable`)
+- **`disposed`** - Boolean indicating if view has been disposed
 
 ### How Schema Gets Stored
 
@@ -72,6 +87,12 @@ if (view.compatibility.canInitialize) {
   // Document has no schema yet - this stores it
   view.initialize(new Map([["alice", { name: "Alice", email: "a@b.com" }]]));
 }
+
+// Access data through the root property
+view.root.get("alice")?.name;  // string | undefined
+
+// Clean up when done
+view.dispose();
 ```
 
 After `initialize()`:
@@ -179,8 +200,11 @@ const view = map.viewWith(UserProfile);
 // canInitialize = true, canView = true
 // Schema exists only in this client's code
 
-view.set("alice", { name: "Alice", email: "alice@example.com" });
-const alice = view.get("alice");  // Typed as UserProfile, validated on read
+view.root.set("alice", { name: "Alice", email: "alice@example.com" });
+const alice = view.root.get("alice");  // Typed as UserProfile, validated on read
+
+// Clean up when done
+view.dispose();
 ```
 
 **Characteristics**:
@@ -204,7 +228,10 @@ if (view.compatibility.canInitialize) {
 }
 
 // Now schema is persisted - future clients check compatibility
-const alice = view.get("alice");  // Typed as UserProfile
+const alice = view.root.get("alice");  // Typed as UserProfile
+
+// Clean up when done
+view.dispose();
 ```
 
 **Characteristics**:
@@ -221,7 +248,10 @@ const view = map.viewWith(UserProfile);
 // canInitialize = false (schema already stored)
 // canView depends on compatibility with stored schema
 assert(view.compatibility.canView);
-const alice = view.get("alice");  // Typed as UserProfile
+const alice = view.root.get("alice");  // Typed as UserProfile
+
+// Clean up when done
+view.dispose();
 ```
 
 ### Schema Evolution - Adding Optional Field
@@ -235,9 +265,12 @@ if (!view.compatibility.canView && view.compatibility.canUpgrade) {
   view.upgradeSchema();
 }
 
-// Now we can use the view
-const alice = view.get("alice");
+// Now we can use the view - data accessed through root
+const alice = view.root.get("alice");
 alice.avatar;  // string | undefined (new optional field)
+
+// Clean up when done
+view.dispose();
 ```
 
 ### Incompatible Schema
@@ -257,11 +290,11 @@ if (!view.compatibility.canView && !view.compatibility.canUpgrade) {
 const view = map.viewWith(UserProfile);
 
 // WRITES: TypeScript enforces types at compile time
-view.set("alice", { name: "Alice", email: "a@b.com" });  // ✅ Compiles
-view.set("bob", { garbage: true });                      // ❌ Compile error
+view.root.set("alice", { name: "Alice", email: "a@b.com" });  // ✅ Compiles
+view.root.set("bob", { garbage: true });                      // ❌ Compile error
 
 // READS: Runtime validation, throws on malformed data
-const user = view.get("alice");
+const user = view.root.get("alice");
 // If data doesn't match UserProfile schema → throws SchemaValidationError
 // If valid → returns typed UserProfile, guaranteed accurate
 
@@ -399,7 +432,13 @@ if (taskMap.compatibility.canInitialize) {
   taskMap.initialize(new Map([["task1", { title: "Buy milk", completed: false }]]));
 }
 
-// Same schema, same patterns across DDSes
+// Access data through root property
+taskTree.root.title;                // "Buy milk"
+taskMap.root.get("task1")?.title;   // "Buy milk"
+
+// Clean up when done
+taskTree.dispose();
+taskMap.dispose();
 ```
 
 ### Consistent Patterns Across DDSes
@@ -412,7 +451,8 @@ Following Tree's pattern means all schema-enabled DDSes work the same way:
 | Check status | `view.compatibility.canView` | `view.compatibility.canView` |
 | Initialize | `view.initialize(content)` | `view.initialize(content)` |
 | Upgrade | `view.upgradeSchema()` | `view.upgradeSchema()` |
-| Access data | `view.root` | `view.get(key)` |
+| Access data | `view.root.field` | `view.root.get(key)` |
+| Dispose | `view.dispose()` | `view.dispose()` |
 
 This enables:
 - **Shared type definitions** across your application
