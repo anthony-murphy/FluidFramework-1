@@ -7,7 +7,6 @@
  * SchematizedObjectView - typed view over object data in schema storage.
  */
 
-import type { IDisposable } from "@fluidframework/core-interfaces";
 import { UsageError } from "@fluidframework/telemetry-utils/internal";
 
 import type { NodeSchema, ObjectNodeSchema, FieldSchema } from "../core/index.js";
@@ -15,13 +14,9 @@ import { FieldKind, isObjectSchema, isMapSchema } from "../core/index.js";
 import { isSchemaClassConstructor } from "../factory/index.js";
 import type { ISchemaStorage, ISchemaPersistence, StorageResult } from "../storage/index.js";
 import type { NodeFromSchema } from "../types/index.js";
-import {
-	encodeSchema,
-	checkSchemaCompatibility,
-	type SchemaCompatibilityStatus,
-} from "../serialization/index.js";
 import { validateData } from "../validation/index.js";
 
+import { BaseSchematizedView, type SchematizedViewOptions } from "./baseView.js";
 import { SchemaValidationError } from "./errors.js";
 import { SchematizedMapView } from "./mapView.js";
 
@@ -30,28 +25,7 @@ import { SchematizedMapView } from "./mapView.js";
  *
  * @internal
  */
-export interface SchematizedObjectViewOptions {
-	/**
-	 * Enable runtime validation on every property set operation.
-	 *
-	 * @remarks
-	 * When true, every set operation will validate the data against the schema
-	 * before storing it.
-	 *
-	 * @defaultValue false
-	 */
-	enableSchemaValidation?: boolean;
-
-	/**
-	 * List of stored schema identifiers to ignore during validation.
-	 *
-	 * @remarks
-	 * This is an unsafe escape hatch for development/migration scenarios.
-	 * When the stored schema's identifier matches one in this list,
-	 * it will be ignored and the view will act as if no schema was stored.
-	 */
-	ignoreStoredSchema?: readonly string[];
-}
+export type SchematizedObjectViewOptions = SchematizedViewOptions;
 
 /**
  * A view that provides typed access to object data stored in {@link ISchemaStorage}.
@@ -85,16 +59,10 @@ export interface SchematizedObjectViewOptions {
  *
  * @internal
  */
-export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements IDisposable {
-	private readonly enableSchemaValidation: boolean;
-	private readonly ignoreStoredSchema: readonly string[] | undefined;
-	private _disposed = false;
+export class SchematizedObjectView<
+	TSchema extends ObjectNodeSchema,
+> extends BaseSchematizedView<TSchema> {
 	private readonly rootProxy: NodeFromSchema<TSchema>;
-
-	/**
-	 * Error message thrown when accessing a disposed view.
-	 */
-	private static readonly disposedErrorMessage = "Accessed a disposed SchemaView.";
 
 	/**
 	 * Creates a new SchematizedObjectView.
@@ -106,105 +74,12 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 	 */
 	public constructor(
 		private readonly storage: ISchemaStorage,
-		private readonly schema: TSchema,
-		private readonly persistence?: ISchemaPersistence,
+		schema: TSchema,
+		persistence?: ISchemaPersistence,
 		options?: SchematizedObjectViewOptions,
 	) {
-		this.enableSchemaValidation = options?.enableSchemaValidation ?? false;
-		this.ignoreStoredSchema = options?.ignoreStoredSchema;
+		super(schema, persistence, options);
 		this.rootProxy = this.createRootProxy();
-	}
-
-	/**
-	 * Whether this view has been disposed.
-	 */
-	public get disposed(): boolean {
-		return this._disposed;
-	}
-
-	/**
-	 * Dispose this view, releasing resources.
-	 *
-	 * @remarks
-	 * After disposing, accessing the view will throw an error.
-	 */
-	public dispose(): void {
-		this._disposed = true;
-	}
-
-	/**
-	 * Throws if this view has been disposed.
-	 */
-	private ensureNotDisposed(): void {
-		if (this._disposed) {
-			throw new UsageError("Accessed a disposed SchemaView.");
-		}
-	}
-
-	/**
-	 * Gets the schema compatibility status between the stored schema and this view's schema.
-	 *
-	 * @returns The compatibility status
-	 */
-	public get compatibility(): SchemaCompatibilityStatus {
-		const stored = this.persistence?.getPersistedSchema();
-
-		// Check if stored schema should be ignored
-		if (
-			stored !== undefined &&
-			this.ignoreStoredSchema?.includes(stored.root.identifier) === true
-		) {
-			// Act as if no schema is stored
-			return checkSchemaCompatibility(undefined, this.schema);
-		}
-
-		return checkSchemaCompatibility(stored, this.schema);
-	}
-
-	/**
-	 * Gets the schema this view is based on.
-	 */
-	public get nodeSchema(): TSchema {
-		return this.schema;
-	}
-
-	/**
-	 * Initialize the storage by persisting the schema.
-	 *
-	 * @remarks
-	 * This method persists the schema to enable cross-client enforcement.
-	 * Setting data is a separate concern - use the `root` property after initializing.
-	 * Calling `initialize()` is optional - only call when you want schema persistence.
-	 *
-	 * @throws UsageError if a schema is already stored
-	 */
-	public initialize(): void {
-		this.ensureNotDisposed();
-		const compat = this.compatibility;
-		if (!compat.canInitialize) {
-			throw new UsageError("Cannot initialize - schema already stored");
-		}
-
-		// Store schema
-		if (this.persistence !== undefined) {
-			this.persistence.setPersistedSchema(encodeSchema(this.schema));
-		}
-	}
-
-	/**
-	 * Upgrade the stored schema to this view's schema.
-	 *
-	 * @throws UsageError if schemas are not compatible for upgrade
-	 */
-	public upgradeSchema(): void {
-		this.ensureNotDisposed();
-		const compat = this.compatibility;
-		if (!compat.canUpgrade) {
-			throw new UsageError("Cannot upgrade - schemas incompatible");
-		}
-		if (this.persistence !== undefined) {
-			this.persistence.upgradePersistedSchema(encodeSchema(this.schema));
-		}
 	}
 
 	/**
@@ -218,7 +93,7 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 		// Capture references to avoid `this` aliasing in proxy handlers
 		const schema = this.schema;
 		const storage = this.storage;
-		const isDisposed = (): boolean => this.disposed;
+		const ensureNotDisposed = (): void => this.ensureNotDisposed();
 		const enableValidation = this.enableSchemaValidation;
 		const getFieldNodeSchema = (fieldSchema: FieldSchema): NodeSchema =>
 			this.getFieldNodeSchema(fieldSchema);
@@ -235,9 +110,7 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		return new Proxy(target, {
 			get(proxyTarget, prop, receiver): unknown {
-				if (isDisposed()) {
-					throw new UsageError(SchematizedObjectView.disposedErrorMessage);
-				}
+				ensureNotDisposed();
 				if (typeof prop === "string" && prop in schema.fields) {
 					// Access storage directly for schema fields
 					const fieldSchema = schema.fields[prop];
@@ -261,9 +134,7 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 				return Reflect.get(proxyTarget, prop, receiver);
 			},
 			set(proxyTarget, prop, value, _receiver) {
-				if (isDisposed()) {
-					throw new UsageError(SchematizedObjectView.disposedErrorMessage);
-				}
+				ensureNotDisposed();
 				if (typeof prop === "string" && prop in schema.fields) {
 					// Access storage directly for schema fields
 					const fieldSchema = schema.fields[prop];

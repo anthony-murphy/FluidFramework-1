@@ -12,20 +12,13 @@
  * as direct class methods rather than a complex proxy.
  */
 
-import type { IDisposable } from "@fluidframework/core-interfaces";
-import { UsageError } from "@fluidframework/telemetry-utils/internal";
-
 import type { NodeSchema } from "../core/index.js";
 import { isObjectSchema } from "../core/index.js";
 import type { ISchemaStorage, ISchemaPersistence } from "../storage/index.js";
-import {
-	encodeSchema,
-	checkSchemaCompatibility,
-	type SchemaCompatibilityStatus,
-} from "../serialization/index.js";
 import { validateData } from "../validation/index.js";
 import type { TypedMapNodeSchema } from "../factory/index.js";
 
+import { BaseSchematizedView, type SchematizedViewOptions } from "./baseView.js";
 import { SchemaValidationError } from "./errors.js";
 import { SchematizedObjectView } from "./objectView.js";
 
@@ -34,28 +27,7 @@ import { SchematizedObjectView } from "./objectView.js";
  *
  * @internal
  */
-export interface SchematizedMapViewOptions {
-	/**
-	 * Enable runtime validation on every set operation.
-	 *
-	 * @remarks
-	 * When true, every set operation will validate the data against the schema
-	 * before storing it.
-	 *
-	 * @defaultValue false
-	 */
-	enableSchemaValidation?: boolean;
-
-	/**
-	 * List of stored schema identifiers to ignore during validation.
-	 *
-	 * @remarks
-	 * This is an unsafe escape hatch for development/migration scenarios.
-	 * When the stored schema's identifier matches one in this list,
-	 * it will be ignored and the view will act as if no schema was stored.
-	 */
-	ignoreStoredSchema?: readonly string[];
-}
+export type SchematizedMapViewOptions = SchematizedViewOptions;
 
 /**
  * A view that provides Map-like typed access to data stored in {@link ISchemaStorage}.
@@ -88,17 +60,9 @@ export interface SchematizedMapViewOptions {
  * @internal
  */
 export class SchematizedMapView<TValue = unknown>
-	implements Iterable<[string, TValue]>, IDisposable
+	extends BaseSchematizedView<TypedMapNodeSchema>
+	implements Iterable<[string, TValue]>
 {
-	private readonly enableSchemaValidation: boolean;
-	private readonly ignoreStoredSchema: readonly string[] | undefined;
-	private _disposed = false;
-
-	/**
-	 * Error message thrown when accessing a disposed view.
-	 */
-	private static readonly disposedErrorMessage = "Accessed a disposed SchemaView.";
-
 	/**
 	 * Creates a new SchematizedMapView.
 	 *
@@ -109,12 +73,11 @@ export class SchematizedMapView<TValue = unknown>
 	 */
 	public constructor(
 		private readonly storage: ISchemaStorage,
-		private readonly schema: TypedMapNodeSchema,
-		private readonly persistence?: ISchemaPersistence,
+		schema: TypedMapNodeSchema,
+		persistence?: ISchemaPersistence,
 		options?: SchematizedMapViewOptions,
 	) {
-		this.enableSchemaValidation = options?.enableSchemaValidation ?? false;
-		this.ignoreStoredSchema = options?.ignoreStoredSchema;
+		super(schema, persistence, options);
 	}
 
 	// #region root accessor
@@ -128,117 +91,6 @@ export class SchematizedMapView<TValue = unknown>
 	 */
 	public get root(): this {
 		return this;
-	}
-
-	// #endregion
-
-	// #region IDisposable
-
-	/**
-	 * Whether this view has been disposed.
-	 */
-	public get disposed(): boolean {
-		return this._disposed;
-	}
-
-	/**
-	 * Dispose this view, releasing resources.
-	 *
-	 * @remarks
-	 * After disposing, accessing the view will throw an error.
-	 */
-	public dispose(): void {
-		this._disposed = true;
-	}
-
-	/**
-	 * Throws if this view has been disposed.
-	 */
-	private ensureNotDisposed(): void {
-		if (this._disposed) {
-			throw new UsageError(SchematizedMapView.disposedErrorMessage);
-		}
-	}
-
-	// #endregion
-
-	// #region Schema Compatibility
-
-	/**
-	 * Gets the schema compatibility status between the stored schema and this view's schema.
-	 */
-	public get compatibility(): SchemaCompatibilityStatus {
-		const stored = this.persistence?.getPersistedSchema();
-
-		// Check if stored schema should be ignored (escape hatch for migration)
-		if (
-			stored !== undefined &&
-			this.ignoreStoredSchema?.includes(stored.root.identifier) === true
-		) {
-			// When ignoring stored schema, act as if no schema is stored
-			// This allows re-initialization with a new schema
-			return { canView: true, canUpgrade: false, isEquivalent: false, canInitialize: true };
-		}
-
-		return checkSchemaCompatibility(stored, this.schema);
-	}
-
-	/**
-	 * Initialize the view, persisting the schema if not already stored.
-	 *
-	 * @remarks
-	 * This method persists the schema to enable cross-client enforcement.
-	 * Setting data is a separate concern - use Map methods after initializing.
-	 * Calling `initialize()` is optional - only call when you want schema persistence.
-	 *
-	 * @throws UsageError if a schema is already stored
-	 */
-	public initialize(): void {
-		this.ensureNotDisposed();
-		const compat = this.compatibility;
-		if (!compat.canInitialize) {
-			throw new UsageError("Cannot initialize - schema already stored");
-		}
-
-		// Store schema
-		if (this.persistence !== undefined) {
-			this.persistence.setPersistedSchema(encodeSchema(this.schema));
-		}
-	}
-
-	/**
-	 * Upgrade the stored schema to this view's schema.
-	 *
-	 * @throws UsageError if schemas are not compatible for upgrade
-	 */
-	public upgrade(): void {
-		this.ensureNotDisposed();
-		const compat = this.compatibility;
-		if (!compat.canUpgrade) {
-			throw new UsageError("Cannot upgrade - schemas incompatible");
-		}
-		if (this.persistence !== undefined) {
-			this.persistence.upgradePersistedSchema(encodeSchema(this.schema));
-		}
-	}
-
-	/**
-	 * Gets the schema for this view.
-	 */
-	public get nodeSchema(): TypedMapNodeSchema {
-		return this.schema;
-	}
-
-	/**
-	 * Ensure the view can be used (not disposed and schema is compatible).
-	 */
-	private ensureCanView(): void {
-		this.ensureNotDisposed();
-		if (!this.compatibility.canView) {
-			throw new UsageError(
-				"Cannot use view - schema incompatible. Check view.compatibility first.",
-			);
-		}
 	}
 
 	// #endregion

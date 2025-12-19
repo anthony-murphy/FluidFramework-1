@@ -16,6 +16,9 @@ export { UsageError } from "@fluidframework/telemetry-utils/internal";
 export { SchemaValidationError, isSchemaValidationError } from "./errors.js";
 export type { ISchemaValidationError } from "./errors.js";
 
+export { BaseSchematizedView, disposedViewErrorMessage } from "./baseView.js";
+export type { SchematizedViewOptions } from "./baseView.js";
+
 export { SchematizedObjectView } from "./objectView.js";
 export type { SchematizedObjectViewOptions } from "./objectView.js";
 
