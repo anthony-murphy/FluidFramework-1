@@ -209,15 +209,21 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 
 	/**
 	 * Creates the root proxy for typed property access to schema fields.
+	 *
+	 * @remarks
+	 * The proxy handler accesses storage directly for optimal performance,
+	 * avoiding the overhead of method calls for field access.
 	 */
 	private createRootProxy(): NodeFromSchema<TSchema> {
 		// Capture references to avoid `this` aliasing in proxy handlers
 		const schema = this.schema;
+		const storage = this.storage;
 		const isDisposed = (): boolean => this.disposed;
-		const getFieldValue = (prop: string): unknown => this.getFieldValue(prop);
-		const setFieldValue = (prop: string, value: unknown): void =>
-			this.setFieldValue(prop, value);
-		const hasField = (prop: string): boolean => this.hasField(prop);
+		const enableValidation = this.enableSchemaValidation;
+		const getFieldNodeSchema = (fieldSchema: FieldSchema): NodeSchema =>
+			this.getFieldNodeSchema(fieldSchema);
+		const unwrapStorageResult = (result: StorageResult, nodeSchema: NodeSchema): unknown =>
+			this.unwrapStorageResult(result, nodeSchema);
 
 		// If the schema is a class (created with sf.object()), use its prototype as the target.
 		// This enables custom methods and getters on schema subclasses to work via Reflect.
@@ -233,7 +239,22 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 					throw new UsageError(SchematizedObjectView.disposedErrorMessage);
 				}
 				if (typeof prop === "string" && prop in schema.fields) {
-					return getFieldValue(prop);
+					// Access storage directly for schema fields
+					const fieldSchema = schema.fields[prop];
+					if (fieldSchema === undefined) {
+						return undefined;
+					}
+					const nodeSchema = getFieldNodeSchema(fieldSchema);
+					const result = storage.getField(prop, nodeSchema);
+
+					if (result === undefined) {
+						if (fieldSchema.kind === FieldKind.Required) {
+							throw new SchemaValidationError(`Required field "${prop}" is missing`);
+						}
+						return undefined;
+					}
+
+					return unwrapStorageResult(result, nodeSchema);
 				}
 				// Reflect fallback for non-schema properties (enables custom methods/getters when target has prototype)
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-return
@@ -244,7 +265,35 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 					throw new UsageError(SchematizedObjectView.disposedErrorMessage);
 				}
 				if (typeof prop === "string" && prop in schema.fields) {
-					setFieldValue(prop, value);
+					// Access storage directly for schema fields
+					const fieldSchema = schema.fields[prop];
+					if (fieldSchema === undefined) {
+						return false;
+					}
+
+					// Handle undefined for optional fields
+					if (value === undefined) {
+						if (fieldSchema.kind === FieldKind.Optional) {
+							storage.deleteField(prop);
+							return true;
+						}
+						throw new UsageError(`Cannot set required field "${prop}" to undefined`);
+					}
+
+					const nodeSchema = getFieldNodeSchema(fieldSchema);
+
+					// Validate only if schema validation is enabled
+					if (enableValidation) {
+						const validation = validateData(nodeSchema, value);
+						if (!validation.valid) {
+							throw new SchemaValidationError(
+								`Invalid value for field "${prop}"`,
+								validation.errors,
+							);
+						}
+					}
+
+					storage.setField(prop, nodeSchema, value);
 					return true;
 				}
 				// Don't allow setting unknown properties on schema-backed objects
@@ -254,7 +303,7 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 			has(proxyTarget, prop) {
 				// Check if the field has a value (like hasField), not just if it's in the schema
 				if (typeof prop === "string" && prop in schema.fields) {
-					return hasField(prop);
+					return storage.hasField(prop);
 				}
 				return Reflect.has(proxyTarget, prop);
 			},
@@ -275,10 +324,10 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 			deleteProperty(proxyTarget, prop) {
 				if (typeof prop === "string" && prop in schema.fields) {
 					// For schema fields, setting to undefined clears optional fields
-					// For required fields, this will throw in setFieldValue
+					// For required fields, we cannot delete
 					const fieldSchema = schema.fields[prop];
 					if (fieldSchema !== undefined && fieldSchema.kind === FieldKind.Optional) {
-						setFieldValue(prop, undefined);
+						storage.deleteField(prop);
 						return true;
 					}
 					return false; // Cannot delete required fields

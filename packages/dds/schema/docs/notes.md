@@ -98,8 +98,11 @@ Implementation tasks from decisions #10-21, ordered by dependency:
      - Custom methods work (e.g., `increment()`, `canVote()`)
      - Multiple subclasses of same schema work independently
      - `instanceof` correctly identifies schema class instances
-   - [ ] Remove `getFieldValue()` / `setFieldValue()` from view classes (future optimization)
-   - [ ] Proxy handler accesses storage directly (future optimization)
+   - [DONE] Proxy handler accesses storage directly (optimization)
+     - objectView: proxy get/set/has/delete directly call storage methods
+     - mapView: proxy get/set/has/delete directly call storage methods
+     - Avoids method call overhead for every property access
+     - `getFieldValue()` / `setFieldValue()` remain as public API alternatives
 
 ### Phase 4: Test relocation (#14)
 

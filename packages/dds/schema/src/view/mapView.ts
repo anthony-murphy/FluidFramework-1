@@ -203,23 +203,27 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 
 	/**
 	 * Creates the root Map proxy for typed map operations.
+	 *
+	 * @remarks
+	 * The proxy handler accesses storage directly for optimal performance,
+	 * avoiding the overhead of method calls for the core Map operations.
 	 */
 	private createRootProxy(): Map<string, InferValueSchema<TSchema>> {
 		// Capture references to avoid `this` aliasing in proxy handlers
+		const storage = this.storage;
 		const isDisposed = (): boolean => this.disposed;
-		const getVal = (key: string): InferValueSchema<TSchema> | undefined => this.get(key);
-		const setVal = (key: string, value: InferValueSchema<TSchema>): this =>
-			this.set(key, value);
-		const hasKey = (key: string): boolean => this.has(key);
-		const deleteKey = (key: string): boolean => this.delete(key);
-		const clearAll = (): void => this.clear();
+		const canView = (): boolean => this.compatibility.canView;
+		const enableValidation = this.enableSchemaValidation;
+		const getValueNodeSchema = (): NodeSchema => this.getValueNodeSchema();
+
+		// Iterator functions need to use the view's methods since they have complex logic
 		const getKeys = (): IterableIterator<string> => this.keys();
 		const getValues = (): IterableIterator<InferValueSchema<TSchema>> => this.values();
 		const getEntries = (): IterableIterator<[string, InferValueSchema<TSchema>]> =>
 			this.entries();
-		const getSize = (): number => this.size;
 		const getIterator = (): IterableIterator<[string, InferValueSchema<TSchema>]> =>
 			this[Symbol.iterator]();
+		const clearAll = (): void => this.clear();
 
 		// Use object type for the target to enable Reflect fallback
 		const target: object = {};
@@ -229,21 +233,73 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 				if (isDisposed()) {
 					throw new UsageError(SchematizedMapView.disposedErrorMessage);
 				}
-				// Map methods
+				// Map methods - core operations access storage directly
 				if (prop === "get") {
-					return (key: string) => getVal(key);
+					return (key: string): InferValueSchema<TSchema> | undefined => {
+						if (!canView()) {
+							throw new UsageError(
+								"Cannot use view - schema incompatible. Check view.compatibility first.",
+							);
+						}
+						const valueSchema = getValueNodeSchema();
+						const result = storage.getField(key, valueSchema);
+						if (result === undefined) {
+							return undefined;
+						}
+						if (result.type === "value") {
+							return result.value as InferValueSchema<TSchema>;
+						}
+						// Nested storage for object values
+						if (isObjectSchema(valueSchema)) {
+							return new SchematizedObjectView(
+								result.storage,
+								valueSchema,
+							) as unknown as InferValueSchema<TSchema>;
+						}
+						return result.storage as unknown as InferValueSchema<TSchema>;
+					};
 				}
 				if (prop === "set") {
 					return (key: string, value: InferValueSchema<TSchema>) => {
-						setVal(key, value);
+						if (!canView()) {
+							throw new UsageError(
+								"Cannot use view - schema incompatible. Check view.compatibility first.",
+							);
+						}
+						const valueSchema = getValueNodeSchema();
+						// Validate only if schema validation is enabled
+						if (enableValidation) {
+							const validation = validateData(valueSchema, value);
+							if (!validation.valid) {
+								throw new SchemaValidationError(
+									`Invalid value for key "${key}"`,
+									validation.errors,
+								);
+							}
+						}
+						storage.setField(key, valueSchema, value);
 						return proxy; // Return proxy for chaining like Map
 					};
 				}
 				if (prop === "has") {
-					return (key: string) => hasKey(key);
+					return (key: string): boolean => {
+						if (!canView()) {
+							throw new UsageError(
+								"Cannot use view - schema incompatible. Check view.compatibility first.",
+							);
+						}
+						return storage.hasField(key);
+					};
 				}
 				if (prop === "delete") {
-					return (key: string) => deleteKey(key);
+					return (key: string): boolean => {
+						if (!canView()) {
+							throw new UsageError(
+								"Cannot use view - schema incompatible. Check view.compatibility first.",
+							);
+						}
+						return storage.deleteField(key);
+					};
 				}
 				if (prop === "clear") {
 					return () => clearAll();
@@ -272,7 +328,15 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 					};
 				}
 				if (prop === "size") {
-					return getSize();
+					if (isDisposed()) {
+						throw new UsageError(SchematizedMapView.disposedErrorMessage);
+					}
+					if (!canView()) {
+						throw new UsageError(
+							"Cannot use view - schema incompatible. Check view.compatibility first.",
+						);
+					}
+					return storage.size ?? 0;
 				}
 				if (prop === Symbol.iterator) {
 					return () => getIterator();
