@@ -285,20 +285,58 @@ export type NodeFromSchema<T> = T extends TypedLeafNodeSchema
 // #region Helper Functions
 
 /**
- * Brands a value with a phantom type for type inference.
+ * The phantom type information added to typed schemas.
+ * This interface is used purely for compile-time type inference.
+ */
+interface PhantomTypeInfo<T> {
+	readonly _typeInfo?: T;
+}
+
+/**
+ * Brands an ObjectNodeSchema with phantom type information for field inference.
  *
  * @remarks
- * This function is used to add compile-time type information to schema objects
- * without modifying their runtime structure. The phantom type pattern allows
- * TypeScript to infer rich types from schema definitions while keeping the
- * runtime objects simple.
+ * This function takes a runtime ObjectNodeSchema and returns it typed as a
+ * TypedObjectNodeSchema with the specified identifier and field types preserved
+ * for compile-time inference.
  *
- * @param value - The runtime value to brand
- * @returns The same value, typed as the branded type
+ * @param schema - The runtime schema object (must have identifier, kind, and fields)
+ * @returns The same schema branded with phantom type information
  */
-// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Intentional phantom type branding pattern for type inference
-function brandWithPhantomType<T>(value: unknown): T {
-	return value as T;
+function brandObjectSchema<TIdentifier extends string, TFields extends ObjectSchemaFields>(
+	schema: ObjectNodeSchema & { readonly identifier: TIdentifier },
+): TypedObjectNodeSchema<TIdentifier, TFields> {
+	return schema as ObjectNodeSchema & { readonly identifier: TIdentifier } & PhantomTypeInfo<{
+			readonly fields: TFields;
+		}>;
+}
+
+/**
+ * Brands a MapNodeSchema with phantom type information for value type inference.
+ *
+ * @param schema - The runtime schema object (must have identifier, kind, and allowedTypes)
+ * @returns The same schema branded with phantom type information
+ */
+function brandMapSchema<TIdentifier extends string, TValueSchema extends ImplicitAllowedTypes>(
+	schema: MapNodeSchema & { readonly identifier: TIdentifier },
+): TypedMapNodeSchema<TIdentifier, TValueSchema> {
+	return schema as MapNodeSchema & { readonly identifier: TIdentifier } & PhantomTypeInfo<{
+			readonly valueSchema: TValueSchema;
+		}>;
+}
+
+/**
+ * Brands a FieldSchema with phantom type information for allowed types inference.
+ *
+ * @param schema - The runtime field schema object (must have kind and allowedTypes)
+ * @returns The same schema branded with phantom type information
+ */
+function brandFieldSchema<TKind extends FieldKind, TAllowedTypes extends ImplicitAllowedTypes>(
+	schema: FieldSchema & { readonly kind: TKind },
+): TypedFieldSchema<TKind, TAllowedTypes> {
+	return schema as FieldSchema & { readonly kind: TKind } & PhantomTypeInfo<{
+			readonly allowedTypes: TAllowedTypes;
+		}>;
 }
 
 /**
@@ -539,14 +577,11 @@ export class SchemaFactory<TScope extends string = string> {
 			normalizedFields[fieldName] = normalizeFieldSchema(fieldSchema);
 		}
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Phantom type pattern for type inference
-		return {
-			identifier,
+		return brandObjectSchema<ScopedSchemaName<TScope, TName>, TFields>({
+			identifier: identifier as ScopedSchemaName<TScope, TName>,
 			kind: NodeKind.Object,
 			fields: normalizedFields,
-			// The _typeInfo is a phantom property for type inference only
-			// It's typed but not assigned at runtime
-		} as TypedObjectNodeSchema<ScopedSchemaName<TScope, TName>, TFields>;
+		});
 	}
 
 	/**
@@ -578,13 +613,11 @@ export class SchemaFactory<TScope extends string = string> {
 	): TypedMapNodeSchema<ScopedSchemaName<TScope, TName>, TValueSchema> {
 		const identifier = `${this.scope}.${name}`;
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Phantom type pattern for type inference
-		return {
-			identifier,
+		return brandMapSchema<ScopedSchemaName<TScope, TName>, TValueSchema>({
+			identifier: identifier as ScopedSchemaName<TScope, TName>,
 			kind: NodeKind.Map,
 			allowedTypes: normalizeAllowedTypes(valueSchema),
-			// The _typeInfo is a phantom property for type inference only
-		} as TypedMapNodeSchema<ScopedSchemaName<TScope, TName>, TValueSchema>;
+		});
 	}
 
 	/**
@@ -613,12 +646,10 @@ export class SchemaFactory<TScope extends string = string> {
 	public optional<const T extends ImplicitAllowedTypes>(
 		allowedTypes: T,
 	): TypedFieldSchema<typeof FieldKind.Optional, T> {
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Phantom type pattern for type inference
-		return {
+		return brandFieldSchema<typeof FieldKind.Optional, T>({
 			kind: FieldKind.Optional,
 			allowedTypes: normalizeAllowedTypes(allowedTypes),
-			// The _typeInfo is a phantom property for type inference only
-		} as TypedFieldSchema<typeof FieldKind.Optional, T>;
+		});
 	}
 
 	/**
@@ -646,12 +677,10 @@ export class SchemaFactory<TScope extends string = string> {
 	public required<const T extends ImplicitAllowedTypes>(
 		allowedTypes: T,
 	): TypedFieldSchema<typeof FieldKind.Required, T> {
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Phantom type pattern for type inference
-		return {
+		return brandFieldSchema<typeof FieldKind.Required, T>({
 			kind: FieldKind.Required,
 			allowedTypes: normalizeAllowedTypes(allowedTypes),
-			// The _typeInfo is a phantom property for type inference only
-		} as TypedFieldSchema<typeof FieldKind.Required, T>;
+		});
 	}
 }
 
