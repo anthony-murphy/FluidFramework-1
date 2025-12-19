@@ -24,6 +24,24 @@ import { SchemaValidationError } from "./errors.js";
 import { SchematizedMapView } from "./mapView.js";
 
 /**
+ * Options for configuring a {@link SchematizedObjectView}.
+ *
+ * @internal
+ */
+export interface SchematizedObjectViewOptions {
+	/**
+	 * Enable runtime validation on every property set operation.
+	 *
+	 * @remarks
+	 * When true, every set operation will validate the data against the schema
+	 * before storing it.
+	 *
+	 * @defaultValue false
+	 */
+	enableSchemaValidation?: boolean;
+}
+
+/**
  * A view that provides typed access to object data stored in {@link ISchemaStorage}.
  *
  * @remarks
@@ -54,18 +72,24 @@ import { SchematizedMapView } from "./mapView.js";
  * @internal
  */
 export class SchematizedObjectView<TSchema extends ObjectNodeSchema> {
+	private readonly enableSchemaValidation: boolean;
+
 	/**
 	 * Creates a new SchematizedObjectView.
 	 *
 	 * @param storage - The storage to read from and write to
 	 * @param schema - The object schema defining the structure
 	 * @param persistence - Optional persistence layer for schema storage
+	 * @param options - Optional configuration options
 	 */
 	public constructor(
 		private readonly storage: ISchemaStorage,
 		private readonly schema: TSchema,
 		private readonly persistence?: ISchemaPersistence,
-	) {}
+		options?: SchematizedObjectViewOptions,
+	) {
+		this.enableSchemaValidation = options?.enableSchemaValidation ?? false;
+	}
 
 	/**
 	 * Gets the schema compatibility status between the stored schema and this view's schema.
@@ -165,7 +189,7 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> {
 	 * @param fieldName - The name of the field to set
 	 * @param value - The value to set. Use undefined to clear optional fields.
 	 * @throws UsageError if the field does not exist or if trying to set a required field to undefined
-	 * @throws SchemaValidationError if the value fails validation
+	 * @throws SchemaValidationError if the value fails validation (when enableSchemaValidation is true)
 	 */
 	public setFieldValue<K extends keyof TSchema["fields"] & string>(
 		fieldName: K,
@@ -185,16 +209,18 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> {
 			throw new UsageError(`Cannot set required field "${fieldName}" to undefined`);
 		}
 
-		// Get the node schema for validation
+		// Get the node schema for storage operations
 		const nodeSchema = this.getFieldNodeSchema(fieldSchema);
 
-		// Validate
-		const validation = validateData(nodeSchema, value);
-		if (!validation.valid) {
-			throw new SchemaValidationError(
-				`Invalid value for field "${fieldName}"`,
-				validation.errors,
-			);
+		// Validate only if schema validation is enabled
+		if (this.enableSchemaValidation) {
+			const validation = validateData(nodeSchema, value);
+			if (!validation.valid) {
+				throw new SchemaValidationError(
+					`Invalid value for field "${fieldName}"`,
+					validation.errors,
+				);
+			}
 		}
 
 		this.storage.setField(fieldName, nodeSchema, value);

@@ -22,6 +22,7 @@ import { SchematizedObjectView } from "./objectView.js";
 import { SchematizedMapView } from "./mapView.js";
 import { createObjectViewProxy, createMapViewProxy } from "./proxy.js";
 import type { SchematizedView } from "./proxyTypes.js";
+import { normalizeViewConfig, type SchemaViewConfiguration } from "./configuration.js";
 
 // #region View Options
 
@@ -110,7 +111,7 @@ export type MapViewResult<TSchema extends MapNodeSchema> = Map<
  * Create a schematized view for an object schema.
  *
  * @param storage - The storage to read from and write to
- * @param schema - The object schema defining the structure
+ * @param schemaOrConfig - The object schema or configuration object
  * @param persistence - Optional persistence layer for schema storage
  * @param options - Optional view creation options
  * @returns A proxied view with property access
@@ -123,7 +124,14 @@ export type MapViewResult<TSchema extends MapNodeSchema> = Map<
  *   age: sf.optional(sf.number),
  * });
  *
+ * // With schema directly
  * const view = createSchematizedObjectView(storage, UserSchema, persistence);
+ *
+ * // With configuration object
+ * const view = createSchematizedObjectView(storage, {
+ *   schema: UserSchema,
+ *   enableSchemaValidation: true,
+ * }, persistence);
  *
  * // Property access
  * view.name = "Alice";
@@ -138,19 +146,22 @@ export type MapViewResult<TSchema extends MapNodeSchema> = Map<
  */
 export function createSchematizedObjectView<TSchema extends ObjectNodeSchema>(
 	storage: ISchemaStorage,
-	schema: TSchema,
+	schemaOrConfig: TSchema | SchemaViewConfiguration<TSchema>,
 	persistence?: ISchemaPersistence,
 	_options?: CreateViewOptions,
 ): ObjectViewResult<TSchema> {
-	const view = new SchematizedObjectView(storage, schema, persistence);
-	return createObjectViewProxy(view, schema) as ObjectViewResult<TSchema>;
+	const config = normalizeViewConfig(schemaOrConfig);
+	const view = new SchematizedObjectView(storage, config.schema, persistence, {
+		enableSchemaValidation: config.enableSchemaValidation,
+	});
+	return createObjectViewProxy(view, config.schema) as ObjectViewResult<TSchema>;
 }
 
 /**
  * Create a schematized view for a map schema.
  *
  * @param storage - The storage to read from and write to
- * @param schema - The map schema defining the value type
+ * @param schemaOrConfig - The map schema or configuration object
  * @param persistence - Optional persistence layer for schema storage
  * @param options - Optional view creation options
  * @returns A proxied view with Map-like access
@@ -160,7 +171,14 @@ export function createSchematizedObjectView<TSchema extends ObjectNodeSchema>(
  * const sf = new SchemaFactory("myApp");
  * const ConfigMap = sf.map("Config", sf.string);
  *
+ * // With schema directly
  * const view = createSchematizedMapView(storage, ConfigMap, persistence);
+ *
+ * // With configuration object
+ * const view = createSchematizedMapView(storage, {
+ *   schema: ConfigMap,
+ *   enableSchemaValidation: true,
+ * }, persistence);
  *
  * // Map operations
  * view.set("key1", "value1");
@@ -174,12 +192,15 @@ export function createSchematizedObjectView<TSchema extends ObjectNodeSchema>(
  */
 export function createSchematizedMapView<TSchema extends MapNodeSchema>(
 	storage: ISchemaStorage,
-	schema: TSchema,
+	schemaOrConfig: TSchema | SchemaViewConfiguration<TSchema>,
 	persistence?: ISchemaPersistence,
 	_options?: CreateViewOptions,
 ): MapViewResult<TSchema> {
-	const view = new SchematizedMapView(storage, schema, persistence);
-	return createMapViewProxy(view, schema) as MapViewResult<TSchema>;
+	const config = normalizeViewConfig(schemaOrConfig);
+	const view = new SchematizedMapView(storage, config.schema, persistence, {
+		enableSchemaValidation: config.enableSchemaValidation,
+	});
+	return createMapViewProxy(view, config.schema) as MapViewResult<TSchema>;
 }
 
 /**
@@ -191,7 +212,7 @@ export function createSchematizedMapView<TSchema extends MapNodeSchema>(
  * appropriate view type.
  *
  * @param storage - The storage to read from and write to
- * @param schema - The root schema (object or map)
+ * @param schemaOrConfig - The root schema (object or map) or configuration object
  * @param persistence - Optional persistence layer for schema storage
  * @param options - Optional view creation options
  * @returns A proxied view appropriate for the schema type
@@ -205,30 +226,42 @@ export function createSchematizedMapView<TSchema extends MapNodeSchema>(
  * // Works with map schemas
  * const configView = createSchematizedView(storage, ConfigMap, persistence);
  * configView.set("key", "value"); // Map-like access
+ *
+ * // With configuration object
+ * const view = createSchematizedView(storage, {
+ *   schema: UserSchema,
+ *   enableSchemaValidation: true,
+ * }, persistence);
  * ```
  *
  * @internal
  */
 export function createSchematizedView<TSchema extends RootSchema>(
 	storage: ISchemaStorage,
-	schema: TSchema,
+	schemaOrConfig: TSchema | SchemaViewConfiguration<TSchema>,
 	persistence?: ISchemaPersistence,
 	options?: CreateViewOptions,
 ): SchematizedView<TSchema> {
-	if (isObjectSchema(schema)) {
-		const view = new SchematizedObjectView(storage, schema, persistence);
-		return createObjectViewProxy(view, schema) as unknown as SchematizedView<TSchema>;
+	const config = normalizeViewConfig(schemaOrConfig);
+
+	if (isObjectSchema(config.schema)) {
+		const view = new SchematizedObjectView(storage, config.schema, persistence, {
+			enableSchemaValidation: config.enableSchemaValidation,
+		});
+		return createObjectViewProxy(view, config.schema) as unknown as SchematizedView<TSchema>;
 	}
 
-	if (isMapSchema(schema)) {
-		const view = new SchematizedMapView(storage, schema, persistence);
-		return createMapViewProxy(view, schema) as unknown as SchematizedView<TSchema>;
+	if (isMapSchema(config.schema)) {
+		const view = new SchematizedMapView(storage, config.schema, persistence, {
+			enableSchemaValidation: config.enableSchemaValidation,
+		});
+		return createMapViewProxy(view, config.schema) as unknown as SchematizedView<TSchema>;
 	}
 
 	// For leaf schemas, we can't create a view directly
 	// This should be unreachable for valid RootSchema inputs (object or map)
 	throw new Error(
-		`Cannot create view for schema type. Expected object or map schema, got kind: ${(schema as { kind?: unknown }).kind}`,
+		`Cannot create view for schema type. Expected object or map schema, got kind: ${(config.schema as { kind?: unknown }).kind}`,
 	);
 }
 

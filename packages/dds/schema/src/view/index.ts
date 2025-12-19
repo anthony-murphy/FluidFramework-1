@@ -16,14 +16,20 @@ export { UsageError } from "@fluidframework/telemetry-utils/internal";
 export { SchemaValidationError } from "./errors.js";
 
 export { SchematizedObjectView } from "./objectView.js";
+export type { SchematizedObjectViewOptions } from "./objectView.js";
 
 export { SchematizedMapView } from "./mapView.js";
+export type { SchematizedMapViewOptions } from "./mapView.js";
 
 export { createObjectViewProxy, createMapViewProxy } from "./proxy.js";
 
 export type { ViewFor } from "./viewFor.js";
 
 export type { SchematizedObject, SchematizedMap, SchematizedView } from "./proxyTypes.js";
+
+// Configuration types for views
+export { normalizeViewConfig } from "./configuration.js";
+export type { SchemaViewConfiguration } from "./configuration.js";
 
 // Factory functions for creating views
 export {

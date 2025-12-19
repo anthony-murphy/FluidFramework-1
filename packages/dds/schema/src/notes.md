@@ -1,5 +1,10 @@
 # Schema Package API Review
 
+<!-- 
+  This is the primary working document for API decisions and implementation tasks.
+  For historical notes and earlier review items, see ../notes.md
+-->
+
 Comparing `@fluidframework/schema` with `@fluidframework/tree` to ensure API consistency and identify gaps.
 
 ---
@@ -331,11 +336,11 @@ public viewWith<TSchema extends RootSchema>(schema: TSchema): SchematizedView<TS
 ### #1 - Config Object Implementation
 
 TODO:
-- [ ] Create `SchemaViewConfiguration<TSchema>` interface
-- [ ] Update `viewWith()` signature to accept config or schema directly
-- [ ] Add `enableSchemaValidation` option (default: false)
-- [ ] When enabled, validate on property set operations
-- [ ] Update API reports
+- [DONE] Create `SchemaViewConfiguration<TSchema>` interface
+- [DONE] Update `viewWith()` signature to accept config or schema directly
+- [DONE] Add `enableSchemaValidation` option (default: false)
+- [DONE] When enabled, validate on property set operations
+- [DONE] Update API reports
 
 ### #2 - IDisposable Implementation
 

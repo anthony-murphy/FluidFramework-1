@@ -1,3 +1,10 @@
+# Schema Package Notes (Historical)
+
+<!-- 
+  This file contains historical review notes and completed tasks from initial package setup.
+  For current API decisions and implementation tasks, see src/notes.md
+-->
+
 # Human Added
 - [x] use const object rather than enums
 - [x] tag all types intended to be export from the package as @legacy @alpha
@@ -9,6 +16,8 @@
 - [x] we need to add test to the map project that validate the viewWith works
 - [x] this package needs a legacy/alpha export, as we are adding legacy alpha types.
 - [x] review the schema project and add notes under AI Added heading
+
+---
 
 # AI Added
 

@@ -214,6 +214,12 @@ export class SchemaValidationError extends Error {
 }
 
 // @alpha @legacy
+export interface SchemaViewConfiguration<TSchema extends RootSchema> {
+    readonly enableSchemaValidation?: boolean;
+    readonly schema: TSchema;
+}
+
+// @alpha @legacy
 export type ScopedSchemaName<TScope extends string, TName extends string | number> = `${TScope}.${TName}`;
 
 // @alpha @legacy

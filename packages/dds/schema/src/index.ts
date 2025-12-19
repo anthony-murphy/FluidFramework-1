@@ -126,6 +126,7 @@ export {
 	createSchematizedView,
 	createSchematizedObjectView,
 	createSchematizedMapView,
+	normalizeViewConfig,
 } from "./view/index.js";
 export type {
 	ViewFor,
@@ -135,4 +136,7 @@ export type {
 	CreateViewOptions,
 	ObjectViewResult,
 	MapViewResult,
+	SchemaViewConfiguration,
+	SchematizedObjectViewOptions,
+	SchematizedMapViewOptions,
 } from "./view/index.js";

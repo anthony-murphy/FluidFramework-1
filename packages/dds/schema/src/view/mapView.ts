@@ -24,6 +24,24 @@ import { SchemaValidationError } from "./errors.js";
 import { SchematizedObjectView } from "./objectView.js";
 
 /**
+ * Options for configuring a {@link SchematizedMapView}.
+ *
+ * @internal
+ */
+export interface SchematizedMapViewOptions {
+	/**
+	 * Enable runtime validation on every set operation.
+	 *
+	 * @remarks
+	 * When true, every set operation will validate the data against the schema
+	 * before storing it.
+	 *
+	 * @defaultValue false
+	 */
+	enableSchemaValidation?: boolean;
+}
+
+/**
  * A view that provides Map-like typed access to data stored in {@link ISchemaStorage}.
  *
  * @remarks
@@ -52,18 +70,24 @@ import { SchematizedObjectView } from "./objectView.js";
 export class SchematizedMapView<TSchema extends MapNodeSchema>
 	implements Iterable<[string, InferValueSchema<TSchema>]>
 {
+	private readonly enableSchemaValidation: boolean;
+
 	/**
 	 * Creates a new SchematizedMapView.
 	 *
 	 * @param storage - The storage to read from and write to
 	 * @param schema - The map schema defining the value type
 	 * @param persistence - Optional persistence layer for schema storage
+	 * @param options - Optional configuration options
 	 */
 	public constructor(
 		private readonly storage: ISchemaStorage,
 		private readonly schema: TSchema,
 		private readonly persistence?: ISchemaPersistence,
-	) {}
+		options?: SchematizedMapViewOptions,
+	) {
+		this.enableSchemaValidation = options?.enableSchemaValidation ?? false;
+	}
 
 	/**
 	 * Gets the schema compatibility status between the stored schema and this view's schema.
@@ -173,15 +197,18 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	 * @param key - The key to set
 	 * @param value - The value to store
 	 * @returns This view for chaining
-	 * @throws SchemaValidationError if the value fails validation
+	 * @throws SchemaValidationError if the value fails validation (when enableSchemaValidation is true)
 	 */
 	public set(key: string, value: InferValueSchema<TSchema>): this {
 		this.ensureCanView();
 		const valueSchema = this.getValueNodeSchema();
 
-		const validation = validateData(valueSchema, value);
-		if (!validation.valid) {
-			throw new SchemaValidationError(`Invalid value for key "${key}"`, validation.errors);
+		// Validate only if schema validation is enabled
+		if (this.enableSchemaValidation) {
+			const validation = validateData(valueSchema, value);
+			if (!validation.valid) {
+				throw new SchemaValidationError(`Invalid value for key "${key}"`, validation.errors);
+			}
 		}
 
 		this.storage.setField(key, valueSchema, value);
