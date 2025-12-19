@@ -385,9 +385,11 @@ function normalizeAllowedTypes(allowedTypes: ImplicitAllowedTypes): readonly str
  */
 function normalizeFieldSchema(fieldSchema: ImplicitFieldSchema): FieldSchema {
 	if (isTypedFieldSchema(fieldSchema)) {
+		// For TypedFieldSchema, the allowedTypes are already normalized at runtime
+		// (set by the optional() and required() methods)
 		return {
 			kind: fieldSchema.kind,
-			allowedTypes: normalizeAllowedTypes(fieldSchema._typeInfo?.allowedTypes ?? []),
+			allowedTypes: fieldSchema.allowedTypes,
 		};
 	}
 	// Treat as required field with the given allowed types

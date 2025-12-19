@@ -68,3 +68,27 @@ export type {
 	// Union utilities
 	UnionFromSchemas,
 } from "./types/index.js";
+
+// Serialization
+export { encodeSchema, decodeSchema, checkSchemaCompatibility } from "./serialization/index.js";
+export type {
+	// Encoded schema types
+	EncodedSchema,
+	EncodedNodeSchema,
+	EncodedObjectSchema,
+	EncodedMapSchema,
+	EncodedArraySchema,
+	EncodedLeafSchema,
+	EncodedFieldSchema,
+	// Simple schema types (decode output)
+	SimpleNodeSchema,
+	SimpleObjectNodeSchema,
+	SimpleArrayNodeSchema,
+	SimpleMapNodeSchema,
+	SimpleLeafNodeSchema,
+	SimpleFieldSchema,
+	DecodedSchema,
+	// Compatibility checking
+	SchemaCompatibilityStatus,
+} from "./serialization/index.js";
+
