@@ -140,19 +140,20 @@ export type TypeFromField<T extends ImplicitFieldSchema> = NormalizeFieldSchema<
  * @remarks
  * This type utility separates required and optional fields to produce
  * a properly typed object interface where optional fields are marked
- * with `?` in the resulting type.
+ * with `?` in the resulting type. The `-readonly` modifier ensures
+ * properties are mutable, allowing assignment like `view.root.name = "Alice"`.
  *
  * @legacy
  * @alpha
  */
 export type ObjectFromFields<TFields extends ObjectSchemaFields> = {
-	[K in keyof TFields as NormalizeFieldSchema<
+	-readonly [K in keyof TFields as NormalizeFieldSchema<
 		TFields[K]
 	>["kind"] extends typeof FieldKind.Required
 		? K
 		: never]: TypeFromField<TFields[K]>;
 } & {
-	[K in keyof TFields as NormalizeFieldSchema<
+	-readonly [K in keyof TFields as NormalizeFieldSchema<
 		TFields[K]
 	>["kind"] extends typeof FieldKind.Optional
 		? K

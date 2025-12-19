@@ -160,9 +160,9 @@ export const numberSchema: TypedLeafNodeSchema<"com.fluidframework.leaf.number",
 
 // @alpha @legacy
 export type ObjectFromFields<TFields extends ObjectSchemaFields> = {
-    [K in keyof TFields as NormalizeFieldSchema<TFields[K]>["kind"] extends typeof FieldKind.Required ? K : never]: TypeFromField<TFields[K]>;
+    -readonly [K in keyof TFields as NormalizeFieldSchema<TFields[K]>["kind"] extends typeof FieldKind.Required ? K : never]: TypeFromField<TFields[K]>;
 } & {
-    [K in keyof TFields as NormalizeFieldSchema<TFields[K]>["kind"] extends typeof FieldKind.Optional ? K : never]?: TypeFromField<TFields[K]>;
+    -readonly [K in keyof TFields as NormalizeFieldSchema<TFields[K]>["kind"] extends typeof FieldKind.Optional ? K : never]?: TypeFromField<TFields[K]>;
 };
 
 // @alpha @legacy
