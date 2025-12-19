@@ -139,6 +139,7 @@ export type {
 	ObjectViewResult,
 	MapViewResult,
 	SchemaViewConfiguration,
+	NormalizedViewConfig,
 	SchematizedObjectViewOptions,
 	SchematizedMapViewOptions,
 } from "./view/index.js";

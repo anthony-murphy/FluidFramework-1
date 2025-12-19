@@ -121,6 +121,26 @@ class Document extends sf.object("Document", {
 }) {}
 ```
 
+### Ignoring Stored Schema (Unsafe Escape Hatch)
+
+In development or migration scenarios where you need to bypass incompatible schema checks, you can use the `ignoreStoredSchema` option:
+
+```typescript
+// ⚠️ UNSAFE: Use with caution - existing data may not match the new schema!
+const view = map.viewWith({
+  schema: NewSchemaV2,
+  ignoreStoredSchema: ["com.example.myapp.OldSchemaV1"]
+});
+
+// When the stored schema's identifier matches one in the list,
+// it will be ignored and the view will act as if no schema was stored
+if (view.compatibility.canInitialize) {
+  view.initialize();  // Re-initialize with the new schema
+}
+```
+
+**Warning:** This is an escape hatch for development/migration scenarios only. Use with extreme caution as existing data may not conform to the new schema structure.
+
 ## API Documentation
 
 API documentation for **@fluidframework/schema** is available at <https://fluidframework.com/docs/apis/schema>.

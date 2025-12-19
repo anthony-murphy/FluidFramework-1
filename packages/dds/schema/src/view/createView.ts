@@ -183,6 +183,7 @@ export function createSchematizedObjectView<TSchema extends ObjectNodeSchema>(
 	const config = normalizeViewConfig(schemaOrConfig);
 	const view = new SchematizedObjectView(storage, config.schema, persistence, {
 		enableSchemaValidation: config.enableSchemaValidation,
+		ignoreStoredSchema: config.ignoreStoredSchema,
 	});
 	return createObjectViewProxy(view, config.schema) as ObjectViewResult<TSchema>;
 }
@@ -230,6 +231,7 @@ export function createSchematizedMapView<TSchema extends MapNodeSchema>(
 	const config = normalizeViewConfig(schemaOrConfig);
 	const view = new SchematizedMapView(storage, config.schema, persistence, {
 		enableSchemaValidation: config.enableSchemaValidation,
+		ignoreStoredSchema: config.ignoreStoredSchema,
 	});
 	return createMapViewProxy(view, config.schema) as MapViewResult<TSchema>;
 }
@@ -278,6 +280,7 @@ export function createSchematizedView<TSchema extends RootSchema>(
 	if (isObjectSchema(config.schema)) {
 		const view = new SchematizedObjectView(storage, config.schema, persistence, {
 			enableSchemaValidation: config.enableSchemaValidation,
+			ignoreStoredSchema: config.ignoreStoredSchema,
 		});
 		return createObjectViewProxy(view, config.schema) as unknown as SchemaView<TSchema>;
 	}
@@ -285,6 +288,7 @@ export function createSchematizedView<TSchema extends RootSchema>(
 	if (isMapSchema(config.schema)) {
 		const view = new SchematizedMapView(storage, config.schema, persistence, {
 			enableSchemaValidation: config.enableSchemaValidation,
+			ignoreStoredSchema: config.ignoreStoredSchema,
 		});
 		return createMapViewProxy(view, config.schema) as unknown as SchemaView<TSchema>;
 	}

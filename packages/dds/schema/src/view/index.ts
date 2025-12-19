@@ -30,7 +30,7 @@ export type { ObjectView, MapView, SchemaView } from "./proxyTypes.js";
 
 // Configuration types for views
 export { normalizeViewConfig } from "./configuration.js";
-export type { SchemaViewConfiguration } from "./configuration.js";
+export type { SchemaViewConfiguration, NormalizedViewConfig } from "./configuration.js";
 
 // Factory functions for creating views
 export {

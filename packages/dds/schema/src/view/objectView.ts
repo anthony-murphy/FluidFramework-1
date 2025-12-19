@@ -39,6 +39,16 @@ export interface SchematizedObjectViewOptions {
 	 * @defaultValue false
 	 */
 	enableSchemaValidation?: boolean;
+
+	/**
+	 * List of stored schema identifiers to ignore during validation.
+	 *
+	 * @remarks
+	 * This is an unsafe escape hatch for development/migration scenarios.
+	 * When the stored schema's identifier matches one in this list,
+	 * it will be ignored and the view will act as if no schema was stored.
+	 */
+	ignoreStoredSchema?: readonly string[];
 }
 
 /**
@@ -75,6 +85,7 @@ export interface SchematizedObjectViewOptions {
  */
 export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements IDisposable {
 	private readonly enableSchemaValidation: boolean;
+	private readonly ignoreStoredSchema: readonly string[] | undefined;
 	private _disposed = false;
 
 	/**
@@ -92,6 +103,7 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 		options?: SchematizedObjectViewOptions,
 	) {
 		this.enableSchemaValidation = options?.enableSchemaValidation ?? false;
+		this.ignoreStoredSchema = options?.ignoreStoredSchema;
 	}
 
 	/**
@@ -127,6 +139,16 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 	 */
 	public get compatibility(): SchemaCompatibilityStatus {
 		const stored = this.persistence?.getPersistedSchema();
+
+		// Check if stored schema should be ignored
+		if (
+			stored !== undefined &&
+			this.ignoreStoredSchema?.includes(stored.root.identifier) === true
+		) {
+			// Act as if no schema is stored
+			return checkSchemaCompatibility(undefined, this.schema);
+		}
+
 		return checkSchemaCompatibility(stored, this.schema);
 	}
 

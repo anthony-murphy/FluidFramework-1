@@ -223,6 +223,7 @@ export type SchemaView<TSchema extends RootSchema> = TSchema extends ObjectNodeS
 // @alpha @legacy
 export interface SchemaViewConfiguration<TSchema extends RootSchema> {
     readonly enableSchemaValidation?: boolean;
+    readonly ignoreStoredSchema?: readonly string[];
     readonly schema: TSchema;
 }
 

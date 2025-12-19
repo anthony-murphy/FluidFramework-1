@@ -79,13 +79,18 @@ Implementation tasks from decisions #10-21, ordered by dependency:
 ### Phase 3: Proxy/Reflect refactor (#13, #15, #16)
 
 6. **#13/#15/#16 - Proxy architecture refactor** (largest change)
-   - [ ] Change `sf.object()` to return a class
+
+   **Key change: View is NOT proxied, only `root` is proxied**
+
+   - [ ] Remove `createObjectViewProxy()` / `createMapViewProxy()` functions
+   - [ ] Move `root` property (with proxy) into view classes directly
+   - [ ] `viewWith()` returns view class instance, not wrapper object
+   - [ ] Change `sf.object()` to return a class (for Reflect/inheritance)
    - [ ] Refactor proxy handlers to use Reflect fallback
    - [ ] Change proxy target to be schema class instance
    - [ ] Ensure `receiver` passed correctly for `this` binding
    - [ ] Remove `getFieldValue()` / `setFieldValue()` from view classes
    - [ ] Proxy handler accesses storage directly
-   - [ ] Single proxy instead of viewProxy/dataProxy
    - [ ] Test with schema classes that have custom methods/getters
    - [ ] Update all existing tests for new pattern
 
@@ -451,30 +456,57 @@ return {
 
 **Decision:** [x] Match Tree - simplify to 2 layers
 
-**New architecture:**
-1. **View class (lifecycle only):**
-   - `dispose()`, `disposed`
-   - `compatibility`
-   - `initialize()`
-   - Holds reference to storage/persistence
-   - NO `getFieldValue()` / `setFieldValue()`
+**New architecture (match Tree):**
 
-2. **Single proxy (direct storage access):**
+1. **View class returned directly (NOT proxied):**
+   - `viewWith()` returns the view class instance directly
+   - NOT wrapped in a proxy
+   - Has: `dispose()`, `disposed`, `compatibility`, `initialize()`, `upgradeSchema()`
+   - Has: `root` property (getter/setter)
+   - Holds reference to storage/persistence
+   - NO `getFieldValue()` / `setFieldValue()` (proxy does this)
+
+2. **Only `root` is a proxy:**
+   - `view.root` returns a Proxy for typed field access
    - Schema map lookup for fields
-   - Accesses storage directly
-   - Reflect fallback for inherited methods/getters
-   - Returns view for lifecycle properties
+   - Accesses storage directly (not via view methods)
+   - Reflect fallback for inherited methods/getters (enables schema class extension)
+
+**Current (wrong):**
+```ts
+// createObjectViewProxy returns a wrapper object
+const viewProxy = {
+  get root() { return dataProxy; },  // viewProxy is not really proxied, but confusing
+  get compatibility() { ... },
+  ...
+};
+return viewProxy;  // Returns wrapper, not view class
+```
+
+**New (correct, like Tree):**
+```ts
+// View class has root property directly
+class SchematizedObjectView {
+  get root(): Proxy { return this.rootProxy; }  // Only root is proxied
+  get compatibility() { return this._compatibility; }
+  ...
+}
+return view;  // Returns view class instance directly
+```
 
 **Benefits:**
-- Matches Tree architecture
-- Less code, less indirection
-- Proxy accesses storage directly
-- Still in development, OK to refactor
+- Matches Tree architecture exactly
+- View is a real class instance (can use instanceof, etc.)
+- Only data access (`root`) is proxied
+- Clear separation: view = lifecycle, root = data access
+- Less indirection, easier to understand
 
 **TODO (part of #13 refactor):**
+- [ ] Remove `createObjectViewProxy()` / `createMapViewProxy()` functions
+- [ ] Move `root` property (with proxy) into view classes directly
 - [ ] Remove `getFieldValue()` / `setFieldValue()` from view classes
 - [ ] Proxy handler accesses storage directly
-- [ ] Single proxy instead of viewProxy/dataProxy
+- [ ] `viewWith()` returns view class instance, not wrapper
 
 ---
 

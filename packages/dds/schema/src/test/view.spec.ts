@@ -329,6 +329,92 @@ describe("View", () => {
 				assert.strictEqual(view.nodeSchema, PersonSchema);
 			});
 		});
+
+		describe("ignoreStoredSchema option", () => {
+			it("ignores stored schema when identifier matches", () => {
+				const PersonSchemaV1 = sf.object("PersonIgnoreV1", {
+					name: sf.string,
+				});
+				const PersonSchemaV2 = sf.object("PersonIgnoreV2", {
+					name: sf.string,
+					email: sf.string, // Breaking change - new required field
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+
+				// Initialize with V1
+				const viewV1 = new SchematizedObjectView(storage, PersonSchemaV1, persistence);
+				viewV1.initialize();
+				viewV1.setFieldValue("name", "Alice");
+
+				// Without ignoreStoredSchema, we cannot initialize with V2
+				const viewV2NoIgnore = new SchematizedObjectView(storage, PersonSchemaV2, persistence);
+				assert.equal(viewV2NoIgnore.compatibility.canInitialize, false);
+
+				// With ignoreStoredSchema, we can initialize with V2 (escape hatch)
+				const viewV2WithIgnore = new SchematizedObjectView(
+					storage,
+					PersonSchemaV2,
+					persistence,
+					{
+						ignoreStoredSchema: ["test.PersonIgnoreV1"],
+					},
+				);
+				assert.equal(viewV2WithIgnore.compatibility.canInitialize, true);
+			});
+
+			it("does not ignore stored schema when identifier does not match", () => {
+				const PersonSchemaV1 = sf.object("PersonNoMatchV1", {
+					name: sf.string,
+				});
+				const PersonSchemaV2 = sf.object("PersonNoMatchV2", {
+					name: sf.string,
+					email: sf.string,
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+
+				// Initialize with V1
+				const viewV1 = new SchematizedObjectView(storage, PersonSchemaV1, persistence);
+				viewV1.initialize();
+
+				// With ignoreStoredSchema for a different identifier, canInitialize should still be false
+				const viewV2 = new SchematizedObjectView(storage, PersonSchemaV2, persistence, {
+					ignoreStoredSchema: ["test.SomeOtherSchema"],
+				});
+				assert.equal(viewV2.compatibility.canInitialize, false);
+			});
+
+			it("allows re-initialization after ignoring stored schema", () => {
+				const PersonSchemaV1 = sf.object("PersonReinitV1", {
+					name: sf.string,
+				});
+				const PersonSchemaV2 = sf.object("PersonReinitV2", {
+					name: sf.string,
+					email: sf.string,
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+
+				// Initialize with V1
+				const viewV1 = new SchematizedObjectView(storage, PersonSchemaV1, persistence);
+				viewV1.initialize();
+				viewV1.setFieldValue("name", "Alice");
+
+				// Create view V2 with ignoreStoredSchema and initialize
+				// Note: MockPersistence.setPersistedSchema throws if already set,
+				// so we need to upgrade instead
+				const viewV2 = new SchematizedObjectView(storage, PersonSchemaV2, persistence, {
+					ignoreStoredSchema: ["test.PersonReinitV1"],
+				});
+
+				// With ignore, canInitialize is true (as if no schema stored)
+				assert.equal(viewV2.compatibility.canInitialize, true);
+			});
+		});
 	});
 
 	describe("SchematizedMapView", () => {
@@ -669,6 +755,51 @@ describe("View", () => {
 				assert.strictEqual(result, view);
 				assert.equal(view.get("key1"), "value1");
 				assert.equal(view.get("key2"), "value2");
+			});
+		});
+
+		describe("ignoreStoredSchema option", () => {
+			it("ignores stored schema when identifier matches", () => {
+				const ConfigSchemaV1 = sf.map("ConfigIgnoreV1", sf.string);
+				const ConfigSchemaV2 = sf.map("ConfigIgnoreV2", sf.number); // Incompatible change
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+
+				// Initialize with V1
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const viewV1 = new SchematizedMapView(storage, ConfigSchemaV1, persistence) as any;
+				viewV1.initialize();
+				viewV1.set("key1", "value1");
+
+				// Without ignoreStoredSchema, we cannot initialize with V2
+				const viewV2NoIgnore = new SchematizedMapView(storage, ConfigSchemaV2, persistence);
+				assert.equal(viewV2NoIgnore.compatibility.canInitialize, false);
+
+				// With ignoreStoredSchema, we can initialize with V2 (escape hatch)
+				const viewV2WithIgnore = new SchematizedMapView(storage, ConfigSchemaV2, persistence, {
+					ignoreStoredSchema: ["test.ConfigIgnoreV1"],
+				});
+				assert.equal(viewV2WithIgnore.compatibility.canInitialize, true);
+			});
+
+			it("does not ignore stored schema when identifier does not match", () => {
+				const ConfigSchemaV1 = sf.map("ConfigNoMatchV1", sf.string);
+				const ConfigSchemaV2 = sf.map("ConfigNoMatchV2", sf.number);
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+
+				// Initialize with V1
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const viewV1 = new SchematizedMapView(storage, ConfigSchemaV1, persistence) as any;
+				viewV1.initialize();
+
+				// With ignoreStoredSchema for a different identifier, canInitialize should still be false
+				const viewV2 = new SchematizedMapView(storage, ConfigSchemaV2, persistence, {
+					ignoreStoredSchema: ["test.SomeOtherSchema"],
+				});
+				assert.equal(viewV2.compatibility.canInitialize, false);
 			});
 		});
 	});

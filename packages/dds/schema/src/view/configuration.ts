@@ -60,6 +60,26 @@ export interface SchemaViewConfiguration<TSchema extends RootSchema> {
 	 * @defaultValue false
 	 */
 	readonly enableSchemaValidation?: boolean;
+
+	/**
+	 * List of stored schema identifiers to ignore during validation.
+	 *
+	 * @remarks
+	 * This is an unsafe escape hatch for development/migration scenarios.
+	 * When the stored schema's identifier matches one in this list,
+	 * it will be ignored and the view will act as if no schema was stored.
+	 *
+	 * Use with caution - existing data may not match the new schema!
+	 *
+	 * @example
+	 * ```ts
+	 * const view = map.viewWith({
+	 *   schema: SchemaV2,
+	 *   ignoreStoredSchema: ["com.example.myapp.SchemaV1"]
+	 * });
+	 * ```
+	 */
+	readonly ignoreStoredSchema?: readonly string[];
 }
 
 /**
@@ -79,6 +99,22 @@ export function isSchemaViewConfiguration<TSchema extends RootSchema>(
 		"schema" in schemaOrConfig &&
 		typeof schemaOrConfig.schema === "object"
 	);
+}
+
+/**
+ * Normalized configuration type with defaults applied.
+ *
+ * @remarks
+ * This type represents the configuration after normalization, where optional
+ * properties have been replaced with their default values. Unlike `Required`,
+ * `ignoreStoredSchema` remains optional since its default is `undefined`.
+ *
+ * @internal
+ */
+export interface NormalizedViewConfig<TSchema extends RootSchema> {
+	readonly schema: TSchema;
+	readonly enableSchemaValidation: boolean;
+	readonly ignoreStoredSchema: readonly string[] | undefined;
 }
 
 /**
@@ -105,11 +141,12 @@ export function isSchemaViewConfiguration<TSchema extends RootSchema>(
  */
 export function normalizeViewConfig<TSchema extends RootSchema>(
 	schemaOrConfig: TSchema | SchemaViewConfiguration<TSchema>,
-): Required<SchemaViewConfiguration<TSchema>> {
+): NormalizedViewConfig<TSchema> {
 	if (isSchemaViewConfiguration(schemaOrConfig)) {
 		return {
 			schema: schemaOrConfig.schema,
 			enableSchemaValidation: schemaOrConfig.enableSchemaValidation ?? false,
+			ignoreStoredSchema: schemaOrConfig.ignoreStoredSchema,
 		};
 	}
 
@@ -117,5 +154,6 @@ export function normalizeViewConfig<TSchema extends RootSchema>(
 	return {
 		schema: schemaOrConfig,
 		enableSchemaValidation: false,
+		ignoreStoredSchema: undefined,
 	};
 }
