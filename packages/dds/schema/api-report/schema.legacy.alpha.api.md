@@ -18,85 +18,9 @@ export interface ArrayNodeSchema extends NodeSchema {
 export const booleanSchema: TypedLeafNodeSchema<"com.fluidframework.leaf.boolean", "boolean", boolean>;
 
 // @alpha @legacy
-export function buildSchemaRegistry(rootSchema: NodeSchema): SchemaRegistry;
-
-// @alpha @legacy
-export function checkSchemaCompatibility(stored: EncodedSchema | undefined, view: NodeSchema): SchemaCompatibilityStatus;
-
-// @alpha @legacy
-export function createMapViewProxy<TSchema extends MapNodeSchema>(view: SchematizedMapView<TSchema>, _schema: TSchema): Map<string, InferValueSchema<TSchema>> & {
-    compatibility: SchemaCompatibilityStatus;
-    initialize: (content: Map<string, InferValueSchema<TSchema>>) => void;
-    upgradeSchema: () => void;
-};
-
-// @alpha @legacy
-export function createObjectViewProxy<TSchema extends ObjectNodeSchema>(view: SchematizedObjectView<TSchema>, schema: TSchema): NodeFromSchema<TSchema> & {
-    compatibility: SchemaCompatibilityStatus;
-    initialize: (content: NodeFromSchema<TSchema>) => void;
-    upgradeSchema: () => void;
-};
-
-// @alpha @legacy
-export interface DecodedSchema {
-    readonly definitions: ReadonlyMap<string, SimpleNodeSchema>;
-    readonly root: SimpleNodeSchema;
-}
-
-// @alpha @legacy
-export function decodeSchema(encoded: EncodedSchema): DecodedSchema;
-
-// @alpha @legacy
 export type DeepReadonly<T> = T extends IFluidHandle ? T : T extends Map<infer K, infer V> ? ReadonlyMap<DeepReadonly<K>, DeepReadonly<V>> : T extends Set<infer U> ? ReadonlySet<DeepReadonly<U>> : T extends readonly (infer U)[] ? readonly DeepReadonly<U>[] : T extends object ? {
     readonly [P in keyof T]: DeepReadonly<T[P]>;
 } : T;
-
-// @alpha @legacy
-export interface EncodedArraySchema {
-    readonly allowedTypes: readonly (EncodedNodeSchema | string)[];
-    readonly identifier: string;
-    readonly kind: "array";
-}
-
-// @alpha @legacy
-export interface EncodedFieldSchema {
-    readonly allowedTypes: readonly (EncodedNodeSchema | string)[];
-    readonly kind: "required" | "optional";
-}
-
-// @alpha @legacy
-export interface EncodedLeafSchema {
-    readonly identifier: string;
-    readonly kind: "leaf";
-    readonly leafKind: LeafKind;
-}
-
-// @alpha @legacy
-export interface EncodedMapSchema {
-    readonly allowedTypes: readonly (EncodedNodeSchema | string)[];
-    readonly identifier: string;
-    readonly kind: "map";
-}
-
-// @alpha @legacy
-export type EncodedNodeSchema = EncodedObjectSchema | EncodedMapSchema | EncodedArraySchema | EncodedLeafSchema;
-
-// @alpha @legacy
-export interface EncodedObjectSchema {
-    readonly fields: Record<string, EncodedFieldSchema>;
-    readonly identifier: string;
-    readonly kind: "object";
-}
-
-// @alpha @legacy
-export interface EncodedSchema {
-    readonly definitions?: Record<string, EncodedNodeSchema>;
-    readonly root: EncodedNodeSchema;
-    readonly version: 1;
-}
-
-// @alpha @legacy
-export function encodeSchema(schema: NodeSchema, schemaRegistry?: ReadonlyMap<string, NodeSchema>): EncodedSchema;
 
 // @alpha @legacy
 export const FieldKind: {
@@ -136,23 +60,6 @@ export type InferValueSchema<T> = T extends TypedMapNodeSchema<string, infer TVa
 
 // @alpha @legacy
 export function isArraySchema(schema: NodeSchema): schema is ArrayNodeSchema;
-
-// @alpha @legacy
-export interface ISchemaPersistence {
-    getPersistedSchema(): EncodedSchema | undefined;
-    setPersistedSchema(schema: EncodedSchema): void;
-    upgradePersistedSchema(schema: EncodedSchema): void;
-}
-
-// @alpha @legacy
-export interface ISchemaStorage {
-    deleteField(key: string): boolean;
-    getField(key: string, fieldSchema: NodeSchema): StorageResult | undefined;
-    hasField(key: string): boolean;
-    keys?(): IterableIterator<string>;
-    setField(key: string, fieldSchema: NodeSchema, value: unknown): void;
-    readonly size?: number;
-}
 
 // @alpha @legacy
 export type IsLeafSchema<T> = T extends TypedLeafNodeSchema ? true : false;
@@ -275,9 +182,6 @@ export class SchemaFactory<TScope extends string = string> {
 export type SchemaKind<T> = T extends TypedLeafNodeSchema ? typeof NodeKind.Leaf : T extends TypedObjectNodeSchema ? typeof NodeKind.Object : T extends TypedMapNodeSchema ? typeof NodeKind.Map : never;
 
 // @alpha @legacy
-export type SchemaRegistry = ReadonlyMap<string, NodeSchema>;
-
-// @alpha @legacy
 export type SchematizedMap<TSchema extends MapNodeSchema> = Map<string, InferValueSchema<TSchema>> & {
     readonly compatibility: SchemaCompatibilityStatus;
     initialize: (content: Map<string, InferValueSchema<TSchema>>) => void;
@@ -285,43 +189,11 @@ export type SchematizedMap<TSchema extends MapNodeSchema> = Map<string, InferVal
 };
 
 // @alpha @legacy
-export class SchematizedMapView<TSchema extends MapNodeSchema> implements Iterable<[string, InferValueSchema<TSchema>]> {
-    [Symbol.iterator](): IterableIterator<[string, InferValueSchema<TSchema>]>;
-    constructor(storage: ISchemaStorage, schema: TSchema, persistence?: ISchemaPersistence | undefined);
-    clear(): void;
-    get compatibility(): SchemaCompatibilityStatus;
-    delete(key: string): boolean;
-    entries(): IterableIterator<[string, InferValueSchema<TSchema>]>;
-    forEach(callback: (value: InferValueSchema<TSchema>, key: string, map: this) => void, thisArg?: unknown): void;
-    get(key: string): InferValueSchema<TSchema> | undefined;
-    has(key: string): boolean;
-    initialize(content: Map<string, InferValueSchema<TSchema>>): void;
-    keys(): IterableIterator<string>;
-    get nodeSchema(): TSchema;
-    set(key: string, value: InferValueSchema<TSchema>): this;
-    get size(): number;
-    upgradeSchema(): void;
-    values(): IterableIterator<InferValueSchema<TSchema>>;
-}
-
-// @alpha @legacy
 export type SchematizedObject<TSchema extends ObjectNodeSchema> = NodeFromSchema<TSchema> & {
     readonly compatibility: SchemaCompatibilityStatus;
     initialize: (content: NodeFromSchema<TSchema>) => void;
     upgradeSchema: () => void;
 };
-
-// @alpha @legacy
-export class SchematizedObjectView<TSchema extends ObjectNodeSchema> {
-    constructor(storage: ISchemaStorage, schema: TSchema, persistence?: ISchemaPersistence | undefined);
-    get compatibility(): SchemaCompatibilityStatus;
-    getFieldValue<K extends keyof TSchema["fields"] & string>(fieldName: K): unknown;
-    hasField(fieldName: string): boolean;
-    initialize(content: NodeFromSchema<TSchema>): void;
-    get nodeSchema(): TSchema;
-    setFieldValue<K extends keyof TSchema["fields"] & string>(fieldName: K, value: unknown): void;
-    upgradeSchema(): void;
-}
 
 // @alpha @legacy
 export type SchematizedView<TSchema extends RootSchema> = TSchema extends ObjectNodeSchema ? SchematizedObject<TSchema> : TSchema extends MapNodeSchema ? SchematizedMap<TSchema> : never;
@@ -334,66 +206,6 @@ export class SchemaValidationError extends Error {
 
 // @alpha @legacy
 export type ScopedSchemaName<TScope extends string, TName extends string | number> = `${TScope}.${TName}`;
-
-// @alpha @legacy
-export interface SimpleArrayNodeSchema {
-    // (undocumented)
-    readonly allowedTypes: readonly string[];
-    // (undocumented)
-    readonly identifier: string;
-    // (undocumented)
-    readonly kind: typeof NodeKind.Array;
-}
-
-// @alpha @legacy
-export interface SimpleFieldSchema {
-    // (undocumented)
-    readonly allowedTypes: readonly string[];
-    // (undocumented)
-    readonly kind: FieldKind;
-}
-
-// @alpha @legacy
-export interface SimpleLeafNodeSchema {
-    // (undocumented)
-    readonly identifier: string;
-    // (undocumented)
-    readonly kind: typeof NodeKind.Leaf;
-    // (undocumented)
-    readonly leafKind: LeafKind;
-}
-
-// @alpha @legacy
-export interface SimpleMapNodeSchema {
-    // (undocumented)
-    readonly allowedTypes: readonly string[];
-    // (undocumented)
-    readonly identifier: string;
-    // (undocumented)
-    readonly kind: typeof NodeKind.Map;
-}
-
-// @alpha @legacy
-export type SimpleNodeSchema = SimpleObjectNodeSchema | SimpleArrayNodeSchema | SimpleMapNodeSchema | SimpleLeafNodeSchema;
-
-// @alpha @legacy
-export interface SimpleObjectNodeSchema {
-    // (undocumented)
-    readonly fields: Record<string, SimpleFieldSchema>;
-    // (undocumented)
-    readonly identifier: string;
-    // (undocumented)
-    readonly kind: typeof NodeKind.Object;
-}
-
-// @alpha @legacy
-export type StorageResult = {
-    readonly type: "value";
-    readonly value: unknown;
-} | {
-    readonly type: "storage";
-    readonly storage: ISchemaStorage;
-};
 
 // @alpha @legacy
 export const stringSchema: TypedLeafNodeSchema<"com.fluidframework.leaf.string", "string", string>;
@@ -455,9 +267,6 @@ export type TypeFromImplicitAllowedTypes<T extends ImplicitAllowedTypes> = T ext
 export type UnionFromSchemas<T extends readonly unknown[]> = T extends readonly (infer U)[] ? U extends TypedLeafNodeSchema | TypedObjectNodeSchema | TypedMapNodeSchema ? NodeFromSchema<U> : never : never;
 
 // @alpha @legacy
-export function validateData(schema: NodeSchema, data: unknown, registry?: SchemaRegistry): ValidationResult;
-
-// @alpha @legacy
 export interface ValidationError {
     readonly actual: string;
     readonly expected: string;
@@ -466,15 +275,6 @@ export interface ValidationError {
 }
 
 // @alpha @legacy
-export interface ValidationResult {
-    readonly errors: readonly ValidationError[];
-    readonly valid: boolean;
-}
-
-// @alpha @legacy
 export type ValueFromLeafSchema<T extends TypedLeafNodeSchema> = T extends TypedLeafNodeSchema<string, "string", infer TValue> ? TValue : T extends TypedLeafNodeSchema<string, "number", infer TValue> ? TValue : T extends TypedLeafNodeSchema<string, "boolean", infer TValue> ? TValue : T extends TypedLeafNodeSchema<string, "null", infer TValue> ? TValue : T extends TypedLeafNodeSchema<string, "handle", infer TValue> ? TValue : never;
-
-// @alpha @legacy
-export type ViewFor<TSchema extends RootSchema> = TSchema extends ObjectNodeSchema ? SchematizedObjectView<TSchema> : TSchema extends MapNodeSchema ? SchematizedMapView<TSchema> : never;
 
 ```

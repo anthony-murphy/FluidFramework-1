@@ -38,8 +38,7 @@ import type { SchematizedObjectView } from "./objectView.js";
  * console.log(proxy.compatibility);
  * ```
  *
- * @legacy
- * @alpha
+ * @internal
  */
 export function createObjectViewProxy<TSchema extends ObjectNodeSchema>(
 	view: SchematizedObjectView<TSchema>,
@@ -128,8 +127,7 @@ export function createObjectViewProxy<TSchema extends ObjectNodeSchema>(
  * console.log(proxy.compatibility);
  * ```
  *
- * @legacy
- * @alpha
+ * @internal
  */
 export function createMapViewProxy<TSchema extends MapNodeSchema>(
 	view: SchematizedMapView<TSchema>,

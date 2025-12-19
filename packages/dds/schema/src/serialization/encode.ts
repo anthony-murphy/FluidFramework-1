@@ -85,8 +85,7 @@ interface EncodeContext {
  * //   }
  * // }
  * ```
- * @legacy
- * @alpha
+ * @internal
  */
 export function encodeSchema(
 	schema: NodeSchema,

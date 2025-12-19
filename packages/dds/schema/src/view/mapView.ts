@@ -47,8 +47,7 @@ import { SchematizedObjectView } from "./objectView.js";
  * const value = view.get("key1"); // "value1"
  * ```
  *
- * @legacy
- * @alpha
+ * @internal
  */
 export class SchematizedMapView<TSchema extends MapNodeSchema>
 	implements Iterable<[string, InferValueSchema<TSchema>]>

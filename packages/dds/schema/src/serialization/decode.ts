@@ -54,8 +54,7 @@ import type {
  * // decoded.root is a SimpleObjectNodeSchema
  * // decoded.definitions contains all referenced schemas
  * ```
- * @legacy
- * @alpha
+ * @internal
  */
 export function decodeSchema(encoded: EncodedSchema): DecodedSchema {
 	if (encoded.version !== 1) {

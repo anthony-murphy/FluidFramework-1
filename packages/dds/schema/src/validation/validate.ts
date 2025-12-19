@@ -65,8 +65,7 @@ export interface ValidationError {
 /**
  * Result of validating data against a schema.
  *
- * @legacy
- * @alpha
+ * @internal
  */
 export interface ValidationResult {
 	/**
@@ -88,8 +87,7 @@ export interface ValidationResult {
  * A map from schema identifiers to their schema definitions.
  * Used to look up schemas by identifier during validation.
  *
- * @legacy
- * @alpha
+ * @internal
  */
 export type SchemaRegistry = ReadonlyMap<string, NodeSchema>;
 
@@ -99,8 +97,7 @@ export type SchemaRegistry = ReadonlyMap<string, NodeSchema>;
  * @param rootSchema - The root schema to start from
  * @returns A map of schema identifiers to schemas
  *
- * @legacy
- * @alpha
+ * @internal
  */
 export function buildSchemaRegistry(rootSchema: NodeSchema): SchemaRegistry {
 	const registry = new Map<string, NodeSchema>();
@@ -231,8 +228,7 @@ function getTypeName(value: unknown): string {
  * }
  * ```
  *
- * @legacy
- * @alpha
+ * @internal
  */
 export function validateData(
 	schema: NodeSchema,

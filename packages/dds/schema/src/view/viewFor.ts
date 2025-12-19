@@ -29,8 +29,7 @@ import type { SchematizedMapView } from "./mapView.js";
  * // Usage in a DDS interface
  * viewWith<TSchema extends RootSchema>(schema: TSchema): ViewFor<TSchema>;
  * ```
- * @legacy
- * @alpha
+ * @internal
  */
 export type ViewFor<TSchema extends RootSchema> = TSchema extends ObjectNodeSchema
 	? SchematizedObjectView<TSchema>

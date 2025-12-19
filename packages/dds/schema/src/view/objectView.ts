@@ -51,8 +51,7 @@ import { SchematizedMapView } from "./mapView.js";
  * view.setFieldValue("age", 31);
  * ```
  *
- * @legacy
- * @alpha
+ * @internal
  */
 export class SchematizedObjectView<TSchema extends ObjectNodeSchema> {
 	/**

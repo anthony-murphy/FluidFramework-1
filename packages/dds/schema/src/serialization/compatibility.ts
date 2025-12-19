@@ -99,8 +99,7 @@ export interface SchemaCompatibilityStatus {
  * // status.canView is false (view expects email which stored doesn't have)
  * // status.isEquivalent is false (schemas differ)
  * ```
- * @legacy
- * @alpha
+ * @internal
  */
 export function checkSchemaCompatibility(
 	stored: EncodedSchema | undefined,

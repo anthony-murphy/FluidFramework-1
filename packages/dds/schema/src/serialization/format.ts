@@ -18,8 +18,7 @@ import type { LeafKind } from "../core/index.js";
  * - **Deterministic**: Same schema always produces same encoding
  * - **Compact**: Reasonable size for `.attributes` blob
  * - **Extensible**: Version field for future changes
- * @legacy
- * @alpha
+ * @internal
  */
 export interface EncodedSchema {
 	/**
@@ -45,8 +44,7 @@ export interface EncodedSchema {
 
 /**
  * Union of all encoded node schema types.
- * @legacy
- * @alpha
+ * @internal
  */
 export type EncodedNodeSchema =
 	| EncodedObjectSchema
@@ -56,8 +54,7 @@ export type EncodedNodeSchema =
 
 /**
  * Encoded representation of an object node schema.
- * @legacy
- * @alpha
+ * @internal
  */
 export interface EncodedObjectSchema {
 	/**
@@ -78,8 +75,7 @@ export interface EncodedObjectSchema {
 
 /**
  * Encoded representation of a map node schema.
- * @legacy
- * @alpha
+ * @internal
  */
 export interface EncodedMapSchema {
 	/**
@@ -102,8 +98,7 @@ export interface EncodedMapSchema {
 
 /**
  * Encoded representation of an array node schema.
- * @legacy
- * @alpha
+ * @internal
  */
 export interface EncodedArraySchema {
 	/**
@@ -126,8 +121,7 @@ export interface EncodedArraySchema {
 
 /**
  * Encoded representation of a leaf node schema.
- * @legacy
- * @alpha
+ * @internal
  */
 export interface EncodedLeafSchema {
 	/**
@@ -148,8 +142,7 @@ export interface EncodedLeafSchema {
 
 /**
  * Encoded representation of a field schema.
- * @legacy
- * @alpha
+ * @internal
  */
 export interface EncodedFieldSchema {
 	/**
@@ -174,8 +167,7 @@ import type { FieldKind, NodeKind } from "../core/index.js";
  * This is the output format of {@link decodeSchema}. It provides a
  * class-free representation of the schema that can be used for
  * validation, comparison, or further processing.
- * @legacy
- * @alpha
+ * @internal
  */
 export type SimpleNodeSchema =
 	| SimpleObjectNodeSchema
@@ -185,8 +177,7 @@ export type SimpleNodeSchema =
 
 /**
  * Simple representation of an object node schema.
- * @legacy
- * @alpha
+ * @internal
  */
 export interface SimpleObjectNodeSchema {
 	readonly kind: typeof NodeKind.Object;
@@ -196,8 +187,7 @@ export interface SimpleObjectNodeSchema {
 
 /**
  * Simple representation of an array node schema.
- * @legacy
- * @alpha
+ * @internal
  */
 export interface SimpleArrayNodeSchema {
 	readonly kind: typeof NodeKind.Array;
@@ -207,8 +197,7 @@ export interface SimpleArrayNodeSchema {
 
 /**
  * Simple representation of a map node schema.
- * @legacy
- * @alpha
+ * @internal
  */
 export interface SimpleMapNodeSchema {
 	readonly kind: typeof NodeKind.Map;
@@ -218,8 +207,7 @@ export interface SimpleMapNodeSchema {
 
 /**
  * Simple representation of a leaf node schema.
- * @legacy
- * @alpha
+ * @internal
  */
 export interface SimpleLeafNodeSchema {
 	readonly kind: typeof NodeKind.Leaf;
@@ -229,8 +217,7 @@ export interface SimpleLeafNodeSchema {
 
 /**
  * Simple representation of a field schema.
- * @legacy
- * @alpha
+ * @internal
  */
 export interface SimpleFieldSchema {
 	readonly kind: FieldKind;
@@ -243,8 +230,7 @@ export interface SimpleFieldSchema {
  * @remarks
  * Contains the root schema and all definitions needed to resolve
  * schema references.
- * @legacy
- * @alpha
+ * @internal
  */
 export interface DecodedSchema {
 	/**
