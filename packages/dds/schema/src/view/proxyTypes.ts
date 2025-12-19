@@ -14,7 +14,7 @@ import type { IDisposable } from "@fluidframework/core-interfaces";
 
 import type { ObjectNodeSchema, MapNodeSchema, RootSchema } from "../core/index.js";
 import type { SchemaCompatibilityStatus } from "../serialization/index.js";
-import type { NodeFromSchema, InferValueSchema } from "../types/index.js";
+import type { NodeFromSchema } from "../types/index.js";
 
 /**
  * A typed object view returned by DDSes for object schemas.
@@ -152,8 +152,11 @@ export type MapView<TSchema extends MapNodeSchema> = IDisposable & {
 	 * @remarks
 	 * Provides standard Map interface with typed values.
 	 * Use Map methods like `set()`, `delete()`, `clear()` to modify data.
+	 *
+	 * Note: The value type is `unknown` at the type level. Use explicit typing
+	 * or the factory function `createSchematizedMapView` for full type safety.
 	 */
-	readonly root: Map<string, InferValueSchema<TSchema>>;
+	readonly root: Map<string, unknown>;
 
 	/**
 	 * Whether this view has been disposed.

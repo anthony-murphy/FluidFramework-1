@@ -5,12 +5,17 @@
 
 /**
  * SchematizedMapView - typed Map-like view over schema storage.
+ *
+ * @remarks
+ * Following SharedTree's pattern, the class uses a single type parameter for the
+ * value schema, and derives the value type from it. Map operations are implemented
+ * as direct class methods rather than a complex proxy.
  */
 
 import type { IDisposable } from "@fluidframework/core-interfaces";
 import { UsageError } from "@fluidframework/telemetry-utils/internal";
 
-import type { NodeSchema, MapNodeSchema } from "../core/index.js";
+import type { NodeSchema } from "../core/index.js";
 import { isObjectSchema } from "../core/index.js";
 import type { ISchemaStorage, ISchemaPersistence } from "../storage/index.js";
 import {
@@ -19,7 +24,7 @@ import {
 	type SchemaCompatibilityStatus,
 } from "../serialization/index.js";
 import { validateData } from "../validation/index.js";
-import type { InferValueSchema } from "../types/index.js";
+import type { TypedMapNodeSchema } from "../factory/index.js";
 
 import { SchemaValidationError } from "./errors.js";
 import { SchematizedObjectView } from "./objectView.js";
@@ -59,7 +64,10 @@ export interface SchematizedMapViewOptions {
  * This class wraps an {@link ISchemaStorage} and provides typed Map-like operations
  * based on a {@link MapNodeSchema}. It handles validation and schema compatibility.
  *
- * @typeParam TSchema - The map node schema type
+ * Following SharedTree's pattern, the class uses the value schema type as its primary
+ * type parameter, making it easier for TypeScript to infer the correct value types.
+ *
+ * @typeParam TValueSchema - The schema type for map values (e.g., sf.string, sf.number, or an object schema)
  *
  * @example
  * ```typescript
@@ -74,18 +82,17 @@ export interface SchematizedMapViewOptions {
  *
  * // Map operations
  * view.set("key2", "value2");
- * const value = view.get("key1"); // "value1"
+ * const value = view.get("key1"); // type: string
  * ```
  *
  * @internal
  */
-export class SchematizedMapView<TSchema extends MapNodeSchema>
-	implements Iterable<[string, InferValueSchema<TSchema>]>, IDisposable
+export class SchematizedMapView<TValue = unknown>
+	implements Iterable<[string, TValue]>, IDisposable
 {
 	private readonly enableSchemaValidation: boolean;
 	private readonly ignoreStoredSchema: readonly string[] | undefined;
 	private _disposed = false;
-	private readonly rootProxy: Map<string, InferValueSchema<TSchema>>;
 
 	/**
 	 * Error message thrown when accessing a disposed view.
@@ -102,14 +109,30 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	 */
 	public constructor(
 		private readonly storage: ISchemaStorage,
-		private readonly schema: TSchema,
+		private readonly schema: TypedMapNodeSchema,
 		private readonly persistence?: ISchemaPersistence,
 		options?: SchematizedMapViewOptions,
 	) {
 		this.enableSchemaValidation = options?.enableSchemaValidation ?? false;
 		this.ignoreStoredSchema = options?.ignoreStoredSchema;
-		this.rootProxy = this.createRootProxy();
 	}
+
+	// #region root accessor
+
+	/**
+	 * The map root providing map operations on schema data.
+	 *
+	 * @remarks
+	 * Returns `this` since the class directly implements the Map-like interface.
+	 * This allows the pattern `view.root.get(key)` to work.
+	 */
+	public get root(): this {
+		return this;
+	}
+
+	// #endregion
+
+	// #region IDisposable
 
 	/**
 	 * Whether this view has been disposed.
@@ -133,9 +156,13 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	 */
 	private ensureNotDisposed(): void {
 		if (this._disposed) {
-			throw new UsageError("Accessed a disposed SchemaView.");
+			throw new UsageError(SchematizedMapView.disposedErrorMessage);
 		}
 	}
+
+	// #endregion
+
+	// #region Schema Compatibility
 
 	/**
 	 * Gets the schema compatibility status between the stored schema and this view's schema.
@@ -143,31 +170,25 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	public get compatibility(): SchemaCompatibilityStatus {
 		const stored = this.persistence?.getPersistedSchema();
 
-		// Check if stored schema should be ignored
+		// Check if stored schema should be ignored (escape hatch for migration)
 		if (
 			stored !== undefined &&
 			this.ignoreStoredSchema?.includes(stored.root.identifier) === true
 		) {
-			// Act as if no schema is stored
-			return checkSchemaCompatibility(undefined, this.schema);
+			// When ignoring stored schema, act as if no schema is stored
+			// This allows re-initialization with a new schema
+			return { canView: true, canUpgrade: false, isEquivalent: false, canInitialize: true };
 		}
 
 		return checkSchemaCompatibility(stored, this.schema);
 	}
 
 	/**
-	 * Gets the schema this view is based on.
-	 */
-	public get nodeSchema(): TSchema {
-		return this.schema;
-	}
-
-	/**
-	 * Initialize the storage by persisting the schema.
+	 * Initialize the view, persisting the schema if not already stored.
 	 *
 	 * @remarks
 	 * This method persists the schema to enable cross-client enforcement.
-	 * Setting data is a separate concern - use the `root` property or `set()` after initializing.
+	 * Setting data is a separate concern - use Map methods after initializing.
 	 * Calling `initialize()` is optional - only call when you want schema persistence.
 	 *
 	 * @throws UsageError if a schema is already stored
@@ -190,7 +211,7 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	 *
 	 * @throws UsageError if schemas are not compatible for upgrade
 	 */
-	public upgradeSchema(): void {
+	public upgrade(): void {
 		this.ensureNotDisposed();
 		const compat = this.compatibility;
 		if (!compat.canUpgrade) {
@@ -202,190 +223,27 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	}
 
 	/**
-	 * Creates the root Map proxy for typed map operations.
-	 *
-	 * @remarks
-	 * The proxy handler accesses storage directly for optimal performance,
-	 * avoiding the overhead of method calls for the core Map operations.
+	 * Gets the schema for this view.
 	 */
-	private createRootProxy(): Map<string, InferValueSchema<TSchema>> {
-		// Capture references to avoid `this` aliasing in proxy handlers
-		const storage = this.storage;
-		const isDisposed = (): boolean => this.disposed;
-		const canView = (): boolean => this.compatibility.canView;
-		const enableValidation = this.enableSchemaValidation;
-		const getValueNodeSchema = (): NodeSchema => this.getValueNodeSchema();
-
-		// Iterator functions need to use the view's methods since they have complex logic
-		const getKeys = (): IterableIterator<string> => this.keys();
-		const getValues = (): IterableIterator<InferValueSchema<TSchema>> => this.values();
-		const getEntries = (): IterableIterator<[string, InferValueSchema<TSchema>]> =>
-			this.entries();
-		const getIterator = (): IterableIterator<[string, InferValueSchema<TSchema>]> =>
-			this[Symbol.iterator]();
-		const clearAll = (): void => this.clear();
-
-		// Use object type for the target to enable Reflect fallback
-		const target: object = {};
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-		const proxy = new Proxy(target, {
-			get(proxyTarget, prop, receiver): unknown {
-				if (isDisposed()) {
-					throw new UsageError(SchematizedMapView.disposedErrorMessage);
-				}
-				// Map methods - core operations access storage directly
-				if (prop === "get") {
-					return (key: string): InferValueSchema<TSchema> | undefined => {
-						if (!canView()) {
-							throw new UsageError(
-								"Cannot use view - schema incompatible. Check view.compatibility first.",
-							);
-						}
-						const valueSchema = getValueNodeSchema();
-						const result = storage.getField(key, valueSchema);
-						if (result === undefined) {
-							return undefined;
-						}
-						if (result.type === "value") {
-							return result.value as InferValueSchema<TSchema>;
-						}
-						// Nested storage for object values
-						if (isObjectSchema(valueSchema)) {
-							return new SchematizedObjectView(
-								result.storage,
-								valueSchema,
-							) as unknown as InferValueSchema<TSchema>;
-						}
-						return result.storage as unknown as InferValueSchema<TSchema>;
-					};
-				}
-				if (prop === "set") {
-					return (key: string, value: InferValueSchema<TSchema>) => {
-						if (!canView()) {
-							throw new UsageError(
-								"Cannot use view - schema incompatible. Check view.compatibility first.",
-							);
-						}
-						const valueSchema = getValueNodeSchema();
-						// Validate only if schema validation is enabled
-						if (enableValidation) {
-							const validation = validateData(valueSchema, value);
-							if (!validation.valid) {
-								throw new SchemaValidationError(
-									`Invalid value for key "${key}"`,
-									validation.errors,
-								);
-							}
-						}
-						storage.setField(key, valueSchema, value);
-						return proxy; // Return proxy for chaining like Map
-					};
-				}
-				if (prop === "has") {
-					return (key: string): boolean => {
-						if (!canView()) {
-							throw new UsageError(
-								"Cannot use view - schema incompatible. Check view.compatibility first.",
-							);
-						}
-						return storage.hasField(key);
-					};
-				}
-				if (prop === "delete") {
-					return (key: string): boolean => {
-						if (!canView()) {
-							throw new UsageError(
-								"Cannot use view - schema incompatible. Check view.compatibility first.",
-							);
-						}
-						return storage.deleteField(key);
-					};
-				}
-				if (prop === "clear") {
-					return () => clearAll();
-				}
-				if (prop === "keys") {
-					return () => getKeys();
-				}
-				if (prop === "values") {
-					return () => getValues();
-				}
-				if (prop === "entries") {
-					return () => getEntries();
-				}
-				if (prop === "forEach") {
-					return (
-						callback: (
-							value: InferValueSchema<TSchema>,
-							key: string,
-							map: Map<string, InferValueSchema<TSchema>>,
-						) => void,
-						thisArg?: unknown,
-					) => {
-						for (const [key, value] of getIterator()) {
-							callback.call(thisArg, value, key, proxy);
-						}
-					};
-				}
-				if (prop === "size") {
-					if (isDisposed()) {
-						throw new UsageError(SchematizedMapView.disposedErrorMessage);
-					}
-					if (!canView()) {
-						throw new UsageError(
-							"Cannot use view - schema incompatible. Check view.compatibility first.",
-						);
-					}
-					return storage.size ?? 0;
-				}
-				if (prop === Symbol.iterator) {
-					return () => getIterator();
-				}
-				if (prop === Symbol.toStringTag) {
-					return "Map";
-				}
-				// Reflect fallback for non-Map properties
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-return
-				return Reflect.get(proxyTarget, prop, receiver);
-			},
-			has(proxyTarget, prop) {
-				const mapProps = [
-					"get",
-					"set",
-					"has",
-					"delete",
-					"clear",
-					"keys",
-					"values",
-					"entries",
-					"forEach",
-					"size",
-					Symbol.iterator,
-					Symbol.toStringTag,
-				];
-				if (mapProps.includes(prop)) {
-					return true;
-				}
-				return Reflect.has(proxyTarget, prop);
-			},
-		}) as Map<string, InferValueSchema<TSchema>>;
-		return proxy;
+	public get nodeSchema(): TypedMapNodeSchema {
+		return this.schema;
 	}
 
 	/**
-	 * The typed Map root providing map operations on schema data.
-	 *
-	 * @remarks
-	 * Use Map operations through this property:
-	 * ```ts
-	 * view.root.set("key", "value");
-	 * console.log(view.root.get("key"));
-	 * ```
+	 * Ensure the view can be used (not disposed and schema is compatible).
 	 */
-	public get root(): Map<string, InferValueSchema<TSchema>> {
+	private ensureCanView(): void {
 		this.ensureNotDisposed();
-		return this.rootProxy;
+		if (!this.compatibility.canView) {
+			throw new UsageError(
+				"Cannot use view - schema incompatible. Check view.compatibility first.",
+			);
+		}
 	}
+
+	// #endregion
+
+	// #region Map Interface
 
 	/**
 	 * Get a value by key.
@@ -393,7 +251,7 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	 * @param key - The key to look up
 	 * @returns The value, or undefined if not found
 	 */
-	public get(key: string): InferValueSchema<TSchema> | undefined {
+	public get(key: string): TValue | undefined {
 		this.ensureCanView();
 		const valueSchema = this.getValueNodeSchema();
 		const result = this.storage.getField(key, valueSchema);
@@ -404,18 +262,15 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 
 		switch (result.type) {
 			case "value": {
-				return result.value as InferValueSchema<TSchema>;
+				return result.value as TValue;
 			}
 			case "storage": {
 				// Wrap nested storage if needed
 				if (isObjectSchema(valueSchema)) {
-					return new SchematizedObjectView(
-						result.storage,
-						valueSchema,
-					) as unknown as InferValueSchema<TSchema>;
+					return new SchematizedObjectView(result.storage, valueSchema) as unknown as TValue;
 				}
 				// Unexpected for leaf schemas
-				return result.storage as unknown as InferValueSchema<TSchema>;
+				return result.storage as unknown as TValue;
 			}
 			default: {
 				// Exhaustive check - all result types handled above
@@ -432,13 +287,14 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	 * @returns This view for chaining
 	 * @throws SchemaValidationError if the value fails validation (when enableSchemaValidation is true)
 	 */
-	public set(key: string, value: InferValueSchema<TSchema>): this {
+	public set(key: string, value: TValue): this {
 		this.ensureCanView();
 		const valueSchema = this.getValueNodeSchema();
 
 		// Validate only if schema validation is enabled
 		if (this.enableSchemaValidation) {
-			const validation = validateData(valueSchema, value);
+			// Cast to unknown for validateData which takes unknown
+			const validation = validateData(valueSchema, value as unknown);
 			if (!validation.valid) {
 				throw new SchemaValidationError(`Invalid value for key "${key}"`, validation.errors);
 			}
@@ -479,6 +335,20 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	}
 
 	/**
+	 * Clear all entries.
+	 */
+	public clear(): void {
+		this.ensureCanView();
+		for (const key of [...this.keys()]) {
+			this.storage.deleteField(key);
+		}
+	}
+
+	// #endregion
+
+	// #region Iterators
+
+	/**
 	 * Iterate over keys.
 	 */
 	public keys(): IterableIterator<string> {
@@ -489,7 +359,7 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	/**
 	 * Iterate over values.
 	 */
-	public *values(): IterableIterator<InferValueSchema<TSchema>> {
+	public *values(): IterableIterator<TValue> {
 		for (const key of this.keys()) {
 			const value = this.get(key);
 			if (value !== undefined) {
@@ -501,7 +371,7 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	/**
 	 * Iterate over entries.
 	 */
-	public *entries(): IterableIterator<[string, InferValueSchema<TSchema>]> {
+	public *entries(): IterableIterator<[string, TValue]> {
 		for (const key of this.keys()) {
 			const value = this.get(key);
 			if (value !== undefined) {
@@ -511,9 +381,9 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	}
 
 	/**
-	 * Iterate over entries.
+	 * Iterate over entries (implements Iterable interface).
 	 */
-	public [Symbol.iterator](): IterableIterator<[string, InferValueSchema<TSchema>]> {
+	public [Symbol.iterator](): IterableIterator<[string, TValue]> {
 		return this.entries();
 	}
 
@@ -524,7 +394,7 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	 * @param thisArg - Optional this argument for the callback
 	 */
 	public forEach(
-		callback: (value: InferValueSchema<TSchema>, key: string, map: this) => void,
+		callback: (value: TValue, key: string, map: this) => void,
 		thisArg?: unknown,
 	): void {
 		for (const [key, value] of this) {
@@ -532,18 +402,12 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 		}
 	}
 
-	/**
-	 * Clear all entries.
-	 */
-	public clear(): void {
-		this.ensureCanView();
-		for (const key of [...this.keys()]) {
-			this.storage.deleteField(key);
-		}
-	}
+	// #endregion
+
+	// #region Internal Helpers
 
 	/**
-	 * Get a dummy node schema for value operations.
+	 * Get the node schema for values in this map.
 	 */
 	private getValueNodeSchema(): NodeSchema {
 		// Return a minimal schema for storage operations
@@ -554,15 +418,5 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 		return schema;
 	}
 
-	/**
-	 * Ensure the view can be used (not disposed and schema is compatible).
-	 */
-	private ensureCanView(): void {
-		this.ensureNotDisposed();
-		if (!this.compatibility.canView) {
-			throw new UsageError(
-				"Cannot use view - schema incompatible. Check view.compatibility first.",
-			);
-		}
-	}
+	// #endregion
 }

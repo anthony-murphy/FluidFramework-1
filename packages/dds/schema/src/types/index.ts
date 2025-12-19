@@ -17,6 +17,7 @@ export type {
 	NodeFromSchema,
 	InferFields,
 	InferValueSchema,
+	InferMapValueType,
 	InferAllowedTypes,
 	InferFieldKind,
 	ObjectFromFields,

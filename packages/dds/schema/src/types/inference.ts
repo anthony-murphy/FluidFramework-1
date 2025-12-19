@@ -266,6 +266,39 @@ export type InferValueSchema<T> = T extends TypedMapNodeSchema<string, infer TVa
 	: never;
 
 /**
+ * Extracts the TypeScript value type from a {@link TypedMapNodeSchema}.
+ *
+ * @typeParam T - A typed map node schema.
+ *
+ * @remarks
+ * Unlike {@link InferValueSchema} which returns the schema type, this utility
+ * returns the actual TypeScript type that values in the map will have at runtime.
+ *
+ * @example
+ * ```typescript
+ * const sf = new SchemaFactory("myApp");
+ *
+ * const UserSchema = sf.object("User", { name: sf.string });
+ * const UsersMap = sf.map("Users", UserSchema);
+ *
+ * // Extracts the actual value type (not the schema)
+ * type ValueType = InferMapValueType<typeof UsersMap>;
+ * // Results in: { name: string }
+ *
+ * const StringMap = sf.map("Config", sf.string);
+ * type StringValueType = InferMapValueType<typeof StringMap>;
+ * // Results in: string
+ * ```
+ * @legacy
+ * @alpha
+ */
+export type InferMapValueType<T> = T extends TypedMapNodeSchema<string, infer TValueSchema>
+	? TValueSchema extends ImplicitAllowedTypes
+		? TypeFromImplicitAllowedTypes<TValueSchema>
+		: never
+	: never;
+
+/**
  * Extracts the allowed types from a {@link TypedFieldSchema}.
  *
  * @typeParam T - A typed field schema.

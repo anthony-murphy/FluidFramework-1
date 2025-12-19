@@ -3,17 +3,13 @@
  * Licensed under the MIT License.
  */
 
-/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any, unicorn/no-array-for-each, unicorn/no-array-method-this-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, unicorn/no-array-for-each, unicorn/no-array-method-this-argument */
 
 import { strict as assert } from "node:assert";
 
 import { SchemaFactory } from "../factory/index.js";
 import { MockStorage, MockPersistence } from "./mockStorage.js";
 import { SchematizedObjectView, SchematizedMapView, UsageError } from "../view/index.js";
-
-// Note: The SchematizedMapView uses InferValueSchema which extracts the schema type,
-// not the value type. The tests use type assertions to work around this and test
-// the underlying runtime functionality.
 
 describe("View", () => {
 	const sf = new SchemaFactory("test");
@@ -123,10 +119,10 @@ describe("View", () => {
 				view.root.name = "Alice";
 
 				// Accessing unknown fields via proxy returns undefined (Reflect fallback)
-				assert.equal((view.root as any).unknownField, undefined);
+				assert.equal(Reflect.get(view.root, "unknownField"), undefined);
 			});
 
-			it("throws TypeError for unknown field on set in strict mode", () => {
+			it("returns false when setting unknown field", () => {
 				const PersonSchema = sf.object("PersonUnknownSet", {
 					name: sf.string,
 				});
@@ -138,13 +134,9 @@ describe("View", () => {
 				view.initialize();
 				view.root.name = "Alice";
 
-				// Setting unknown fields via proxy returns false, which throws TypeError in strict mode
-				assert.throws(
-					() => {
-						(view.root as any).unknownField = "value";
-					},
-					TypeError,
-				);
+				// Setting unknown fields via proxy returns false
+				const result = Reflect.set(view.root, "unknownField", "value");
+				assert.equal(result, false);
 			});
 
 			it("throws UsageError when setting required field to undefined", () => {
@@ -159,7 +151,7 @@ describe("View", () => {
 				view.initialize();
 				view.root.name = "Alice";
 
-				assert.throws(() => ((view.root as any).name = undefined), UsageError);
+				assert.throws(() => Reflect.set(view.root, "name", undefined), UsageError);
 			});
 		});
 
@@ -413,16 +405,13 @@ describe("View", () => {
 	});
 
 	describe("SchematizedMapView", () => {
-		// The SchematizedMapView type parameters use InferValueSchema which returns the schema type,
-		// not the value type. We use 'as unknown as any' to bypass the type system and test runtime behavior.
-
 		describe("get/set/delete/has operations", () => {
 			it("gets and sets values", () => {
 				const ConfigSchema = sf.map("ConfigMap", sf.string);
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
 
 				view.initialize();
 				view.set("key1", "value1");
@@ -438,7 +427,7 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
 
 				view.initialize();
 
@@ -450,7 +439,7 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
 
 				view.initialize();
 				view.set("key1", "value1");
@@ -466,7 +455,7 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
 
 				view.initialize();
 
@@ -479,7 +468,7 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
 
 				view.initialize();
 				view.set("exists", "value");
@@ -495,7 +484,7 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
 
 				view.initialize();
 				assert.equal(view.size, 0);
@@ -517,7 +506,7 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
 
 				view.initialize();
 				view.set("key1", "value1");
@@ -532,7 +521,7 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
 
 				view.initialize();
 				view.set("key1", "value1");
@@ -547,7 +536,7 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
 
 				view.initialize();
 				view.set("key1", "value1");
@@ -565,13 +554,13 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
 
 				view.initialize();
 				view.set("key1", "value1");
 				view.set("key2", "value2");
 
-				const collected: [string, string][] = [];
+				const collected: [string, unknown][] = [];
 				for (const entry of view) {
 					collected.push(entry);
 				}
@@ -586,14 +575,14 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
 
 				view.initialize();
 				view.set("key1", "value1");
 				view.set("key2", "value2");
 
-				const collected: [string, string][] = [];
-				view.forEach((value: string, key: string) => {
+				const collected: [string, unknown][] = [];
+				view.forEach((value, key) => {
 					collected.push([key, value]);
 				});
 
@@ -607,7 +596,7 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
 
 				view.initialize();
 				view.set("key1", "value1");
@@ -627,7 +616,7 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
 
 				view.initialize();
 				view.set("key1", "value1");
@@ -653,7 +642,7 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
 
 				view.initialize();
 
@@ -671,7 +660,7 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
 
 				// Should not throw
 				view.initialize();
@@ -684,7 +673,7 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
 
 				view.initialize();
 
@@ -722,7 +711,7 @@ describe("View", () => {
 
 				const storage = new MockStorage();
 				const persistence = new MockPersistence();
-				const view = new SchematizedMapView(storage, ConfigSchema, persistence) as any;
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
 
 				view.initialize();
 
@@ -743,7 +732,7 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 
 				// Initialize with V1
-				const viewV1 = new SchematizedMapView(storage, ConfigSchemaV1, persistence) as any;
+				const viewV1 = new SchematizedMapView(storage, ConfigSchemaV1, persistence);
 				viewV1.initialize();
 				viewV1.set("key1", "value1");
 
@@ -766,7 +755,7 @@ describe("View", () => {
 				const persistence = new MockPersistence();
 
 				// Initialize with V1
-				const viewV1 = new SchematizedMapView(storage, ConfigSchemaV1, persistence) as any;
+				const viewV1 = new SchematizedMapView(storage, ConfigSchemaV1, persistence);
 				viewV1.initialize();
 
 				// With ignoreStoredSchema for a different identifier, canInitialize should still be false
@@ -972,6 +961,11 @@ describe("View", () => {
 		});
 
 		describe("custom methods via schema subclassing", () => {
+			// Note: Casts in these tests are inherent to the custom methods pattern.
+			// When subclassing a schema, `this` doesn't have field types, so methods
+			// must cast to access fields. Similarly, the proxy type doesn't know about
+			// custom methods added via subclassing, so callers must cast to invoke them.
+
 			it("custom getter works on schema subclass", () => {
 				// Create a schema class and subclass it with a custom getter
 				const UserSchemaBase = sf.object("UserWithGetter", {
@@ -1024,7 +1018,8 @@ describe("View", () => {
 				view.root.value = 5;
 
 				// Access the custom method through the proxy
-				const root = view.root as any;
+				// Cast needed: custom methods exist on schema class but aren't reflected in NodeFromSchema
+				const root = view.root as { value: number; double(): number; increment(): void };
 				assert.equal(root.double(), 10);
 
 				// Call increment method which modifies the field

@@ -15,7 +15,7 @@
 import type { RootSchema, ObjectNodeSchema, MapNodeSchema } from "../core/index.js";
 import { isObjectSchema, isMapSchema } from "../core/index.js";
 import type { ISchemaStorage, ISchemaPersistence } from "../storage/index.js";
-import type { NodeFromSchema, InferValueSchema } from "../types/index.js";
+import type { NodeFromSchema } from "../types/index.js";
 import type { SchemaCompatibilityStatus } from "../serialization/index.js";
 
 import { SchematizedObjectView } from "./objectView.js";
@@ -94,42 +94,15 @@ export interface ObjectViewResult<TSchema extends ObjectNodeSchema> {
 /**
  * Result type for map schema views.
  *
+ * @remarks
+ * The SchematizedMapView class directly implements map operations (get, set, has, delete, etc.)
+ * without a separate `root` property. It is itself the map-like interface.
+ *
  * @internal
  */
-export interface MapViewResult<TSchema extends MapNodeSchema> {
-	/**
-	 * The typed Map root providing map operations on schema data.
-	 */
-	root: Map<string, InferValueSchema<TSchema>>;
-
-	/**
-	 * Whether this view has been disposed.
-	 */
-	readonly disposed: boolean;
-
-	/**
-	 * The schema compatibility status.
-	 */
-	readonly compatibility: SchemaCompatibilityStatus;
-
-	/**
-	 * Initialize the storage by persisting the schema.
-	 *
-	 * @remarks
-	 * Setting data is a separate concern - use the `root` property after initializing.
-	 */
-	initialize(): void;
-
-	/**
-	 * Upgrade the stored schema to this view's schema.
-	 */
-	upgradeSchema(): void;
-
-	/**
-	 * Dispose this view and release resources.
-	 */
-	dispose(): void;
-}
+export type MapViewResult<TSchema extends MapNodeSchema> = SchematizedMapView<
+	NodeFromSchema<TSchema>
+>;
 
 // #endregion
 

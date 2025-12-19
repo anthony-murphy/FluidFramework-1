@@ -62,6 +62,7 @@ export type {
 	// Field and value extraction
 	InferFields,
 	InferValueSchema,
+	InferMapValueType,
 	InferAllowedTypes,
 	InferFieldKind,
 	// Helper types used by NodeFromSchema

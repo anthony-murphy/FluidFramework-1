@@ -65,6 +65,9 @@ export type InferFieldKind<T> = T extends TypedFieldSchema<infer TKind> ? TKind 
 export type InferFields<T> = T extends TypedObjectNodeSchema<string, infer TFields> ? TFields : never;
 
 // @alpha @legacy
+export type InferMapValueType<T> = T extends TypedMapNodeSchema<string, infer TValueSchema> ? TValueSchema extends ImplicitAllowedTypes ? TypeFromImplicitAllowedTypes<TValueSchema> : never : never;
+
+// @alpha @legacy
 export type InferValueSchema<T> = T extends TypedMapNodeSchema<string, infer TValueSchema> ? TValueSchema : never;
 
 // @alpha @legacy
@@ -122,7 +125,7 @@ export interface MapNodeSchema extends NodeSchema {
 
 // @alpha @legacy
 export type MapView<TSchema extends MapNodeSchema> = IDisposable & {
-    readonly root: Map<string, InferValueSchema<TSchema>>;
+    readonly root: Map<string, unknown>;
     readonly disposed: boolean;
     readonly compatibility: SchemaCompatibilityStatus;
     initialize: () => void;
