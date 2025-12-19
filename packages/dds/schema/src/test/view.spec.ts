@@ -31,14 +31,14 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("name", "Alice");
-				view.setFieldValue("age", 30);
+				view.root.name = "Alice";
+				view.root.age = 30;
 
-				assert.equal(view.getFieldValue("name"), "Alice");
-				assert.equal(view.getFieldValue("age"), 30);
+				assert.equal(view.root.name, "Alice");
+				assert.equal(view.root.age, 30);
 
-				view.setFieldValue("age", 31);
-				assert.equal(view.getFieldValue("age"), 31);
+				view.root.age = 31;
+				assert.equal(view.root.age, 31);
 			});
 
 			it("handles optional fields when present", () => {
@@ -52,10 +52,10 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("name", "Alice");
-				view.setFieldValue("nickname", "Ali");
+				view.root.name = "Alice";
+				view.root.nickname = "Ali";
 
-				assert.equal(view.getFieldValue("nickname"), "Ali");
+				assert.equal(view.root.nickname, "Ali");
 			});
 
 			it("handles optional fields when absent", () => {
@@ -69,9 +69,9 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("name", "Alice");
+				view.root.name = "Alice";
 
-				assert.equal(view.getFieldValue("nickname"), undefined);
+				assert.equal(view.root.nickname, undefined);
 			});
 
 			it("allows setting optional field to undefined", () => {
@@ -85,12 +85,12 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("name", "Alice");
-				view.setFieldValue("nickname", "Ali");
-				assert.equal(view.getFieldValue("nickname"), "Ali");
+				view.root.name = "Alice";
+				view.root.nickname = "Ali";
+				assert.equal(view.root.nickname, "Ali");
 
-				view.setFieldValue("nickname", undefined);
-				assert.equal(view.getFieldValue("nickname"), undefined);
+				view.root.nickname = undefined;
+				assert.equal(view.root.nickname, undefined);
 			});
 
 			it("checks field existence with hasField", () => {
@@ -104,13 +104,13 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("name", "Alice");
+				view.root.name = "Alice";
 
-				assert.equal(view.hasField("name"), true);
-				assert.equal(view.hasField("nickname"), false);
+				assert.equal("name" in view.root, true);
+				assert.equal("nickname" in view.root, false);
 			});
 
-			it("throws UsageError for unknown field on get", () => {
+			it("returns undefined for unknown field on get", () => {
 				const PersonSchema = sf.object("PersonUnknownGet", {
 					name: sf.string,
 				});
@@ -120,15 +120,13 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("name", "Alice");
+				view.root.name = "Alice";
 
-				assert.throws(
-					() => view.getFieldValue("unknownField" as keyof typeof PersonSchema.fields),
-					UsageError,
-				);
+				// Accessing unknown fields via proxy returns undefined (Reflect fallback)
+				assert.equal((view.root as any).unknownField, undefined);
 			});
 
-			it("throws UsageError for unknown field on set", () => {
+			it("throws TypeError for unknown field on set in strict mode", () => {
 				const PersonSchema = sf.object("PersonUnknownSet", {
 					name: sf.string,
 				});
@@ -138,12 +136,14 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("name", "Alice");
+				view.root.name = "Alice";
 
+				// Setting unknown fields via proxy returns false, which throws TypeError in strict mode
 				assert.throws(
-					() =>
-						view.setFieldValue("unknownField" as keyof typeof PersonSchema.fields, "value"),
-					UsageError,
+					() => {
+						(view.root as any).unknownField = "value";
+					},
+					TypeError,
 				);
 			});
 
@@ -157,17 +157,17 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("name", "Alice");
+				view.root.name = "Alice";
 
-				assert.throws(() => view.setFieldValue("name", undefined), UsageError);
+				assert.throws(() => ((view.root as any).name = undefined), UsageError);
 			});
 		});
 
 		describe("validation on set", () => {
-			// Note: The SchematizedObjectView.setFieldValue uses a simplified
-			// getFieldNodeSchema that creates a minimal schema for storage operations.
-			// This means validation only checks against the first allowed type's leaf kind,
-			// not the full type system. These tests verify the current behavior.
+			// Note: The proxy set handler uses a simplified getFieldNodeSchema that creates
+			// a minimal schema for storage operations. This means validation only checks
+			// against the first allowed type's leaf kind, not the full type system.
+			// These tests verify the current behavior.
 
 			it("accepts valid values", () => {
 				const PersonSchema = sf.object("PersonValidType", {
@@ -180,12 +180,12 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("name", "Alice");
-				view.setFieldValue("age", 30);
+				view.root.name = "Alice";
+				view.root.age = 30;
 
 				// Should not throw for valid values
-				view.setFieldValue("age", 31);
-				assert.equal(view.getFieldValue("age"), 31);
+				view.root.age = 31;
+				assert.equal(view.root.age, 31);
 			});
 		});
 
@@ -201,11 +201,11 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("name", "Alice");
-				view.setFieldValue("age", 30);
+				view.root.name = "Alice";
+				view.root.age = 30;
 
-				assert.equal(view.getFieldValue("name"), "Alice");
-				assert.equal(view.getFieldValue("age"), 30);
+				assert.equal(view.root.name, "Alice");
+				assert.equal(view.root.age, 30);
 			});
 
 			it("throws UsageError when initializing twice", () => {
@@ -254,7 +254,7 @@ describe("View", () => {
 
 				const viewV1 = new SchematizedObjectView(storage, PersonSchemaV1, persistence);
 				viewV1.initialize();
-				viewV1.setFieldValue("name", "Alice");
+				viewV1.root.name = "Alice";
 
 				const viewV2 = new SchematizedObjectView(storage, PersonSchemaV2, persistence);
 				assert.equal(viewV2.compatibility.canUpgrade, true);
@@ -276,7 +276,7 @@ describe("View", () => {
 
 				const viewV1 = new SchematizedObjectView(storage, PersonSchemaV1, persistence);
 				viewV1.initialize();
-				viewV1.setFieldValue("name", "Alice");
+				viewV1.root.name = "Alice";
 
 				const viewV2 = new SchematizedObjectView(storage, PersonSchemaV2, persistence);
 
@@ -341,7 +341,7 @@ describe("View", () => {
 				// Initialize with V1
 				const viewV1 = new SchematizedObjectView(storage, PersonSchemaV1, persistence);
 				viewV1.initialize();
-				viewV1.setFieldValue("name", "Alice");
+				viewV1.root.name = "Alice";
 
 				// Without ignoreStoredSchema, we cannot initialize with V2
 				const viewV2NoIgnore = new SchematizedObjectView(storage, PersonSchemaV2, persistence);
@@ -397,7 +397,7 @@ describe("View", () => {
 				// Initialize with V1
 				const viewV1 = new SchematizedObjectView(storage, PersonSchemaV1, persistence);
 				viewV1.initialize();
-				viewV1.setFieldValue("name", "Alice");
+				viewV1.root.name = "Alice";
 
 				// Create view V2 with ignoreStoredSchema and initialize
 				// Note: MockPersistence.setPersistedSchema throws if already set,
@@ -791,8 +791,8 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("name", "Alice");
-				view.setFieldValue("age", 30);
+				view.root.name = "Alice";
+				view.root.age = 30;
 
 				assert.equal(view.root.name, "Alice");
 				assert.equal(view.root.age, 30);
@@ -809,7 +809,7 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("name", "Alice");
+				view.root.name = "Alice";
 
 				assert.equal(view.root.nickname, undefined);
 			});
@@ -827,13 +827,13 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("name", "Alice");
-				view.setFieldValue("age", 30);
+				view.root.name = "Alice";
+				view.root.age = 30;
 
 				// Use direct assignment via the root proxy
 				(view.root as any).age = 31;
 				assert.equal(view.root.age, 31);
-				assert.equal(view.getFieldValue("age"), 31);
+				assert.equal(view.root.age, 31);
 			});
 
 			it("returns false for unknown properties on root", () => {
@@ -846,7 +846,7 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("name", "Alice");
+				view.root.name = "Alice";
 
 				// Setting unknown property on root returns false (strict mode would throw)
 				const result = Reflect.set(view.root, "unknownProp", "value");
@@ -866,8 +866,8 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("name", "Alice");
-				view.setFieldValue("age", 30);
+				view.root.name = "Alice";
+				view.root.age = 30;
 
 				assert.equal("name" in view.root, true);
 				assert.equal("age" in view.root, true);
@@ -885,8 +885,8 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("name", "Alice");
-				view.setFieldValue("age", 30);
+				view.root.name = "Alice";
+				view.root.age = 30;
 
 				const keys = Object.keys(view.root);
 				assert.deepEqual(keys.sort(), ["age", "name"]);
@@ -916,7 +916,7 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("name", "Bob");
+				view.root.name = "Bob";
 
 				assert.equal(view.root.name, "Bob");
 			});
@@ -931,7 +931,7 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("name", "Alice");
+				view.root.name = "Alice";
 
 				// Should not throw (same schema)
 				view.upgradeSchema();
@@ -949,7 +949,7 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("name", "Alice");
+				view.root.name = "Alice";
 
 				// Non-schema property should return undefined (since target is {})
 				assert.equal((view.root as any).nonExistentProp, undefined);
@@ -991,8 +991,8 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, UserSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("firstName", "John");
-				view.setFieldValue("lastName", "Doe");
+				view.root.firstName = "John";
+				view.root.lastName = "Doe";
 
 				// Access the custom getter through the proxy
 				const fullName = (view.root as any).fullName;
@@ -1021,7 +1021,7 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, CounterSchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("value", 5);
+				view.root.value = 5;
 
 				// Access the custom method through the proxy
 				const root = view.root as any;
@@ -1029,7 +1029,7 @@ describe("View", () => {
 
 				// Call increment method which modifies the field
 				root.increment();
-				assert.equal(view.getFieldValue("value"), 6);
+				assert.equal(view.root.value, 6);
 			});
 
 			it("schema class can be subclassed multiple times", () => {
@@ -1058,8 +1058,8 @@ describe("View", () => {
 				const adultPersistence = new MockPersistence();
 				const adultView = new SchematizedObjectView(adultStorage, Adult, adultPersistence);
 				adultView.initialize();
-				adultView.setFieldValue("name", "Alice");
-				adultView.setFieldValue("age", 25);
+				adultView.root.name = "Alice";
+				adultView.root.age = 25;
 				assert.equal((adultView.root as any).canVote(), true);
 
 				// Test Child subclass
@@ -1067,8 +1067,8 @@ describe("View", () => {
 				const childPersistence = new MockPersistence();
 				const childView = new SchematizedObjectView(childStorage, Child, childPersistence);
 				childView.initialize();
-				childView.setFieldValue("name", "Bob");
-				childView.setFieldValue("age", 10);
+				childView.root.name = "Bob";
+				childView.root.age = 10;
 				assert.equal((childView.root as any).canVote(), false);
 			});
 
@@ -1084,7 +1084,7 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, MySchema, persistence);
 
 				view.initialize();
-				view.setFieldValue("value", "test");
+				view.root.value = "test";
 
 				// The proxy target is Object.create(MySchema.prototype), so instanceof should work
 				assert(view.root instanceof MySchema);

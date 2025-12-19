@@ -75,12 +75,12 @@ export interface SchematizedObjectViewOptions {
  *
  * // Initialize (persist schema) and set data
  * view.initialize();
- * view.setFieldValue("name", "Alice");
- * view.setFieldValue("age", 30);
+ * view.root.name = "Alice";
+ * view.root.age = 30;
  *
  * // Access fields
- * const name = view.getFieldValue("name"); // "Alice"
- * view.setFieldValue("age", 31);
+ * const name = view.root.name; // "Alice"
+ * view.root.age = 31;
  * ```
  *
  * @internal
@@ -173,7 +173,7 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 	 *
 	 * @remarks
 	 * This method persists the schema to enable cross-client enforcement.
-	 * Setting data is a separate concern - use the `root` property or `setFieldValue()` after initializing.
+	 * Setting data is a separate concern - use the `root` property after initializing.
 	 * Calling `initialize()` is optional - only call when you want schema persistence.
 	 *
 	 * @throws UsageError if a schema is already stored
@@ -350,89 +350,6 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 	public get root(): NodeFromSchema<TSchema> {
 		this.ensureNotDisposed();
 		return this.rootProxy;
-	}
-
-	/**
-	 * Get a field value by name.
-	 *
-	 * @param fieldName - The name of the field to get
-	 * @returns The field value, or undefined for optional fields that are not set
-	 * @throws UsageError if the field does not exist in the schema
-	 * @throws SchemaValidationError if a required field is missing
-	 */
-	public getFieldValue<K extends keyof TSchema["fields"] & string>(fieldName: K): unknown {
-		this.ensureNotDisposed();
-		const fieldSchema = this.schema.fields[fieldName];
-		if (fieldSchema === undefined) {
-			throw new UsageError(`Unknown field: ${fieldName}`);
-		}
-
-		const nodeSchema = this.getFieldNodeSchema(fieldSchema);
-		const result = this.storage.getField(fieldName, nodeSchema);
-
-		if (result === undefined) {
-			if (fieldSchema.kind === FieldKind.Required) {
-				throw new SchemaValidationError(`Required field "${fieldName}" is missing`);
-			}
-			return undefined;
-		}
-
-		return this.unwrapStorageResult(result, nodeSchema);
-	}
-
-	/**
-	 * Set a field value by name.
-	 *
-	 * @param fieldName - The name of the field to set
-	 * @param value - The value to set. Use undefined to clear optional fields.
-	 * @throws UsageError if the field does not exist or if trying to set a required field to undefined
-	 * @throws SchemaValidationError if the value fails validation (when enableSchemaValidation is true)
-	 */
-	public setFieldValue<K extends keyof TSchema["fields"] & string>(
-		fieldName: K,
-		value: unknown,
-	): void {
-		this.ensureNotDisposed();
-		const fieldSchema = this.schema.fields[fieldName];
-		if (fieldSchema === undefined) {
-			throw new UsageError(`Unknown field: ${fieldName}`);
-		}
-
-		// Handle undefined for optional fields
-		if (value === undefined) {
-			if (fieldSchema.kind === FieldKind.Optional) {
-				this.storage.deleteField(fieldName);
-				return;
-			}
-			throw new UsageError(`Cannot set required field "${fieldName}" to undefined`);
-		}
-
-		// Get the node schema for storage operations
-		const nodeSchema = this.getFieldNodeSchema(fieldSchema);
-
-		// Validate only if schema validation is enabled
-		if (this.enableSchemaValidation) {
-			const validation = validateData(nodeSchema, value);
-			if (!validation.valid) {
-				throw new SchemaValidationError(
-					`Invalid value for field "${fieldName}"`,
-					validation.errors,
-				);
-			}
-		}
-
-		this.storage.setField(fieldName, nodeSchema, value);
-	}
-
-	/**
-	 * Check if a field has a value.
-	 *
-	 * @param fieldName - The name of the field to check
-	 * @returns True if the field has a value
-	 */
-	public hasField(fieldName: string): boolean {
-		this.ensureNotDisposed();
-		return this.storage.hasField(fieldName);
 	}
 
 	/**

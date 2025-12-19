@@ -102,7 +102,8 @@ Implementation tasks from decisions #10-21, ordered by dependency:
      - objectView: proxy get/set/has/delete directly call storage methods
      - mapView: proxy get/set/has/delete directly call storage methods
      - Avoids method call overhead for every property access
-     - `getFieldValue()` / `setFieldValue()` remain as public API alternatives
+     - Removed `getFieldValue()` / `setFieldValue()` / `hasField()` public methods
+     - All field access now goes through `view.root.fieldName` proxy pattern
 
 ### Phase 4: Test relocation (#14)
 
