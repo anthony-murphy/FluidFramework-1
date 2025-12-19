@@ -349,7 +349,7 @@ describe("Type Inference", () => {
 			const optionalField = sf.optional(sf.string);
 
 			type Kind = InferFieldKind<typeof optionalField>;
-			assertTypeEquals<Equals<Kind, FieldKind.Optional>>();
+			assertTypeEquals<Equals<Kind, typeof FieldKind.Optional>>();
 
 			assert.ok(true);
 		});
@@ -358,7 +358,7 @@ describe("Type Inference", () => {
 			const requiredField = sf.required(sf.string);
 
 			type Kind = InferFieldKind<typeof requiredField>;
-			assertTypeEquals<Equals<Kind, FieldKind.Required>>();
+			assertTypeEquals<Equals<Kind, typeof FieldKind.Required>>();
 
 			assert.ok(true);
 		});
@@ -488,15 +488,15 @@ describe("Type Inference", () => {
 
 		it("extracts correct NodeKind from schemas", () => {
 			type LeafKind = SchemaKind<typeof sf.string>;
-			assertTypeEquals<Equals<LeafKind, NodeKind.Leaf>>();
+			assertTypeEquals<Equals<LeafKind, typeof NodeKind.Leaf>>();
 
 			const ObjSchema = sf.object("Obj", {});
 			type ObjKind = SchemaKind<typeof ObjSchema>;
-			assertTypeEquals<Equals<ObjKind, NodeKind.Object>>();
+			assertTypeEquals<Equals<ObjKind, typeof NodeKind.Object>>();
 
 			const MapSchema = sf.map("Map", sf.string);
 			type MapKind = SchemaKind<typeof MapSchema>;
-			assertTypeEquals<Equals<MapKind, NodeKind.Map>>();
+			assertTypeEquals<Equals<MapKind, typeof NodeKind.Map>>();
 
 			assert.ok(true);
 		});

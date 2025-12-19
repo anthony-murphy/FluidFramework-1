@@ -59,6 +59,11 @@ export type {
 	InferValueSchema,
 	InferAllowedTypes,
 	InferFieldKind,
+	// Helper types used by NodeFromSchema
+	ObjectFromFields,
+	TypeFromImplicitAllowedTypes,
+	NormalizeFieldSchema,
+	TypeFromField,
 	// Immutability utilities
 	DeepReadonly,
 	// Type-level schema guards

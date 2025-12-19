@@ -62,8 +62,8 @@ describe("Schema", () => {
 			assert.equal(UserSchema.identifier, "myApp.User");
 			assert.equal(UserSchema.kind, NodeKind.Object);
 			assert.deepEqual(Object.keys(UserSchema.fields), ["name", "age"]);
-			assert.equal(UserSchema.fields["name"]?.kind, FieldKind.Required);
-			assert.equal(UserSchema.fields["age"]?.kind, FieldKind.Required);
+			assert.equal(UserSchema.fields.name?.kind, FieldKind.Required);
+			assert.equal(UserSchema.fields.age?.kind, FieldKind.Required);
 		});
 
 		it("creates object schemas with optional fields", () => {
@@ -73,8 +73,8 @@ describe("Schema", () => {
 				email: sf.optional(sf.string),
 			});
 
-			assert.equal(UserSchema.fields["name"]?.kind, FieldKind.Required);
-			assert.equal(UserSchema.fields["email"]?.kind, FieldKind.Optional);
+			assert.equal(UserSchema.fields.name?.kind, FieldKind.Required);
+			assert.equal(UserSchema.fields.email?.kind, FieldKind.Optional);
 		});
 
 		it("creates object schemas with explicit required fields", () => {
@@ -83,7 +83,7 @@ describe("Schema", () => {
 				name: sf.required(sf.string),
 			});
 
-			assert.equal(UserSchema.fields["name"]?.kind, FieldKind.Required);
+			assert.equal(UserSchema.fields.name?.kind, FieldKind.Required);
 		});
 
 		it("creates map schemas with scoped identifiers", () => {

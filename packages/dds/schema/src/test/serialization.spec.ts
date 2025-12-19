@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import { strict as assert } from "assert";
+import { strict as assert } from "node:assert";
 
 import {
 	SchemaFactory,
@@ -21,7 +21,6 @@ import {
 	checkSchemaCompatibility,
 	type EncodedSchema,
 	type EncodedObjectSchema,
-	type EncodedLeafSchema,
 } from "../serialization/index.js";
 
 describe("Schema Serialization", () => {
@@ -33,7 +32,7 @@ describe("Schema Serialization", () => {
 
 			assert.equal(encoded.version, 1);
 			assert.equal(encoded.root.kind, "leaf");
-			const root = encoded.root as EncodedLeafSchema;
+			const root = encoded.root;
 			assert.equal(root.identifier, "com.fluidframework.leaf.string");
 			assert.equal(root.leafKind, "string");
 			assert.equal(encoded.definitions, undefined);
@@ -43,7 +42,7 @@ describe("Schema Serialization", () => {
 			const encoded = encodeSchema(numberSchema);
 
 			assert.equal(encoded.root.kind, "leaf");
-			const root = encoded.root as EncodedLeafSchema;
+			const root = encoded.root;
 			assert.equal(root.identifier, "com.fluidframework.leaf.number");
 			assert.equal(root.leafKind, "number");
 		});
@@ -52,7 +51,7 @@ describe("Schema Serialization", () => {
 			const encoded = encodeSchema(booleanSchema);
 
 			assert.equal(encoded.root.kind, "leaf");
-			const root = encoded.root as EncodedLeafSchema;
+			const root = encoded.root;
 			assert.equal(root.identifier, "com.fluidframework.leaf.boolean");
 			assert.equal(root.leafKind, "boolean");
 		});
@@ -61,7 +60,7 @@ describe("Schema Serialization", () => {
 			const encoded = encodeSchema(nullSchema);
 
 			assert.equal(encoded.root.kind, "leaf");
-			const root = encoded.root as EncodedLeafSchema;
+			const root = encoded.root;
 			assert.equal(root.identifier, "com.fluidframework.leaf.null");
 			assert.equal(root.leafKind, "null");
 		});
@@ -70,7 +69,7 @@ describe("Schema Serialization", () => {
 			const encoded = encodeSchema(handleSchema);
 
 			assert.equal(encoded.root.kind, "leaf");
-			const root = encoded.root as EncodedLeafSchema;
+			const root = encoded.root;
 			assert.equal(root.identifier, "com.fluidframework.leaf.handle");
 			assert.equal(root.leafKind, "handle");
 		});
@@ -85,7 +84,7 @@ describe("Schema Serialization", () => {
 
 			assert.equal(encoded.version, 1);
 			assert.equal(encoded.root.kind, "object");
-			const root = encoded.root as EncodedObjectSchema;
+			const root = encoded.root;
 			assert.equal(root.identifier, "myApp.User");
 
 			// Check fields (sorted alphabetically)
@@ -93,13 +92,13 @@ describe("Schema Serialization", () => {
 			assert.deepEqual(fieldNames, ["age", "name"]);
 
 			// Check name field
-			const nameField = root.fields["name"];
+			const nameField = root.fields.name;
 			assert(nameField !== undefined);
 			assert.equal(nameField.kind, "required");
 			assert.equal(nameField.allowedTypes.length, 1);
 
 			// Check age field
-			const ageField = root.fields["age"];
+			const ageField = root.fields.age;
 			assert(ageField !== undefined);
 			assert.equal(ageField.kind, "required");
 			assert.equal(ageField.allowedTypes.length, 1);
@@ -114,11 +113,11 @@ describe("Schema Serialization", () => {
 			const encoded = encodeSchema(UserSchema);
 			const root = encoded.root as EncodedObjectSchema;
 
-			const nameField = root.fields["name"];
+			const nameField = root.fields.name;
 			assert(nameField !== undefined);
 			assert.equal(nameField.kind, "required");
 
-			const nicknameField = root.fields["nickname"];
+			const nicknameField = root.fields.nickname;
 			assert(nicknameField !== undefined);
 			assert.equal(nicknameField.kind, "optional");
 		});
@@ -231,12 +230,12 @@ describe("Schema Serialization", () => {
 			assert.equal(decoded.root.identifier, "myApp.User");
 
 			if (decoded.root.kind === NodeKind.Object) {
-				const nameField = decoded.root.fields["name"];
+				const nameField = decoded.root.fields.name;
 				assert(nameField !== undefined);
 				assert.equal(nameField.kind, FieldKind.Required);
 				assert.deepEqual(nameField.allowedTypes, ["com.fluidframework.leaf.string"]);
 
-				const ageField = decoded.root.fields["age"];
+				const ageField = decoded.root.fields.age;
 				assert(ageField !== undefined);
 				assert.equal(ageField.kind, FieldKind.Optional);
 				assert.deepEqual(ageField.allowedTypes, ["com.fluidframework.leaf.number"]);
@@ -359,7 +358,7 @@ describe("Schema Serialization", () => {
 
 			// Container should reference Item by string
 			if (decoded.root.kind === NodeKind.Object) {
-				const itemField = decoded.root.fields["item"];
+				const itemField = decoded.root.fields.item;
 				assert(itemField !== undefined);
 				assert.deepEqual(itemField.allowedTypes, ["myApp.Item"]);
 			}
@@ -398,11 +397,11 @@ describe("Schema Serialization", () => {
 			if (decoded.root.kind === NodeKind.Object) {
 				assert.equal(Object.keys(decoded.root.fields).length, 2);
 
-				const nameField = decoded.root.fields["name"];
+				const nameField = decoded.root.fields.name;
 				assert(nameField !== undefined);
 				assert.equal(nameField.kind, FieldKind.Required);
 
-				const ageField = decoded.root.fields["age"];
+				const ageField = decoded.root.fields.age;
 				assert(ageField !== undefined);
 				assert.equal(ageField.kind, FieldKind.Optional);
 			}
@@ -433,8 +432,8 @@ describe("Schema Serialization", () => {
 			assert.equal(decoded.root.identifier, "myApp.JsonRoundtrip");
 
 			if (decoded.root.kind === NodeKind.Object) {
-				assert(decoded.root.fields["name"] !== undefined);
-				assert(decoded.root.fields["active"] !== undefined);
+				assert(decoded.root.fields.name !== undefined);
+				assert(decoded.root.fields.active !== undefined);
 			}
 		});
 	});

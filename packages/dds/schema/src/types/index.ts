@@ -12,13 +12,17 @@
  * enable compile-time type safety when working with schema-defined data structures.
  */
 
-export {
+export type {
 	ValueFromLeafSchema,
 	NodeFromSchema,
 	InferFields,
 	InferValueSchema,
 	InferAllowedTypes,
 	InferFieldKind,
+	ObjectFromFields,
+	TypeFromImplicitAllowedTypes,
+	NormalizeFieldSchema,
+	TypeFromField,
 	DeepReadonly,
 	ReadonlyNodeFromSchema,
 	IsLeafSchema,

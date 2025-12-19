@@ -13,12 +13,7 @@ import {
 	nullSchema,
 } from "../factory/index.js";
 import type { NodeSchema } from "../core/index.js";
-import {
-	validateData,
-	buildSchemaRegistry,
-	type ValidationResult,
-	type SchemaRegistry,
-} from "../validation/index.js";
+import { validateData, buildSchemaRegistry } from "../validation/index.js";
 
 describe("Validation", () => {
 	const sf = new SchemaFactory("test");

@@ -511,7 +511,7 @@ describe("View", () => {
 					]),
 				);
 
-				const collected: Array<[string, string]> = [];
+				const collected: [string, string][] = [];
 				for (const entry of view) {
 					collected.push(entry);
 				}
@@ -536,7 +536,7 @@ describe("View", () => {
 					]),
 				);
 
-				const collected: Array<[string, string]> = [];
+				const collected: [string, string][] = [];
 				view.forEach((value: string, key: string) => {
 					collected.push([key, value]);
 				});

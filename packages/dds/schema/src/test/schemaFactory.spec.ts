@@ -110,9 +110,9 @@ describe("SchemaFactory", () => {
 				active: sf.boolean,
 			});
 
-			assert.equal(schema.fields["name"]?.kind, FieldKind.Required);
-			assert.equal(schema.fields["age"]?.kind, FieldKind.Required);
-			assert.equal(schema.fields["active"]?.kind, FieldKind.Required);
+			assert.equal(schema.fields.name?.kind, FieldKind.Required);
+			assert.equal(schema.fields.age?.kind, FieldKind.Required);
+			assert.equal(schema.fields.active?.kind, FieldKind.Required);
 		});
 
 		it("creates object with optional fields", () => {
@@ -122,8 +122,8 @@ describe("SchemaFactory", () => {
 				nickname: sf.optional(sf.string),
 			});
 
-			assert.equal(schema.fields["name"]?.kind, FieldKind.Required);
-			assert.equal(schema.fields["nickname"]?.kind, FieldKind.Optional);
+			assert.equal(schema.fields.name?.kind, FieldKind.Required);
+			assert.equal(schema.fields.nickname?.kind, FieldKind.Optional);
 		});
 
 		it("creates object with explicit required fields", () => {
@@ -132,7 +132,7 @@ describe("SchemaFactory", () => {
 				name: sf.required(sf.string),
 			});
 
-			assert.equal(schema.fields["name"]?.kind, FieldKind.Required);
+			assert.equal(schema.fields.name?.kind, FieldKind.Required);
 		});
 
 		it("creates object with mixed required and optional fields", () => {
@@ -145,11 +145,11 @@ describe("SchemaFactory", () => {
 				active: sf.required(sf.boolean),
 			});
 
-			assert.equal(schema.fields["id"]?.kind, FieldKind.Required);
-			assert.equal(schema.fields["name"]?.kind, FieldKind.Required);
-			assert.equal(schema.fields["email"]?.kind, FieldKind.Optional);
-			assert.equal(schema.fields["phone"]?.kind, FieldKind.Optional);
-			assert.equal(schema.fields["active"]?.kind, FieldKind.Required);
+			assert.equal(schema.fields.id?.kind, FieldKind.Required);
+			assert.equal(schema.fields.name?.kind, FieldKind.Required);
+			assert.equal(schema.fields.email?.kind, FieldKind.Optional);
+			assert.equal(schema.fields.phone?.kind, FieldKind.Optional);
+			assert.equal(schema.fields.active?.kind, FieldKind.Required);
 		});
 
 		it("creates object with no fields", () => {
@@ -168,10 +168,8 @@ describe("SchemaFactory", () => {
 				age: sf.number,
 			});
 
-			assert.deepEqual(schema.fields["name"]?.allowedTypes, [
-				"com.fluidframework.leaf.string",
-			]);
-			assert.deepEqual(schema.fields["age"]?.allowedTypes, ["com.fluidframework.leaf.number"]);
+			assert.deepEqual(schema.fields.name?.allowedTypes, ["com.fluidframework.leaf.string"]);
+			assert.deepEqual(schema.fields.age?.allowedTypes, ["com.fluidframework.leaf.number"]);
 		});
 
 		it("creates nested object schemas", () => {
@@ -186,8 +184,8 @@ describe("SchemaFactory", () => {
 			});
 
 			assert.equal(PersonSchema.identifier, "test.Person");
-			assert.equal(PersonSchema.fields["address"]?.kind, FieldKind.Required);
-			assert.deepEqual(PersonSchema.fields["address"]?.allowedTypes, ["test.Address"]);
+			assert.equal(PersonSchema.fields.address?.kind, FieldKind.Required);
+			assert.deepEqual(PersonSchema.fields.address?.allowedTypes, ["test.Address"]);
 		});
 
 		it("scopes identifiers correctly with different scopes", () => {
@@ -294,11 +292,8 @@ describe("SchemaFactory", () => {
 			const implicit = sf.object("Implicit", { name: sf.string });
 			const explicit = sf.object("Explicit", { name: sf.required(sf.string) });
 
-			assert.equal(implicit.fields["name"]?.kind, explicit.fields["name"]?.kind);
-			assert.deepEqual(
-				implicit.fields["name"]?.allowedTypes,
-				explicit.fields["name"]?.allowedTypes,
-			);
+			assert.equal(implicit.fields.name?.kind, explicit.fields.name?.kind);
+			assert.deepEqual(implicit.fields.name?.allowedTypes, explicit.fields.name?.allowedTypes);
 		});
 	});
 });

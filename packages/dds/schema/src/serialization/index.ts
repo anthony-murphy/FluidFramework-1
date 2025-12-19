@@ -10,7 +10,7 @@
  * to/from a JSON-compatible format suitable for persistence in `.attributes` blobs.
  */
 
-export {
+export type {
 	EncodedSchema,
 	EncodedNodeSchema,
 	EncodedObjectSchema,
@@ -31,4 +31,4 @@ export { encodeSchema } from "./encode.js";
 
 export { decodeSchema } from "./decode.js";
 
-export { SchemaCompatibilityStatus, checkSchemaCompatibility } from "./compatibility.js";
+export { type SchemaCompatibilityStatus, checkSchemaCompatibility } from "./compatibility.js";
