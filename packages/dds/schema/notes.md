@@ -6,6 +6,7 @@
 - [ ] keep test code, like MockStorage, and product code separate. test code should live in the test folder
 - [ ] you copied usage error when you should have just imported it from telemetry utils. might be other similar problems.
 - [ ] rather than SchematizedView could we have a common type for a root schema that does the same thing, but can be reused, rather than each type building their own.
+- [ ] we need to add test to the map project that validate the viewWith works
 - [ ] review the schema project and add notes under AI Added heading
 
 # AI Added

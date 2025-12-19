@@ -56,7 +56,7 @@ export interface TypedLeafNodeSchema<
 	TValue = unknown,
 > extends LeafNodeSchema {
 	readonly identifier: TIdentifier;
-	readonly kind: NodeKind.Leaf;
+	readonly kind: typeof NodeKind.Leaf;
 	readonly leafKind: TLeafKind;
 	/**
 	 * Phantom property used for type inference only.
@@ -110,7 +110,7 @@ export interface TypedObjectNodeSchema<
 	TFields extends ObjectSchemaFields = ObjectSchemaFields,
 > extends ObjectNodeSchema {
 	readonly identifier: TIdentifier;
-	readonly kind: NodeKind.Object;
+	readonly kind: typeof NodeKind.Object;
 	/**
 	 * Phantom property used for type inference only.
 	 * @remarks
@@ -137,7 +137,7 @@ export interface TypedMapNodeSchema<
 	TValueSchema extends ImplicitAllowedTypes = ImplicitAllowedTypes,
 > extends MapNodeSchema {
 	readonly identifier: TIdentifier;
-	readonly kind: NodeKind.Map;
+	readonly kind: typeof NodeKind.Map;
 	/**
 	 * Phantom property used for type inference only.
 	 * @remarks
@@ -285,7 +285,7 @@ type NormalizeFieldSchema<T extends ImplicitFieldSchema> = T extends TypedFieldS
 	infer TAllowedTypes
 >
 	? { kind: TKind; allowedTypes: TAllowedTypes }
-	: { kind: FieldKind.Required; allowedTypes: T };
+	: { kind: typeof FieldKind.Required; allowedTypes: T };
 
 /**
  * Extracts the TypeScript type for a field based on its schema.
@@ -295,7 +295,7 @@ type TypeFromField<T extends ImplicitFieldSchema> = NormalizeFieldSchema<T> exte
 	allowedTypes: infer A;
 }
 	? A extends ImplicitAllowedTypes
-		? K extends FieldKind.Optional
+		? K extends typeof FieldKind.Optional
 			? TypeFromImplicitAllowedTypes<A> | undefined
 			: TypeFromImplicitAllowedTypes<A>
 		: never
@@ -309,11 +309,11 @@ type TypeFromField<T extends ImplicitFieldSchema> = NormalizeFieldSchema<T> exte
  * a properly typed object interface.
  */
 type ObjectFromFields<TFields extends ObjectSchemaFields> = {
-	[K in keyof TFields as NormalizeFieldSchema<TFields[K]>["kind"] extends FieldKind.Required
+	[K in keyof TFields as NormalizeFieldSchema<TFields[K]>["kind"] extends typeof FieldKind.Required
 		? K
 		: never]: TypeFromField<TFields[K]>;
 } & {
-	[K in keyof TFields as NormalizeFieldSchema<TFields[K]>["kind"] extends FieldKind.Optional
+	[K in keyof TFields as NormalizeFieldSchema<TFields[K]>["kind"] extends typeof FieldKind.Optional
 		? K
 		: never]?: TypeFromField<TFields[K]>;
 };
@@ -658,12 +658,12 @@ export class SchemaFactory<TScope extends string = string> {
 	 */
 	public optional<const T extends ImplicitAllowedTypes>(
 		allowedTypes: T,
-	): TypedFieldSchema<FieldKind.Optional, T> {
+	): TypedFieldSchema<typeof FieldKind.Optional, T> {
 		return {
 			kind: FieldKind.Optional,
 			allowedTypes: normalizeAllowedTypes(allowedTypes),
 			// The _typeInfo is a phantom property for type inference only
-		} as TypedFieldSchema<FieldKind.Optional, T>;
+		} as TypedFieldSchema<typeof FieldKind.Optional, T>;
 	}
 
 	/**
@@ -690,12 +690,12 @@ export class SchemaFactory<TScope extends string = string> {
 	 */
 	public required<const T extends ImplicitAllowedTypes>(
 		allowedTypes: T,
-	): TypedFieldSchema<FieldKind.Required, T> {
+	): TypedFieldSchema<typeof FieldKind.Required, T> {
 		return {
 			kind: FieldKind.Required,
 			allowedTypes: normalizeAllowedTypes(allowedTypes),
 			// The _typeInfo is a phantom property for type inference only
-		} as TypedFieldSchema<FieldKind.Required, T>;
+		} as TypedFieldSchema<typeof FieldKind.Required, T>;
 	}
 }
 

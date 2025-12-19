@@ -172,7 +172,7 @@ export type SimpleNodeSchema =
  * Simple representation of an object node schema.
  */
 export interface SimpleObjectNodeSchema {
-	readonly kind: NodeKind.Object;
+	readonly kind: typeof NodeKind.Object;
 	readonly identifier: string;
 	readonly fields: Record<string, SimpleFieldSchema>;
 }
@@ -181,7 +181,7 @@ export interface SimpleObjectNodeSchema {
  * Simple representation of an array node schema.
  */
 export interface SimpleArrayNodeSchema {
-	readonly kind: NodeKind.Array;
+	readonly kind: typeof NodeKind.Array;
 	readonly identifier: string;
 	readonly allowedTypes: readonly string[];
 }
@@ -190,7 +190,7 @@ export interface SimpleArrayNodeSchema {
  * Simple representation of a map node schema.
  */
 export interface SimpleMapNodeSchema {
-	readonly kind: NodeKind.Map;
+	readonly kind: typeof NodeKind.Map;
 	readonly identifier: string;
 	readonly allowedTypes: readonly string[];
 }
@@ -199,7 +199,7 @@ export interface SimpleMapNodeSchema {
  * Simple representation of a leaf node schema.
  */
 export interface SimpleLeafNodeSchema {
-	readonly kind: NodeKind.Leaf;
+	readonly kind: typeof NodeKind.Leaf;
 	readonly identifier: string;
 	readonly leafKind: LeafKind;
 }

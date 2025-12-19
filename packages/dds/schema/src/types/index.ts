@@ -76,7 +76,7 @@ type NormalizeFieldSchema<T extends ImplicitFieldSchema> = T extends TypedFieldS
 	infer TAllowedTypes
 >
 	? { kind: TKind; allowedTypes: TAllowedTypes }
-	: { kind: FieldKind.Required; allowedTypes: T };
+	: { kind: typeof FieldKind.Required; allowedTypes: T };
 
 /**
  * Extracts the TypeScript type from an implicit allowed types specification.
@@ -118,7 +118,7 @@ type TypeFromField<T extends ImplicitFieldSchema> = NormalizeFieldSchema<T> exte
 	allowedTypes: infer A;
 }
 	? A extends ImplicitAllowedTypes
-		? K extends FieldKind.Optional
+		? K extends typeof FieldKind.Optional
 			? TypeFromImplicitAllowedTypes<A> | undefined
 			: TypeFromImplicitAllowedTypes<A>
 		: never
@@ -137,11 +137,11 @@ type TypeFromField<T extends ImplicitFieldSchema> = NormalizeFieldSchema<T> exte
  * @internal
  */
 type ObjectFromFields<TFields extends ObjectSchemaFields> = {
-	[K in keyof TFields as NormalizeFieldSchema<TFields[K]>["kind"] extends FieldKind.Required
+	[K in keyof TFields as NormalizeFieldSchema<TFields[K]>["kind"] extends typeof FieldKind.Required
 		? K
 		: never]: TypeFromField<TFields[K]>;
 } & {
-	[K in keyof TFields as NormalizeFieldSchema<TFields[K]>["kind"] extends FieldKind.Optional
+	[K in keyof TFields as NormalizeFieldSchema<TFields[K]>["kind"] extends typeof FieldKind.Optional
 		? K
 		: never]?: TypeFromField<TFields[K]>;
 };
@@ -290,7 +290,7 @@ export type InferAllowedTypes<T> = T extends TypedFieldSchema<FieldKind, infer T
  */
 export type InferFieldKind<T> = T extends TypedFieldSchema<infer TKind, ImplicitAllowedTypes>
 	? TKind
-	: FieldKind.Required;
+	: typeof FieldKind.Required;
 
 // #endregion
 
@@ -420,11 +420,11 @@ export type IsMapSchema<T> = T extends TypedMapNodeSchema ? true : false;
  * This extracts the {@link NodeKind} from a typed schema at the type level.
  */
 export type SchemaKind<T> = T extends TypedLeafNodeSchema
-	? NodeKind.Leaf
+	? typeof NodeKind.Leaf
 	: T extends TypedObjectNodeSchema
-		? NodeKind.Object
+		? typeof NodeKind.Object
 		: T extends TypedMapNodeSchema
-			? NodeKind.Map
+			? typeof NodeKind.Map
 			: never;
 
 // #endregion

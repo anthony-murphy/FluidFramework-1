@@ -20,21 +20,30 @@
  * This is a simplified version of the Tree DDS FieldKind that excludes
  * Tree-specific field kinds like `Identifier`.
  */
-export enum FieldKind {
+export const FieldKind = {
 	/**
 	 * A field which must always be filled.
 	 * @remarks
 	 * Only allows exactly one child.
 	 */
-	Required = 0,
+	Required: 0,
 
 	/**
 	 * A field which can be empty or filled.
 	 * @remarks
 	 * Allows 0 or one child.
 	 */
-	Optional = 1,
-}
+	Optional: 1,
+} as const;
+
+/**
+ * Kind of a field on an object node.
+ *
+ * @remarks
+ * This is a simplified version of the Tree DDS FieldKind that excludes
+ * Tree-specific field kinds like `Identifier`.
+ */
+export type FieldKind = (typeof FieldKind)[keyof typeof FieldKind];
 
 /**
  * The kind of tree node.
@@ -42,29 +51,37 @@ export enum FieldKind {
  * @remarks
  * More kinds may be added over time, so do not assume this is an exhaustive set.
  */
-export enum NodeKind {
+export const NodeKind = {
 	/**
 	 * A node which serves as a map, storing children under string keys.
 	 */
-	Map = 0,
+	Map: 0,
 
 	/**
 	 * A node which serves as an array, storing children in an ordered sequence.
 	 */
-	Array = 1,
+	Array: 1,
 
 	/**
 	 * A node which stores a heterogeneous collection of children in named fields.
 	 * @remarks
 	 * Each field gets its own schema.
 	 */
-	Object = 2,
+	Object: 2,
 
 	/**
 	 * A node which stores a single leaf value.
 	 */
-	Leaf = 3,
-}
+	Leaf: 3,
+} as const;
+
+/**
+ * The kind of tree node.
+ *
+ * @remarks
+ * More kinds may be added over time, so do not assume this is an exhaustive set.
+ */
+export type NodeKind = (typeof NodeKind)[keyof typeof NodeKind];
 
 // #endregion
 
@@ -116,7 +133,7 @@ export interface NodeSchema {
  * Each field has its own schema that defines what values it can contain.
  */
 export interface ObjectNodeSchema extends NodeSchema {
-	readonly kind: NodeKind.Object;
+	readonly kind: typeof NodeKind.Object;
 
 	/**
 	 * The fields defined on this object, keyed by field name.
@@ -136,7 +153,7 @@ export interface ObjectNodeSchema extends NodeSchema {
  * conform to the allowed types specified in the schema.
  */
 export interface ArrayNodeSchema extends NodeSchema {
-	readonly kind: NodeKind.Array;
+	readonly kind: typeof NodeKind.Array;
 
 	/**
 	 * The allowed types for elements in this array.
@@ -155,7 +172,7 @@ export interface ArrayNodeSchema extends NodeSchema {
  * to the allowed types specified in the schema.
  */
 export interface MapNodeSchema extends NodeSchema {
-	readonly kind: NodeKind.Map;
+	readonly kind: typeof NodeKind.Map;
 
 	/**
 	 * The allowed types for values in this map.
@@ -174,7 +191,7 @@ export interface MapNodeSchema extends NodeSchema {
  * They cannot have children.
  */
 export interface LeafNodeSchema extends NodeSchema {
-	readonly kind: NodeKind.Leaf;
+	readonly kind: typeof NodeKind.Leaf;
 
 	/**
 	 * The kind of primitive value this leaf holds.
