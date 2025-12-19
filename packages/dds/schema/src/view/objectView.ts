@@ -265,22 +265,10 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 	 * view.root.name = "Alice";
 	 * console.log(view.root.age);
 	 * ```
-	 *
-	 * Setting root replaces all field values:
-	 * ```ts
-	 * view.root = { name: "Bob", age: 30 };
-	 * ```
 	 */
 	public get root(): NodeFromSchema<TSchema> {
 		this.ensureNotDisposed();
 		return this.rootProxy;
-	}
-
-	public set root(value: NodeFromSchema<TSchema>) {
-		this.ensureNotDisposed();
-		for (const fieldName of Object.keys(this.schema.fields)) {
-			this.setFieldValue(fieldName, (value as Record<string, unknown>)[fieldName]);
-		}
 	}
 
 	/**

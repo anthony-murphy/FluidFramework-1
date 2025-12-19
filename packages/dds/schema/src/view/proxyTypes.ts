@@ -49,15 +49,12 @@ import type { NodeFromSchema, InferValueSchema } from "../types/index.js";
  * // Initialize if needed (persists schema)
  * if (view.compatibility.canInitialize) {
  *   view.initialize();
- *   view.root = { name: "Alice", age: 30 };
  * }
  *
  * // Property access through root - fully typed!
- * view.root.name = "Bob";
+ * view.root.name = "Alice";
+ * view.root.age = 30;
  * console.log(view.root.age); // number | undefined
- *
- * // Full replacement via root setter
- * view.root = { name: "Charlie", age: 25 };
  * ```
  *
  * @legacy
@@ -69,9 +66,9 @@ export type ObjectView<TSchema extends ObjectNodeSchema> = IDisposable & {
 	 *
 	 * @remarks
 	 * Reading returns the current field values.
-	 * Writing to `root` replaces all data (calls initialize internally).
+	 * Individual fields can be modified through the proxy (e.g., `view.root.name = "Alice"`).
 	 */
-	root: NodeFromSchema<TSchema>;
+	readonly root: NodeFromSchema<TSchema>;
 
 	/**
 	 * Whether this view has been disposed.
@@ -133,19 +130,16 @@ export type ObjectView<TSchema extends ObjectNodeSchema> = IDisposable & {
  * // Initialize if needed (persists schema)
  * if (view.compatibility.canInitialize) {
  *   view.initialize();
- *   view.root = new Map([["setting1", "value1"]]);
  * }
  *
  * // Map operations through root - fully typed!
+ * view.root.set("setting1", "value1");
  * view.root.set("setting2", "value2");
  * const value = view.root.get("setting1"); // string | undefined
  *
  * for (const [key, val] of view.root) {
  *   console.log(key, val);
  * }
- *
- * // Full replacement via root setter
- * view.root = new Map([["newKey", "newValue"]]);
  * ```
  *
  * @legacy
@@ -157,9 +151,9 @@ export type MapView<TSchema extends MapNodeSchema> = IDisposable & {
 	 *
 	 * @remarks
 	 * Provides standard Map interface with typed values.
-	 * Writing to `root` replaces all data (calls initialize internally).
+	 * Use Map methods like `set()`, `delete()`, `clear()` to modify data.
 	 */
-	root: Map<string, InferValueSchema<TSchema>>;
+	readonly root: Map<string, InferValueSchema<TSchema>>;
 
 	/**
 	 * Whether this view has been disposed.
@@ -217,3 +211,17 @@ export type SchemaView<TSchema extends RootSchema> = TSchema extends ObjectNodeS
 	: TSchema extends MapNodeSchema
 		? MapView<TSchema>
 		: never;
+
+/**
+ * Alias for {@link SchemaView} for use in DDS interfaces.
+ *
+ * @remarks
+ * This type alias is provided for naming consistency with the `viewWith` pattern.
+ * DDSes typically use `viewWith<TSchema>(schema: TSchema): SchematizedView<TSchema>`.
+ *
+ * @typeParam TSchema - The root schema type
+ *
+ * @legacy
+ * @alpha
+ */
+export type SchematizedView<TSchema extends RootSchema> = SchemaView<TSchema>;

@@ -311,24 +311,10 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	 * view.root.set("key", "value");
 	 * console.log(view.root.get("key"));
 	 * ```
-	 *
-	 * Setting root replaces all entries:
-	 * ```ts
-	 * view.root = new Map([["a", "1"], ["b", "2"]]);
-	 * ```
 	 */
 	public get root(): Map<string, InferValueSchema<TSchema>> {
 		this.ensureNotDisposed();
 		return this.rootProxy;
-	}
-
-	public set root(value: Map<string, InferValueSchema<TSchema>>) {
-		this.ensureNotDisposed();
-		// Clear existing entries and add new ones
-		this.clear();
-		for (const [key, val] of value) {
-			this.set(key, val);
-		}
 	}
 
 	/**

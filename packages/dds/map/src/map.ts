@@ -33,8 +33,6 @@ import {
 	SchematizedMapView,
 	isObjectSchema,
 	isMapSchema,
-	createObjectViewProxy,
-	createMapViewProxy,
 } from "@fluidframework/schema/internal";
 import type { IFluidSerializer } from "@fluidframework/shared-object-base/internal";
 import { SharedObject } from "@fluidframework/shared-object-base/internal";
@@ -255,12 +253,18 @@ export class SharedMap
 		const persistence = this.createSchemaPersistence();
 
 		if (isObjectSchema(schema)) {
-			const view = new SchematizedObjectView(storage, schema, persistence);
-			return createObjectViewProxy(view, schema) as unknown as SchematizedView<TSchema>;
+			return new SchematizedObjectView(
+				storage,
+				schema,
+				persistence,
+			) as unknown as SchematizedView<TSchema>;
 		}
 		if (isMapSchema(schema)) {
-			const view = new SchematizedMapView(storage, schema, persistence);
-			return createMapViewProxy(view, schema) as unknown as SchematizedView<TSchema>;
+			return new SchematizedMapView(
+				storage,
+				schema,
+				persistence,
+			) as unknown as SchematizedView<TSchema>;
 		}
 		throw new Error("Schema must be an ObjectNodeSchema or MapNodeSchema");
 	}

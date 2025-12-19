@@ -938,7 +938,7 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.root = { name: "Bob" };
+				view.setFieldValue("name", "Bob");
 
 				assert.equal(view.root.name, "Bob");
 			});
@@ -953,33 +953,10 @@ describe("View", () => {
 				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
 
 				view.initialize();
-				view.root = { name: "Alice" };
+				view.setFieldValue("name", "Alice");
 
 				// Should not throw (same schema)
 				view.upgradeSchema();
-			});
-		});
-
-		describe("root setter", () => {
-			it("allows full replacement via root setter", () => {
-				const PersonSchema = sf.object("PersonProxyRootSet", {
-					name: sf.string,
-					age: sf.number,
-				});
-
-				const storage = new MockStorage();
-				const persistence = new MockPersistence();
-				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
-
-				view.initialize();
-				view.setFieldValue("name", "Alice");
-				view.setFieldValue("age", 30);
-
-				// Replace all data via root setter
-				view.root = { name: "Bob", age: 25 };
-
-				assert.equal(view.root.name, "Bob");
-				assert.equal(view.root.age, 25);
 			});
 		});
 	});

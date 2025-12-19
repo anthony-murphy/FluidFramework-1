@@ -116,7 +116,7 @@ export interface MapNodeSchema extends NodeSchema {
 
 // @alpha @legacy
 export type MapView<TSchema extends MapNodeSchema> = IDisposable & {
-    root: Map<string, InferValueSchema<TSchema>>;
+    readonly root: Map<string, InferValueSchema<TSchema>>;
     readonly disposed: boolean;
     readonly compatibility: SchemaCompatibilityStatus;
     initialize: () => void;
@@ -177,7 +177,7 @@ export type ObjectSchemaFields = Record<string, ImplicitFieldSchema>;
 
 // @alpha @legacy
 export type ObjectView<TSchema extends ObjectNodeSchema> = IDisposable & {
-    root: NodeFromSchema<TSchema>;
+    readonly root: NodeFromSchema<TSchema>;
     readonly disposed: boolean;
     readonly compatibility: SchemaCompatibilityStatus;
     initialize: () => void;
@@ -216,6 +216,9 @@ export class SchemaFactory<TScope extends string = string> {
 
 // @alpha @legacy
 export type SchemaKind<T> = T extends TypedLeafNodeSchema ? typeof NodeKind.Leaf : T extends TypedObjectNodeSchema ? typeof NodeKind.Object : T extends TypedMapNodeSchema ? typeof NodeKind.Map : never;
+
+// @alpha @legacy
+export type SchematizedView<TSchema extends RootSchema> = SchemaView<TSchema>;
 
 // @alpha @legacy
 export type SchemaView<TSchema extends RootSchema> = TSchema extends ObjectNodeSchema ? ObjectView<TSchema> : TSchema extends MapNodeSchema ? MapView<TSchema> : never;

@@ -3,6 +3,8 @@
  * Licensed under the MIT License.
  */
 
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
+
 import { strict as assert } from "node:assert";
 
 import { MockFluidDataStoreRuntime } from "@fluidframework/test-runtime-utils/internal";
@@ -49,7 +51,8 @@ describe("SharedMap.viewWith", () => {
 				const map = createLocalMap("testMap");
 				const view = map.viewWith(PersonSchema);
 
-				view.initialize({ name: "Alice", age: 30 });
+				view.initialize();
+				view.root = { name: "Alice", age: 30 } as { name: string; age: number };
 
 				assert.equal(view.root.name, "Alice");
 				assert.equal(view.root.age, 30);
@@ -64,7 +67,8 @@ describe("SharedMap.viewWith", () => {
 				const map = createLocalMap("testMap");
 				const view = map.viewWith(PersonSchema);
 
-				view.initialize({ name: "Alice", age: 30 });
+				view.initialize();
+				view.root = { name: "Alice", age: 30 } as { name: string; age: number };
 				(view.root as { age: number }).age = 31;
 
 				assert.equal(view.root.age, 31);
@@ -79,7 +83,8 @@ describe("SharedMap.viewWith", () => {
 				const map = createLocalMap("testMap");
 				const view = map.viewWith(PersonSchema);
 
-				view.initialize({ name: "Alice", nickname: "Ali" });
+				view.initialize();
+				view.root = { name: "Alice", nickname: "Ali" } as { name: string; nickname?: string };
 
 				assert.equal(view.root.nickname, "Ali");
 			});
@@ -93,7 +98,8 @@ describe("SharedMap.viewWith", () => {
 				const map = createLocalMap("testMap");
 				const view = map.viewWith(PersonSchema);
 
-				view.initialize({ name: "Alice" });
+				view.initialize();
+				view.root = { name: "Alice" } as { name: string; nickname?: string };
 
 				assert.equal(view.root.nickname, undefined);
 			});
@@ -107,7 +113,8 @@ describe("SharedMap.viewWith", () => {
 				const map = createLocalMap("testMap");
 				const view = map.viewWith(PersonSchema);
 
-				view.initialize({ name: "Alice", nickname: "Ali" });
+				view.initialize();
+				view.root = { name: "Alice", nickname: "Ali" } as { name: string; nickname?: string };
 				assert.equal(view.root.nickname, "Ali");
 
 				(view.root as { nickname: string | undefined }).nickname = undefined;
@@ -123,7 +130,8 @@ describe("SharedMap.viewWith", () => {
 				const map = createLocalMap("testMap");
 				const view = map.viewWith(PersonSchema);
 
-				view.initialize({ name: "Alice" });
+				view.initialize();
+				view.root = { name: "Alice" } as { name: string; nickname?: string };
 
 				assert.equal("name" in view.root, true);
 				assert.equal("nickname" in view.root, false);
@@ -140,14 +148,13 @@ describe("SharedMap.viewWith", () => {
 				const map = createLocalMap("testMap");
 				const view = map.viewWith(PersonSchema);
 
-				assert.throws(
-					() =>
-						view.initialize({ name: "Alice", age: "not a number" } as unknown as {
-							name: string;
-							age: number;
-						}),
-					SchemaValidationError,
-				);
+				view.initialize();
+				assert.throws(() => {
+					view.root = { name: "Alice", age: "not a number" } as unknown as {
+						name: string;
+						age: number;
+					};
+				}, SchemaValidationError);
 			});
 
 			it("throws when initializing twice", () => {
@@ -158,9 +165,9 @@ describe("SharedMap.viewWith", () => {
 				const map = createLocalMap("testMap");
 				const view = map.viewWith(PersonSchema);
 
-				view.initialize({ name: "Alice" });
+				view.initialize();
 
-				assert.throws(() => view.initialize({ name: "Bob" }));
+				assert.throws(() => view.initialize());
 			});
 		});
 
@@ -176,7 +183,8 @@ describe("SharedMap.viewWith", () => {
 				// Before initialize
 				assert.equal(view.compatibility.canInitialize, true);
 
-				view.initialize({ name: "Alice" });
+				view.initialize();
+				view.root = { name: "Alice" } as { name: string };
 
 				// After initialize
 				assert.equal(view.compatibility.canInitialize, false);
@@ -203,7 +211,8 @@ describe("SharedMap.viewWith", () => {
 				const map = createLocalMap("testMap");
 				const view = map.viewWith(PersonSchema);
 
-				view.initialize({ name: "Alice" });
+				view.initialize();
+				view.root = { name: "Alice" } as { name: string };
 
 				assert.equal(view.compatibility.canView, true);
 			});
@@ -221,7 +230,8 @@ describe("SharedMap.viewWith", () => {
 
 				// Initialize with V1
 				const viewV1 = map.viewWith(PersonSchemaV1);
-				viewV1.initialize({ name: "Alice" });
+				viewV1.initialize();
+				viewV1.root = { name: "Alice" } as { name: string };
 
 				// Create V2 view
 				const viewV2 = map.viewWith(PersonSchemaV2);
@@ -242,7 +252,8 @@ describe("SharedMap.viewWith", () => {
 
 				// Initialize with V1
 				const viewV1 = map.viewWith(PersonSchemaV1);
-				viewV1.initialize({ name: "Alice" });
+				viewV1.initialize();
+				viewV1.root = { name: "Alice" } as { name: string };
 
 				// Create V2 view
 				const viewV2 = map.viewWith(PersonSchemaV2);
@@ -587,7 +598,8 @@ describe("SharedMap.viewWith", () => {
 			const map = createLocalMap("testMap");
 			const view = map.viewWith(PersonSchema);
 
-			view.initialize({ name: "Alice", age: 30 });
+			view.initialize();
+			view.root = { name: "Alice", age: 30 } as { name: string; age: number };
 
 			// The underlying map should have the data
 			assert.equal(map.get("name"), "Alice");
@@ -607,7 +619,8 @@ describe("SharedMap.viewWith", () => {
 			const map = createLocalMap("testMap");
 			const view = map.viewWith(PersonSchema);
 
-			view.initialize({ name: "Alice", age: 30 });
+			view.initialize();
+			view.root = { name: "Alice", age: 30 } as { name: string; age: number };
 
 			// Update underlying map directly
 			map.set("age", 32);
@@ -630,12 +643,13 @@ describe("SharedMap.viewWith", () => {
 				const map = createLocalMap("testMap");
 				const view = map.viewWith(UserProfileSchema);
 
-				view.initialize({
+				view.initialize();
+				view.root = {
 					username: "alice123",
 					age: 30,
 					isActive: true,
 					email: "alice@example.com",
-				});
+				} as { username: string; age: number; isActive: boolean; email: string };
 
 				assert.equal(view.root.username, "alice123");
 				assert.equal(view.root.age, 30);
@@ -654,11 +668,12 @@ describe("SharedMap.viewWith", () => {
 				const map = createLocalMap("testMap");
 				const view = map.viewWith(ProfileSchema);
 
-				view.initialize({
+				view.initialize();
+				view.root = {
 					name: "Bob",
 					age: 25,
 					nickname: "Bobby",
-				});
+				} as { name: string; age: number; nickname?: string; bio?: string };
 
 				assert.equal(view.root.name, "Bob");
 				assert.equal(view.root.age, 25);
@@ -676,11 +691,12 @@ describe("SharedMap.viewWith", () => {
 				const map = createLocalMap("testMap");
 				const view = map.viewWith(PersonSchema);
 
-				view.initialize({
+				view.initialize();
+				view.root = {
 					firstName: "Charlie",
 					lastName: "Brown",
 					age: 35,
-				});
+				} as { firstName: string; lastName: string; age: number };
 
 				// Update each field independently
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
@@ -705,11 +721,12 @@ describe("SharedMap.viewWith", () => {
 				const map = createLocalMap("testMap");
 				const view = map.viewWith(AllTypesSchema);
 
-				view.initialize({
+				view.initialize();
+				view.root = {
 					stringField: "hello",
 					numberField: 42,
 					booleanField: true,
-				});
+				} as { stringField: string; numberField: number; booleanField: boolean };
 
 				assert.equal(view.root.stringField, "hello");
 				assert.equal(view.root.numberField, 42);
@@ -726,11 +743,12 @@ describe("SharedMap.viewWith", () => {
 				const map = createLocalMap("testMap");
 				const view = map.viewWith(AllTypesSchema);
 
-				view.initialize({
+				view.initialize();
+				view.root = {
 					stringField: "initial",
 					numberField: 0,
 					booleanField: false,
-				});
+				} as { stringField: string; numberField: number; booleanField: boolean };
 
 				// Update each field
 				/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
@@ -866,7 +884,12 @@ describe("SharedMap.viewWith", () => {
 			const map = createLocalMap("testMap");
 			const view = map.viewWith(EnumSchema);
 
-			view.initialize({ firstName: "John", lastName: "Doe", age: 25 });
+			view.initialize();
+			view.root = { firstName: "John", lastName: "Doe", age: 25 } as {
+				firstName: string;
+				lastName: string;
+				age: number;
+			};
 
 			const keys = Object.keys(view.root);
 			assert.deepEqual(keys.sort(), ["age", "firstName", "lastName"]);
@@ -881,7 +904,8 @@ describe("SharedMap.viewWith", () => {
 			const map = createLocalMap("testMap");
 			const view = map.viewWith(EnumValuesSchema);
 
-			view.initialize({ a: "hello", b: 42 });
+			view.initialize();
+			view.root = { a: "hello", b: 42 } as { a: string; b: number };
 
 			const values = Object.values(view.root);
 			assert.deepEqual(values.sort(), [42, "hello"]);
@@ -896,7 +920,8 @@ describe("SharedMap.viewWith", () => {
 			const map = createLocalMap("testMap");
 			const view = map.viewWith(EnumEntriesSchema);
 
-			view.initialize({ x: "test", y: 100 });
+			view.initialize();
+			view.root = { x: "test", y: 100 } as { x: string; y: number };
 
 			const entries = Object.entries(view.root);
 			const entryMap = new Map(entries);
@@ -915,7 +940,12 @@ describe("SharedMap.viewWith", () => {
 			const map = createLocalMap("testMap");
 			const view = map.viewWith(ForInSchema);
 
-			view.initialize({ prop1: "a", prop2: "b", prop3: 3 });
+			view.initialize();
+			view.root = { prop1: "a", prop2: "b", prop3: 3 } as {
+				prop1: string;
+				prop2: string;
+				prop3: number;
+			};
 
 			// Using Object.keys as a proxy to verify enumerable properties work correctly
 			// This tests the same underlying proxy enumeration behavior as for...in
@@ -939,7 +969,8 @@ describe("SharedMap.viewWith", () => {
 
 			// Initialize with V1
 			const viewV1 = map.viewWith(SchemaV1);
-			viewV1.initialize({ name: "Alice" });
+			viewV1.initialize();
+			viewV1.root = { name: "Alice" } as { name: string };
 
 			// Create V2 view and check upgrade is possible
 			const viewV2 = map.viewWith(SchemaV2);
@@ -965,7 +996,8 @@ describe("SharedMap.viewWith", () => {
 
 			// Initialize with V1
 			const viewV1 = map.viewWith(SchemaV1);
-			viewV1.initialize({ name: "Bob" });
+			viewV1.initialize();
+			viewV1.root = { name: "Bob" } as { name: string };
 
 			// Create V2 view and upgrade
 			const viewV2 = map.viewWith(SchemaV2);
@@ -993,7 +1025,8 @@ describe("SharedMap.viewWith", () => {
 
 			// Initialize with V1
 			const viewV1 = map.viewWith(SchemaV1);
-			viewV1.initialize({ name: "Charlie" });
+			viewV1.initialize();
+			viewV1.root = { name: "Charlie" } as { name: string };
 
 			// Create V2 view - should not be able to upgrade
 			const viewV2 = map.viewWith(SchemaV2);
