@@ -62,7 +62,7 @@ import type { NodeFromSchema, InferValueSchema } from "../types/index.js";
  * @legacy
  * @alpha
  */
-export type SchematizedObject<TSchema extends ObjectNodeSchema> = IDisposable & {
+export type ObjectView<TSchema extends ObjectNodeSchema> = IDisposable & {
 	/**
 	 * The typed data root providing property access to schema fields.
 	 *
@@ -145,7 +145,7 @@ export type SchematizedObject<TSchema extends ObjectNodeSchema> = IDisposable & 
  * @legacy
  * @alpha
  */
-export type SchematizedMap<TSchema extends MapNodeSchema> = IDisposable & {
+export type MapView<TSchema extends MapNodeSchema> = IDisposable & {
 	/**
 	 * The typed Map root providing map operations on schema data.
 	 *
@@ -188,8 +188,8 @@ export type SchematizedMap<TSchema extends MapNodeSchema> = IDisposable & {
  * This utility type is used by DDSes to provide the correct typed view
  * based on the schema passed to view methods like `viewWith`.
  *
- * - For {@link ObjectNodeSchema}: Returns a {@link SchematizedObject}
- * - For {@link MapNodeSchema}: Returns a {@link SchematizedMap}
+ * - For {@link ObjectNodeSchema}: Returns a {@link ObjectView}
+ * - For {@link MapNodeSchema}: Returns a {@link MapView}
  *
  * @typeParam TSchema - The root schema type
  *
@@ -202,8 +202,8 @@ export type SchematizedMap<TSchema extends MapNodeSchema> = IDisposable & {
  * @legacy
  * @alpha
  */
-export type SchematizedView<TSchema extends RootSchema> = TSchema extends ObjectNodeSchema
-	? SchematizedObject<TSchema>
+export type SchemaView<TSchema extends RootSchema> = TSchema extends ObjectNodeSchema
+	? ObjectView<TSchema>
 	: TSchema extends MapNodeSchema
-		? SchematizedMap<TSchema>
+		? MapView<TSchema>
 		: never;

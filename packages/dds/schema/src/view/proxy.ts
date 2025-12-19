@@ -19,7 +19,7 @@ import type { SchematizedObjectView } from "./objectView.js";
 /**
  * Error message thrown when accessing a disposed view.
  */
-const disposedErrorMessage = "Accessed a disposed SchematizedView.";
+const disposedErrorMessage = "Accessed a disposed SchemaView.";
 
 /**
  * Create a Proxy that provides property access to a {@link SchematizedObjectView}.

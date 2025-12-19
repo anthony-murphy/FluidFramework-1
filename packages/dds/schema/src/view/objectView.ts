@@ -115,7 +115,7 @@ export class SchematizedObjectView<TSchema extends ObjectNodeSchema> implements 
 	 */
 	private ensureNotDisposed(): void {
 		if (this._disposed) {
-			throw new UsageError("Accessed a disposed SchematizedView.");
+			throw new UsageError("Accessed a disposed SchemaView.");
 		}
 	}
 

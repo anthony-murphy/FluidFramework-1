@@ -132,9 +132,9 @@ export {
 export type {
 	ISchemaValidationError,
 	ViewFor,
-	SchematizedObject,
-	SchematizedMap,
-	SchematizedView,
+	ObjectView,
+	MapView,
+	SchemaView,
 	CreateViewOptions,
 	ObjectViewResult,
 	MapViewResult,

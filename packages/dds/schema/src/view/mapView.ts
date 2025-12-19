@@ -113,7 +113,7 @@ export class SchematizedMapView<TSchema extends MapNodeSchema>
 	 */
 	private ensureNotDisposed(): void {
 		if (this._disposed) {
-			throw new UsageError("Accessed a disposed SchematizedView.");
+			throw new UsageError("Accessed a disposed SchemaView.");
 		}
 	}
 

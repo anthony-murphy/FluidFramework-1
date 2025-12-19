@@ -21,7 +21,7 @@ import type { SchemaCompatibilityStatus } from "../serialization/index.js";
 import { SchematizedObjectView } from "./objectView.js";
 import { SchematizedMapView } from "./mapView.js";
 import { createObjectViewProxy, createMapViewProxy } from "./proxy.js";
-import type { SchematizedView } from "./proxyTypes.js";
+import type { SchemaView } from "./proxyTypes.js";
 import { normalizeViewConfig, type SchemaViewConfiguration } from "./configuration.js";
 
 // #region View Options
@@ -268,21 +268,21 @@ export function createSchematizedView<TSchema extends RootSchema>(
 	schemaOrConfig: TSchema | SchemaViewConfiguration<TSchema>,
 	persistence?: ISchemaPersistence,
 	options?: CreateViewOptions,
-): SchematizedView<TSchema> {
+): SchemaView<TSchema> {
 	const config = normalizeViewConfig(schemaOrConfig);
 
 	if (isObjectSchema(config.schema)) {
 		const view = new SchematizedObjectView(storage, config.schema, persistence, {
 			enableSchemaValidation: config.enableSchemaValidation,
 		});
-		return createObjectViewProxy(view, config.schema) as unknown as SchematizedView<TSchema>;
+		return createObjectViewProxy(view, config.schema) as unknown as SchemaView<TSchema>;
 	}
 
 	if (isMapSchema(config.schema)) {
 		const view = new SchematizedMapView(storage, config.schema, persistence, {
 			enableSchemaValidation: config.enableSchemaValidation,
 		});
-		return createMapViewProxy(view, config.schema) as unknown as SchematizedView<TSchema>;
+		return createMapViewProxy(view, config.schema) as unknown as SchemaView<TSchema>;
 	}
 
 	// For leaf schemas, we can't create a view directly
