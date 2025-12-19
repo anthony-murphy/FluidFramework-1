@@ -32,6 +32,15 @@ export const FieldKind: {
 export type FieldKind = (typeof FieldKind)[keyof typeof FieldKind];
 
 // @alpha @legacy
+export interface FieldProps {
+    key?: string;
+    metadata?: {
+        description?: string;
+        custom?: unknown;
+    };
+}
+
+// @alpha @legacy
 export interface FieldSchema {
     readonly allowedTypes: readonly string[];
     readonly kind: FieldKind;
@@ -172,8 +181,8 @@ export class SchemaFactory<TScope extends string = string> {
     get null(): TypedLeafNodeSchema<"com.fluidframework.leaf.null", "null", null>;
     get number(): TypedLeafNodeSchema<"com.fluidframework.leaf.number", "number", number>;
     object<const TName extends string, const TFields extends ObjectSchemaFields>(name: TName, fields: TFields): TypedObjectNodeSchema<ScopedSchemaName<TScope, TName>, TFields>;
-    optional<const T extends ImplicitAllowedTypes>(allowedTypes: T): TypedFieldSchema<typeof FieldKind.Optional, T>;
-    required<const T extends ImplicitAllowedTypes>(allowedTypes: T): TypedFieldSchema<typeof FieldKind.Required, T>;
+    optional<const T extends ImplicitAllowedTypes>(allowedTypes: T, props?: FieldProps): TypedFieldSchema<typeof FieldKind.Optional, T>;
+    required<const T extends ImplicitAllowedTypes>(allowedTypes: T, props?: FieldProps): TypedFieldSchema<typeof FieldKind.Required, T>;
     readonly scope: TScope;
     get string(): TypedLeafNodeSchema<"com.fluidframework.leaf.string", "string", string>;
 }
@@ -214,6 +223,7 @@ export const stringSchema: TypedLeafNodeSchema<"com.fluidframework.leaf.string",
 export interface TypedFieldSchema<TKind extends FieldKind = FieldKind, TAllowedTypes extends ImplicitAllowedTypes = ImplicitAllowedTypes> extends FieldSchema {
     // (undocumented)
     readonly kind: TKind;
+    readonly props?: FieldProps;
     readonly _typeInfo?: {
         readonly allowedTypes: TAllowedTypes;
     };

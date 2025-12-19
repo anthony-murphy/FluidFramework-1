@@ -21,6 +21,7 @@ export {
 
 export {
 	type ScopedSchemaName,
+	type FieldProps,
 	type TypedFieldSchema,
 	type TypedObjectNodeSchema,
 	type TypedMapNodeSchema,

@@ -359,16 +359,25 @@ TODO:
 
 ### #6 - Field Props Implementation
 
-TODO:
-- [ ] Add `FieldProps` interface: `{ key?: string, metadata?: { description?: string, custom?: unknown } }`
-- [ ] Update `optional()` signature: `optional<T>(types: T, props?: FieldProps)`
-- [ ] Update `required()` signature: `required<T>(types: T, props?: FieldProps)`
-- [ ] Store props in `TypedFieldSchema`
-- [ ] Use `key` for storage key remapping (if different from field name)
+[DONE] **Completed December 19, 2025**
+
+Implementation summary:
+- ✅ Added `FieldProps` interface in `schemaFactory.ts`: `{ key?: string, metadata?: { description?: string, custom?: unknown } }`
+- ✅ Updated `TypedFieldSchema` interface to include optional `props?: FieldProps`
+- ✅ Updated `optional()` signature: `optional<T>(types: T, props?: FieldProps)`
+- ✅ Updated `required()` signature: `required<T>(types: T, props?: FieldProps)`
+- ✅ Props stored in returned `TypedFieldSchema` when provided
+- ✅ Exported `FieldProps` from `factory/index.ts` and main `index.ts`
+- ✅ Build passes, all 252 tests pass
 
 ### #7 - Error Handling Implementation
 
-TODO:
+[SKIP] **Reason:** UsageError is `@internal` in telemetry-utils, so extending it forces SchemaValidationError to be `@internal` too. This would remove it from the public API, preventing users from catching the specific error type. Need design decision on:
+- Keep `@alpha` with plain Error (current)
+- Accept `@internal` visibility (lose public type)
+- Use composition instead of inheritance
+
+Original TODO (not implemented):
 - [ ] Import `UsageError` from `@fluidframework/telemetry-utils`
 - [ ] Change `SchemaValidationError extends Error` to `extends UsageError`
 - [ ] Keep `errors: ValidationError[]` property

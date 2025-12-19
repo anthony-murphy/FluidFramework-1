@@ -29,6 +29,7 @@ export type {
 	ImplicitAllowedTypes,
 	ImplicitFieldSchema,
 	ObjectSchemaFields,
+	FieldProps,
 } from "./factory/index.js";
 export {
 	FieldKind,

@@ -50,6 +50,47 @@ export type ScopedSchemaName<
 
 // #endregion
 
+// #region Field Props
+
+/**
+ * Properties that can be associated with a field in a schema.
+ *
+ * @remarks
+ * Field props allow specifying additional metadata and configuration for fields,
+ * such as a storage key override or descriptive metadata.
+ * @legacy
+ * @alpha
+ */
+export interface FieldProps {
+	/**
+	 * Storage key override.
+	 *
+	 * @remarks
+	 * If specified, this key is used for storage instead of the field name.
+	 * This is useful when renaming fields while maintaining backward compatibility
+	 * with existing stored data.
+	 */
+	key?: string;
+	/**
+	 * Metadata for the field.
+	 *
+	 * @remarks
+	 * Optional metadata that can be used for documentation, tooling, or runtime introspection.
+	 */
+	metadata?: {
+		/**
+		 * Human-readable description of the field.
+		 */
+		description?: string;
+		/**
+		 * Custom metadata for application-specific purposes.
+		 */
+		custom?: unknown;
+	};
+}
+
+// #endregion
+
 // #region Typed Schema Interfaces
 
 /**
@@ -69,6 +110,13 @@ export interface TypedFieldSchema<
 	TAllowedTypes extends ImplicitAllowedTypes = ImplicitAllowedTypes,
 > extends FieldSchema {
 	readonly kind: TKind;
+	/**
+	 * Optional properties associated with this field.
+	 *
+	 * @remarks
+	 * Props can include storage key overrides and metadata.
+	 */
+	readonly props?: FieldProps;
 	/**
 	 * Phantom property used for type inference only.
 	 * @remarks
@@ -624,6 +672,7 @@ export class SchemaFactory<TScope extends string = string> {
 	 * Creates an optional field schema.
 	 *
 	 * @param allowedTypes - The schema(s) that values in this field must conform to.
+	 * @param props - Optional properties for the field, such as storage key override or metadata.
 	 *
 	 * @returns A typed field schema marked as optional.
 	 *
@@ -638,17 +687,21 @@ export class SchemaFactory<TScope extends string = string> {
 	 * const PersonSchema = sf.object("Person", {
 	 *   name: sf.string,              // Required field
 	 *   nickname: sf.optional(sf.string),  // Optional field
+	 *   // Field with props:
+	 *   email: sf.optional(sf.string, { key: "emailAddress", metadata: { description: "User email" } }),
 	 * });
 	 *
-	 * // NodeFromSchema<typeof PersonSchema> === { name: string; nickname?: string }
+	 * // NodeFromSchema<typeof PersonSchema> === { name: string; nickname?: string; email?: string }
 	 * ```
 	 */
 	public optional<const T extends ImplicitAllowedTypes>(
 		allowedTypes: T,
+		props?: FieldProps,
 	): TypedFieldSchema<typeof FieldKind.Optional, T> {
 		return brandFieldSchema<typeof FieldKind.Optional, T>({
 			kind: FieldKind.Optional,
 			allowedTypes: normalizeAllowedTypes(allowedTypes),
+			...(props !== undefined && { props }),
 		});
 	}
 
@@ -656,6 +709,7 @@ export class SchemaFactory<TScope extends string = string> {
 	 * Creates a required field schema.
 	 *
 	 * @param allowedTypes - The schema(s) that values in this field must conform to.
+	 * @param props - Optional properties for the field, such as storage key override or metadata.
 	 *
 	 * @returns A typed field schema marked as required.
 	 *
@@ -672,14 +726,21 @@ export class SchemaFactory<TScope extends string = string> {
 	 * // These are equivalent:
 	 * const Schema1 = sf.object("S1", { name: sf.string });
 	 * const Schema2 = sf.object("S2", { name: sf.required(sf.string) });
+	 *
+	 * // With props:
+	 * const Schema3 = sf.object("S3", {
+	 *   name: sf.required(sf.string, { key: "userName", metadata: { description: "User name" } }),
+	 * });
 	 * ```
 	 */
 	public required<const T extends ImplicitAllowedTypes>(
 		allowedTypes: T,
+		props?: FieldProps,
 	): TypedFieldSchema<typeof FieldKind.Required, T> {
 		return brandFieldSchema<typeof FieldKind.Required, T>({
 			kind: FieldKind.Required,
 			allowedTypes: normalizeAllowedTypes(allowedTypes),
+			...(props !== undefined && { props }),
 		});
 	}
 }
