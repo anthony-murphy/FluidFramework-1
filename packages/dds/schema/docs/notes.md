@@ -47,44 +47,44 @@ Implementation tasks from decisions #10-21, ordered by dependency:
 
 ### Phase 1: Foundation (no dependencies)
 
-1. **#11 - SchemaValidationError**
-   - [ ] Create `ISchemaValidationError` interface
-   - [ ] Create `isSchemaValidationError()` type guard
-   - [ ] Change class to extend `LoggingError`
-   - [ ] Export interface and guard, not class
+1. **#11 - SchemaValidationError** [DONE]
+   - [DONE] Create `ISchemaValidationError` interface
+   - [DONE] Create `isSchemaValidationError()` type guard
+   - [DONE] Change class to extend `LoggingError`
+   - [DONE] Export interface and guard, not class
 
-2. **#20 - Rename types**
-   - [ ] Rename `SchematizedView` → `SchemaView`
-   - [ ] Rename `SchematizedObject` → `ObjectView`
-   - [ ] Update all references
+2. **#20 - Rename types** [DONE]
+   - [DONE] Rename `SchematizedView` → `SchemaView`
+   - [DONE] Rename `SchematizedObject` → `ObjectView`
+   - [DONE] Update all references
 
-3. **#19 - API visibility audit**
-   - [ ] Audit exports - remove any unnecessary ones
-   - [ ] Ensure DDS-author APIs are `@internal`
-   - [ ] Keep user-facing APIs at `@alpha` until stable
+3. **#19 - API visibility audit** [DONE]
+   - [DONE] Audit exports - remove any unnecessary ones
+   - [DONE] Ensure DDS-author APIs are `@internal`
+   - [DONE] Keep user-facing APIs at `@alpha` until stable
 
 ### Phase 2: Initialize API (#10, #21)
 
-4. **#10 - Simplify initialize()**
-   - [ ] Change `initialize(content)` to `initialize()` (no parameter)
-   - [ ] Update README and docs
-   - [ ] Update tests
+4. **#10 - Simplify initialize()** [DONE]
+   - [DONE] Change `initialize(content)` to `initialize()` (no parameter)
+   - [DONE] Update README and docs
+   - [DONE] Update tests
 
-5. **#21 - Add ignoreStoredSchema escape hatch**
-   - [ ] Add `ignoreStoredSchema?: string[]` to `SchemaViewConfiguration`
-   - [ ] Update README to clarify initialize is optional
-   - [ ] Document that this is an unsafe escape hatch
-   - [ ] Validate against `ScopedSchemaName` of stored schema
+5. **#21 - Add ignoreStoredSchema escape hatch** [DONE]
+   - [DONE] Add `ignoreStoredSchema?: string[]` to `SchemaViewConfiguration`
+   - [DONE] Update README to clarify initialize is optional
+   - [DONE] Document that this is an unsafe escape hatch
+   - [DONE] Validate against `ScopedSchemaName` of stored schema
 
 ### Phase 3: Proxy/Reflect refactor (#13, #15, #16)
 
-6. **#13/#15/#16 - Proxy architecture refactor** (largest change)
+6. **#13/#15/#16 - Proxy architecture refactor** [PARTIAL]
 
    **Key change: View is NOT proxied, only `root` is proxied**
 
-   - [ ] Remove `createObjectViewProxy()` / `createMapViewProxy()` functions
-   - [ ] Move `root` property (with proxy) into view classes directly
-   - [ ] `viewWith()` returns view class instance, not wrapper object
+   - [DONE] Move `root` property (with proxy) into view classes directly
+   - [DONE] `viewWith()` returns view class instance, not wrapper object
+   - [ ] Remove `createObjectViewProxy()` / `createMapViewProxy()` functions (currently deprecated)
    - [ ] Change `sf.object()` to return a class (for Reflect/inheritance)
    - [ ] Refactor proxy handlers to use Reflect fallback
    - [ ] Change proxy target to be schema class instance
