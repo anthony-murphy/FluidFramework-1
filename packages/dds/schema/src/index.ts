@@ -47,6 +47,7 @@ export type {
 	FieldSchema,
 	LeafKind,
 	AnyNodeSchema,
+	RootSchema,
 } from "./core/index.js";
 export type {
 	// Primary type inference
@@ -97,7 +98,6 @@ export type {
 } from "./serialization/index.js";
 
 // Storage
-export { MockStorage, MockPersistence } from "./storage/index.js";
 export type { StorageResult, ISchemaStorage, ISchemaPersistence } from "./storage/index.js";
 
 // Validation
@@ -115,3 +115,4 @@ export {
 	SchemaValidationError,
 	createObjectViewProxy,
 } from "./view/index.js";
+export type { ViewFor } from "./view/index.js";

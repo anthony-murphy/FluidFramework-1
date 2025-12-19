@@ -9,12 +9,7 @@ import type {
 	IEventProvider,
 	IEventThisPlaceHolder,
 } from "@fluidframework/core-interfaces";
-import type {
-	ObjectNodeSchema,
-	MapNodeSchema,
-	SchematizedObjectView,
-	SchematizedMapView,
-} from "@fluidframework/schema";
+import type { RootSchema, ViewFor } from "@fluidframework/schema/internal";
 import type {
 	ISharedObject,
 	ISharedObjectEvents,
@@ -413,9 +408,7 @@ export interface ISharedMap extends ISharedObject<ISharedMapEvents>, Map<string,
 	 * @param schema - The schema to use for the view (ObjectNodeSchema or MapNodeSchema)
 	 * @returns A view with typed access and compatibility status
 	 */
-	viewWith<TSchema extends ObjectNodeSchema | MapNodeSchema>(
-		schema: TSchema,
-	): SchematizedView<TSchema>;
+	viewWith<TSchema extends RootSchema>(schema: TSchema): ViewFor<TSchema>;
 }
 
 /**
@@ -424,12 +417,9 @@ export interface ISharedMap extends ISharedObject<ISharedMapEvents>, Map<string,
  * @remarks
  * This type represents the typed view returned by {@link ISharedMap.viewWith}.
  * The concrete type depends on the schema provided:
- * - For {@link ObjectNodeSchema}: Returns a {@link SchematizedObjectView}
- * - For {@link MapNodeSchema}: Returns a {@link SchematizedMapView}
+ * - For ObjectNodeSchema: Returns a SchematizedObjectView
+ * - For MapNodeSchema: Returns a SchematizedMapView
+ *
+ * @deprecated Use {@link ViewFor} from `@fluidframework/schema` instead.
  */
-export type SchematizedView<TSchema extends ObjectNodeSchema | MapNodeSchema> =
-	TSchema extends ObjectNodeSchema
-		? SchematizedObjectView<TSchema>
-		: TSchema extends MapNodeSchema
-			? SchematizedMapView<TSchema>
-			: never;
+export type SchematizedView<TSchema extends RootSchema> = ViewFor<TSchema>;

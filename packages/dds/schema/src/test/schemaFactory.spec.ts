@@ -171,9 +171,7 @@ describe("SchemaFactory", () => {
 			assert.deepEqual(schema.fields["name"]?.allowedTypes, [
 				"com.fluidframework.leaf.string",
 			]);
-			assert.deepEqual(schema.fields["age"]?.allowedTypes, [
-				"com.fluidframework.leaf.number",
-			]);
+			assert.deepEqual(schema.fields["age"]?.allowedTypes, ["com.fluidframework.leaf.number"]);
 		});
 
 		it("creates nested object schemas", () => {

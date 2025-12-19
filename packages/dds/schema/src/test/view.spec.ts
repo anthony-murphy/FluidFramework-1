@@ -6,7 +6,7 @@
 import { strict as assert } from "node:assert";
 
 import { SchemaFactory } from "../factory/index.js";
-import { MockStorage, MockPersistence } from "../storage/index.js";
+import { MockStorage, MockPersistence } from "./mockStorage.js";
 import {
 	SchematizedObjectView,
 	SchematizedMapView,

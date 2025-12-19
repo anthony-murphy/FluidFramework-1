@@ -21,19 +21,18 @@ import type {
 import { SummaryTreeBuilder } from "@fluidframework/runtime-utils/internal";
 import type {
 	NodeSchema,
-	ObjectNodeSchema,
-	MapNodeSchema,
 	ISchemaStorage,
 	ISchemaPersistence,
 	EncodedSchema,
 	StorageResult,
-} from "@fluidframework/schema";
+	RootSchema,
+} from "@fluidframework/schema/internal";
 import {
 	SchematizedObjectView,
 	SchematizedMapView,
 	isObjectSchema,
 	isMapSchema,
-} from "@fluidframework/schema";
+} from "@fluidframework/schema/internal";
 import type { IFluidSerializer } from "@fluidframework/shared-object-base/internal";
 import { SharedObject } from "@fluidframework/shared-object-base/internal";
 
@@ -245,9 +244,7 @@ export class SharedMap extends SharedObject<ISharedMapEvents> implements IShared
 	 * @param schema - The schema to use for the view (ObjectNodeSchema or MapNodeSchema)
 	 * @returns A view with typed access and compatibility status
 	 */
-	public viewWith<TSchema extends ObjectNodeSchema | MapNodeSchema>(
-		schema: TSchema,
-	): SchematizedView<TSchema> {
+	public viewWith<TSchema extends RootSchema>(schema: TSchema): SchematizedView<TSchema> {
 		const storage = this.createSchemaStorage();
 		const persistence = this.createSchemaPersistence();
 

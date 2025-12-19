@@ -8972,6 +8972,9 @@ importers:
       '@fluidframework/core-utils':
         specifier: workspace:~
         version: link:../../common/core-utils
+      '@fluidframework/telemetry-utils':
+        specifier: workspace:~
+        version: link:../../utils/telemetry-utils
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: ^0.17.1
