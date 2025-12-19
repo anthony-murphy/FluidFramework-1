@@ -10,6 +10,9 @@
  * type-safe access to data that conforms to a schema definition.
  */
 
+// Re-export UsageError for use by consumers of this module
+export { UsageError } from "@fluidframework/telemetry-utils/internal";
+
 import {
 	type NodeSchema,
 	type ObjectNodeSchema,
@@ -31,18 +34,6 @@ import {
 } from "../serialization/index.js";
 import { validateData, type ValidationError } from "../validation/index.js";
 import type { NodeFromSchema, InferValueSchema } from "../types/index.js";
-
-// #region Error Types
-
-/**
- * Error thrown when an API is used incorrectly.
- */
-export class UsageError extends Error {
-	public constructor(message: string) {
-		super(message);
-		this.name = "UsageError";
-	}
-}
 
 // #region Error Types
 

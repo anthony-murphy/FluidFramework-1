@@ -46,19 +46,24 @@ import type {
  * // Infers: number
  * type NumberValue = ValueFromLeafSchema<typeof numberSchema>;
  * ```
+ * @legacy
+ * @alpha
  */
-export type ValueFromLeafSchema<T extends TypedLeafNodeSchema> =
-	T extends TypedLeafNodeSchema<string, "string", infer TValue>
+export type ValueFromLeafSchema<T extends TypedLeafNodeSchema> = T extends TypedLeafNodeSchema<
+	string,
+	"string",
+	infer TValue
+>
+	? TValue
+	: T extends TypedLeafNodeSchema<string, "number", infer TValue>
 		? TValue
-		: T extends TypedLeafNodeSchema<string, "number", infer TValue>
+		: T extends TypedLeafNodeSchema<string, "boolean", infer TValue>
 			? TValue
-			: T extends TypedLeafNodeSchema<string, "boolean", infer TValue>
+			: T extends TypedLeafNodeSchema<string, "null", infer TValue>
 				? TValue
-				: T extends TypedLeafNodeSchema<string, "null", infer TValue>
+				: T extends TypedLeafNodeSchema<string, "handle", infer TValue>
 					? TValue
-					: T extends TypedLeafNodeSchema<string, "handle", infer TValue>
-						? TValue
-						: never;
+					: never;
 
 /**
  * Normalizes an implicit field schema to extract its field kind and allowed types.
@@ -137,11 +142,15 @@ type TypeFromField<T extends ImplicitFieldSchema> = NormalizeFieldSchema<T> exte
  * @internal
  */
 type ObjectFromFields<TFields extends ObjectSchemaFields> = {
-	[K in keyof TFields as NormalizeFieldSchema<TFields[K]>["kind"] extends typeof FieldKind.Required
+	[K in keyof TFields as NormalizeFieldSchema<
+		TFields[K]
+	>["kind"] extends typeof FieldKind.Required
 		? K
 		: never]: TypeFromField<TFields[K]>;
 } & {
-	[K in keyof TFields as NormalizeFieldSchema<TFields[K]>["kind"] extends typeof FieldKind.Optional
+	[K in keyof TFields as NormalizeFieldSchema<
+		TFields[K]
+	>["kind"] extends typeof FieldKind.Optional
 		? K
 		: never]?: TypeFromField<TFields[K]>;
 };
@@ -180,6 +189,8 @@ type ObjectFromFields<TFields extends ObjectSchemaFields> = {
  * // Infers: string (the value type)
  * type ConfigValue = NodeFromSchema<typeof ConfigMap>;
  * ```
+ * @legacy
+ * @alpha
  */
 export type NodeFromSchema<T> = T extends TypedLeafNodeSchema
 	? ValueFromLeafSchema<T>
@@ -215,6 +226,8 @@ export type NodeFromSchema<T> = T extends TypedLeafNodeSchema
  * type UserFields = InferFields<typeof UserSchema>;
  * // Results in: { name: typeof sf.string; age: typeof sf.number }
  * ```
+ * @legacy
+ * @alpha
  */
 export type InferFields<T> = T extends TypedObjectNodeSchema<string, infer TFields>
 	? TFields
@@ -240,6 +253,8 @@ export type InferFields<T> = T extends TypedObjectNodeSchema<string, infer TFiel
  * type ValueSchema = InferValueSchema<typeof UsersMap>;
  * // Results in: typeof UserSchema
  * ```
+ * @legacy
+ * @alpha
  */
 export type InferValueSchema<T> = T extends TypedMapNodeSchema<string, infer TValueSchema>
 	? TValueSchema
@@ -264,6 +279,8 @@ export type InferValueSchema<T> = T extends TypedMapNodeSchema<string, infer TVa
  * type AllowedTypes = InferAllowedTypes<typeof optionalString>;
  * // Results in: typeof sf.string
  * ```
+ * @legacy
+ * @alpha
  */
 export type InferAllowedTypes<T> = T extends TypedFieldSchema<FieldKind, infer TAllowedTypes>
 	? TAllowedTypes
@@ -287,6 +304,8 @@ export type InferAllowedTypes<T> = T extends TypedFieldSchema<FieldKind, infer T
  * type Kind = InferFieldKind<typeof optionalString>;
  * // Results in: FieldKind.Optional
  * ```
+ * @legacy
+ * @alpha
  */
 export type InferFieldKind<T> = T extends TypedFieldSchema<infer TKind, ImplicitAllowedTypes>
 	? TKind
@@ -327,6 +346,8 @@ export type InferFieldKind<T> = T extends TypedFieldSchema<infer TKind, Implicit
  * //   readonly tags: readonly string[];
  * // }
  * ```
+ * @legacy
+ * @alpha
  */
 export type DeepReadonly<T> = T extends IFluidHandle
 	? T
@@ -371,6 +392,8 @@ export type DeepReadonly<T> = T extends IFluidHandle
  * //   };
  * // }
  * ```
+ * @legacy
+ * @alpha
  */
 export type ReadonlyNodeFromSchema<T> = DeepReadonly<NodeFromSchema<T>>;
 
@@ -386,6 +409,8 @@ export type ReadonlyNodeFromSchema<T> = DeepReadonly<NodeFromSchema<T>>;
  * @remarks
  * This is a type-level utility that evaluates to `true` if the schema
  * is a {@link TypedLeafNodeSchema}, `false` otherwise.
+ * @legacy
+ * @alpha
  */
 export type IsLeafSchema<T> = T extends TypedLeafNodeSchema ? true : false;
 
@@ -397,6 +422,8 @@ export type IsLeafSchema<T> = T extends TypedLeafNodeSchema ? true : false;
  * @remarks
  * This is a type-level utility that evaluates to `true` if the schema
  * is a {@link TypedObjectNodeSchema}, `false` otherwise.
+ * @legacy
+ * @alpha
  */
 export type IsObjectSchema<T> = T extends TypedObjectNodeSchema ? true : false;
 
@@ -408,6 +435,8 @@ export type IsObjectSchema<T> = T extends TypedObjectNodeSchema ? true : false;
  * @remarks
  * This is a type-level utility that evaluates to `true` if the schema
  * is a {@link TypedMapNodeSchema}, `false` otherwise.
+ * @legacy
+ * @alpha
  */
 export type IsMapSchema<T> = T extends TypedMapNodeSchema ? true : false;
 
@@ -418,6 +447,8 @@ export type IsMapSchema<T> = T extends TypedMapNodeSchema ? true : false;
  *
  * @remarks
  * This extracts the {@link NodeKind} from a typed schema at the type level.
+ * @legacy
+ * @alpha
  */
 export type SchemaKind<T> = T extends TypedLeafNodeSchema
 	? typeof NodeKind.Leaf
@@ -449,6 +480,8 @@ export type SchemaKind<T> = T extends TypedLeafNodeSchema
  * // Infers: string | number | boolean
  * type UnionType = UnionFromSchemas<typeof schemas>;
  * ```
+ * @legacy
+ * @alpha
  */
 export type UnionFromSchemas<T extends readonly unknown[]> = T extends readonly (infer U)[]
 	? U extends TypedLeafNodeSchema | TypedObjectNodeSchema | TypedMapNodeSchema

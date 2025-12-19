@@ -29,6 +29,8 @@ import {
  *
  * @remarks
  * The scope is prepended to the schema name with a "." separator.
+ * @legacy
+ * @alpha
  */
 export type ScopedSchemaName<
 	TScope extends string,
@@ -49,6 +51,8 @@ export type ScopedSchemaName<
  * @remarks
  * This extends the base LeafNodeSchema with additional type information
  * needed for type inference.
+ * @legacy
+ * @alpha
  */
 export interface TypedLeafNodeSchema<
 	TIdentifier extends string = string,
@@ -78,6 +82,8 @@ export interface TypedLeafNodeSchema<
  * @remarks
  * This extends the base FieldSchema with additional type information
  * needed for type inference.
+ * @legacy
+ * @alpha
  */
 export interface TypedFieldSchema<
 	TKind extends FieldKind = FieldKind,
@@ -104,6 +110,8 @@ export interface TypedFieldSchema<
  * @remarks
  * This extends the base ObjectNodeSchema with additional type information
  * needed for type inference.
+ * @legacy
+ * @alpha
  */
 export interface TypedObjectNodeSchema<
 	TIdentifier extends string = string,
@@ -131,6 +139,8 @@ export interface TypedObjectNodeSchema<
  * @remarks
  * This extends the base MapNodeSchema with additional type information
  * needed for type inference.
+ * @legacy
+ * @alpha
  */
 export interface TypedMapNodeSchema<
 	TIdentifier extends string = string,
@@ -155,6 +165,8 @@ export interface TypedMapNodeSchema<
 
 /**
  * Built-in leaf schema for string values.
+ * @legacy
+ * @alpha
  */
 export const stringSchema: TypedLeafNodeSchema<
 	"com.fluidframework.leaf.string",
@@ -168,6 +180,8 @@ export const stringSchema: TypedLeafNodeSchema<
 
 /**
  * Built-in leaf schema for number values.
+ * @legacy
+ * @alpha
  */
 export const numberSchema: TypedLeafNodeSchema<
 	"com.fluidframework.leaf.number",
@@ -181,6 +195,8 @@ export const numberSchema: TypedLeafNodeSchema<
 
 /**
  * Built-in leaf schema for boolean values.
+ * @legacy
+ * @alpha
  */
 export const booleanSchema: TypedLeafNodeSchema<
 	"com.fluidframework.leaf.boolean",
@@ -194,6 +210,8 @@ export const booleanSchema: TypedLeafNodeSchema<
 
 /**
  * Built-in leaf schema for null values.
+ * @legacy
+ * @alpha
  */
 // eslint-disable-next-line @rushstack/no-new-null
 export const nullSchema: TypedLeafNodeSchema<"com.fluidframework.leaf.null", "null", null> = {
@@ -204,6 +222,8 @@ export const nullSchema: TypedLeafNodeSchema<"com.fluidframework.leaf.null", "nu
 
 /**
  * Built-in leaf schema for Fluid handle values.
+ * @legacy
+ * @alpha
  */
 export const handleSchema: TypedLeafNodeSchema<
 	"com.fluidframework.leaf.handle",
@@ -225,6 +245,8 @@ export const handleSchema: TypedLeafNodeSchema<
  * @remarks
  * This includes individual typed leaf schemas, typed object schemas, typed map schemas,
  * or an array of such types for union fields.
+ * @legacy
+ * @alpha
  */
 export type ImplicitAllowedTypes =
 	| TypedLeafNodeSchema
@@ -238,11 +260,15 @@ export type ImplicitAllowedTypes =
  * @remarks
  * A field can be specified either as a {@link TypedFieldSchema} or as an
  * {@link ImplicitAllowedTypes}, in which case it is treated as a required field.
+ * @legacy
+ * @alpha
  */
 export type ImplicitFieldSchema = TypedFieldSchema | ImplicitAllowedTypes;
 
 /**
  * A record of field names to their implicit field schemas.
+ * @legacy
+ * @alpha
  */
 export type ObjectSchemaFields = Record<string, ImplicitFieldSchema>;
 
@@ -309,11 +335,15 @@ type TypeFromField<T extends ImplicitFieldSchema> = NormalizeFieldSchema<T> exte
  * a properly typed object interface.
  */
 type ObjectFromFields<TFields extends ObjectSchemaFields> = {
-	[K in keyof TFields as NormalizeFieldSchema<TFields[K]>["kind"] extends typeof FieldKind.Required
+	[K in keyof TFields as NormalizeFieldSchema<
+		TFields[K]
+	>["kind"] extends typeof FieldKind.Required
 		? K
 		: never]: TypeFromField<TFields[K]>;
 } & {
-	[K in keyof TFields as NormalizeFieldSchema<TFields[K]>["kind"] extends typeof FieldKind.Optional
+	[K in keyof TFields as NormalizeFieldSchema<
+		TFields[K]
+	>["kind"] extends typeof FieldKind.Optional
 		? K
 		: never]?: TypeFromField<TFields[K]>;
 };
@@ -453,6 +483,8 @@ function isTypedFieldSchema(value: ImplicitFieldSchema): value is TypedFieldSche
  * type User = NodeFromSchema<typeof UserSchema>;
  * // User is { name: string; age: number; email?: string }
  * ```
+ * @legacy
+ * @alpha
  */
 export class SchemaFactory<TScope extends string = string> {
 	/**

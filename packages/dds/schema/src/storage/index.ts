@@ -232,6 +232,8 @@ export interface ISchemaPersistence {
  *   console.log(result.value); // "Alice"
  * }
  * ```
+ * @legacy
+ * @alpha
  */
 export class MockStorage implements ISchemaStorage {
 	private readonly data = new Map<string, unknown>();
@@ -316,6 +318,8 @@ export class MockStorage implements ISchemaStorage {
  * // Use upgrade instead
  * persistence.upgradePersistedSchema(upgradedSchema);
  * ```
+ * @legacy
+ * @alpha
  */
 export class MockPersistence implements ISchemaPersistence {
 	private schema: EncodedSchema | undefined;

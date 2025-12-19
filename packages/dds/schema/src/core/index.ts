@@ -19,6 +19,8 @@
  * @remarks
  * This is a simplified version of the Tree DDS FieldKind that excludes
  * Tree-specific field kinds like `Identifier`.
+ * @legacy
+ * @alpha
  */
 export const FieldKind = {
 	/**
@@ -42,6 +44,8 @@ export const FieldKind = {
  * @remarks
  * This is a simplified version of the Tree DDS FieldKind that excludes
  * Tree-specific field kinds like `Identifier`.
+ * @legacy
+ * @alpha
  */
 export type FieldKind = (typeof FieldKind)[keyof typeof FieldKind];
 
@@ -50,6 +54,8 @@ export type FieldKind = (typeof FieldKind)[keyof typeof FieldKind];
  *
  * @remarks
  * More kinds may be added over time, so do not assume this is an exhaustive set.
+ * @legacy
+ * @alpha
  */
 export const NodeKind = {
 	/**
@@ -80,6 +86,8 @@ export const NodeKind = {
  *
  * @remarks
  * More kinds may be added over time, so do not assume this is an exhaustive set.
+ * @legacy
+ * @alpha
  */
 export type NodeKind = (typeof NodeKind)[keyof typeof NodeKind];
 
@@ -94,6 +102,8 @@ export type NodeKind = (typeof NodeKind)[keyof typeof NodeKind];
  * These correspond to the primitive types that can be stored as leaf values
  * in a tree. The `handle` type represents Fluid handles for referencing
  * other Fluid objects.
+ * @legacy
+ * @alpha
  */
 export type LeafKind = "string" | "number" | "boolean" | "null" | "handle";
 
@@ -107,6 +117,8 @@ export type LeafKind = "string" | "number" | "boolean" | "null" | "handle";
  * @remarks
  * All node schemas must have a unique identifier and a kind that indicates
  * what type of node the schema describes.
+ * @legacy
+ * @alpha
  */
 export interface NodeSchema {
 	/**
@@ -131,6 +143,8 @@ export interface NodeSchema {
  * @remarks
  * Object nodes store a heterogeneous collection of children in named fields.
  * Each field has its own schema that defines what values it can contain.
+ * @legacy
+ * @alpha
  */
 export interface ObjectNodeSchema extends NodeSchema {
 	readonly kind: typeof NodeKind.Object;
@@ -151,6 +165,8 @@ export interface ObjectNodeSchema extends NodeSchema {
  * @remarks
  * Array nodes store children in an ordered sequence. All children must
  * conform to the allowed types specified in the schema.
+ * @legacy
+ * @alpha
  */
 export interface ArrayNodeSchema extends NodeSchema {
 	readonly kind: typeof NodeKind.Array;
@@ -170,6 +186,8 @@ export interface ArrayNodeSchema extends NodeSchema {
  * @remarks
  * Map nodes store children under string keys. All values must conform
  * to the allowed types specified in the schema.
+ * @legacy
+ * @alpha
  */
 export interface MapNodeSchema extends NodeSchema {
 	readonly kind: typeof NodeKind.Map;
@@ -189,6 +207,8 @@ export interface MapNodeSchema extends NodeSchema {
  * @remarks
  * Leaf nodes are terminal nodes that store a single primitive value.
  * They cannot have children.
+ * @legacy
+ * @alpha
  */
 export interface LeafNodeSchema extends NodeSchema {
 	readonly kind: typeof NodeKind.Leaf;
@@ -209,6 +229,8 @@ export interface LeafNodeSchema extends NodeSchema {
  * @remarks
  * Fields define the structure of object nodes by specifying what values
  * can be stored under each property name.
+ * @legacy
+ * @alpha
  */
 export interface FieldSchema {
 	/**
@@ -235,6 +257,8 @@ export interface FieldSchema {
  *
  * @param schema - The schema to check.
  * @returns `true` if the schema is an ObjectNodeSchema, `false` otherwise.
+ * @legacy
+ * @alpha
  */
 export function isObjectSchema(schema: NodeSchema): schema is ObjectNodeSchema {
 	return schema.kind === NodeKind.Object;
@@ -245,6 +269,8 @@ export function isObjectSchema(schema: NodeSchema): schema is ObjectNodeSchema {
  *
  * @param schema - The schema to check.
  * @returns `true` if the schema is an ArrayNodeSchema, `false` otherwise.
+ * @legacy
+ * @alpha
  */
 export function isArraySchema(schema: NodeSchema): schema is ArrayNodeSchema {
 	return schema.kind === NodeKind.Array;
@@ -255,6 +281,8 @@ export function isArraySchema(schema: NodeSchema): schema is ArrayNodeSchema {
  *
  * @param schema - The schema to check.
  * @returns `true` if the schema is a MapNodeSchema, `false` otherwise.
+ * @legacy
+ * @alpha
  */
 export function isMapSchema(schema: NodeSchema): schema is MapNodeSchema {
 	return schema.kind === NodeKind.Map;
@@ -265,6 +293,8 @@ export function isMapSchema(schema: NodeSchema): schema is MapNodeSchema {
  *
  * @param schema - The schema to check.
  * @returns `true` if the schema is a LeafNodeSchema, `false` otherwise.
+ * @legacy
+ * @alpha
  */
 export function isLeafSchema(schema: NodeSchema): schema is LeafNodeSchema {
 	return schema.kind === NodeKind.Leaf;
@@ -280,6 +310,8 @@ export function isLeafSchema(schema: NodeSchema): schema is LeafNodeSchema {
  * @remarks
  * This type is useful when you need to handle any kind of node schema
  * and want exhaustive type checking.
+ * @legacy
+ * @alpha
  */
 export type AnyNodeSchema =
 	| ObjectNodeSchema

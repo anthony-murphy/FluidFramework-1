@@ -37,6 +37,8 @@ import {
  * - **Deterministic**: Same schema always produces same encoding
  * - **Compact**: Reasonable size for `.attributes` blob
  * - **Extensible**: Version field for future changes
+ * @legacy
+ * @alpha
  */
 export interface EncodedSchema {
 	/**
@@ -62,6 +64,8 @@ export interface EncodedSchema {
 
 /**
  * Union of all encoded node schema types.
+ * @legacy
+ * @alpha
  */
 export type EncodedNodeSchema =
 	| EncodedObjectSchema
@@ -71,6 +75,8 @@ export type EncodedNodeSchema =
 
 /**
  * Encoded representation of an object node schema.
+ * @legacy
+ * @alpha
  */
 export interface EncodedObjectSchema {
 	/** Discriminant for object schemas. */
@@ -85,6 +91,8 @@ export interface EncodedObjectSchema {
 
 /**
  * Encoded representation of a map node schema.
+ * @legacy
+ * @alpha
  */
 export interface EncodedMapSchema {
 	/** Discriminant for map schemas. */
@@ -103,6 +111,8 @@ export interface EncodedMapSchema {
 
 /**
  * Encoded representation of an array node schema.
+ * @legacy
+ * @alpha
  */
 export interface EncodedArraySchema {
 	/** Discriminant for array schemas. */
@@ -121,6 +131,8 @@ export interface EncodedArraySchema {
 
 /**
  * Encoded representation of a leaf node schema.
+ * @legacy
+ * @alpha
  */
 export interface EncodedLeafSchema {
 	/** Discriminant for leaf schemas. */
@@ -135,6 +147,8 @@ export interface EncodedLeafSchema {
 
 /**
  * Encoded representation of a field schema.
+ * @legacy
+ * @alpha
  */
 export interface EncodedFieldSchema {
 	/**
@@ -161,6 +175,8 @@ export interface EncodedFieldSchema {
  * This is the output format of {@link decodeSchema}. It provides a
  * class-free representation of the schema that can be used for
  * validation, comparison, or further processing.
+ * @legacy
+ * @alpha
  */
 export type SimpleNodeSchema =
 	| SimpleObjectNodeSchema
@@ -170,6 +186,8 @@ export type SimpleNodeSchema =
 
 /**
  * Simple representation of an object node schema.
+ * @legacy
+ * @alpha
  */
 export interface SimpleObjectNodeSchema {
 	readonly kind: typeof NodeKind.Object;
@@ -179,6 +197,8 @@ export interface SimpleObjectNodeSchema {
 
 /**
  * Simple representation of an array node schema.
+ * @legacy
+ * @alpha
  */
 export interface SimpleArrayNodeSchema {
 	readonly kind: typeof NodeKind.Array;
@@ -188,6 +208,8 @@ export interface SimpleArrayNodeSchema {
 
 /**
  * Simple representation of a map node schema.
+ * @legacy
+ * @alpha
  */
 export interface SimpleMapNodeSchema {
 	readonly kind: typeof NodeKind.Map;
@@ -197,6 +219,8 @@ export interface SimpleMapNodeSchema {
 
 /**
  * Simple representation of a leaf node schema.
+ * @legacy
+ * @alpha
  */
 export interface SimpleLeafNodeSchema {
 	readonly kind: typeof NodeKind.Leaf;
@@ -206,6 +230,8 @@ export interface SimpleLeafNodeSchema {
 
 /**
  * Simple representation of a field schema.
+ * @legacy
+ * @alpha
  */
 export interface SimpleFieldSchema {
 	readonly kind: FieldKind;
@@ -218,6 +244,8 @@ export interface SimpleFieldSchema {
  * @remarks
  * Contains the root schema and all definitions needed to resolve
  * schema references.
+ * @legacy
+ * @alpha
  */
 export interface DecodedSchema {
 	/**
@@ -283,6 +311,8 @@ interface EncodeContext {
  * //   }
  * // }
  * ```
+ * @legacy
+ * @alpha
  */
 export function encodeSchema(
 	schema: NodeSchema,
@@ -340,7 +370,10 @@ function encodeNodeSchema(
 /**
  * Encodes a node schema without checking for deduplication.
  */
-function encodeNodeSchemaInline(schema: NodeSchema, context: EncodeContext): EncodedNodeSchema {
+function encodeNodeSchemaInline(
+	schema: NodeSchema,
+	context: EncodeContext,
+): EncodedNodeSchema {
 	if (isLeafSchema(schema)) {
 		return encodeLeafSchema(schema);
 	} else if (isObjectSchema(schema)) {
@@ -369,7 +402,10 @@ function encodeLeafSchema(schema: LeafNodeSchema): EncodedLeafSchema {
 /**
  * Encodes an object node schema.
  */
-function encodeObjectSchema(schema: ObjectNodeSchema, context: EncodeContext): EncodedObjectSchema {
+function encodeObjectSchema(
+	schema: ObjectNodeSchema,
+	context: EncodeContext,
+): EncodedObjectSchema {
 	const fields: Record<string, EncodedFieldSchema> = {};
 
 	// Sort field keys for deterministic output
@@ -391,7 +427,10 @@ function encodeObjectSchema(schema: ObjectNodeSchema, context: EncodeContext): E
 /**
  * Encodes an array node schema.
  */
-function encodeArraySchema(schema: ArrayNodeSchema, context: EncodeContext): EncodedArraySchema {
+function encodeArraySchema(
+	schema: ArrayNodeSchema,
+	context: EncodeContext,
+): EncodedArraySchema {
 	return {
 		kind: "array",
 		identifier: schema.identifier,
@@ -486,6 +525,8 @@ function encodeAllowedTypes(
  * // decoded.root is a SimpleObjectNodeSchema
  * // decoded.definitions contains all referenced schemas
  * ```
+ * @legacy
+ * @alpha
  */
 export function decodeSchema(encoded: EncodedSchema): DecodedSchema {
 	if (encoded.version !== 1) {
@@ -642,6 +683,8 @@ function decodeAllowedTypes(
  * @remarks
  * This interface describes the compatibility status between a stored schema
  * (from persistence) and a view schema (requested by the application).
+ * @legacy
+ * @alpha
  */
 export interface SchemaCompatibilityStatus {
 	/**
@@ -713,6 +756,8 @@ export interface SchemaCompatibilityStatus {
  * // status.canView is false (view expects email which stored doesn't have)
  * // status.isEquivalent is false (schemas differ)
  * ```
+ * @legacy
+ * @alpha
  */
 export function checkSchemaCompatibility(
 	stored: EncodedSchema | undefined,
@@ -792,7 +837,12 @@ function areSimpleSchemasEqual(
 		}
 		case NodeKind.Map: {
 			const viewMap = view as SimpleMapNodeSchema;
-			return areAllowedTypesEqual(stored.allowedTypes, viewMap.allowedTypes, storedDefs, viewDefs);
+			return areAllowedTypesEqual(
+				stored.allowedTypes,
+				viewMap.allowedTypes,
+				storedDefs,
+				viewDefs,
+			);
 		}
 		case NodeKind.Array: {
 			const viewArray = view as SimpleArrayNodeSchema;
@@ -846,7 +896,14 @@ function areObjectSchemasEqual(
 		}
 
 		// Allowed types must match
-		if (!areAllowedTypesEqual(storedField.allowedTypes, viewField.allowedTypes, storedDefs, viewDefs)) {
+		if (
+			!areAllowedTypesEqual(
+				storedField.allowedTypes,
+				viewField.allowedTypes,
+				storedDefs,
+				viewDefs,
+			)
+		) {
 			return false;
 		}
 	}
@@ -975,7 +1032,9 @@ function canViewObjectData(
 
 		// Field exists in both - check type compatibility
 		// Stored types must be subset of view types for this field
-		if (!areTypesSubset(storedField.allowedTypes, viewField.allowedTypes, storedDefs, viewDefs)) {
+		if (
+			!areTypesSubset(storedField.allowedTypes, viewField.allowedTypes, storedDefs, viewDefs)
+		) {
 			return false;
 		}
 	}
@@ -1053,7 +1112,9 @@ function canUpgradeObjectSchema(
 		}
 
 		// Check type compatibility - types must be equal or view must be superset
-		if (!areTypesSubset(storedField.allowedTypes, viewField.allowedTypes, storedDefs, viewDefs)) {
+		if (
+			!areTypesSubset(storedField.allowedTypes, viewField.allowedTypes, storedDefs, viewDefs)
+		) {
 			return false;
 		}
 
