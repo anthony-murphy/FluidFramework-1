@@ -9,14 +9,19 @@ import type {
 	IEventProvider,
 	IEventThisPlaceHolder,
 } from "@fluidframework/core-interfaces";
-import type { RootSchema, SchematizedView } from "@fluidframework/schema/internal";
+import type {
+	ObjectNodeSchema,
+	MapNodeSchema,
+	ObjectView,
+	MapView,
+} from "@fluidframework/schema/internal";
 import type {
 	ISharedObject,
 	ISharedObjectEvents,
 } from "@fluidframework/shared-object-base/internal";
 
 // Re-export SchematizedView for consumers
-export type { SchematizedView } from "@fluidframework/schema/internal";
+export type { SchematizedView, SchematizedViewBase } from "@fluidframework/schema/internal";
 
 /**
  * Type of "valueChanged" event parameter.
@@ -414,14 +419,26 @@ export interface ISharedMap extends ISharedObject<ISharedMapEvents>, Map<string,
  * This interface adds the experimental {@link ISchematizedSharedMap.viewWith} method
  * for typed, schema-based access to map data.
  *
+ * @remarks
+ * This interface uses method overloads to provide specific return types for
+ * object and map schemas while avoiding TypeScript's "Type instantiation is
+ * excessively deep and possibly infinite" error (TS2589).
+ *
  * @sealed
  * @legacy @alpha
  */
 export interface ISchematizedSharedMap extends ISharedMap {
 	/**
-	 * Get a typed, schematized view of this map.
-	 * @param schema - The schema to use for the view (ObjectNodeSchema or MapNodeSchema)
-	 * @returns A view with typed access and compatibility status
+	 * Get a typed, schematized view of this map using an object schema.
+	 * @param schema - The object schema to use for the view
+	 * @returns A view with typed property access
 	 */
-	viewWith<TSchema extends RootSchema>(schema: TSchema): SchematizedView<TSchema>;
+	viewWith<TSchema extends ObjectNodeSchema>(schema: TSchema): ObjectView<TSchema>;
+
+	/**
+	 * Get a typed, schematized view of this map using a map schema.
+	 * @param schema - The map schema to use for the view
+	 * @returns A view with typed Map access
+	 */
+	viewWith<TSchema extends MapNodeSchema>(schema: TSchema): MapView<TSchema>;
 }

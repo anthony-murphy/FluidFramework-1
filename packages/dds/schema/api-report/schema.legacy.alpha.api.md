@@ -124,13 +124,7 @@ export interface MapNodeSchema extends NodeSchema {
 }
 
 // @alpha @legacy
-export type MapView<TSchema extends MapNodeSchema> = IDisposable & {
-    readonly root: Map<string, unknown>;
-    readonly disposed: boolean;
-    readonly compatibility: SchemaCompatibilityStatus;
-    initialize: () => void;
-    upgradeSchema: () => void;
-};
+export type MapView<TSchema extends MapNodeSchema> = SchematizedView<TSchema>;
 
 // @alpha @legacy
 export type NodeFromSchema<T> = T extends TypedLeafNodeSchema ? ValueFromLeafSchema<T> : T extends TypedObjectNodeSchema<string, infer TFields> ? ObjectFromFields<TFields> : T extends TypedMapNodeSchema<string, infer TValueSchema> ? TypeFromImplicitAllowedTypes<TValueSchema> : never;
@@ -185,16 +179,13 @@ export interface ObjectNodeSchema extends NodeSchema {
 export type ObjectSchemaFields = Record<string, ImplicitFieldSchema>;
 
 // @alpha @legacy
-export type ObjectView<TSchema extends ObjectNodeSchema> = IDisposable & {
-    readonly root: NodeFromSchema<TSchema>;
-    readonly disposed: boolean;
-    readonly compatibility: SchemaCompatibilityStatus;
-    initialize: () => void;
-    upgradeSchema: () => void;
-};
+export type ObjectView<TSchema extends ObjectNodeSchema> = SchematizedView<TSchema>;
 
 // @alpha @legacy
 export type ReadonlyNodeFromSchema<T> = DeepReadonly<NodeFromSchema<T>>;
+
+// @alpha @legacy
+export type RootFromSchema<TSchema extends RootSchema> = TSchema extends ObjectNodeSchema ? NodeFromSchema<TSchema> : TSchema extends MapNodeSchema ? Map<string, InferMapValueType<TSchema>> : never;
 
 // @alpha @legacy
 export type RootSchema = ObjectNodeSchema | MapNodeSchema;
@@ -241,10 +232,12 @@ export class SchemaFactory<TScope extends string = string> {
 export type SchemaKind<T> = T extends TypedLeafNodeSchema ? typeof NodeKind.Leaf : T extends TypedObjectNodeSchema ? typeof NodeKind.Object : T extends TypedMapNodeSchema ? typeof NodeKind.Map : never;
 
 // @alpha @legacy
-export type SchematizedView<TSchema extends RootSchema> = SchemaView<TSchema>;
+export type SchematizedView<TSchema extends RootSchema> = SchematizedViewBase & {
+    readonly root: RootFromSchema<TSchema>;
+};
 
-// @alpha @legacy
-export type SchemaView<TSchema extends RootSchema> = TSchema extends ObjectNodeSchema ? ObjectView<TSchema> : TSchema extends MapNodeSchema ? MapView<TSchema> : never;
+// @alpha @deprecated @legacy
+export type SchemaView<TSchema extends RootSchema> = SchematizedView<TSchema>;
 
 // @alpha @legacy
 export interface SchemaViewConfiguration<TSchema extends RootSchema> {

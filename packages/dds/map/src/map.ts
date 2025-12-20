@@ -26,7 +26,11 @@ import type {
 	EncodedSchema,
 	StorageResult,
 	RootSchema,
-	SchematizedView,
+	ObjectNodeSchema,
+	MapNodeSchema,
+	ObjectView,
+	MapView,
+	SchematizedViewBase,
 } from "@fluidframework/schema/internal";
 import {
 	SchematizedObjectView,
@@ -37,7 +41,7 @@ import {
 import type { IFluidSerializer } from "@fluidframework/shared-object-base/internal";
 import { SharedObject } from "@fluidframework/shared-object-base/internal";
 
-import type { ISchematizedSharedMap, ISharedMapEvents } from "./interfaces.js";
+import type { ISharedMapEvents } from "./interfaces.js";
 import {
 	type IMapDataObjectSerializable,
 	type IMapOperation,
@@ -57,11 +61,14 @@ const snapshotFileName = "header";
 
 /**
  * {@inheritDoc ISharedMap}
+ *
+ * @remarks
+ * This class does NOT use `implements ISchematizedSharedMap` to avoid
+ * TypeScript's "Type instantiation is excessively deep and possibly infinite"
+ * error (TS2589). Instead, the class defines the same method overloads as the
+ * interface and is exported with a type assertion.
  */
-export class SharedMap
-	extends SharedObject<ISharedMapEvents>
-	implements ISchematizedSharedMap
-{
+export class SharedMap extends SharedObject<ISharedMapEvents> {
 	/**
 	 * String representation for the class.
 	 */
@@ -244,27 +251,31 @@ export class SharedMap
 	}
 
 	/**
-	 * Get a typed, schematized view of this map.
-	 * @param schema - The schema to use for the view (ObjectNodeSchema or MapNodeSchema)
-	 * @returns A view with typed access and compatibility status
+	 * Get a typed, schematized view of this map using an object schema.
+	 * @param schema - The object schema to use for the view
+	 * @returns A view with typed property access
 	 */
-	public viewWith<TSchema extends RootSchema>(schema: TSchema): SchematizedView<TSchema> {
+	public viewWith<TSchema extends ObjectNodeSchema>(schema: TSchema): ObjectView<TSchema>;
+
+	/**
+	 * Get a typed, schematized view of this map using a map schema.
+	 * @param schema - The map schema to use for the view
+	 * @returns A view with typed Map access
+	 */
+	public viewWith<TSchema extends MapNodeSchema>(schema: TSchema): MapView<TSchema>;
+
+	/**
+	 * Implementation of viewWith that handles both schema types.
+	 */
+	public viewWith(schema: RootSchema): SchematizedViewBase {
 		const storage = this.createSchemaStorage();
 		const persistence = this.createSchemaPersistence();
 
 		if (isObjectSchema(schema)) {
-			return new SchematizedObjectView(
-				storage,
-				schema,
-				persistence,
-			) as unknown as SchematizedView<TSchema>;
+			return new SchematizedObjectView(storage, schema, persistence);
 		}
 		if (isMapSchema(schema)) {
-			return new SchematizedMapView(
-				storage,
-				schema,
-				persistence,
-			) as unknown as SchematizedView<TSchema>;
+			return new SchematizedMapView(storage, schema, persistence);
 		}
 		throw new Error("Schema must be an ObjectNodeSchema or MapNodeSchema");
 	}

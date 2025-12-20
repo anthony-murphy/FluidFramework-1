@@ -139,6 +139,8 @@ export type {
 	MapView,
 	SchemaView,
 	SchematizedView,
+	SchematizedViewBase,
+	RootFromSchema,
 	CreateViewOptions,
 	ObjectViewResult,
 	MapViewResult,
