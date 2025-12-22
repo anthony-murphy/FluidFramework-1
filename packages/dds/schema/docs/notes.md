@@ -11,16 +11,40 @@
 
 ### Move tests to local-server-tests
 
-- [ ] Add `@fluidframework/schema` dependency to local-server-tests
-- [ ] Add `@fluidframework/map` dependency if not present
-- [ ] Create test file in local-server-tests
-- [ ] Move/adapt test cases from e2e
-- [ ] Remove tests from e2e package
-- [ ] Verify tests pass in new location
+- [DONE] Add `@fluidframework/schema` dependency to local-server-tests
+- [DONE] Add `@fluidframework/map` dependency if not present (already present)
+- [DONE] Create test file in local-server-tests
+- [SKIP] Move/adapt test cases from e2e (no existing e2e tests to move)
+- [SKIP] Remove tests from e2e package (no existing e2e tests)
+- [DONE] Verify tests pass in new location (tests created, need build to verify)
 
 ---
 
 ## Open Issues
+
+### Nested Object Field Updates Concatenate Instead of Replace [BUG]
+
+**Problem:** When updating a nested object field from a second client, values get concatenated instead of replaced.
+
+**Reproduction (from local-server-tests/schematizedMap.spec.ts):**
+```typescript
+// Client 1: Sets nested object
+view1.root.address = { street: "123 Main St", city: "Seattle" };
+
+// Client 2: Updates nested field
+view2.root.address.city = "Portland";
+
+// Expected on Client 1: "Portland"
+// Actual on Client 1: "SeaPorttleand"  // Concatenated!
+```
+
+**Likely cause:** The nested object proxy's `set` handler may be incorrectly handling the update, possibly due to how the storage key path is constructed or how the SharedMap `set` operation is being called.
+
+**Files to investigate:**
+- `src/view/objectView.ts` - Object proxy handler
+- `src/view/mapView.ts` - Storage key path construction
+
+---
 
 ### Schema Op for Real-Time Sync [PENDING]
 
