@@ -45,8 +45,7 @@ import type {
  * // Infers: number
  * type NumberValue = ValueFromLeafSchema<typeof numberSchema>;
  * ```
- * @legacy
- * @alpha
+ * @alpha @legacy
  */
 export type ValueFromLeafSchema<T extends TypedLeafNodeSchema> = T extends TypedLeafNodeSchema<
 	string,
@@ -73,8 +72,7 @@ export type ValueFromLeafSchema<T extends TypedLeafNodeSchema> = T extends Typed
  * This utility normalizes both explicit TypedFieldSchema and implicit allowed types
  * (which are treated as required fields) into a consistent structure.
  *
- * @legacy
- * @alpha
+ * @alpha @legacy
  */
 export type NormalizeFieldSchema<T extends ImplicitFieldSchema> = T extends TypedFieldSchema<
 	infer TKind,
@@ -92,8 +90,7 @@ export type NormalizeFieldSchema<T extends ImplicitFieldSchema> = T extends Type
  * This handles single schemas, union schemas (arrays), and all node kinds
  * (leaf, object, map) to produce the corresponding TypeScript type.
  *
- * @legacy
- * @alpha
+ * @alpha @legacy
  */
 export type TypeFromImplicitAllowedTypes<T extends ImplicitAllowedTypes> =
 	T extends TypedLeafNodeSchema
@@ -117,8 +114,7 @@ export type TypeFromImplicitAllowedTypes<T extends ImplicitAllowedTypes> =
  * This handles both required and optional fields, adding `undefined` to the
  * type union for optional fields.
  *
- * @legacy
- * @alpha
+ * @alpha @legacy
  */
 export type TypeFromField<T extends ImplicitFieldSchema> = NormalizeFieldSchema<T> extends {
 	kind: infer K;
@@ -142,8 +138,7 @@ export type TypeFromField<T extends ImplicitFieldSchema> = NormalizeFieldSchema<
  * with `?` in the resulting type. The `-readonly` modifier ensures
  * properties are mutable, allowing assignment like `view.root.name = "Alice"`.
  *
- * @legacy
- * @alpha
+ * @alpha @legacy
  */
 export type ObjectFromFields<TFields extends ObjectSchemaFields> = {
 	-readonly [K in keyof TFields as NormalizeFieldSchema<
@@ -235,8 +230,7 @@ export type NodeFromSchema<T> = T extends TypedLeafNodeSchema
  * type ValueSchema = InferValueSchema<typeof UsersMap>;
  * // Results in: typeof UserSchema
  * ```
- * @legacy
- * @alpha
+ * @internal
  */
 export type InferValueSchema<T> = T extends TypedMapNodeSchema<string, infer TValueSchema>
 	? TValueSchema

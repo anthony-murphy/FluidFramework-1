@@ -25,8 +25,7 @@ import type { NodeFromSchema, InferMapValueType } from "../types/index.js";
  *
  * @typeParam TSchema - The root schema type
  *
- * @legacy
- * @alpha
+ * @alpha @legacy
  */
 export type RootFromSchema<TSchema extends RootSchema> = TSchema extends ObjectNodeSchema
 	? NodeFromSchema<TSchema>
@@ -126,8 +125,7 @@ export type SchematizedView<TSchema extends RootSchema> = SchematizedViewBase & 
 /**
  * Alias for backward compatibility.
  * @deprecated Use {@link SchematizedView} instead.
- * @legacy
- * @alpha
+ * @internal
  */
 export type SchemaView<TSchema extends RootSchema> = SchematizedView<TSchema>;
 
@@ -140,8 +138,7 @@ export type SchemaView<TSchema extends RootSchema> = SchematizedView<TSchema>;
  *
  * @typeParam TSchema - The object node schema type
  *
- * @legacy
- * @alpha
+ * @internal
  */
 export type ObjectView<TSchema extends ObjectNodeSchema> = SchematizedView<TSchema>;
 
@@ -154,7 +151,6 @@ export type ObjectView<TSchema extends ObjectNodeSchema> = SchematizedView<TSche
  *
  * @typeParam TSchema - The map node schema type
  *
- * @legacy
- * @alpha
+ * @internal
  */
 export type MapView<TSchema extends MapNodeSchema> = SchematizedView<TSchema>;

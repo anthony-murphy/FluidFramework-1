@@ -13,8 +13,7 @@ import type { NodeKind } from "./nodeKind.js";
  * These correspond to the primitive types that can be stored as leaf values
  * in a tree. The `handle` type represents Fluid handles for referencing
  * other Fluid objects.
- * @legacy
- * @alpha
+ * @alpha @legacy
  */
 export type LeafKind = "string" | "number" | "boolean" | "null" | "handle";
 
@@ -24,8 +23,7 @@ export type LeafKind = "string" | "number" | "boolean" | "null" | "handle";
  * @remarks
  * All node schemas must have a unique identifier and a kind that indicates
  * what type of node the schema describes.
- * @legacy
- * @alpha
+ * @alpha @legacy
  */
 export interface NodeSchema {
 	/**
@@ -50,8 +48,7 @@ export interface NodeSchema {
  * @remarks
  * Object nodes store a heterogeneous collection of children in named fields.
  * Each field has its own schema that defines what values it can contain.
- * @legacy
- * @alpha
+ * @alpha @legacy
  */
 export interface ObjectNodeSchema extends NodeSchema {
 	readonly kind: typeof NodeKind.Object;
@@ -72,8 +69,7 @@ export interface ObjectNodeSchema extends NodeSchema {
  * @remarks
  * Array nodes store children in an ordered sequence. All children must
  * conform to the allowed types specified in the schema.
- * @legacy
- * @alpha
+ * @internal
  */
 export interface ArrayNodeSchema extends NodeSchema {
 	readonly kind: typeof NodeKind.Array;
@@ -93,8 +89,7 @@ export interface ArrayNodeSchema extends NodeSchema {
  * @remarks
  * Map nodes store children under string keys. All values must conform
  * to the allowed types specified in the schema.
- * @legacy
- * @alpha
+ * @alpha @legacy
  */
 export interface MapNodeSchema extends NodeSchema {
 	readonly kind: typeof NodeKind.Map;
@@ -114,8 +109,7 @@ export interface MapNodeSchema extends NodeSchema {
  * @remarks
  * Leaf nodes are terminal nodes that store a single primitive value.
  * They cannot have children.
- * @legacy
- * @alpha
+ * @alpha @legacy
  */
 export interface LeafNodeSchema extends NodeSchema {
 	readonly kind: typeof NodeKind.Leaf;
@@ -132,8 +126,7 @@ export interface LeafNodeSchema extends NodeSchema {
  * @remarks
  * Fields define the structure of object nodes by specifying what values
  * can be stored under each property name.
- * @legacy
- * @alpha
+ * @alpha @legacy
  */
 export interface FieldSchema {
 	/**
@@ -157,8 +150,7 @@ export interface FieldSchema {
  * @remarks
  * This type is useful when you need to handle any kind of node schema
  * and want exhaustive type checking.
- * @legacy
- * @alpha
+ * @internal
  */
 export type AnyNodeSchema =
 	| ObjectNodeSchema
@@ -173,7 +165,6 @@ export type AnyNodeSchema =
  * Root schemas are the valid schema types that can be passed to
  * DDS view methods like `viewWith`. Currently, only object and map
  * schemas are supported as root schemas.
- * @legacy
- * @alpha
+ * @alpha @legacy
  */
 export type RootSchema = ObjectNodeSchema | MapNodeSchema;

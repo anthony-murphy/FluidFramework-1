@@ -18,7 +18,7 @@ import type { LeafKind } from "../core/index.js";
  * - **Deterministic**: Same schema always produces same encoding
  * - **Compact**: Reasonable size for `.attributes` blob
  * - **Extensible**: Version field for future changes
- * @alpha @legacy
+ * @internal
  */
 export interface EncodedSchema {
 	/**
@@ -44,7 +44,7 @@ export interface EncodedSchema {
 
 /**
  * Union of all encoded node schema types.
- * @alpha @legacy
+ * @internal
  */
 export type EncodedNodeSchema =
 	| EncodedObjectSchema
@@ -54,7 +54,7 @@ export type EncodedNodeSchema =
 
 /**
  * Encoded representation of an object node schema.
- * @alpha @legacy
+ * @internal
  */
 export interface EncodedObjectSchema {
 	/**
@@ -75,7 +75,7 @@ export interface EncodedObjectSchema {
 
 /**
  * Encoded representation of a map node schema.
- * @alpha @legacy
+ * @internal
  */
 export interface EncodedMapSchema {
 	/**
@@ -98,7 +98,7 @@ export interface EncodedMapSchema {
 
 /**
  * Encoded representation of an array node schema.
- * @alpha @legacy
+ * @internal
  */
 export interface EncodedArraySchema {
 	/**
@@ -121,7 +121,7 @@ export interface EncodedArraySchema {
 
 /**
  * Encoded representation of a leaf node schema.
- * @alpha @legacy
+ * @internal
  */
 export interface EncodedLeafSchema {
 	/**
@@ -142,7 +142,7 @@ export interface EncodedLeafSchema {
 
 /**
  * Encoded representation of a field schema.
- * @alpha @legacy
+ * @internal
  */
 export interface EncodedFieldSchema {
 	/**

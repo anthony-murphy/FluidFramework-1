@@ -37,8 +37,7 @@ import {
 /**
  * A single validation error.
  *
- * @legacy
- * @alpha
+ * @internal
  */
 export interface ValidationError {
 	/**

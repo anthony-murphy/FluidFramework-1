@@ -27,7 +27,7 @@ import { SchematizedMapView } from "./mapView.js";
 /**
  * Options for configuring a {@link SchematizedObjectView}.
  *
- * @alpha @legacy
+ * @internal
  */
 export type SchematizedObjectViewOptions = SchematizedViewOptions;
 
@@ -61,7 +61,7 @@ export type SchematizedObjectViewOptions = SchematizedViewOptions;
  * view.root.age = 31;
  * ```
  *
- * @alpha @legacy
+ * @internal
  */
 export class SchematizedObjectView<
 	TSchema extends ObjectNodeSchema,

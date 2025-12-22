@@ -9,8 +9,7 @@
  * @remarks
  * This is a simplified version of the Tree DDS FieldKind that excludes
  * Tree-specific field kinds like `Identifier`.
- * @legacy
- * @alpha
+ * @alpha @legacy
  */
 export const FieldKind = {
 	/**
@@ -34,7 +33,6 @@ export const FieldKind = {
  * @remarks
  * This is a simplified version of the Tree DDS FieldKind that excludes
  * Tree-specific field kinds like `Identifier`.
- * @legacy
- * @alpha
+ * @alpha @legacy
  */
 export type FieldKind = (typeof FieldKind)[keyof typeof FieldKind];

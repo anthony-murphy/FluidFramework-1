@@ -19,8 +19,7 @@ import type { ValidationError } from "../validation/index.js";
  * @remarks
  * Use {@link isSchemaValidationError} to check if an error is a schema validation error.
  *
- * @legacy
- * @alpha
+ * @internal
  */
 export interface ISchemaValidationError extends IErrorBase {
 	/**
@@ -51,8 +50,7 @@ export interface ISchemaValidationError extends IErrorBase {
  * }
  * ```
  *
- * @legacy
- * @alpha
+ * @internal
  */
 export function isSchemaValidationError(error: unknown): error is ISchemaValidationError {
 	return (

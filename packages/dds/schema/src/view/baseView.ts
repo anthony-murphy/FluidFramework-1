@@ -27,7 +27,7 @@ export const disposedViewErrorMessage = "Accessed a disposed SchemaView.";
 /**
  * Options for configuring schematized views.
  *
- * @alpha @legacy
+ * @internal
  */
 export interface SchematizedViewOptions {
 	/**
@@ -64,7 +64,7 @@ export interface SchematizedViewOptions {
  *
  * @typeParam TSchema - The node schema type
  *
- * @alpha @legacy
+ * @internal
  */
 export abstract class BaseSchematizedView<TSchema extends NodeSchema> implements IDisposable {
 	/**

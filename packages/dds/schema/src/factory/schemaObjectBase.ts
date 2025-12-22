@@ -82,7 +82,7 @@ export interface SchemaClassConstructor<TFields = unknown> extends SchemaClassSt
 
 /**
  * Check if a value is a schema class constructor.
- * @alpha @legacy
+ * @internal
  */
 export function isSchemaClassConstructor(value: unknown): value is SchemaClassConstructor {
 	return (
@@ -100,7 +100,7 @@ export function isSchemaClassConstructor(value: unknown): value is SchemaClassCo
  * @param info - The original field definitions with type information (for TypeScript inference)
  * @returns A class that can be subclassed for custom methods
  *
- * @alpha
+ * @internal
  */
 export function createSchemaClass<TFields>(
 	identifier: string,

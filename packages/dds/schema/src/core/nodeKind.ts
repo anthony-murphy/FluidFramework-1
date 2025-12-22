@@ -8,8 +8,7 @@
  *
  * @remarks
  * More kinds may be added over time, so do not assume this is an exhaustive set.
- * @legacy
- * @alpha
+ * @alpha @legacy
  */
 export const NodeKind = {
 	/**
@@ -40,7 +39,6 @@ export const NodeKind = {
  *
  * @remarks
  * More kinds may be added over time, so do not assume this is an exhaustive set.
- * @legacy
- * @alpha
+ * @alpha @legacy
  */
 export type NodeKind = (typeof NodeKind)[keyof typeof NodeKind];
