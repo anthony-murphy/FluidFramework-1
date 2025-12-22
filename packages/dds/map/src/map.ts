@@ -25,19 +25,8 @@ import type {
 	ISchemaPersistence,
 	EncodedSchema,
 	StorageResult,
-	RootSchema,
-	ObjectNodeSchema,
-	MapNodeSchema,
-	ObjectView,
-	MapView,
-	SchematizedViewBase,
 } from "@fluidframework/schema/internal";
-import {
-	SchematizedObjectView,
-	SchematizedMapView,
-	isObjectSchema,
-	isMapSchema,
-} from "@fluidframework/schema/internal";
+import { createViewWith } from "@fluidframework/schema/internal";
 import type { IFluidSerializer } from "@fluidframework/shared-object-base/internal";
 import { SharedObject } from "@fluidframework/shared-object-base/internal";
 
@@ -207,7 +196,7 @@ export class SharedMap extends SharedObject<ISharedMapEvents> {
 	/**
 	 * Creates a storage adapter for schema-based views.
 	 */
-	private createSchemaStorage(): ISchemaStorage {
+	public getSchemaStorage(): ISchemaStorage {
 		// eslint-disable-next-line @typescript-eslint/no-this-alias, unicorn/no-this-assignment
 		const map = this;
 		return {
@@ -233,7 +222,7 @@ export class SharedMap extends SharedObject<ISharedMapEvents> {
 	/**
 	 * Creates a persistence adapter for schema storage.
 	 */
-	private createSchemaPersistence(): ISchemaPersistence {
+	public getSchemaPersistence(): ISchemaPersistence {
 		// eslint-disable-next-line @typescript-eslint/no-this-alias, unicorn/no-this-assignment
 		const map = this;
 		return {
@@ -251,34 +240,22 @@ export class SharedMap extends SharedObject<ISharedMapEvents> {
 	}
 
 	/**
-	 * Get a typed, schematized view of this map using an object schema.
-	 * @param schema - The object schema to use for the view
-	 * @returns A view with typed property access
+	 * Get a typed, schematized view of this map.
+	 *
+	 * @remarks
+	 * This method is created by the schema library's `createViewWith` helper,
+	 * which handles all the complexity of overloads and type guards.
+	 * Consumers get full type inference based on the schema they pass in.
+	 *
+	 * @example
+	 * ```typescript
+	 * const sf = new SchemaFactory("myApp");
+	 * const UserSchema = sf.object("User", { name: sf.string });
+	 * const view = map.viewWith(UserSchema);
+	 * view.root.name = "Alice";  // Fully typed!
+	 * ```
 	 */
-	public viewWith<TSchema extends ObjectNodeSchema>(schema: TSchema): ObjectView<TSchema>;
-
-	/**
-	 * Get a typed, schematized view of this map using a map schema.
-	 * @param schema - The map schema to use for the view
-	 * @returns A view with typed Map access
-	 */
-	public viewWith<TSchema extends MapNodeSchema>(schema: TSchema): MapView<TSchema>;
-
-	/**
-	 * Implementation of viewWith that handles both schema types.
-	 */
-	public viewWith(schema: RootSchema): SchematizedViewBase {
-		const storage = this.createSchemaStorage();
-		const persistence = this.createSchemaPersistence();
-
-		if (isObjectSchema(schema)) {
-			return new SchematizedObjectView(storage, schema, persistence);
-		}
-		if (isMapSchema(schema)) {
-			return new SchematizedMapView(storage, schema, persistence);
-		}
-		throw new Error("Schema must be an ObjectNodeSchema or MapNodeSchema");
-	}
+	public viewWith = createViewWith(this);
 
 	/**
 	 * {@inheritDoc @fluidframework/shared-object-base#SharedObject.summarizeCore}

@@ -149,3 +149,7 @@ export type {
 	SchematizedObjectViewOptions,
 	SchematizedMapViewOptions,
 } from "./view/index.js";
+
+// DDS integration helpers
+export { createViewWith } from "./dds/index.js";
+export type { IViewableStorage } from "./dds/index.js";
