@@ -26,7 +26,7 @@ import type { EncodedSchema } from "../serialization/index.js";
  * - **value**: The field contains a primitive value or a JSON-serializable object
  * - **storage**: The field contains nested storage that can be navigated further
  *
- * @internal
+ * @alpha
  */
 export type StorageResult =
 	| {
@@ -83,7 +83,7 @@ export type StorageResult =
  * }
  * ```
  *
- * @internal
+ * @alpha
  */
 export interface ISchemaStorage {
 	/**
@@ -181,7 +181,7 @@ export interface ISchemaStorage {
  * }
  * ```
  *
- * @internal
+ * @alpha
  */
 export interface ISchemaPersistence {
 	/**

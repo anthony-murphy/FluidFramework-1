@@ -2,7 +2,6 @@
  * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
-
 /**
  * Type inference utilities for deriving TypeScript types from schema definitions.
  *
@@ -11,9 +10,7 @@
  * from schema definitions created with {@link SchemaFactory}. These utilities
  * enable compile-time type safety when working with schema-defined data structures.
  */
-
 import type { IFluidHandle } from "@fluidframework/core-interfaces";
-
 import type { FieldKind, NodeKind } from "../core/index.js";
 import type {
 	TypedLeafNodeSchema,
@@ -24,10 +21,8 @@ import type {
 	ImplicitFieldSchema,
 	ObjectSchemaFields,
 	SchemaClassConstructor,
+	SchemaFieldsBrand,
 } from "../factory/index.js";
-
-// #region Core Type Inference Utilities
-
 /**
  * Extracts the TypeScript value type from a typed leaf node schema.
  *
@@ -65,7 +60,6 @@ export type ValueFromLeafSchema<T extends TypedLeafNodeSchema> = T extends Typed
 				: T extends TypedLeafNodeSchema<string, "handle", infer TValue>
 					? TValue
 					: never;
-
 /**
  * Normalizes an implicit field schema to extract its field kind and allowed types.
  *
@@ -82,9 +76,14 @@ export type NormalizeFieldSchema<T extends ImplicitFieldSchema> = T extends Type
 	infer TKind,
 	infer TAllowedTypes
 >
-	? { kind: TKind; allowedTypes: TAllowedTypes }
-	: { kind: typeof FieldKind.Required; allowedTypes: T };
-
+	? {
+			kind: TKind;
+			allowedTypes: TAllowedTypes;
+		}
+	: {
+			kind: typeof FieldKind.Required;
+			allowedTypes: T;
+		};
 /**
  * Extracts the TypeScript type from an implicit allowed types specification.
  *
@@ -109,7 +108,6 @@ export type TypeFromImplicitAllowedTypes<T extends ImplicitAllowedTypes> =
 						? TypeFromImplicitAllowedTypes<U>
 						: never
 					: never;
-
 /**
  * Extracts the TypeScript type for a field based on its schema.
  *
@@ -132,7 +130,6 @@ export type TypeFromField<T extends ImplicitFieldSchema> = NormalizeFieldSchema<
 			: TypeFromImplicitAllowedTypes<A>
 		: never
 	: never;
-
 /**
  * Constructs an object type from a record of field schemas.
  *
@@ -160,11 +157,6 @@ export type ObjectFromFields<TFields extends ObjectSchemaFields> = {
 		? K
 		: never]?: TypeFromField<TFields[K]>;
 };
-
-// #endregion
-
-// #region Primary Type Inference
-
 /**
  * Infers the TypeScript type that a node of the given schema would have.
  *
@@ -206,17 +198,13 @@ export type NodeFromSchema<T> = T extends TypedLeafNodeSchema
 			? TypeFromImplicitAllowedTypes<TValueSchema>
 			: T extends SchemaClassConstructor<infer TFields extends ObjectSchemaFields>
 				? ObjectFromFields<TFields>
-				: // Extract from the info property (for class inheritance support)
-					T extends { readonly info: infer TFields }
+				: T extends new (
+							...args: never[]
+						) => SchemaFieldsBrand<infer TFields>
 					? TFields extends ObjectSchemaFields
 						? ObjectFromFields<TFields>
 						: never
 					: never;
-
-// #endregion
-
-// #region Field and Value Schema Extraction
-
 /**
  * Extracts the fields type from a {@link TypedObjectNodeSchema}.
  *
@@ -245,7 +233,6 @@ export type NodeFromSchema<T> = T extends TypedLeafNodeSchema
 export type InferFields<T> = T extends TypedObjectNodeSchema<string, infer TFields>
 	? TFields
 	: never;
-
 /**
  * Extracts the value schema from a {@link TypedMapNodeSchema}.
  *
@@ -272,7 +259,6 @@ export type InferFields<T> = T extends TypedObjectNodeSchema<string, infer TFiel
 export type InferValueSchema<T> = T extends TypedMapNodeSchema<string, infer TValueSchema>
 	? TValueSchema
 	: never;
-
 /**
  * Extracts the TypeScript value type from a {@link TypedMapNodeSchema}.
  *
@@ -305,7 +291,6 @@ export type InferMapValueType<T> = T extends TypedMapNodeSchema<string, infer TV
 		? TypeFromImplicitAllowedTypes<TValueSchema>
 		: never
 	: never;
-
 /**
  * Extracts the allowed types from a {@link TypedFieldSchema}.
  *
@@ -331,7 +316,6 @@ export type InferMapValueType<T> = T extends TypedMapNodeSchema<string, infer TV
 export type InferAllowedTypes<T> = T extends TypedFieldSchema<FieldKind, infer TAllowedTypes>
 	? TAllowedTypes
 	: never;
-
 /**
  * Extracts the field kind from a {@link TypedFieldSchema}.
  *
@@ -356,11 +340,6 @@ export type InferAllowedTypes<T> = T extends TypedFieldSchema<FieldKind, infer T
 export type InferFieldKind<T> = T extends TypedFieldSchema<infer TKind>
 	? TKind
 	: typeof FieldKind.Required;
-
-// #endregion
-
-// #region Immutability Utilities
-
 /**
  * Makes all properties of a type recursively readonly.
  *
@@ -404,9 +383,10 @@ export type DeepReadonly<T> = T extends IFluidHandle
 			: T extends readonly (infer U)[]
 				? readonly DeepReadonly<U>[]
 				: T extends object
-					? { readonly [P in keyof T]: DeepReadonly<T[P]> }
+					? {
+							readonly [P in keyof T]: DeepReadonly<T[P]>;
+						}
 					: T;
-
 /**
  * Infers a deeply readonly TypeScript type from a schema.
  *
@@ -442,11 +422,6 @@ export type DeepReadonly<T> = T extends IFluidHandle
  * @alpha
  */
 export type ReadonlyNodeFromSchema<T> = DeepReadonly<NodeFromSchema<T>>;
-
-// #endregion
-
-// #region Schema Type Guards (Type-Level)
-
 /**
  * Checks at the type level if a schema is a leaf schema.
  *
@@ -459,7 +434,6 @@ export type ReadonlyNodeFromSchema<T> = DeepReadonly<NodeFromSchema<T>>;
  * @alpha
  */
 export type IsLeafSchema<T> = T extends TypedLeafNodeSchema ? true : false;
-
 /**
  * Checks at the type level if a schema is an object schema.
  *
@@ -472,7 +446,6 @@ export type IsLeafSchema<T> = T extends TypedLeafNodeSchema ? true : false;
  * @alpha
  */
 export type IsObjectSchema<T> = T extends TypedObjectNodeSchema ? true : false;
-
 /**
  * Checks at the type level if a schema is a map schema.
  *
@@ -485,7 +458,6 @@ export type IsObjectSchema<T> = T extends TypedObjectNodeSchema ? true : false;
  * @alpha
  */
 export type IsMapSchema<T> = T extends TypedMapNodeSchema ? true : false;
-
 /**
  * Gets the node kind from a schema type.
  *
@@ -503,11 +475,6 @@ export type SchemaKind<T> = T extends TypedLeafNodeSchema
 		: T extends TypedMapNodeSchema
 			? typeof NodeKind.Map
 			: never;
-
-// #endregion
-
-// #region Union Type Utilities
-
 /**
  * Creates a union type from an array of schemas.
  *
@@ -534,5 +501,3 @@ export type UnionFromSchemas<T extends readonly unknown[]> = T extends readonly 
 		? NodeFromSchema<U>
 		: never
 	: never;
-
-// #endregion

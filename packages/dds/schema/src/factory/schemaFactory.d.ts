@@ -2,41 +2,18 @@
  * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
-
 /**
  * Schema factory for creating schema definitions.
  *
  * This module provides a factory class for creating type-safe schema definitions
  * that can be used across Fluid Framework DDSes.
  */
-
 import type { IFluidHandle } from "@fluidframework/core-interfaces";
-
-import {
-	FieldKind,
-	NodeKind,
-	type FieldSchema,
-	type MapNodeSchema,
-	type ObjectNodeSchema,
-	type LeafKind,
-} from "../core/index.js";
-
-import {
-	type TypedLeafNodeSchema,
-	stringSchema,
-	numberSchema,
-	booleanSchema,
-	nullSchema,
-	handleSchema,
-} from "./leafSchemas.js";
-
-import { createSchemaClass, type SchemaClassConstructor } from "./schemaObjectBase.js";
-
-// Re-export TypedLeafNodeSchema from leafSchemas
+import type { FieldSchema, MapNodeSchema, ObjectNodeSchema } from "../core/index.js";
+import type { FieldKind, NodeKind } from "../core/index.js";
+import type { TypedLeafNodeSchema } from "./leafSchemas.js";
+import type { SchemaClassConstructor } from "./schemaObjectBase.js";
 export type { TypedLeafNodeSchema } from "./leafSchemas.js";
-
-// #region Scoped Schema Name
-
 /**
  * The name of a schema produced by {@link SchemaFactory}, including its scope prefix.
  *
@@ -49,11 +26,6 @@ export type ScopedSchemaName<
 	TScope extends string,
 	TName extends string | number,
 > = `${TScope}.${TName}`;
-
-// #endregion
-
-// #region Field Props
-
 /**
  * Properties that can be associated with a field in a schema.
  *
@@ -90,11 +62,6 @@ export interface FieldProps {
 		custom?: unknown;
 	};
 }
-
-// #endregion
-
-// #region Typed Schema Interfaces
-
 /**
  * A typed field schema that preserves the allowed types and field kind.
  *
@@ -127,7 +94,6 @@ export interface TypedFieldSchema<
 	 */
 	readonly info: TAllowedTypes;
 }
-
 /**
  * A typed object node schema that preserves the field structure.
  *
@@ -158,7 +124,6 @@ export interface TypedObjectNodeSchema<
 	 */
 	readonly info: TFields;
 }
-
 /**
  * A typed map node schema that preserves the value schema type.
  *
@@ -189,11 +154,6 @@ export interface TypedMapNodeSchema<
 	 */
 	readonly info: TValueSchema;
 }
-
-// #endregion
-
-// #region Implicit Types
-
 /**
  * Types that can be implicitly used as allowed types in a field.
  *
@@ -208,7 +168,6 @@ export type ImplicitAllowedTypes =
 	| TypedObjectNodeSchema
 	| TypedMapNodeSchema
 	| readonly (TypedLeafNodeSchema | TypedObjectNodeSchema | TypedMapNodeSchema)[];
-
 /**
  * Types that can be implicitly used as a field schema.
  *
@@ -219,201 +178,12 @@ export type ImplicitAllowedTypes =
  * @alpha
  */
 export type ImplicitFieldSchema = TypedFieldSchema | ImplicitAllowedTypes;
-
 /**
  * A record of field names to their implicit field schemas.
  * @legacy
  * @alpha
  */
 export type ObjectSchemaFields = Record<string, ImplicitFieldSchema>;
-
-// #endregion
-
-// #region Type Inference Utilities
-
-/**
- * Extracts the TypeScript value type from a typed leaf node schema.
- */
-type ValueFromLeafSchema<T extends TypedLeafNodeSchema> = T extends TypedLeafNodeSchema<
-	string,
-	LeafKind,
-	infer TValue
->
-	? TValue
-	: never;
-
-/**
- * Extracts the TypeScript type from an implicit allowed types specification.
- */
-type TypeFromImplicitAllowedTypes<T extends ImplicitAllowedTypes> =
-	T extends TypedLeafNodeSchema
-		? ValueFromLeafSchema<T>
-		: T extends TypedObjectNodeSchema<string, infer TFields>
-			? ObjectFromFields<TFields>
-			: T extends TypedMapNodeSchema<string, infer TValueSchema>
-				? Map<string, TypeFromImplicitAllowedTypes<TValueSchema>>
-				: T extends readonly (infer U)[]
-					? U extends TypedLeafNodeSchema | TypedObjectNodeSchema | TypedMapNodeSchema
-						? TypeFromImplicitAllowedTypes<U>
-						: never
-					: never;
-
-/**
- * Normalizes an implicit field schema to extract its field kind and allowed types.
- */
-type NormalizeFieldSchema<T extends ImplicitFieldSchema> = T extends TypedFieldSchema<
-	infer TKind,
-	infer TAllowedTypes
->
-	? { kind: TKind; allowedTypes: TAllowedTypes }
-	: { kind: typeof FieldKind.Required; allowedTypes: T };
-
-/**
- * Extracts the TypeScript type for a field based on its schema.
- */
-type TypeFromField<T extends ImplicitFieldSchema> = NormalizeFieldSchema<T> extends {
-	kind: infer K;
-	allowedTypes: infer A;
-}
-	? A extends ImplicitAllowedTypes
-		? K extends typeof FieldKind.Optional
-			? TypeFromImplicitAllowedTypes<A> | undefined
-			: TypeFromImplicitAllowedTypes<A>
-		: never
-	: never;
-
-/**
- * Constructs an object type from a record of field schemas.
- *
- * @remarks
- * This type utility separates required and optional fields to produce
- * a properly typed object interface.
- */
-type ObjectFromFields<TFields extends ObjectSchemaFields> = {
-	[K in keyof TFields as NormalizeFieldSchema<
-		TFields[K]
-	>["kind"] extends typeof FieldKind.Required
-		? K
-		: never]: TypeFromField<TFields[K]>;
-} & {
-	[K in keyof TFields as NormalizeFieldSchema<
-		TFields[K]
-	>["kind"] extends typeof FieldKind.Optional
-		? K
-		: never]?: TypeFromField<TFields[K]>;
-};
-
-// #endregion
-
-// #region Helper Functions
-
-/**
- * Brands a MapNodeSchema with type information for value type inference.
- *
- * @param schema - The runtime schema object (must have identifier, kind, and allowedTypes)
- * @param info - The type information to associate with this schema
- * @returns The schema with info property added
- */
-function brandMapSchema<TIdentifier extends string, TValueSchema extends ImplicitAllowedTypes>(
-	schema: MapNodeSchema & { readonly identifier: TIdentifier },
-	info: TValueSchema,
-): TypedMapNodeSchema<TIdentifier, TValueSchema> {
-	// Add info property for type inference
-	Object.defineProperty(schema, "info", {
-		value: info,
-		writable: false,
-		enumerable: true,
-		configurable: false,
-	});
-	return schema as TypedMapNodeSchema<TIdentifier, TValueSchema>;
-}
-
-/**
- * Brands a FieldSchema with type information for allowed types inference.
- *
- * @param schema - The runtime field schema object (must have kind and allowedTypes)
- * @param info - The type information to associate with this field
- * @returns The field schema with info property added
- */
-function brandFieldSchema<TKind extends FieldKind, TAllowedTypes extends ImplicitAllowedTypes>(
-	schema: FieldSchema & { readonly kind: TKind },
-	info: TAllowedTypes,
-): TypedFieldSchema<TKind, TAllowedTypes> {
-	// Add info property for type inference
-	Object.defineProperty(schema, "info", {
-		value: info,
-		writable: false,
-		enumerable: true,
-		configurable: false,
-	});
-	return schema as TypedFieldSchema<TKind, TAllowedTypes>;
-}
-
-/**
- * Extracts the schema identifier from an implicit allowed type.
- */
-function getSchemaIdentifier(
-	schema: TypedLeafNodeSchema | TypedObjectNodeSchema | TypedMapNodeSchema,
-): string {
-	return schema.identifier;
-}
-
-/**
- * Normalizes allowed types to an array of schema identifiers.
- */
-function normalizeAllowedTypes(allowedTypes: ImplicitAllowedTypes): readonly string[] {
-	if (Array.isArray(allowedTypes)) {
-		return (
-			allowedTypes as readonly (
-				| TypedLeafNodeSchema
-				| TypedObjectNodeSchema
-				| TypedMapNodeSchema
-			)[]
-		).map((schema) => getSchemaIdentifier(schema));
-	}
-	return [
-		getSchemaIdentifier(
-			allowedTypes as TypedLeafNodeSchema | TypedObjectNodeSchema | TypedMapNodeSchema,
-		),
-	];
-}
-
-/**
- * Normalizes an implicit field schema to a FieldSchema object.
- */
-function normalizeFieldSchema(fieldSchema: ImplicitFieldSchema): FieldSchema {
-	if (isTypedFieldSchema(fieldSchema)) {
-		// For TypedFieldSchema, the allowedTypes are already normalized at runtime
-		// (set by the optional() and required() methods)
-		return {
-			kind: fieldSchema.kind,
-			allowedTypes: fieldSchema.allowedTypes,
-		};
-	}
-	// Treat as required field with the given allowed types
-	return {
-		kind: FieldKind.Required,
-		allowedTypes: normalizeAllowedTypes(fieldSchema),
-	};
-}
-
-/**
- * Type guard to check if a value is a TypedFieldSchema.
- */
-function isTypedFieldSchema(value: ImplicitFieldSchema): value is TypedFieldSchema {
-	return (
-		typeof value === "object" &&
-		value !== null &&
-		"kind" in value &&
-		(value.kind === FieldKind.Required || value.kind === FieldKind.Optional) &&
-		"allowedTypes" in value
-	);
-}
-
-// #endregion
-
-// #region SchemaFactory
-
 /**
  * Factory class for creating type-safe schema definitions.
  *
@@ -454,7 +224,21 @@ function isTypedFieldSchema(value: ImplicitFieldSchema): value is TypedFieldSche
  * @legacy
  * @alpha
  */
-export class SchemaFactory<TScope extends string = string> {
+export declare class SchemaFactory<TScope extends string = string> {
+	/**
+	 * Prefix appended to the identifiers of all schemas produced by this factory.
+	 *
+	 * @remarks
+	 * Generally each independently developed library should get its own unique scope.
+	 * The scope and name are joined with a period to form the schema identifier.
+	 * Following this pattern allows a single application to depend on multiple libraries
+	 * which define their own schema, and use them together without risk of collisions.
+	 *
+	 * To avoid collisions between the scopes of libraries, it is recommended that
+	 * libraries use {@link https://en.wikipedia.org/wiki/Reverse_domain_name_notation | reverse domain name notation}
+	 * or a UUIDv4 for their scope.
+	 */
+	public readonly scope: TScope;
 	/**
 	 * Creates a new SchemaFactory instance.
 	 *
@@ -481,9 +265,8 @@ export class SchemaFactory<TScope extends string = string> {
 		 * libraries use {@link https://en.wikipedia.org/wiki/Reverse_domain_name_notation | reverse domain name notation}
 		 * or a UUIDv4 for their scope.
 		 */
-		public readonly scope: TScope,
-	) {}
-
+		scope: TScope,
+	);
 	/**
 	 * Schema for string leaf values.
 	 *
@@ -491,14 +274,7 @@ export class SchemaFactory<TScope extends string = string> {
 	 * Strings containing unpaired UTF-16 surrogate pair code units may not be
 	 * handled correctly due to UTF-8 encoding requirements.
 	 */
-	public get string(): TypedLeafNodeSchema<
-		"com.fluidframework.leaf.string",
-		"string",
-		string
-	> {
-		return stringSchema;
-	}
-
+	public get string(): TypedLeafNodeSchema<"com.fluidframework.leaf.string", "string", string>;
 	/**
 	 * Schema for number leaf values.
 	 *
@@ -506,14 +282,7 @@ export class SchemaFactory<TScope extends string = string> {
 	 * Numbers are stored as double-precision 64-bit IEEE 754 values.
 	 * NaN and infinities are converted to null, and -0 may be converted to 0.
 	 */
-	public get number(): TypedLeafNodeSchema<
-		"com.fluidframework.leaf.number",
-		"number",
-		number
-	> {
-		return numberSchema;
-	}
-
+	public get number(): TypedLeafNodeSchema<"com.fluidframework.leaf.number", "number", number>;
 	/**
 	 * Schema for boolean leaf values.
 	 */
@@ -521,10 +290,7 @@ export class SchemaFactory<TScope extends string = string> {
 		"com.fluidframework.leaf.boolean",
 		"boolean",
 		boolean
-	> {
-		return booleanSchema;
-	}
-
+	>;
 	/**
 	 * Schema for null leaf values.
 	 *
@@ -532,11 +298,8 @@ export class SchemaFactory<TScope extends string = string> {
 	 * Consider using optional fields or a named empty object instead of null
 	 * when possible, unless interoperating with existing data that uses null.
 	 */
-	// eslint-disable-next-line @rushstack/no-new-null
-	public get null(): TypedLeafNodeSchema<"com.fluidframework.leaf.null", "null", null> {
-		return nullSchema;
-	}
-
+	// eslint-disable-next-line @rushstack/no-new-null -- This getter returns the null type schema
+	public get null(): TypedLeafNodeSchema<"com.fluidframework.leaf.null", "null", null>;
 	/**
 	 * Schema for Fluid handle leaf values.
 	 *
@@ -548,10 +311,7 @@ export class SchemaFactory<TScope extends string = string> {
 		"com.fluidframework.leaf.handle",
 		"handle",
 		IFluidHandle
-	> {
-		return handleSchema;
-	}
-
+	>;
 	/**
 	 * Creates an object node schema with the given name and fields.
 	 *
@@ -586,27 +346,7 @@ export class SchemaFactory<TScope extends string = string> {
 		name: TName,
 		fields: TFields,
 	): TypedObjectNodeSchema<ScopedSchemaName<TScope, TName>, TFields> &
-		SchemaClassConstructor<TFields> {
-		const identifier = `${this.scope}.${name}`;
-
-		// Convert fields to the runtime FieldSchema format
-		const normalizedFields: Record<string, FieldSchema> = {};
-		for (const [fieldName, fieldSchema] of Object.entries(fields)) {
-			normalizedFields[fieldName] = normalizeFieldSchema(fieldSchema);
-		}
-
-		// Create a class with the schema as static properties
-		// Pass the original fields for type inference
-		const SchemaClass = createSchemaClass(
-			identifier as ScopedSchemaName<TScope, TName>,
-			normalizedFields,
-			fields,
-		);
-
-		return SchemaClass as TypedObjectNodeSchema<ScopedSchemaName<TScope, TName>, TFields> &
-			SchemaClassConstructor<TFields>;
-	}
-
+		SchemaClassConstructor<TFields>;
 	/**
 	 * Creates a map node schema with the given name and value schema.
 	 *
@@ -633,19 +373,7 @@ export class SchemaFactory<TScope extends string = string> {
 	public map<const TName extends string, const TValueSchema extends ImplicitAllowedTypes>(
 		name: TName,
 		valueSchema: TValueSchema,
-	): TypedMapNodeSchema<ScopedSchemaName<TScope, TName>, TValueSchema> {
-		const identifier = `${this.scope}.${name}`;
-
-		return brandMapSchema<ScopedSchemaName<TScope, TName>, TValueSchema>(
-			{
-				identifier: identifier as ScopedSchemaName<TScope, TName>,
-				kind: NodeKind.Map,
-				allowedTypes: normalizeAllowedTypes(valueSchema),
-			},
-			valueSchema,
-		);
-	}
-
+	): TypedMapNodeSchema<ScopedSchemaName<TScope, TName>, TValueSchema>;
 	/**
 	 * Creates an optional field schema.
 	 *
@@ -675,17 +403,7 @@ export class SchemaFactory<TScope extends string = string> {
 	public optional<const T extends ImplicitAllowedTypes>(
 		allowedTypes: T,
 		props?: FieldProps,
-	): TypedFieldSchema<typeof FieldKind.Optional, T> {
-		return brandFieldSchema<typeof FieldKind.Optional, T>(
-			{
-				kind: FieldKind.Optional,
-				allowedTypes: normalizeAllowedTypes(allowedTypes),
-				...(props !== undefined && { props }),
-			},
-			allowedTypes,
-		);
-	}
-
+	): TypedFieldSchema<typeof FieldKind.Optional, T>;
 	/**
 	 * Creates a required field schema.
 	 *
@@ -717,16 +435,5 @@ export class SchemaFactory<TScope extends string = string> {
 	public required<const T extends ImplicitAllowedTypes>(
 		allowedTypes: T,
 		props?: FieldProps,
-	): TypedFieldSchema<typeof FieldKind.Required, T> {
-		return brandFieldSchema<typeof FieldKind.Required, T>(
-			{
-				kind: FieldKind.Required,
-				allowedTypes: normalizeAllowedTypes(allowedTypes),
-				...(props !== undefined && { props }),
-			},
-			allowedTypes,
-		);
-	}
+	): TypedFieldSchema<typeof FieldKind.Required, T>;
 }
-
-// #endregion

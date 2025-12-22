@@ -31,7 +31,7 @@ import { SchemaFactory, createViewWith } from "../../index.js";
  * Helper to "use" a value so TypeScript doesn't complain about unused variables.
  * This ensures the type is actually checked without needing runtime code.
  */
-declare function use<T>(thing: T): void;
+function use<T>(_thing: T): void {}
 
 // =============================================================================
 // Schema definitions - how users define their data models
@@ -363,21 +363,16 @@ export function testCreateViewWithForDDSAuthors(mockStorage: IViewableStorage): 
 	objView.root.name satisfies string;
 	objView.root.email satisfies string;
 
-	// For map schemas, map operations should be typed correctly
+	// For map schemas, map operations are correctly typed
 	const mapView = viewWith(SettingsMapSchema);
-
-	// BUG: These should work but don't - SchematizedMapView type parameter issue
-	// The map operations should return string, not the schema type
-	// @ts-expect-error - BUG: mapView.root.get should return string | undefined
 	mapView.root.get("theme") satisfies string | undefined;
-	// @ts-expect-error - BUG: mapView.root.set should accept string value
 	mapView.root.set("theme", "dark");
 
-	// Map of objects should also work
+	// Map of objects also works
 	const usersMapView = viewWith(UsersMapSchema);
 	const user = usersMapView.root.get("user-1");
 	if (user !== undefined) {
-		// @ts-expect-error - BUG: user should have name property typed as string
+		// user is correctly typed as { name: string, email: string, age: number }
 		use(user.name satisfies string);
 	}
 }

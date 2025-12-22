@@ -2,22 +2,19 @@
  * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
-
 /**
  * Base class for schema-backed object nodes.
  *
  * This module provides the base class that all object schemas extend,
  * enabling custom methods and getters on schema classes.
  */
-
-import { NodeKind, type FieldSchema } from "../core/index.js";
-
+import type { FieldSchema } from "../core/index.js";
+import type { NodeKind } from "../core/index.js";
 /**
  * Symbol used to identify schema classes.
  * @alpha
  */
-export const isSchemaClass = Symbol("isSchemaClass");
-
+export declare const isSchemaClass: unique symbol;
 /**
  * Static properties that all schema classes have.
  * @alpha
@@ -27,23 +24,19 @@ export interface SchemaClassStatics {
 	 * The unique identifier for this schema.
 	 */
 	readonly identifier: string;
-
 	/**
 	 * The kind of node this schema represents.
 	 */
 	readonly kind: typeof NodeKind.Object;
-
 	/**
 	 * The field definitions for this schema.
 	 */
 	readonly fields: Readonly<Record<string, FieldSchema>>;
-
 	/**
 	 * Symbol to identify this as a schema class.
 	 */
 	readonly [isSchemaClass]: true;
 }
-
 /**
  * Phantom type brand for schema field information.
  * This is used to carry type information through class inheritance.
@@ -52,7 +45,6 @@ export interface SchemaClassStatics {
 export interface SchemaFieldsBrand<TFields> {
 	readonly __schemaFields?: TFields;
 }
-
 /**
  * A constructor type for schema classes.
  *
@@ -67,31 +59,23 @@ export interface SchemaClassConstructor<TFields = unknown> extends SchemaClassSt
 	 * This property stores the original field definitions with their type information.
 	 */
 	readonly info: TFields;
-
 	/**
 	 * Schema classes have a protected constructor - instances are created by the view.
 	 * The return type includes a phantom brand that carries field type information.
 	 */
 	new (): object & SchemaFieldsBrand<TFields>;
-
 	/**
 	 * The prototype of the schema class.
 	 */
 	readonly prototype: object;
 }
-
 /**
  * Check if a value is a schema class constructor.
  * @alpha
  */
-export function isSchemaClassConstructor(value: unknown): value is SchemaClassConstructor {
-	return (
-		typeof value === "function" &&
-		isSchemaClass in value &&
-		(value as unknown as SchemaClassStatics)[isSchemaClass] === true
-	);
-}
-
+export declare function isSchemaClassConstructor(
+	value: unknown,
+): value is SchemaClassConstructor;
 /**
  * Creates a schema class with the given identifier and fields.
  *
@@ -102,55 +86,10 @@ export function isSchemaClassConstructor(value: unknown): value is SchemaClassCo
  *
  * @alpha
  */
-export function createSchemaClass<TFields>(
+export declare function createSchemaClass<TFields>(
 	identifier: string,
 	fields: Readonly<Record<string, FieldSchema>>,
 	info: TFields,
-): SchemaClassConstructor & { readonly info: TFields } {
-	// Create the class dynamically using an anonymous class.
-	// This avoids eslint's no-extraneous-class error since the class has
-	// static properties added after creation.
-	// eslint-disable-next-line @typescript-eslint/no-extraneous-class
-	const SchemaClass = class {} as unknown as SchemaClassConstructor & {
-		readonly info: TFields;
-	};
-
-	// Define static properties
-	Object.defineProperties(SchemaClass, {
-		identifier: {
-			value: identifier,
-			writable: false,
-			enumerable: true,
-			configurable: false,
-		},
-		kind: {
-			value: NodeKind.Object,
-			writable: false,
-			enumerable: true,
-			configurable: false,
-		},
-		fields: {
-			value: fields,
-			writable: false,
-			enumerable: true,
-			configurable: false,
-		},
-		info: {
-			value: info,
-			writable: false,
-			enumerable: true,
-			configurable: false,
-		},
-		[isSchemaClass]: {
-			value: true,
-			writable: false,
-			enumerable: false,
-			configurable: false,
-		},
-	});
-
-	// Freeze the fields object
-	Object.freeze(fields);
-
-	return SchemaClass;
-}
+): SchemaClassConstructor & {
+	readonly info: TFields;
+};

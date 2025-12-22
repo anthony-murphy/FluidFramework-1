@@ -11,9 +11,10 @@
  * view class instantiation, etc.
  */
 
-import type { ObjectNodeSchema, MapNodeSchema } from "../core/index.js";
 import { isObjectSchema, isMapSchema } from "../core/index.js";
 import type { ISchemaStorage, ISchemaPersistence } from "../storage/index.js";
+import type { TypedObjectNodeSchema, TypedMapNodeSchema } from "../factory/index.js";
+import type { InferMapValueType } from "../types/index.js";
 import { SchematizedObjectView, SchematizedMapView } from "../view/index.js";
 
 /**
@@ -23,7 +24,7 @@ import { SchematizedObjectView, SchematizedMapView } from "../view/index.js";
  * DDSes implement this interface to provide storage and persistence for schema views.
  * This is the only interface DDS authors need to implement.
  *
- * @public
+ * @alpha
  */
 export interface IViewableStorage {
 	/**
@@ -69,22 +70,15 @@ export interface IViewableStorage {
  * view.root.name = "Alice";  // Fully typed!
  * ```
  *
- * @public
+ * @alpha
  */
 export function createViewWith(storage: IViewableStorage): {
-	<TSchema extends ObjectNodeSchema>(schema: TSchema): SchematizedObjectView<TSchema>;
-	<TSchema extends MapNodeSchema>(schema: TSchema): SchematizedMapView<TSchema>;
+	<TSchema extends TypedObjectNodeSchema>(schema: TSchema): SchematizedObjectView<TSchema>;
+	<TSchema extends TypedMapNodeSchema>(
+		schema: TSchema,
+	): SchematizedMapView<InferMapValueType<TSchema>>;
 } {
-	// Use function declaration with overloads for proper typing
-	function viewWith<TSchema extends ObjectNodeSchema>(
-		schema: TSchema,
-	): SchematizedObjectView<TSchema>;
-	function viewWith<TSchema extends MapNodeSchema>(
-		schema: TSchema,
-	): SchematizedMapView<TSchema>;
-	function viewWith(
-		schema: ObjectNodeSchema | MapNodeSchema,
-	): SchematizedObjectView<ObjectNodeSchema> | SchematizedMapView<MapNodeSchema> {
+	return ((schema: TypedObjectNodeSchema | TypedMapNodeSchema) => {
 		const schemaStorage = storage.getSchemaStorage();
 		const persistence = storage.getSchemaPersistence();
 
@@ -95,7 +89,5 @@ export function createViewWith(storage: IViewableStorage): {
 			return new SchematizedMapView(schemaStorage, schema, persistence);
 		}
 		throw new Error("Schema must be an ObjectNodeSchema or MapNodeSchema");
-	}
-
-	return viewWith;
+	}) as ReturnType<typeof createViewWith>;
 }

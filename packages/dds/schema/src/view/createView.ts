@@ -14,6 +14,7 @@
 
 import type { RootSchema, ObjectNodeSchema, MapNodeSchema } from "../core/index.js";
 import { isObjectSchema, isMapSchema } from "../core/index.js";
+import type { TypedObjectNodeSchema, TypedMapNodeSchema } from "../factory/index.js";
 import type { ISchemaStorage, ISchemaPersistence } from "../storage/index.js";
 import type { NodeFromSchema } from "../types/index.js";
 import type { SchemaCompatibilityStatus } from "../serialization/index.js";
@@ -194,7 +195,7 @@ export function createSchematizedObjectView<TSchema extends ObjectNodeSchema>(
  *
  * @internal
  */
-export function createSchematizedMapView<TSchema extends MapNodeSchema>(
+export function createSchematizedMapView<TSchema extends TypedMapNodeSchema>(
 	storage: ISchemaStorage,
 	schemaOrConfig: TSchema | SchemaViewConfiguration<TSchema>,
 	persistence?: ISchemaPersistence,
@@ -250,18 +251,28 @@ export function createSchematizedView<TSchema extends RootSchema>(
 	const config = normalizeViewConfig(schemaOrConfig);
 
 	if (isObjectSchema(config.schema)) {
-		const view = new SchematizedObjectView(storage, config.schema, persistence, {
-			enableSchemaValidation: config.enableSchemaValidation,
-			ignoreStoredSchema: config.ignoreStoredSchema,
-		});
+		const view = new SchematizedObjectView(
+			storage,
+			config.schema as TypedObjectNodeSchema,
+			persistence,
+			{
+				enableSchemaValidation: config.enableSchemaValidation,
+				ignoreStoredSchema: config.ignoreStoredSchema,
+			},
+		);
 		return view as unknown as SchematizedView<TSchema>;
 	}
 
 	if (isMapSchema(config.schema)) {
-		const view = new SchematizedMapView(storage, config.schema, persistence, {
-			enableSchemaValidation: config.enableSchemaValidation,
-			ignoreStoredSchema: config.ignoreStoredSchema,
-		});
+		const view = new SchematizedMapView(
+			storage,
+			config.schema as TypedMapNodeSchema,
+			persistence,
+			{
+				enableSchemaValidation: config.enableSchemaValidation,
+				ignoreStoredSchema: config.ignoreStoredSchema,
+			},
+		);
 		return view as unknown as SchematizedView<TSchema>;
 	}
 

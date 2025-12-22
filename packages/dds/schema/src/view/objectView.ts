@@ -11,7 +11,11 @@ import { UsageError } from "@fluidframework/telemetry-utils/internal";
 
 import type { NodeSchema, ObjectNodeSchema, FieldSchema } from "../core/index.js";
 import { FieldKind, isObjectSchema, isMapSchema } from "../core/index.js";
-import { isSchemaClassConstructor } from "../factory/index.js";
+import {
+	isSchemaClassConstructor,
+	type TypedObjectNodeSchema,
+	type TypedMapNodeSchema,
+} from "../factory/index.js";
 import type { ISchemaStorage, ISchemaPersistence, StorageResult } from "../storage/index.js";
 import type { NodeFromSchema } from "../types/index.js";
 import { validateData } from "../validation/index.js";
@@ -23,7 +27,7 @@ import { SchematizedMapView } from "./mapView.js";
 /**
  * Options for configuring a {@link SchematizedObjectView}.
  *
- * @internal
+ * @alpha
  */
 export type SchematizedObjectViewOptions = SchematizedViewOptions;
 
@@ -57,7 +61,7 @@ export type SchematizedObjectViewOptions = SchematizedViewOptions;
  * view.root.age = 31;
  * ```
  *
- * @internal
+ * @alpha
  */
 export class SchematizedObjectView<
 	TSchema extends ObjectNodeSchema,
@@ -248,9 +252,12 @@ export class SchematizedObjectView<
 			case "storage": {
 				// Nested storage - wrap in appropriate view
 				if (isObjectSchema(nodeSchema)) {
-					return new SchematizedObjectView(result.storage, nodeSchema);
+					return new SchematizedObjectView(
+						result.storage,
+						nodeSchema as TypedObjectNodeSchema,
+					);
 				} else if (isMapSchema(nodeSchema)) {
-					return new SchematizedMapView(result.storage, nodeSchema);
+					return new SchematizedMapView(result.storage, nodeSchema as TypedMapNodeSchema);
 				}
 				// Should not happen for leaf schemas
 				return result.storage;

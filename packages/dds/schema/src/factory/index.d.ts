@@ -2,14 +2,12 @@
  * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
-
 /**
  * Schema factory for creating schema definitions.
  *
  * This module provides a factory class for creating type-safe schema definitions
  * that can be used across Fluid Framework DDSes.
  */
-
 export {
 	type TypedLeafNodeSchema,
 	stringSchema,
@@ -18,7 +16,6 @@ export {
 	nullSchema,
 	handleSchema,
 } from "./leafSchemas.js";
-
 export {
 	type ScopedSchemaName,
 	type FieldProps,
@@ -30,7 +27,6 @@ export {
 	type ObjectSchemaFields,
 	SchemaFactory,
 } from "./schemaFactory.js";
-
 export {
 	isSchemaClass,
 	isSchemaClassConstructor,

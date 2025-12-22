@@ -51,11 +51,6 @@ const snapshotFileName = "header";
 /**
  * {@inheritDoc ISharedMap}
  *
- * @remarks
- * This class does NOT use `implements ISchematizedSharedMap` to avoid
- * TypeScript's "Type instantiation is excessively deep and possibly infinite"
- * error (TS2589). Instead, the class defines the same method overloads as the
- * interface and is exported with a type assertion.
  */
 export class SharedMap extends SharedObject<ISharedMapEvents> {
 	/**

@@ -34,6 +34,7 @@ export type {
 	FieldProps,
 	SchemaClassConstructor,
 	SchemaClassStatics,
+	SchemaFieldsBrand,
 } from "./factory/index.js";
 export {
 	FieldKind,
@@ -131,6 +132,7 @@ export {
 	createSchematizedObjectView,
 	createSchematizedMapView,
 	normalizeViewConfig,
+	BaseSchematizedView,
 } from "./view/index.js";
 export type {
 	ISchemaValidationError,
@@ -148,6 +150,7 @@ export type {
 	NormalizedViewConfig,
 	SchematizedObjectViewOptions,
 	SchematizedMapViewOptions,
+	SchematizedViewOptions,
 } from "./view/index.js";
 
 // DDS integration helpers

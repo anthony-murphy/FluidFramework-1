@@ -35,7 +35,7 @@ import { SchemaFactory, FieldKind } from "../../index.js";
  * Helper to "use" a value so TypeScript doesn't complain about unused variables.
  * This ensures the type is actually checked without needing runtime code.
  */
-declare function use<T>(thing: T): void;
+function use<T>(_thing: T): void {}
 
 const sf = new SchemaFactory("test.fields");
 
