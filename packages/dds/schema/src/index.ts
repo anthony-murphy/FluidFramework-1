@@ -12,18 +12,11 @@
  * @packageDocumentation
  */
 
-export {
-	SchemaFactory,
-	stringSchema,
-	numberSchema,
-	booleanSchema,
-	nullSchema,
-	handleSchema,
-	isSchemaClass,
-	isSchemaClassConstructor,
-} from "./factory/index.js";
+// =====================================================================
+// Schema Factory - main entry point for defining schemas
+// =====================================================================
+export { SchemaFactory } from "./factory/index.js";
 export type {
-	ScopedSchemaName,
 	TypedLeafNodeSchema,
 	TypedFieldSchema,
 	TypedObjectNodeSchema,
@@ -32,127 +25,96 @@ export type {
 	ImplicitFieldSchema,
 	ObjectSchemaFields,
 	FieldProps,
+	ScopedSchemaName,
 	SchemaClassConstructor,
 	SchemaClassStatics,
 	SchemaFieldsBrand,
 } from "./factory/index.js";
+
+// Primitive leaf schemas
 export {
-	FieldKind,
-	NodeKind,
-	isObjectSchema,
-	isArraySchema,
-	isMapSchema,
-	isLeafSchema,
-} from "./core/index.js";
+	stringSchema,
+	numberSchema,
+	booleanSchema,
+	nullSchema,
+	handleSchema,
+} from "./factory/index.js";
+
+// =====================================================================
+// Core schema types
+// =====================================================================
+export { FieldKind, NodeKind } from "./core/index.js";
 export type {
 	NodeSchema,
 	ObjectNodeSchema,
-	ArrayNodeSchema,
 	MapNodeSchema,
+	ArrayNodeSchema,
 	LeafNodeSchema,
 	FieldSchema,
 	LeafKind,
-	AnyNodeSchema,
 	RootSchema,
+	AnyNodeSchema,
 } from "./core/index.js";
+
+// =====================================================================
+// Type inference
+// =====================================================================
 export type {
-	// Primary type inference
 	NodeFromSchema,
-	ValueFromLeafSchema,
-	ReadonlyNodeFromSchema,
-	// Field and value extraction
-	InferFields,
-	InferValueSchema,
 	InferMapValueType,
-	InferAllowedTypes,
-	InferFieldKind,
-	// Helper types used by NodeFromSchema
+	ValueFromLeafSchema,
 	ObjectFromFields,
 	TypeFromImplicitAllowedTypes,
 	NormalizeFieldSchema,
 	TypeFromField,
-	// Immutability utilities
-	DeepReadonly,
-	// Type-level schema guards
-	IsLeafSchema,
-	IsObjectSchema,
-	IsMapSchema,
-	SchemaKind,
-	// Union utilities
-	UnionFromSchemas,
+	InferValueSchema,
 } from "./types/index.js";
 
+// =====================================================================
 // Serialization
-export {
-	encodeSchema,
-	decodeSchema,
-	checkSchemaCompatibility,
-} from "./serialization/index.js";
+// =====================================================================
 export type {
-	// Encoded schema types
 	EncodedSchema,
+	SchemaCompatibilityStatus,
 	EncodedNodeSchema,
 	EncodedObjectSchema,
 	EncodedMapSchema,
 	EncodedArraySchema,
 	EncodedLeafSchema,
 	EncodedFieldSchema,
-	// Simple schema types (decode output)
-	SimpleNodeSchema,
-	SimpleObjectNodeSchema,
-	SimpleArrayNodeSchema,
-	SimpleMapNodeSchema,
-	SimpleLeafNodeSchema,
-	SimpleFieldSchema,
-	DecodedSchema,
-	// Compatibility checking
-	SchemaCompatibilityStatus,
 } from "./serialization/index.js";
 
-// Storage
+// =====================================================================
+// Storage interfaces
+// =====================================================================
 export type { StorageResult, ISchemaStorage, ISchemaPersistence } from "./storage/index.js";
-export type { MapLikeStorage, SchemaField } from "./storage/index.js";
-export { createFlatStorageAdapter, createPersistenceAdapter } from "./storage/index.js";
 
-// Validation
-export { validateData, buildSchemaRegistry } from "./validation/index.js";
-export type {
-	ValidationError,
-	ValidationResult,
-	SchemaRegistry,
-} from "./validation/index.js";
-
-// View
+// =====================================================================
+// View types
+// =====================================================================
 export {
 	SchematizedObjectView,
 	SchematizedMapView,
-	SchemaValidationError,
-	isSchemaValidationError,
-	createSchematizedView,
-	createSchematizedObjectView,
-	createSchematizedMapView,
-	normalizeViewConfig,
 	BaseSchematizedView,
+	isSchemaValidationError,
 } from "./view/index.js";
 export type {
-	ISchemaValidationError,
-	ViewFor,
 	ObjectView,
 	MapView,
-	SchemaView,
 	SchematizedView,
 	SchematizedViewBase,
-	RootFromSchema,
-	CreateViewOptions,
-	ObjectViewResult,
-	MapViewResult,
-	SchemaViewConfiguration,
-	NormalizedViewConfig,
+	SchematizedViewOptions,
 	SchematizedObjectViewOptions,
 	SchematizedMapViewOptions,
-	SchematizedViewOptions,
+	ISchemaValidationError,
+	RootFromSchema,
 } from "./view/index.js";
 
-// DDS integration helpers
+// Validation error type
+export type { ValidationError } from "./validation/index.js";
+
+// =====================================================================
+// DDS integration
+// =====================================================================
 export { createViewWith } from "./dds/index.js";
 export type { IViewableStorage } from "./dds/index.js";

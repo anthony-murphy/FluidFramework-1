@@ -32,7 +32,9 @@ import type {
 	TypedObjectNodeSchema,
 	SchemaClassConstructor,
 } from "../../index.js";
-import { SchemaFactory, isSchemaClassConstructor } from "../../index.js";
+import { SchemaFactory } from "../../index.js";
+// Internal helper for testing
+import { isSchemaClassConstructor } from "../../factory/index.js";
 
 /**
  * Helper to "use" a value so TypeScript doesn't complain about unused variables.

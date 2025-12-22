@@ -43,11 +43,6 @@ export function createViewWith(storage: IViewableStorage): {
 };
 
 // @alpha @legacy
-export type DeepReadonly<T> = T extends IFluidHandle ? T : T extends Map<infer K, infer V> ? ReadonlyMap<DeepReadonly<K>, DeepReadonly<V>> : T extends Set<infer U> ? ReadonlySet<DeepReadonly<U>> : T extends readonly (infer U)[] ? readonly DeepReadonly<U>[] : T extends object ? {
-    readonly [P in keyof T]: DeepReadonly<T[P]>;
-} : T;
-
-// @alpha @legacy
 export interface EncodedArraySchema {
     readonly allowedTypes: readonly (EncodedNodeSchema | string)[];
     readonly identifier: string;
@@ -125,22 +120,10 @@ export type ImplicitAllowedTypes = TypedLeafNodeSchema | TypedObjectNodeSchema |
 export type ImplicitFieldSchema = TypedFieldSchema | ImplicitAllowedTypes;
 
 // @alpha @legacy
-export type InferAllowedTypes<T> = T extends TypedFieldSchema<FieldKind, infer TAllowedTypes> ? TAllowedTypes : never;
-
-// @alpha @legacy
-export type InferFieldKind<T> = T extends TypedFieldSchema<infer TKind> ? TKind : typeof FieldKind.Required;
-
-// @alpha @legacy
-export type InferFields<T> = T extends TypedObjectNodeSchema<string, infer TFields> ? TFields : never;
-
-// @alpha @legacy
 export type InferMapValueType<T> = T extends TypedMapNodeSchema<string, infer TValueSchema> ? TValueSchema extends ImplicitAllowedTypes ? TypeFromImplicitAllowedTypes<TValueSchema> : never : never;
 
 // @alpha @legacy
 export type InferValueSchema<T> = T extends TypedMapNodeSchema<string, infer TValueSchema> ? TValueSchema : never;
-
-// @alpha @legacy
-export function isArraySchema(schema: NodeSchema): schema is ArrayNodeSchema;
 
 // @alpha @legacy
 export interface ISchemaPersistence {
@@ -164,30 +147,6 @@ export interface ISchemaValidationError extends IErrorBase {
     readonly errors: readonly ValidationError[];
     readonly errorType: "schemaValidation";
 }
-
-// @alpha @legacy
-export type IsLeafSchema<T> = T extends TypedLeafNodeSchema ? true : false;
-
-// @alpha @legacy
-export function isLeafSchema(schema: NodeSchema): schema is LeafNodeSchema;
-
-// @alpha @legacy
-export type IsMapSchema<T> = T extends TypedMapNodeSchema ? true : false;
-
-// @alpha @legacy
-export function isMapSchema(schema: NodeSchema): schema is MapNodeSchema;
-
-// @alpha @legacy
-export type IsObjectSchema<T> = T extends TypedObjectNodeSchema ? true : false;
-
-// @alpha @legacy
-export function isObjectSchema(schema: NodeSchema): schema is ObjectNodeSchema;
-
-// @alpha @legacy
-export const isSchemaClass: unique symbol;
-
-// @alpha @legacy
-export function isSchemaClassConstructor(value: unknown): value is SchemaClassConstructor;
 
 // @alpha @legacy
 export function isSchemaValidationError(error: unknown): error is ISchemaValidationError;
@@ -276,9 +235,6 @@ export type ObjectSchemaFields = Record<string, ImplicitFieldSchema>;
 export type ObjectView<TSchema extends ObjectNodeSchema> = SchematizedView<TSchema>;
 
 // @alpha @legacy
-export type ReadonlyNodeFromSchema<T> = DeepReadonly<NodeFromSchema<T>>;
-
-// @alpha @legacy
 export type RootFromSchema<TSchema extends RootSchema> = TSchema extends ObjectNodeSchema ? NodeFromSchema<TSchema> : TSchema extends MapNodeSchema ? Map<string, InferMapValueType<TSchema>> : never;
 
 // @alpha @legacy
@@ -330,9 +286,6 @@ export interface SchemaFieldsBrand<TFields> {
 }
 
 // @alpha @legacy
-export type SchemaKind<T> = T extends TypedLeafNodeSchema ? typeof NodeKind.Leaf : T extends TypedObjectNodeSchema ? typeof NodeKind.Object : T extends TypedMapNodeSchema ? typeof NodeKind.Map : never;
-
-// @alpha @legacy
 export class SchematizedMapView<TValue = unknown> extends BaseSchematizedView<TypedMapNodeSchema> implements Iterable<[string, TValue]> {
     [Symbol.iterator](): IterableIterator<[string, TValue]>;
     constructor(storage: ISchemaStorage, schema: TypedMapNodeSchema, persistence?: ISchemaPersistence, options?: SchematizedMapViewOptions);
@@ -378,16 +331,6 @@ export interface SchematizedViewBase extends IDisposable {
 export interface SchematizedViewOptions {
     enableSchemaValidation?: boolean;
     ignoreStoredSchema?: readonly string[];
-}
-
-// @alpha @deprecated @legacy
-export type SchemaView<TSchema extends RootSchema> = SchematizedView<TSchema>;
-
-// @alpha @legacy
-export interface SchemaViewConfiguration<TSchema extends RootSchema> {
-    readonly enableSchemaValidation?: boolean;
-    readonly ignoreStoredSchema?: readonly string[];
-    readonly schema: TSchema;
 }
 
 // @alpha @legacy
@@ -452,9 +395,6 @@ export type TypeFromField<T extends ImplicitFieldSchema> = NormalizeFieldSchema<
 
 // @alpha @legacy
 export type TypeFromImplicitAllowedTypes<T extends ImplicitAllowedTypes> = T extends TypedLeafNodeSchema ? ValueFromLeafSchema<T> : T extends TypedObjectNodeSchema<string, infer TFields> ? ObjectFromFields<TFields> : T extends TypedMapNodeSchema<string, infer TValueSchema> ? TypeFromImplicitAllowedTypes<TValueSchema> : T extends readonly (infer U)[] ? U extends TypedLeafNodeSchema | TypedObjectNodeSchema | TypedMapNodeSchema ? TypeFromImplicitAllowedTypes<U> : never : never;
-
-// @alpha @legacy
-export type UnionFromSchemas<T extends readonly unknown[]> = T extends readonly (infer U)[] ? U extends TypedLeafNodeSchema | TypedObjectNodeSchema | TypedMapNodeSchema ? NodeFromSchema<U> : never : never;
 
 // @alpha @legacy
 export interface ValidationError {

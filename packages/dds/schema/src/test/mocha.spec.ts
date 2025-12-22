@@ -7,22 +7,16 @@
 
 import { strict as assert } from "node:assert";
 
-import {
-	FieldKind,
-	NodeKind,
-	SchemaFactory,
-	isObjectSchema,
-	isArraySchema,
-	isMapSchema,
-	isLeafSchema,
-} from "../index.js";
+import { FieldKind, NodeKind, SchemaFactory } from "../index.js";
+// Import type guards from core - these are internal testing helpers
+import { isObjectSchema, isArraySchema, isMapSchema, isLeafSchema } from "../core/index.js";
 import type {
 	ObjectNodeSchema,
 	ArrayNodeSchema,
 	MapNodeSchema,
 	LeafNodeSchema,
-	NodeFromSchema,
-} from "../index.js";
+} from "../core/index.js";
+import type { NodeFromSchema } from "../index.js";
 
 describe("Schema", () => {
 	describe("SchemaFactory", () => {

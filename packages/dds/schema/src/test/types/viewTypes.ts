@@ -26,11 +26,11 @@ import type {
 	SchematizedView,
 	RootFromSchema,
 	SchematizedViewBase,
-	SchemaCompatibilityStatus,
-	ObjectViewResult,
-	MapViewResult,
 	InferMapValueType,
 } from "../../index.js";
+// Import internal view types for testing
+import type { ObjectViewResult, MapViewResult } from "../../view/index.js";
+import type { SchemaCompatibilityStatus } from "../../serialization/index.js";
 import { SchemaFactory } from "../../index.js";
 
 /**
