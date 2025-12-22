@@ -138,7 +138,8 @@ export type SchemaView<TSchema extends RootSchema> = SchematizedView<TSchema>;
  *
  * @typeParam TSchema - The object node schema type
  *
- * @internal
+ * @legacy
+ * @alpha
  */
 export type ObjectView<TSchema extends ObjectNodeSchema> = SchematizedView<TSchema>;
 
@@ -151,6 +152,7 @@ export type ObjectView<TSchema extends ObjectNodeSchema> = SchematizedView<TSche
  *
  * @typeParam TSchema - The map node schema type
  *
- * @internal
+ * @legacy
+ * @alpha
  */
 export type MapView<TSchema extends MapNodeSchema> = SchematizedView<TSchema>;

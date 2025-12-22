@@ -769,6 +769,158 @@ describe("SharedMap.viewWith", () => {
 				assert.equal(sum, 6);
 			});
 		});
+
+		describe("nested object values", () => {
+			it("handles objects with nested object fields", () => {
+				const AddressSchema = sf.object("Address", {
+					street: sf.string,
+					city: sf.string,
+				});
+
+				const PersonWithAddressSchema = sf.object("PersonWithAddress", {
+					name: sf.string,
+					address: AddressSchema,
+				});
+
+				const PersonMapSchema = sf.map("PersonWithAddressMap", PersonWithAddressSchema);
+
+				const map = createLocalMap("testMap");
+				const view = map.viewWith(PersonMapSchema);
+
+				view.initialize();
+				view.root.set("user1", {
+					name: "Alice",
+					address: { street: "123 Main St", city: "Seattle" },
+				});
+
+				const user = view.root.get("user1");
+				assert.ok(user, "user1 should exist");
+				assert.equal(user.name, "Alice");
+				assert.equal(user.address.street, "123 Main St");
+				assert.equal(user.address.city, "Seattle");
+			});
+
+			it("handles deeply nested objects (3 levels)", () => {
+				const CoordinatesSchema = sf.object("Coordinates", {
+					lat: sf.number,
+					lng: sf.number,
+				});
+
+				const LocationSchema = sf.object("Location", {
+					name: sf.string,
+					coords: CoordinatesSchema,
+				});
+
+				const CompanySchema = sf.object("Company", {
+					companyName: sf.string,
+					headquarters: LocationSchema,
+				});
+
+				const CompanyMapSchema = sf.map("CompanyMap", CompanySchema);
+
+				const map = createLocalMap("testMap");
+				const view = map.viewWith(CompanyMapSchema);
+
+				view.initialize();
+				view.root.set("acme", {
+					companyName: "Acme Corp",
+					headquarters: {
+						name: "HQ Building",
+						coords: { lat: 47.6062, lng: -122.3321 },
+					},
+				});
+
+				const company = view.root.get("acme");
+				assert.ok(company, "acme should exist");
+				assert.equal(company.companyName, "Acme Corp");
+				assert.equal(company.headquarters.name, "HQ Building");
+				assert.equal(company.headquarters.coords.lat, 47.6062);
+				assert.equal(company.headquarters.coords.lng, -122.3321);
+			});
+
+			it("handles optional nested objects", () => {
+				const MetadataSchema = sf.object("Metadata", {
+					createdAt: sf.string,
+					updatedAt: sf.optional(sf.string),
+				});
+
+				const DocumentSchema = sf.object("Document", {
+					title: sf.string,
+					metadata: sf.optional(MetadataSchema),
+				});
+
+				const DocumentMapSchema = sf.map("DocumentMap", DocumentSchema);
+
+				const map = createLocalMap("testMap");
+				const view = map.viewWith(DocumentMapSchema);
+
+				view.initialize();
+
+				// Document without metadata
+				view.root.set("doc1", { title: "Untitled" });
+
+				// Document with metadata
+				view.root.set("doc2", {
+					title: "Report",
+					metadata: { createdAt: "2025-01-01" },
+				});
+
+				const doc1 = view.root.get("doc1");
+				const doc2 = view.root.get("doc2");
+
+				assert.ok(doc1, "doc1 should exist");
+				assert.ok(doc2, "doc2 should exist");
+				assert.equal(doc1.title, "Untitled");
+				assert.equal(doc1.metadata, undefined);
+				assert.equal(doc2.title, "Report");
+				assert.equal(doc2.metadata?.createdAt, "2025-01-01");
+			});
+		});
+
+		describe("nested map schemas", () => {
+			// Note: Nested sf.map() inside sf.map() is not currently supported.
+			// The inner map schema gets flattened to its value type.
+			// Use objects with map-like patterns instead for nested structures.
+
+			it("handles map with number values", () => {
+				const ScoresMapSchema = sf.map("ScoresMap", sf.number);
+
+				const map = createLocalMap("testMap");
+				const view = map.viewWith(ScoresMapSchema);
+
+				view.initialize();
+				view.root.set("player1", 100);
+				view.root.set("player2", 250);
+				view.root.set("player3", 175);
+
+				assert.equal(view.root.get("player1"), 100);
+				assert.equal(view.root.get("player2"), 250);
+				assert.equal(view.root.get("player3"), 175);
+
+				// Iteration works with number values
+				let total = 0;
+				for (const [, score] of view.root) {
+					total += score;
+				}
+				assert.equal(total, 525);
+			});
+
+			it("handles map with boolean values", () => {
+				const FlagsMapSchema = sf.map("FlagsMap", sf.boolean);
+
+				const map = createLocalMap("testMap");
+				const view = map.viewWith(FlagsMapSchema);
+
+				view.initialize();
+				view.root.set("featureA", true);
+				view.root.set("featureB", false);
+				view.root.set("featureC", true);
+
+				assert.equal(view.root.get("featureA"), true);
+				assert.equal(view.root.get("featureB"), false);
+				assert.equal(view.root.get("featureC"), true);
+			});
+		});
 	});
 
 	describe("Object proxy enumeration", () => {

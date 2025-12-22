@@ -61,6 +61,9 @@ export interface MapNodeSchema extends NodeSchema {
 }
 
 // @alpha @legacy
+export type MapView<TSchema extends MapNodeSchema> = SchematizedView<TSchema>;
+
+// @alpha @legacy
 export type NodeFromSchema<T> = T extends TypedLeafNodeSchema ? ValueFromLeafSchema<T> : T extends TypedObjectNodeSchema<string, infer TFields> ? ObjectFromFields<TFields> : T extends TypedMapNodeSchema<string, infer TValueSchema> ? TypeFromImplicitAllowedTypes<TValueSchema> : T extends SchemaClassConstructor<infer TFields extends ObjectSchemaFields> ? ObjectFromFields<TFields> : T extends {
     readonly info: infer TFields;
 } ? TFields extends ObjectSchemaFields ? ObjectFromFields<TFields> : never : never;
@@ -113,6 +116,9 @@ export interface ObjectNodeSchema extends NodeSchema {
 
 // @alpha @legacy
 export type ObjectSchemaFields = Record<string, ImplicitFieldSchema>;
+
+// @alpha @legacy
+export type ObjectView<TSchema extends ObjectNodeSchema> = SchematizedView<TSchema>;
 
 // @alpha @legacy
 export type RootFromSchema<TSchema extends RootSchema> = TSchema extends ObjectNodeSchema ? NodeFromSchema<TSchema> : TSchema extends MapNodeSchema ? Map<string, InferMapValueType<TSchema>> : never;
