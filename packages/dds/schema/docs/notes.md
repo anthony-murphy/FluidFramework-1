@@ -119,6 +119,34 @@ Implementation tasks from decisions #10-21, ordered by dependency:
 
 ## New Open Questions (December 2025)
 
+### Schema Op for Real-Time Sync (PENDING)
+
+**Problem:** Schema is currently only persisted in snapshots, not synced via ops.
+
+When client 1 calls `view.initialize()`, the schema is stored in `SharedMap._persistedSchema` and written to the next snapshot. However, if client 2 connects before a snapshot is taken, it won't see the schema because:
+1. `setPersistedSchema()` only sets a local field
+2. There's no op sent to notify other clients
+3. Client 2's `canView` returns `false` because it has no stored schema
+
+**Symptoms:**
+- E2E tests fail when testing schema sync between two clients
+- `view2.compatibility.canView` returns `false` after `view1.initialize()`
+- Works correctly after container reload (because snapshot contains schema)
+
+**Solution (NOT YET IMPLEMENTED):**
+Add a schema op type to SharedMap:
+1. Add `IMapSchemaOperation` to `internalInterfaces.ts`
+2. Modify `setPersistedSchema()` to call `submitLocalMessage({ type: "schema", value: schema })`
+3. Handle schema ops in `processMessagesCore()`
+4. Handle schema ops in `reSubmitCore()` and `applyStashedOp()`
+
+**Why deferred:** Need to consider:
+- Op format and versioning implications
+- Conflict resolution if two clients initialize with different schemas
+- Whether this is the right pattern vs. storing schema as a reserved key in the map
+
+---
+
 ### 10. Should `initialize()` take content?
 
 **Current:**
