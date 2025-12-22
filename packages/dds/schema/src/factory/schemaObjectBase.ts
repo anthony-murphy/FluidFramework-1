@@ -14,13 +14,13 @@ import { NodeKind, type FieldSchema } from "../core/index.js";
 
 /**
  * Symbol used to identify schema classes.
- * @alpha
+ * @alpha @legacy
  */
 export const isSchemaClass = Symbol("isSchemaClass");
 
 /**
  * Static properties that all schema classes have.
- * @alpha
+ * @alpha @legacy
  */
 export interface SchemaClassStatics {
 	/**
@@ -47,7 +47,7 @@ export interface SchemaClassStatics {
 /**
  * Phantom type brand for schema field information.
  * This is used to carry type information through class inheritance.
- * @alpha
+ * @alpha @legacy
  */
 export interface SchemaFieldsBrand<TFields> {
 	readonly __schemaFields?: TFields;
@@ -58,7 +58,7 @@ export interface SchemaFieldsBrand<TFields> {
  *
  * @typeParam TFields - The field definitions type, used for type inference.
  *
- * @alpha
+ * @alpha @legacy
  */
 export interface SchemaClassConstructor<TFields = unknown> extends SchemaClassStatics {
 	/**
@@ -82,7 +82,7 @@ export interface SchemaClassConstructor<TFields = unknown> extends SchemaClassSt
 
 /**
  * Check if a value is a schema class constructor.
- * @alpha
+ * @alpha @legacy
  */
 export function isSchemaClassConstructor(value: unknown): value is SchemaClassConstructor {
 	return (

@@ -14,7 +14,7 @@ export interface ArrayNodeSchema extends NodeSchema {
     readonly kind: typeof NodeKind.Array;
 }
 
-// @alpha
+// @alpha @legacy
 export abstract class BaseSchematizedView<TSchema extends NodeSchema> implements IDisposable {
     protected constructor(schema: TSchema, persistence?: ISchemaPersistence | undefined, options?: SchematizedViewOptions);
     get compatibility(): SchemaCompatibilityStatus;
@@ -36,7 +36,7 @@ export abstract class BaseSchematizedView<TSchema extends NodeSchema> implements
 // @alpha @legacy
 export const booleanSchema: TypedLeafNodeSchema<"com.fluidframework.leaf.boolean", "boolean", boolean>;
 
-// @alpha
+// @alpha @legacy
 export function createViewWith(storage: IViewableStorage): {
     <TSchema extends TypedObjectNodeSchema>(schema: TSchema): SchematizedObjectView<TSchema>;
     <TSchema extends TypedMapNodeSchema>(schema: TSchema): SchematizedMapView<InferMapValueType<TSchema>>;
@@ -47,44 +47,44 @@ export type DeepReadonly<T> = T extends IFluidHandle ? T : T extends Map<infer K
     readonly [P in keyof T]: DeepReadonly<T[P]>;
 } : T;
 
-// @alpha
+// @alpha @legacy
 export interface EncodedArraySchema {
     readonly allowedTypes: readonly (EncodedNodeSchema | string)[];
     readonly identifier: string;
     readonly kind: "array";
 }
 
-// @alpha
+// @alpha @legacy
 export interface EncodedFieldSchema {
     readonly allowedTypes: readonly (EncodedNodeSchema | string)[];
     readonly kind: "required" | "optional";
 }
 
-// @alpha
+// @alpha @legacy
 export interface EncodedLeafSchema {
     readonly identifier: string;
     readonly kind: "leaf";
     readonly leafKind: LeafKind;
 }
 
-// @alpha
+// @alpha @legacy
 export interface EncodedMapSchema {
     readonly allowedTypes: readonly (EncodedNodeSchema | string)[];
     readonly identifier: string;
     readonly kind: "map";
 }
 
-// @alpha
+// @alpha @legacy
 export type EncodedNodeSchema = EncodedObjectSchema | EncodedMapSchema | EncodedArraySchema | EncodedLeafSchema;
 
-// @alpha
+// @alpha @legacy
 export interface EncodedObjectSchema {
     readonly fields: Record<string, EncodedFieldSchema>;
     readonly identifier: string;
     readonly kind: "object";
 }
 
-// @alpha
+// @alpha @legacy
 export interface EncodedSchema {
     readonly definitions?: Record<string, EncodedNodeSchema>;
     readonly root: EncodedNodeSchema;
@@ -142,14 +142,14 @@ export type InferValueSchema<T> = T extends TypedMapNodeSchema<string, infer TVa
 // @alpha @legacy
 export function isArraySchema(schema: NodeSchema): schema is ArrayNodeSchema;
 
-// @alpha
+// @alpha @legacy
 export interface ISchemaPersistence {
     getPersistedSchema(): EncodedSchema | undefined;
     setPersistedSchema(schema: EncodedSchema): void;
     upgradePersistedSchema(schema: EncodedSchema): void;
 }
 
-// @alpha
+// @alpha @legacy
 export interface ISchemaStorage {
     deleteField(key: string): boolean;
     getField(key: string, fieldSchema: NodeSchema): StorageResult | undefined;
@@ -183,16 +183,16 @@ export type IsObjectSchema<T> = T extends TypedObjectNodeSchema ? true : false;
 // @alpha @legacy
 export function isObjectSchema(schema: NodeSchema): schema is ObjectNodeSchema;
 
-// @alpha
+// @alpha @legacy
 export const isSchemaClass: unique symbol;
 
-// @alpha
+// @alpha @legacy
 export function isSchemaClassConstructor(value: unknown): value is SchemaClassConstructor;
 
 // @alpha @legacy
 export function isSchemaValidationError(error: unknown): error is ISchemaValidationError;
 
-// @alpha
+// @alpha @legacy
 export interface IViewableStorage {
     getSchemaPersistence(): ISchemaPersistence;
     getSchemaStorage(): ISchemaStorage;
@@ -284,14 +284,14 @@ export type RootFromSchema<TSchema extends RootSchema> = TSchema extends ObjectN
 // @alpha @legacy
 export type RootSchema = ObjectNodeSchema | MapNodeSchema;
 
-// @alpha
+// @alpha @legacy
 export interface SchemaClassConstructor<TFields = unknown> extends SchemaClassStatics {
     new (): object & SchemaFieldsBrand<TFields>;
     readonly info: TFields;
     readonly prototype: object;
 }
 
-// @alpha
+// @alpha @legacy
 export interface SchemaClassStatics {
     readonly [isSchemaClass]: true;
     readonly fields: Readonly<Record<string, FieldSchema>>;
@@ -323,7 +323,7 @@ export class SchemaFactory<TScope extends string = string> {
     get string(): TypedLeafNodeSchema<"com.fluidframework.leaf.string", "string", string>;
 }
 
-// @alpha
+// @alpha @legacy
 export interface SchemaFieldsBrand<TFields> {
     // (undocumented)
     readonly __schemaFields?: TFields;
@@ -332,7 +332,7 @@ export interface SchemaFieldsBrand<TFields> {
 // @alpha @legacy
 export type SchemaKind<T> = T extends TypedLeafNodeSchema ? typeof NodeKind.Leaf : T extends TypedObjectNodeSchema ? typeof NodeKind.Object : T extends TypedMapNodeSchema ? typeof NodeKind.Map : never;
 
-// @alpha
+// @alpha @legacy
 export class SchematizedMapView<TValue = unknown> extends BaseSchematizedView<TypedMapNodeSchema> implements Iterable<[string, TValue]> {
     [Symbol.iterator](): IterableIterator<[string, TValue]>;
     constructor(storage: ISchemaStorage, schema: TypedMapNodeSchema, persistence?: ISchemaPersistence, options?: SchematizedMapViewOptions);
@@ -349,16 +349,16 @@ export class SchematizedMapView<TValue = unknown> extends BaseSchematizedView<Ty
     values(): IterableIterator<TValue>;
 }
 
-// @alpha
+// @alpha @legacy
 export type SchematizedMapViewOptions = SchematizedViewOptions;
 
-// @alpha
+// @alpha @legacy
 export class SchematizedObjectView<TSchema extends ObjectNodeSchema> extends BaseSchematizedView<TSchema> {
     constructor(storage: ISchemaStorage, schema: TSchema, persistence?: ISchemaPersistence, options?: SchematizedObjectViewOptions);
     get root(): NodeFromSchema<TSchema>;
 }
 
-// @alpha
+// @alpha @legacy
 export type SchematizedObjectViewOptions = SchematizedViewOptions;
 
 // @alpha @legacy
@@ -374,7 +374,7 @@ export interface SchematizedViewBase extends IDisposable {
     upgradeSchema: () => void;
 }
 
-// @alpha
+// @alpha @legacy
 export interface SchematizedViewOptions {
     enableSchemaValidation?: boolean;
     ignoreStoredSchema?: readonly string[];
@@ -393,7 +393,7 @@ export interface SchemaViewConfiguration<TSchema extends RootSchema> {
 // @alpha @legacy
 export type ScopedSchemaName<TScope extends string, TName extends string | number> = `${TScope}.${TName}`;
 
-// @alpha
+// @alpha @legacy
 export type StorageResult = {
     readonly type: "value";
     readonly value: unknown;

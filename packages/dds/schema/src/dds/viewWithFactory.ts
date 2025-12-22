@@ -24,7 +24,7 @@ import { SchematizedObjectView, SchematizedMapView } from "../view/index.js";
  * DDSes implement this interface to provide storage and persistence for schema views.
  * This is the only interface DDS authors need to implement.
  *
- * @alpha
+ * @alpha @legacy
  */
 export interface IViewableStorage {
 	/**
@@ -70,7 +70,7 @@ export interface IViewableStorage {
  * view.root.name = "Alice";  // Fully typed!
  * ```
  *
- * @alpha
+ * @alpha @legacy
  */
 export function createViewWith(storage: IViewableStorage): {
 	<TSchema extends TypedObjectNodeSchema>(schema: TSchema): SchematizedObjectView<TSchema>;

@@ -25,7 +25,7 @@ import { SchematizedObjectView } from "./objectView.js";
 /**
  * Options for configuring a {@link SchematizedMapView}.
  *
- * @alpha
+ * @alpha @legacy
  */
 export type SchematizedMapViewOptions = SchematizedViewOptions;
 
@@ -57,7 +57,7 @@ export type SchematizedMapViewOptions = SchematizedViewOptions;
  * const value = view.get("key1"); // type: string
  * ```
  *
- * @alpha
+ * @alpha @legacy
  */
 export class SchematizedMapView<TValue = unknown>
 	extends BaseSchematizedView<TypedMapNodeSchema>

@@ -119,6 +119,35 @@ Implementation tasks from decisions #10-21, ordered by dependency:
 
 ## New Open Questions (December 2025)
 
+### BUGS TO FIX (December 2025)
+
+**1. Committed .d.ts files in src/ directory** [FIXED]
+
+The following .d.ts files were accidentally committed to git in the src/ directory.
+These have been removed via `git rm`.
+
+**2. Export configuration in package.json** [FIXED]
+
+Fixed to match container-loader pattern:
+- `./` → `public.d.ts` (public API)
+- `./legacy` → `legacy.d.ts` (beta-level legacy)
+- `./legacy/alpha` → `legacyAlpha.d.ts` (alpha-level legacy)
+- `./internal` → `index.d.ts` (internal API)
+
+**3. Over-export of DDS implementation types** [TODO]
+
+The following types are exported at `@alpha` level but should be `@internal` (DDS-author only):
+- `ISchemaStorage` - Storage interface for DDS implementers
+- `ISchemaPersistence` - Persistence interface for DDS implementers
+- `createFlatStorageAdapter` - Adapter for DDS implementers
+- `createPersistenceAdapter` - Adapter for DDS implementers
+- `MapLikeStorage` - Type for DDS implementers
+- `StorageResult` - Type for DDS implementers
+
+These are used by `SharedMap` internally but shouldn't be exposed to end users.
+
+---
+
 ### Schema Op for Real-Time Sync (PENDING)
 
 **Problem:** Schema is currently only persisted in snapshots, not synced via ops.
