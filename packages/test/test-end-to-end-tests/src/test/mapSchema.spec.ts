@@ -72,7 +72,9 @@ describeCompat(
 					true,
 					"View should be able to initialize",
 				);
-				view1.initialize({ name: "Alice", age: 30 });
+				view1.initialize();
+				view1.root.name = "Alice";
+				view1.root.age = 30;
 
 				// Wait for sync
 				await provider.ensureSynchronized();
@@ -85,8 +87,8 @@ describeCompat(
 				await provider.ensureSynchronized();
 
 				assert.equal(view2.compatibility.canView, true, "View2 should be able to view");
-				assert.equal(view2.name, "Alice", "Name should sync to client 2");
-				assert.equal(view2.age, 30, "Age should sync to client 2");
+				assert.equal(view2.root.name, "Alice", "Name should sync to client 2");
+				assert.equal(view2.root.age, 30, "Age should sync to client 2");
 			});
 
 			it("Property updates sync - Client 1 updates a property, Client 2 sees the update", async () => {
@@ -100,7 +102,9 @@ describeCompat(
 				const container1 = await provider.makeTestContainer(testContainerConfig);
 				const map1 = await getSchematizedMap(container1);
 				const view1 = map1.viewWith(PersonSchema);
-				view1.initialize({ name: "Bob", age: 25 });
+				view1.initialize();
+				view1.root.name = "Bob";
+				view1.root.age = 25;
 
 				// Client 2 loads
 				const container2 = await provider.loadTestContainer(testContainerConfig);
@@ -110,16 +114,16 @@ describeCompat(
 				await provider.ensureSynchronized();
 
 				// Verify initial state
-				assert.equal(view2.name, "Bob");
-				assert.equal(view2.age, 25);
+				assert.equal(view2.root.name, "Bob");
+				assert.equal(view2.root.age, 25);
 
 				// Client 1 updates
-				(view1 as { age: number }).age = 26;
+				view1.root.age = 26;
 
 				await provider.ensureSynchronized();
 
 				// Client 2 sees update
-				assert.equal(view2.age, 26, "Age update should sync to client 2");
+				assert.equal(view2.root.age, 26, "Age update should sync to client 2");
 			});
 
 			it("Object schema sync - Full object with multiple fields syncs between clients", async () => {
@@ -135,12 +139,11 @@ describeCompat(
 				const container1 = await provider.makeTestContainer(testContainerConfig);
 				const map1 = await getSchematizedMap(container1);
 				const view1 = map1.viewWith(AddressSchema);
-				view1.initialize({
-					street: "123 Main St",
-					city: "Seattle",
-					zip: "98101",
-					country: "USA",
-				});
+				view1.initialize();
+				view1.root.street = "123 Main St";
+				view1.root.city = "Seattle";
+				view1.root.zip = "98101";
+				view1.root.country = "USA";
 
 				await provider.ensureSynchronized();
 
@@ -151,10 +154,10 @@ describeCompat(
 
 				await provider.ensureSynchronized();
 
-				assert.equal(view2.street, "123 Main St");
-				assert.equal(view2.city, "Seattle");
-				assert.equal(view2.zip, "98101");
-				assert.equal(view2.country, "USA");
+				assert.equal(view2.root.street, "123 Main St");
+				assert.equal(view2.root.city, "Seattle");
+				assert.equal(view2.root.zip, "98101");
+				assert.equal(view2.root.country, "USA");
 			});
 		});
 
@@ -170,12 +173,11 @@ describeCompat(
 				const view1 = map1.viewWith(ConfigSchema) as any;
 
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-				view1.initialize(
-					new Map([
-						["key1", "value1"],
-						["key2", "value2"],
-					]),
-				);
+				view1.initialize();
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+				view1.root.set("key1", "value1");
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+				view1.root.set("key2", "value2");
 
 				await provider.ensureSynchronized();
 
@@ -188,18 +190,18 @@ describeCompat(
 				await provider.ensureSynchronized();
 
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-				assert.equal(view2.get("key1"), "value1", "key1 should sync");
+				assert.equal(view2.root.get("key1"), "value1", "key1 should sync");
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-				assert.equal(view2.get("key2"), "value2", "key2 should sync");
+				assert.equal(view2.root.get("key2"), "value2", "key2 should sync");
 
 				// Client 1 adds more entries
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-				view1.set("key3", "value3");
+				view1.root.set("key3", "value3");
 
 				await provider.ensureSynchronized();
 
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-				assert.equal(view2.get("key3"), "value3", "key3 should sync after add");
+				assert.equal(view2.root.get("key3"), "value3", "key3 should sync after add");
 			});
 
 			it("Map delete syncs - Client 1 deletes entry, Client 2 sees deletion", async () => {
@@ -213,12 +215,11 @@ describeCompat(
 				const view1 = map1.viewWith(ConfigSchema) as any;
 
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-				view1.initialize(
-					new Map([
-						["toDelete", "willBeDeleted"],
-						["toKeep", "willRemain"],
-					]),
-				);
+				view1.initialize();
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+				view1.root.set("toDelete", "willBeDeleted");
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+				view1.root.set("toKeep", "willRemain");
 
 				await provider.ensureSynchronized();
 
@@ -232,19 +233,19 @@ describeCompat(
 
 				// Verify initial state
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-				assert.equal(view2.has("toDelete"), true);
+				assert.equal(view2.root.has("toDelete"), true);
 
 				// Client 1 deletes
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-				view1.delete("toDelete");
+				view1.root.delete("toDelete");
 
 				await provider.ensureSynchronized();
 
 				// Client 2 sees deletion
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-				assert.equal(view2.has("toDelete"), false, "Deleted key should not exist");
+				assert.equal(view2.root.has("toDelete"), false, "Deleted key should not exist");
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-				assert.equal(view2.has("toKeep"), true, "Non-deleted key should still exist");
+				assert.equal(view2.root.has("toKeep"), true, "Non-deleted key should still exist");
 			});
 
 			it("Map iteration syncs - Verify iteration works on receiving client", async () => {
@@ -258,13 +259,13 @@ describeCompat(
 				const view1 = map1.viewWith(ConfigSchema) as any;
 
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-				view1.initialize(
-					new Map([
-						["a", 1],
-						["b", 2],
-						["c", 3],
-					]),
-				);
+				view1.initialize();
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+				view1.root.set("a", 1);
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+				view1.root.set("b", 2);
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+				view1.root.set("c", 3);
 
 				await provider.ensureSynchronized();
 
@@ -278,17 +279,17 @@ describeCompat(
 
 				// Test keys iteration
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
-				const keys = [...view2.keys()];
+				const keys = [...view2.root.keys()];
 				assert.deepEqual(keys.sort(), ["a", "b", "c"], "Keys should iterate correctly");
 
 				// Test values iteration
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
-				const values = [...view2.values()];
+				const values = [...view2.root.values()];
 				assert.deepEqual(values.sort(), [1, 2, 3], "Values should iterate correctly");
 
 				// Test entries iteration
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
-				const entries = [...view2.entries()];
+				const entries = [...view2.root.entries()];
 				const entryMap = new Map(entries);
 				assert.equal(entryMap.get("a"), 1);
 				assert.equal(entryMap.get("b"), 2);
@@ -296,7 +297,7 @@ describeCompat(
 
 				// Test size
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-				assert.equal(view2.size, 3, "Size should be correct");
+				assert.equal(view2.root.size, 3, "Size should be correct");
 			});
 		});
 
@@ -319,7 +320,9 @@ describeCompat(
 				const container1 = await provider.makeTestContainer(testContainerConfig);
 				const map1 = await getSchematizedMap(container1);
 				const view1 = map1.viewWith(PersonSchema1);
-				view1.initialize({ name: "Charlie", age: 40 });
+				view1.initialize();
+				view1.root.name = "Charlie";
+				view1.root.age = 40;
 
 				await provider.ensureSynchronized();
 
@@ -335,8 +338,8 @@ describeCompat(
 					true,
 					"Should be able to view with identical schema",
 				);
-				assert.equal(view2.name, "Charlie");
-				assert.equal(view2.age, 40);
+				assert.equal(view2.root.name, "Charlie");
+				assert.equal(view2.root.age, 40);
 			});
 
 			it("View after initialize - Second client uses viewWith() on already-initialized map", async () => {
@@ -351,7 +354,8 @@ describeCompat(
 				const view1 = map1.viewWith(PersonSchema);
 
 				assert.equal(view1.compatibility.canInitialize, true);
-				view1.initialize({ name: "David" });
+				view1.initialize();
+				view1.root.name = "David";
 				assert.equal(view1.compatibility.canInitialize, false, "Cannot initialize twice");
 
 				await provider.ensureSynchronized();
@@ -370,7 +374,7 @@ describeCompat(
 					"Client 2 should not be able to initialize",
 				);
 				assert.equal(view2.compatibility.canView, true, "Client 2 should be able to view");
-				assert.equal(view2.name, "David");
+				assert.equal(view2.root.name, "David");
 			});
 
 			it("Same schema different instances - Both clients create schema instances but same structure", async () => {
@@ -390,7 +394,9 @@ describeCompat(
 				const container1 = await provider.makeTestContainer(testContainerConfig);
 				const map1 = await getSchematizedMap(container1);
 				const view1 = map1.viewWith(PersonSchema1);
-				view1.initialize({ firstName: "Emma", lastName: "Wilson" });
+				view1.initialize();
+				view1.root.firstName = "Emma";
+				view1.root.lastName = "Wilson";
 
 				await provider.ensureSynchronized();
 
@@ -402,8 +408,8 @@ describeCompat(
 				await provider.ensureSynchronized();
 
 				assert.equal(view2.compatibility.canView, true);
-				assert.equal(view2.firstName, "Emma");
-				assert.equal(view2.lastName, "Wilson");
+				assert.equal(view2.root.firstName, "Emma");
+				assert.equal(view2.root.lastName, "Wilson");
 			});
 		});
 
@@ -419,7 +425,9 @@ describeCompat(
 				const container1 = await provider.makeTestContainer(testContainerConfig);
 				const map1 = await getSchematizedMap(container1);
 				const view1 = map1.viewWith(PersonSchema);
-				view1.initialize({ name: "Frank", score: 100 });
+				view1.initialize();
+				view1.root.name = "Frank";
+				view1.root.score = 100;
 
 				await provider.ensureSynchronized();
 
@@ -431,8 +439,8 @@ describeCompat(
 				await provider.ensureSynchronized();
 
 				// Verify data is present
-				assert.equal(view2.name, "Frank");
-				assert.equal(view2.score, 100);
+				assert.equal(view2.root.name, "Frank");
+				assert.equal(view2.root.score, 100);
 
 				// Load a third container (simulating complete reload)
 				const container3 = await provider.loadTestContainer(testContainerConfig);
@@ -442,8 +450,8 @@ describeCompat(
 				await provider.ensureSynchronized();
 
 				// Verify data persists
-				assert.equal(view3.name, "Frank", "Name should persist across reload");
-				assert.equal(view3.score, 100, "Score should persist across reload");
+				assert.equal(view3.root.name, "Frank", "Name should persist across reload");
+				assert.equal(view3.root.score, 100, "Score should persist across reload");
 			});
 
 			it("Schema survives reload - After reload, can still use viewWith()", async () => {
@@ -457,7 +465,9 @@ describeCompat(
 				const container1 = await provider.makeTestContainer(testContainerConfig);
 				const map1 = await getSchematizedMap(container1);
 				const view1 = map1.viewWith(ConfigSchema);
-				view1.initialize({ theme: "dark", fontSize: 14 });
+				view1.initialize();
+				view1.root.theme = "dark";
+				view1.root.fontSize = 14;
 
 				await provider.ensureSynchronized();
 
@@ -476,11 +486,11 @@ describeCompat(
 					false,
 					"Should not be able to initialize after reload",
 				);
-				assert.equal(view2.theme, "dark");
-				assert.equal(view2.fontSize, 14);
+				assert.equal(view2.root.theme, "dark");
+				assert.equal(view2.root.fontSize, 14);
 
 				// Modify through view2
-				(view2 as { fontSize: number }).fontSize = 16;
+				view2.root.fontSize = 16;
 
 				await provider.ensureSynchronized();
 
@@ -492,7 +502,7 @@ describeCompat(
 				await provider.ensureSynchronized();
 
 				// Verify modifications persisted
-				assert.equal(view3.fontSize, 16, "Modifications should persist");
+				assert.equal(view3.root.fontSize, 16, "Modifications should persist");
 			});
 		});
 	},
