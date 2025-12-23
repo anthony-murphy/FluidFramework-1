@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, unicorn/no-array-for-each, unicorn/no-array-method-this-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, unicorn/no-array-for-each, unicorn/no-array-method-this-argument, unicorn/no-null */
 
 import { strict as assert } from "node:assert";
 
@@ -402,6 +402,78 @@ describe("View", () => {
 				assert.equal(viewV2.compatibility.canInitialize, true);
 			});
 		});
+
+		describe("dispose behavior", () => {
+			it("view.dispose() sets disposed=true", () => {
+				const PersonSchema = sf.object("PersonDispose", {
+					name: sf.string,
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
+
+				view.initialize();
+				view.root.name = "Alice";
+
+				assert.equal(view.disposed, false);
+				view.dispose();
+				assert.equal(view.disposed, true);
+			});
+
+			it("accessing root after dispose throws an error", () => {
+				const PersonSchema = sf.object("PersonDisposeRoot", {
+					name: sf.string,
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
+
+				view.initialize();
+				view.root.name = "Alice";
+				view.dispose();
+
+				// Accessing root after dispose should throw
+				assert.throws(() => view.root.name, UsageError);
+			});
+
+			it("calling initialize() after dispose throws", () => {
+				const PersonSchema = sf.object("PersonDisposeInit", {
+					name: sf.string,
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
+
+				view.dispose();
+
+				assert.throws(() => view.initialize(), UsageError);
+			});
+
+			it("calling upgradeSchema() after dispose throws", () => {
+				const PersonSchemaV1 = sf.object("PersonDisposeUpgrade", {
+					name: sf.string,
+				});
+				const PersonSchemaV2 = sf.object("PersonDisposeUpgrade", {
+					name: sf.string,
+					email: sf.optional(sf.string),
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+
+				const viewV1 = new SchematizedObjectView(storage, PersonSchemaV1, persistence);
+				viewV1.initialize();
+				viewV1.root.name = "Alice";
+
+				const viewV2 = new SchematizedObjectView(storage, PersonSchemaV2, persistence);
+				viewV2.dispose();
+
+				assert.throws(() => viewV2.upgradeSchema(), UsageError);
+			});
+		});
 	});
 
 	describe("SchematizedMapView", () => {
@@ -763,6 +835,94 @@ describe("View", () => {
 					ignoreStoredSchema: ["test.SomeOtherSchema"],
 				});
 				assert.equal(viewV2.compatibility.canInitialize, false);
+			});
+		});
+
+		describe("dispose behavior", () => {
+			it("view.dispose() sets disposed=true", () => {
+				const ConfigSchema = sf.map("ConfigMapDispose", sf.string);
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
+
+				view.initialize();
+				view.set("key", "value");
+
+				assert.equal(view.disposed, false);
+				view.dispose();
+				assert.equal(view.disposed, true);
+			});
+
+			it("accessing root after dispose throws an error", () => {
+				const ConfigSchema = sf.map("ConfigMapDisposeRoot", sf.string);
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
+
+				view.initialize();
+				view.set("key", "value");
+				view.dispose();
+
+				// Accessing root.get after dispose should throw
+				assert.throws(() => view.root.get("key"), UsageError);
+			});
+
+			it("calling initialize() after dispose throws", () => {
+				const ConfigSchema = sf.map("ConfigMapDisposeInit", sf.string);
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
+
+				view.dispose();
+
+				assert.throws(() => view.initialize(), UsageError);
+			});
+
+			it("calling upgradeSchema() after dispose throws", () => {
+				const ConfigSchemaV1 = sf.map("ConfigMapDisposeUpgrade", sf.string);
+				const ConfigSchemaV2 = sf.map("ConfigMapDisposeUpgrade", sf.string);
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+
+				const viewV1 = new SchematizedMapView(storage, ConfigSchemaV1, persistence);
+				viewV1.initialize();
+				viewV1.set("key", "value");
+
+				const viewV2 = new SchematizedMapView(storage, ConfigSchemaV2, persistence);
+				viewV2.dispose();
+
+				assert.throws(() => viewV2.upgradeSchema(), UsageError);
+			});
+
+			it("calling set() after dispose throws", () => {
+				const ConfigSchema = sf.map("ConfigMapDisposeSet", sf.string);
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
+
+				view.initialize();
+				view.dispose();
+
+				assert.throws(() => view.set("key", "value"), UsageError);
+			});
+
+			it("calling delete() after dispose throws", () => {
+				const ConfigSchema = sf.map("ConfigMapDisposeDelete", sf.string);
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedMapView(storage, ConfigSchema, persistence);
+
+				view.initialize();
+				view.set("key", "value");
+				view.dispose();
+
+				assert.throws(() => view.delete("key"), UsageError);
 			});
 		});
 	});
@@ -1187,6 +1347,312 @@ describe("View", () => {
 				assert.equal(view.root.renamedField, "renamed");
 				assert.equal(view.root.optionalRenamed, 42);
 			});
+		});
+	});
+
+	describe("union types (fields with multiple allowed types)", () => {
+		describe("SchematizedObjectView with union fields", () => {
+			it("accepts string value in string|number union field", () => {
+				const MixedSchema = sf.object("MixedUnionString", {
+					value: sf.optional([sf.string, sf.number]),
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, MixedSchema, persistence);
+
+				view.initialize();
+				view.root.value = "hello";
+
+				assert.equal(view.root.value, "hello");
+			});
+
+			it("accepts number value in string|number union field", () => {
+				const MixedSchema = sf.object("MixedUnionNumber", {
+					value: sf.optional([sf.string, sf.number]),
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, MixedSchema, persistence);
+
+				view.initialize();
+				view.root.value = 42;
+
+				assert.equal(view.root.value, 42);
+			});
+
+			it("can switch between types in union field", () => {
+				const MixedSchema = sf.object("MixedUnionSwitch", {
+					value: sf.optional([sf.string, sf.number]),
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, MixedSchema, persistence);
+
+				view.initialize();
+
+				// Set to string first
+				view.root.value = "hello";
+				assert.equal(view.root.value, "hello");
+
+				// Switch to number
+				view.root.value = 123;
+				assert.equal(view.root.value, 123);
+
+				// Switch back to string
+				view.root.value = "world";
+				assert.equal(view.root.value, "world");
+			});
+
+			it("handles boolean in multi-type union", () => {
+				const MultiSchema = sf.object("MultiUnion", {
+					data: sf.optional([sf.string, sf.number, sf.boolean]),
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, MultiSchema, persistence);
+
+				view.initialize();
+				view.root.data = true;
+
+				assert.equal(view.root.data, true);
+
+				view.root.data = false;
+				assert.equal(view.root.data, false);
+			});
+
+			it("handles null in union with null type", () => {
+				const NullableSchema = sf.object("NullableUnion", {
+					value: sf.optional([sf.string, sf.null]),
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, NullableSchema, persistence);
+
+				view.initialize();
+				view.root.value = "hello";
+				assert.equal(view.root.value, "hello");
+
+				view.root.value = null;
+				assert.equal(view.root.value, null);
+			});
+
+			it("union field can be set to undefined when optional", () => {
+				const OptionalUnionSchema = sf.object("OptionalUnion", {
+					value: sf.optional([sf.string, sf.number]),
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, OptionalUnionSchema, persistence);
+
+				view.initialize();
+				view.root.value = "test";
+				assert.equal(view.root.value, "test");
+
+				view.root.value = undefined;
+				assert.equal(view.root.value, undefined);
+			});
+
+			it("required union field works correctly", () => {
+				const RequiredUnionSchema = sf.object("RequiredUnion", {
+					value: sf.required([sf.string, sf.number]),
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, RequiredUnionSchema, persistence);
+
+				view.initialize();
+				view.root.value = "hello";
+				assert.equal(view.root.value, "hello");
+
+				view.root.value = 42;
+				assert.equal(view.root.value, 42);
+			});
+		});
+
+		describe("SchematizedMapView with union value types", () => {
+			it("accepts string values in string|number union map", () => {
+				const MixedMapSchema = sf.map("MixedMapString", [sf.string, sf.number]);
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedMapView(storage, MixedMapSchema, persistence);
+
+				view.initialize();
+				view.set("key1", "hello");
+
+				assert.equal(view.get("key1"), "hello");
+			});
+
+			it("accepts number values in string|number union map", () => {
+				const MixedMapSchema = sf.map("MixedMapNumber", [sf.string, sf.number]);
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedMapView(storage, MixedMapSchema, persistence);
+
+				view.initialize();
+				view.set("key1", 42);
+
+				assert.equal(view.get("key1"), 42);
+			});
+
+			it("can store different types for different keys", () => {
+				const MixedMapSchema = sf.map("MixedMapDifferentKeys", [sf.string, sf.number]);
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedMapView(storage, MixedMapSchema, persistence);
+
+				view.initialize();
+				view.set("stringKey", "hello");
+				view.set("numberKey", 123);
+
+				assert.equal(view.get("stringKey"), "hello");
+				assert.equal(view.get("numberKey"), 123);
+			});
+
+			it("can update value with different type", () => {
+				const MixedMapSchema = sf.map("MixedMapUpdate", [sf.string, sf.number]);
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedMapView(storage, MixedMapSchema, persistence);
+
+				view.initialize();
+				view.set("key", "initial");
+				assert.equal(view.get("key"), "initial");
+
+				view.set("key", 999);
+				assert.equal(view.get("key"), 999);
+			});
+
+			it("handles boolean in multi-type union map", () => {
+				const MultiMapSchema = sf.map("MultiMapUnion", [sf.string, sf.number, sf.boolean]);
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedMapView(storage, MultiMapSchema, persistence);
+
+				view.initialize();
+				view.set("str", "text");
+				view.set("num", 42);
+				view.set("bool", true);
+
+				assert.equal(view.get("str"), "text");
+				assert.equal(view.get("num"), 42);
+				assert.equal(view.get("bool"), true);
+			});
+
+			it("iterates over mixed type values", () => {
+				const MixedMapSchema = sf.map("MixedMapIterate", [sf.string, sf.number]);
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedMapView(storage, MixedMapSchema, persistence);
+
+				view.initialize();
+				view.set("a", "hello");
+				view.set("b", 123);
+
+				const values = [...view.values()];
+				assert.equal(values.length, 2);
+				assert.ok(values.includes("hello"));
+				assert.ok(values.includes(123));
+			});
+		});
+	});
+
+	describe("error messages", () => {
+		it("throws when calling initialize() twice", () => {
+			const PersonSchema = sf.object("PersonInitTwice", {
+				name: sf.string,
+			});
+
+			const storage = new MockStorage();
+			const persistence = new MockPersistence();
+			const view = new SchematizedObjectView(storage, PersonSchema, persistence);
+
+			view.initialize();
+
+			assert.throws(
+				() => view.initialize(),
+				(error: Error) =>
+					error instanceof UsageError &&
+					error.message === "Cannot initialize - schema already stored",
+			);
+		});
+
+		it("throws when upgrading with incompatible schema", () => {
+			const OldSchema = sf.object("PersonUpgradeIncompat", {
+				name: sf.string,
+			});
+
+			const NewSchema = sf.object("PersonUpgradeIncompatNew", {
+				name: sf.string,
+				age: sf.number, // New required field makes it incompatible
+			});
+
+			const storage = new MockStorage();
+			const persistence = new MockPersistence();
+			const oldView = new SchematizedObjectView(storage, OldSchema, persistence);
+			oldView.initialize();
+			oldView.root.name = "Alice";
+
+			const newView = new SchematizedObjectView(storage, NewSchema, persistence);
+
+			assert.throws(
+				() => newView.upgradeSchema(),
+				(error: Error) =>
+					error instanceof UsageError &&
+					error.message === "Cannot upgrade - schemas incompatible",
+			);
+		});
+
+		it("throws when accessing disposed view", () => {
+			const PersonSchema = sf.object("PersonDisposed", {
+				name: sf.string,
+			});
+
+			const storage = new MockStorage();
+			const persistence = new MockPersistence();
+			const view = new SchematizedObjectView(storage, PersonSchema, persistence);
+
+			view.dispose();
+
+			assert.throws(
+				() => view.initialize(),
+				(error: Error) =>
+					error instanceof UsageError && error.message === "Accessed a disposed SchemaView.",
+			);
+		});
+
+		it("throws when setting required field to undefined", () => {
+			const PersonSchema = sf.object("PersonRequiredUndefinedMsg", {
+				name: sf.string,
+			});
+
+			const storage = new MockStorage();
+			const persistence = new MockPersistence();
+			const view = new SchematizedObjectView(storage, PersonSchema, persistence);
+
+			view.initialize();
+			view.root.name = "Alice";
+
+			assert.throws(
+				() => {
+					view.root.name = undefined as any;
+				},
+				(error: Error) =>
+					error instanceof UsageError &&
+					error.message === 'Cannot set required field "name" to undefined',
+			);
 		});
 	});
 });

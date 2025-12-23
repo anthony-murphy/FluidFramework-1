@@ -171,6 +171,47 @@ describe("Schema Serialization", () => {
 			assert.equal(parsed.version, 1);
 			assert.equal(parsed.root.kind, "object");
 		});
+
+		it("encodes schema with FieldProps.key", () => {
+			const UserSchema = sf.object("UserWithKey", {
+				email: sf.required(sf.string, { key: "email_addr" }),
+				nickname: sf.optional(sf.string, { key: "nick" }),
+			});
+
+			const encoded = encodeSchema(UserSchema);
+			const root = encoded.root as EncodedObjectSchema;
+
+			// Verify the schema encodes correctly with key props
+			assert.equal(root.kind, "object");
+			assert.equal(root.fields.email?.kind, "required");
+			assert.equal(root.fields.email?.key, "email_addr");
+			assert.equal(root.fields.nickname?.kind, "optional");
+			assert.equal(root.fields.nickname?.key, "nick");
+		});
+
+		it("encodes schema with FieldProps.metadata", () => {
+			const UserSchema = sf.object("UserWithMetadata", {
+				name: sf.required(sf.string, {
+					metadata: { description: "User's full name" },
+				}),
+				age: sf.optional(sf.number, {
+					metadata: { description: "User's age", custom: { min: 0, max: 150 } },
+				}),
+			});
+
+			const encoded = encodeSchema(UserSchema);
+			const root = encoded.root as EncodedObjectSchema;
+
+			// Verify the schema encodes correctly with metadata props
+			assert.equal(root.kind, "object");
+			assert.equal(root.fields.name?.kind, "required");
+			assert.deepEqual(root.fields.name?.metadata, { description: "User's full name" });
+			assert.equal(root.fields.age?.kind, "optional");
+			assert.deepEqual(root.fields.age?.metadata, {
+				description: "User's age",
+				custom: { min: 0, max: 150 },
+			});
+		});
 	});
 
 	describe("decodeSchema", () => {
@@ -434,6 +475,79 @@ describe("Schema Serialization", () => {
 			if (decoded.root.kind === NodeKind.Object) {
 				assert(decoded.root.fields.name !== undefined);
 				assert(decoded.root.fields.active !== undefined);
+			}
+		});
+
+		it("roundtrip preserves FieldProps.key", () => {
+			const UserSchema = sf.object("RoundtripKey", {
+				email: sf.required(sf.string, { key: "email_address" }),
+				nickname: sf.optional(sf.string, { key: "user_nick" }),
+			});
+
+			const encoded = encodeSchema(UserSchema);
+			const decoded = decodeSchema(encoded);
+
+			assert.equal(decoded.root.kind, NodeKind.Object);
+			if (decoded.root.kind === NodeKind.Object) {
+				assert.equal(decoded.root.fields.email?.key, "email_address");
+				assert.equal(decoded.root.fields.nickname?.key, "user_nick");
+			}
+		});
+
+		it("roundtrip preserves FieldProps.metadata", () => {
+			const UserSchema = sf.object("RoundtripMetadata", {
+				name: sf.required(sf.string, {
+					metadata: { description: "Full name of user" },
+				}),
+				score: sf.optional(sf.number, {
+					metadata: { description: "User score", custom: { range: [0, 100] } },
+				}),
+			});
+
+			const encoded = encodeSchema(UserSchema);
+			const decoded = decodeSchema(encoded);
+
+			assert.equal(decoded.root.kind, NodeKind.Object);
+			if (decoded.root.kind === NodeKind.Object) {
+				assert.deepEqual(decoded.root.fields.name?.metadata, {
+					description: "Full name of user",
+				});
+				assert.deepEqual(decoded.root.fields.score?.metadata, {
+					description: "User score",
+					custom: { range: [0, 100] },
+				});
+			}
+		});
+
+		it("roundtrip preserves combined FieldProps.key and FieldProps.metadata", () => {
+			const UserSchema = sf.object("RoundtripCombined", {
+				email: sf.required(sf.string, {
+					key: "user_email",
+					metadata: { description: "Primary email address" },
+				}),
+				phone: sf.optional(sf.string, {
+					key: "phone_number",
+					metadata: { description: "Contact phone", custom: { format: "E.164" } },
+				}),
+			});
+
+			const encoded = encodeSchema(UserSchema);
+			const decoded = decodeSchema(encoded);
+
+			assert.equal(decoded.root.kind, NodeKind.Object);
+			if (decoded.root.kind === NodeKind.Object) {
+				// Verify key is preserved
+				assert.equal(decoded.root.fields.email?.key, "user_email");
+				assert.equal(decoded.root.fields.phone?.key, "phone_number");
+
+				// Verify metadata is preserved
+				assert.deepEqual(decoded.root.fields.email?.metadata, {
+					description: "Primary email address",
+				});
+				assert.deepEqual(decoded.root.fields.phone?.metadata, {
+					description: "Contact phone",
+					custom: { format: "E.164" },
+				});
 			}
 		});
 	});

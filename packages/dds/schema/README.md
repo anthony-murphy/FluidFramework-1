@@ -120,6 +120,52 @@ class Document extends sf.object("Document", {
 }) {}
 ```
 
+### Schema Lifecycle
+
+When working with schematized views, the `compatibility` property tells you what operations are valid:
+
+| Property | When true |
+|----------|-----------|
+| `canInitialize` | No schema is stored yet. Call `initialize()` to persist your schema. |
+| `canView` | The stored schema is compatible for reading data with your view. |
+| `canUpgrade` | The stored schema can be upgraded to your view's schema. |
+| `isEquivalent` | Schemas are structurally identical. |
+
+**Typical flow:**
+
+1. **Create a view** with your schema
+2. **Check `compatibility`** to determine the current state
+3. **Initialize or upgrade** if needed, then use the view
+
+```typescript
+const view = map.viewWith(UserSchema);
+
+if (view.compatibility.canInitialize) {
+  // No schema stored yet - persist ours
+  view.initialize();
+} else if (view.compatibility.canUpgrade) {
+  // Stored schema is older but compatible - upgrade it
+  view.upgradeSchema();
+} else if (!view.compatibility.canView) {
+  // Incompatible schema - cannot proceed safely
+  throw new Error("Schema incompatible with stored data");
+}
+
+// Now safe to use the view
+view.root.name = "Alice";
+console.log(view.root.name);
+
+// Clean up when done
+view.dispose();
+```
+
+**Key behaviors:**
+
+- **`initialize()`**: Throws `UsageError` if a schema is already stored (`canInitialize` is false)
+- **`upgradeSchema()`**: Throws `UsageError` if schemas are incompatible (`canUpgrade` is false)
+- **`dispose()`**: Releases resources; accessing the view after disposal throws an error
+- Accessing `root` when `canView` is false may result in runtime errors or unexpected behavior
+
 ### Ignoring Stored Schema (Unsafe Escape Hatch)
 
 In development or migration scenarios where you need to bypass incompatible schema checks, you can use the `ignoreStoredSchema` option:

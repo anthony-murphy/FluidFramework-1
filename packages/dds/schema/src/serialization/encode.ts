@@ -226,10 +226,25 @@ function encodeMapSchema(schema: MapNodeSchema, context: EncodeContext): Encoded
  * Encodes a field schema.
  */
 function encodeFieldSchema(schema: FieldSchema, context: EncodeContext): EncodedFieldSchema {
-	return {
+	const result: {
+		kind: "required" | "optional";
+		allowedTypes: readonly (EncodedNodeSchema | string)[];
+		key?: string;
+		metadata?: { description?: string; custom?: unknown };
+	} = {
 		kind: schema.kind === FieldKind.Required ? "required" : "optional",
 		allowedTypes: encodeAllowedTypes(schema.allowedTypes, context),
 	};
+
+	// Include props if present
+	if (schema.props?.key !== undefined) {
+		result.key = schema.props.key;
+	}
+	if (schema.props?.metadata) {
+		result.metadata = schema.props.metadata;
+	}
+
+	return result;
 }
 
 /**
