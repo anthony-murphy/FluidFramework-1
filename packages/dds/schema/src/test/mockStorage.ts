@@ -84,6 +84,26 @@ export class MockStorage implements ISchemaStorage {
 	public getRawData(): Map<string, unknown> {
 		return new Map(this.data);
 	}
+
+	/**
+	 * Get a raw value by key for testing storage key overrides.
+	 *
+	 * @param key - The storage key to look up
+	 * @returns The raw value, or undefined if not present
+	 */
+	public getRawValue(key: string): unknown {
+		return this.data.get(key);
+	}
+
+	/**
+	 * Check if a raw key exists in storage for testing storage key overrides.
+	 *
+	 * @param key - The storage key to check
+	 * @returns True if the key exists in storage
+	 */
+	public hasRawValue(key: string): boolean {
+		return this.data.has(key);
+	}
 }
 
 /**

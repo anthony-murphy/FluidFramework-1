@@ -100,16 +100,15 @@ Add a schema op type to SharedMap:
 - [ ] Add tests for array schemas
 - OR document that arrays are intentionally not supported and why
 
-**2. FieldProps.key Not Implemented** [TODO]
+**2. FieldProps.key Implemented** [DONE]
 
-`FieldProps.key` storage key override is documented but the implementation is incomplete:
+`FieldProps.key` storage key override is now fully implemented:
 - The property is defined in `FieldProps` interface
-- It's never read by storage operations
-- Tests don't cover this feature
+- The view proxy handlers use `props.key` for storage when specified
+- Both schema-level and runtime tests verify the feature
 
-- [ ] Implement storage key override in view proxy handlers
-- [ ] Add tests for key override
-- OR remove if not needed
+- [x] Implement storage key override in view proxy handlers
+- [x] Add tests for key override
 
 **3. No Recursive/Self-Referential Schema Support** [SKIP - by design]
 

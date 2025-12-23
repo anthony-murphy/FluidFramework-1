@@ -385,9 +385,11 @@ function normalizeFieldSchema(fieldSchema: ImplicitFieldSchema): FieldSchema {
 	if (isTypedFieldSchema(fieldSchema)) {
 		// For TypedFieldSchema, the allowedTypes are already normalized at runtime
 		// (set by the optional() and required() methods)
+		// Preserve props if present
 		return {
 			kind: fieldSchema.kind,
 			allowedTypes: fieldSchema.allowedTypes,
+			...(fieldSchema.props !== undefined && { props: fieldSchema.props }),
 		};
 	}
 	// Treat as required field with the given allowed types

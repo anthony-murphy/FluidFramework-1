@@ -168,6 +168,17 @@ function getNestedSchemaFromInfo(
 }
 
 /**
+ * Gets the storage key for a field.
+ * Uses props.key if specified, otherwise returns the property name.
+ */
+function getStorageKey(schema: ObjectNodeSchema, prop: string): string {
+	const fieldSchema = schema.fields[prop];
+	// Access props.key with explicit typing to avoid any-type issues
+	const props = fieldSchema?.props as { key?: string } | undefined;
+	return props?.key ?? prop;
+}
+
+/**
  * Creates a proxy that provides typed access to fields through an accessor.
  * All schema logic (validation, required/optional, nested wrapping) lives here.
  */
@@ -197,12 +208,13 @@ function createSchemaProxy<TSchema extends ObjectNodeSchema>(
 				return undefined;
 			}
 
-			const result = accessor.get(prop);
+			const storageKey = getStorageKey(schema, prop);
+			const result = accessor.get(storageKey);
 
 			// Handle StorageResult from RootFieldAccessor
 			if (result !== null && typeof result === "object" && "type" in result) {
 				const storageResult = result as StorageResult;
-				return unwrapStorageResult(storageResult, schema, prop, accessor, options);
+				return unwrapStorageResult(storageResult, schema, prop, storageKey, accessor, options);
 			}
 
 			// Handle plain value from NestedFieldAccessor
@@ -222,7 +234,7 @@ function createSchemaProxy<TSchema extends ObjectNodeSchema>(
 				result !== null &&
 				!Array.isArray(result)
 			) {
-				const nestedAccessor = new NestedFieldAccessor(accessor, prop);
+				const nestedAccessor = new NestedFieldAccessor(accessor, storageKey);
 				return createSchemaProxy(
 					nestedSchema as TypedObjectNodeSchema,
 					nestedAccessor,
@@ -245,10 +257,12 @@ function createSchemaProxy<TSchema extends ObjectNodeSchema>(
 				return false;
 			}
 
+			const storageKey = getStorageKey(schema, prop);
+
 			// Handle undefined for optional fields
 			if (value === undefined) {
 				if (fieldSchema.kind === FieldKind.Optional) {
-					accessor.delete(prop);
+					accessor.delete(storageKey);
 					return true;
 				}
 				throw new UsageError(`Cannot set required field "${prop}" to undefined`);
@@ -269,13 +283,14 @@ function createSchemaProxy<TSchema extends ObjectNodeSchema>(
 				}
 			}
 
-			accessor.set(prop, value);
+			accessor.set(storageKey, value);
 			return true;
 		},
 
 		has(proxyTarget, prop): boolean {
 			if (typeof prop === "string" && prop in schema.fields) {
-				return accessor.has(prop);
+				const storageKey = getStorageKey(schema, prop);
+				return accessor.has(storageKey);
 			}
 			return Reflect.has(proxyTarget, prop);
 		},
@@ -284,7 +299,8 @@ function createSchemaProxy<TSchema extends ObjectNodeSchema>(
 			if (typeof prop === "string" && prop in schema.fields) {
 				const fieldSchema = schema.fields[prop];
 				if (fieldSchema?.kind === FieldKind.Optional) {
-					accessor.delete(prop);
+					const storageKey = getStorageKey(schema, prop);
+					accessor.delete(storageKey);
 					return true;
 				}
 				return false;
@@ -317,6 +333,7 @@ function unwrapStorageResult(
 	result: StorageResult,
 	schema: ObjectNodeSchema,
 	prop: string,
+	storageKey: string,
 	accessor: IFieldAccessor,
 	options: SchemaProxyOptions,
 ): unknown {
@@ -342,7 +359,7 @@ function unwrapStorageResult(
 				value !== null &&
 				!Array.isArray(value)
 			) {
-				const nestedAccessor = new NestedFieldAccessor(accessor, prop);
+				const nestedAccessor = new NestedFieldAccessor(accessor, storageKey);
 				return createSchemaProxy(
 					nestedSchema as TypedObjectNodeSchema,
 					nestedAccessor,

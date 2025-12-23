@@ -29,6 +29,13 @@ export interface FieldProps {
 export interface FieldSchema {
     readonly allowedTypes: readonly string[];
     readonly kind: FieldKind;
+    readonly props?: {
+        readonly key?: string;
+        readonly metadata?: {
+            readonly description?: string;
+            readonly custom?: unknown;
+        };
+    };
 }
 
 // @alpha @legacy

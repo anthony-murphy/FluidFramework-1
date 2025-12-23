@@ -298,4 +298,123 @@ describe("SchemaFactory", () => {
 			assert.deepEqual(implicit.fields.name?.allowedTypes, explicit.fields.name?.allowedTypes);
 		});
 	});
+
+	describe("FieldProps", () => {
+		describe("key storage override", () => {
+			it("stores key in optional field props", () => {
+				const sf = new SchemaFactory("test");
+				const optionalField = sf.optional(sf.string, { key: "stored_key" });
+
+				assert.deepEqual(optionalField.props, { key: "stored_key" });
+			});
+
+			it("stores key in required field props", () => {
+				const sf = new SchemaFactory("test");
+				const requiredField = sf.required(sf.string, { key: "stored_key" });
+
+				assert.deepEqual(requiredField.props, { key: "stored_key" });
+			});
+
+			it("schema field has props with key", () => {
+				const sf = new SchemaFactory("test");
+				const schema = sf.object("Document", {
+					title: sf.required(sf.string, { key: "doc_title" }),
+					author: sf.optional(sf.string, { key: "doc_author" }),
+				});
+
+				// Props are preserved on the field schema
+				assert.equal(schema.fields.title?.props?.key, "doc_title");
+				assert.equal(schema.fields.author?.props?.key, "doc_author");
+			});
+		});
+
+		describe("metadata", () => {
+			it("stores metadata with description in optional field", () => {
+				const sf = new SchemaFactory("test");
+				const optionalField = sf.optional(sf.string, {
+					metadata: { description: "User email address" },
+				});
+
+				assert.deepEqual(optionalField.props, {
+					metadata: { description: "User email address" },
+				});
+			});
+
+			it("stores metadata with description in required field", () => {
+				const sf = new SchemaFactory("test");
+				const requiredField = sf.required(sf.string, {
+					metadata: { description: "User name" },
+				});
+
+				assert.deepEqual(requiredField.props, {
+					metadata: { description: "User name" },
+				});
+			});
+
+			it("stores metadata with custom data", () => {
+				const sf = new SchemaFactory("test");
+				const field = sf.optional(sf.number, {
+					metadata: { custom: { min: 0, max: 100 } },
+				});
+
+				assert.deepEqual(field.props?.metadata?.custom, { min: 0, max: 100 });
+			});
+
+			it("stores both description and custom metadata", () => {
+				const sf = new SchemaFactory("test");
+				const field = sf.optional(sf.string, {
+					metadata: {
+						description: "Config value",
+						custom: { deprecated: true },
+					},
+				});
+
+				assert.equal(field.props?.metadata?.description, "Config value");
+				assert.deepEqual(field.props?.metadata?.custom, { deprecated: true });
+			});
+		});
+
+		describe("combined key and metadata", () => {
+			it("stores both key and metadata", () => {
+				const sf = new SchemaFactory("test");
+				const field = sf.optional(sf.string, {
+					key: "user_email",
+					metadata: { description: "User email address" },
+				});
+
+				assert.equal(field.props?.key, "user_email");
+				assert.equal(field.props?.metadata?.description, "User email address");
+			});
+
+			it("schema preserves combined props", () => {
+				const sf = new SchemaFactory("test");
+				const schema = sf.object("User", {
+					email: sf.optional(sf.string, {
+						key: "email_addr",
+						metadata: { description: "Primary email" },
+					}),
+				});
+
+				const fieldProps = schema.fields.email?.props;
+				assert.equal(fieldProps?.key, "email_addr");
+				assert.equal(fieldProps?.metadata?.description, "Primary email");
+			});
+		});
+
+		describe("no props", () => {
+			it("optional field without props has undefined props", () => {
+				const sf = new SchemaFactory("test");
+				const field = sf.optional(sf.string);
+
+				assert.equal(field.props, undefined);
+			});
+
+			it("required field without props has undefined props", () => {
+				const sf = new SchemaFactory("test");
+				const field = sf.required(sf.string);
+
+				assert.equal(field.props, undefined);
+			});
+		});
+	});
 });

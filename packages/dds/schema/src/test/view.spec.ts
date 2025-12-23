@@ -1086,5 +1086,107 @@ describe("View", () => {
 				assert(view.root instanceof SchemaBase);
 			});
 		});
+
+		describe("FieldProps.key storage override", () => {
+			it("uses props.key for storage instead of property name", () => {
+				const DocumentSchema = sf.object("DocWithKey", {
+					title: sf.required(sf.string, { key: "doc_title" }),
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, DocumentSchema, persistence);
+
+				view.initialize();
+				view.root.title = "My Document";
+
+				// Verify the value is stored under "doc_title" key, not "title"
+				assert.equal(storage.getRawValue("doc_title"), "My Document");
+				assert.equal(storage.getRawValue("title"), undefined);
+
+				// Verify we can read it back through the property name
+				assert.equal(view.root.title, "My Document");
+			});
+
+			it("uses props.key for optional fields", () => {
+				const PersonSchema = sf.object("PersonWithKey", {
+					nickname: sf.optional(sf.string, { key: "nick" }),
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
+
+				view.initialize();
+				view.root.nickname = "Ali";
+
+				assert.equal(storage.getRawValue("nick"), "Ali");
+				assert.equal(storage.getRawValue("nickname"), undefined);
+				assert.equal(view.root.nickname, "Ali");
+			});
+
+			it("uses props.key for delete operation", () => {
+				const PersonSchema = sf.object("PersonDeleteKey", {
+					nickname: sf.optional(sf.string, { key: "nick" }),
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
+
+				view.initialize();
+				view.root.nickname = "Ali";
+				assert.equal(storage.getRawValue("nick"), "Ali");
+
+				view.root.nickname = undefined;
+				assert.equal(storage.getRawValue("nick"), undefined);
+				assert.equal(storage.hasRawValue("nick"), false);
+			});
+
+			it("uses props.key for has check", () => {
+				const PersonSchema = sf.object("PersonHasKey", {
+					nickname: sf.optional(sf.string, { key: "nick" }),
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, PersonSchema, persistence);
+
+				view.initialize();
+
+				// Should check "nick" key, not "nickname"
+				assert.equal("nickname" in view.root, false);
+
+				view.root.nickname = "Ali";
+				assert.equal("nickname" in view.root, true);
+			});
+
+			it("mixed fields with and without key override", () => {
+				const Schema = sf.object("MixedKeys", {
+					normalField: sf.string,
+					renamedField: sf.required(sf.string, { key: "stored_name" }),
+					optionalRenamed: sf.optional(sf.number, { key: "opt_num" }),
+				});
+
+				const storage = new MockStorage();
+				const persistence = new MockPersistence();
+				const view = new SchematizedObjectView(storage, Schema, persistence);
+
+				view.initialize();
+				view.root.normalField = "normal";
+				view.root.renamedField = "renamed";
+				view.root.optionalRenamed = 42;
+
+				// Check storage keys
+				assert.equal(storage.getRawValue("normalField"), "normal");
+				assert.equal(storage.getRawValue("stored_name"), "renamed");
+				assert.equal(storage.getRawValue("opt_num"), 42);
+
+				// Check property access
+				assert.equal(view.root.normalField, "normal");
+				assert.equal(view.root.renamedField, "renamed");
+				assert.equal(view.root.optionalRenamed, 42);
+			});
+		});
 	});
 });

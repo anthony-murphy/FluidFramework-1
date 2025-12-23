@@ -142,6 +142,29 @@ export interface FieldSchema {
 	 * referenced by their schema identifiers.
 	 */
 	readonly allowedTypes: readonly string[];
+
+	/**
+	 * Optional properties for the field.
+	 *
+	 * @remarks
+	 * Props can include storage key overrides and metadata.
+	 */
+	readonly props?: {
+		/**
+		 * Storage key override.
+		 *
+		 * @remarks
+		 * If specified, this key is used for storage instead of the field name.
+		 */
+		readonly key?: string;
+		/**
+		 * Metadata for the field.
+		 */
+		readonly metadata?: {
+			readonly description?: string;
+			readonly custom?: unknown;
+		};
+	};
 }
 
 /**
