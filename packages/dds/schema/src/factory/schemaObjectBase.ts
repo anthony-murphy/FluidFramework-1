@@ -65,6 +65,8 @@ export interface SchemaClassConstructor<TFields = unknown> extends SchemaClassSt
 	 * Type information for inference.
 	 * @remarks
 	 * This property stores the original field definitions with their type information.
+	 *
+	 * This property name aligns with `@fluidframework/tree` (SharedTree) for API consistency.
 	 */
 	readonly info: TFields;
 

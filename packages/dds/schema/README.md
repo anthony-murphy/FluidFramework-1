@@ -120,6 +120,37 @@ class Document extends sf.object("Document", {
 }) {}
 ```
 
+### Union Types
+
+Fields can accept multiple types using an array:
+
+```typescript
+class FlexibleData extends sf.object("FlexibleData", {
+  // Can be string OR number
+  value: sf.optional([sf.string, sf.number]),
+
+  // Can be string, number, OR boolean (required field)
+  mixedRequired: sf.required([sf.string, sf.number, sf.boolean]),
+
+  // Nullable string (string OR null)
+  nullableName: sf.optional([sf.string, sf.null]),
+}) {}
+
+// Usage
+view.root.value = "hello";  // ✓
+view.root.value = 42;       // ✓
+view.root.nullableName = null;  // ✓
+```
+
+Maps also support union value types:
+
+```typescript
+const MixedMap = sf.map("MixedMap", [sf.string, sf.number]);
+
+view.root.set("name", "Alice");  // string value
+view.root.set("age", 30);        // number value
+```
+
 ### Schema Lifecycle
 
 When working with schematized views, the `compatibility` property tells you what operations are valid:

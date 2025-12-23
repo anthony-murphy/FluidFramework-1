@@ -124,6 +124,8 @@ export interface TypedFieldSchema<
 	 * @remarks
 	 * This property stores the allowed types with type information,
 	 * enabling TypeScript to infer the correct type when using this field.
+	 *
+	 * This property name aligns with `@fluidframework/tree` (SharedTree) for API consistency.
 	 */
 	readonly info: TAllowedTypes;
 }
@@ -155,6 +157,8 @@ export interface TypedObjectNodeSchema<
 	 * This property stores the original field definitions with their type information,
 	 * enabling TypeScript to infer the correct types when using `NodeFromSchema`.
 	 * This is a real property (not phantom) so it's properly inherited by subclasses.
+	 *
+	 * This property name aligns with `@fluidframework/tree` (SharedTree) for API consistency.
 	 */
 	readonly info: TFields;
 }
@@ -186,6 +190,8 @@ export interface TypedMapNodeSchema<
 	 * This property stores the value schema with type information,
 	 * enabling TypeScript to infer the correct value type when using `NodeFromSchema`.
 	 * This is a real property (not phantom) so it's properly inherited by subclasses.
+	 *
+	 * This property name aligns with `@fluidframework/tree` (SharedTree) for API consistency.
 	 */
 	readonly info: TValueSchema;
 }
