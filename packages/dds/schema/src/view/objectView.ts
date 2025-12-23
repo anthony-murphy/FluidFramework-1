@@ -9,7 +9,7 @@
 
 import { UsageError } from "@fluidframework/telemetry-utils/internal";
 
-import type { NodeSchema, ObjectNodeSchema, FieldSchema } from "../core/index.js";
+import type { NodeSchema, ObjectNodeSchema } from "../core/index.js";
 import { FieldKind, NodeKind, isObjectSchema, isMapSchema } from "../core/index.js";
 import {
 	isSchemaClassConstructor,
@@ -23,6 +23,357 @@ import { validateData } from "../validation/index.js";
 import { BaseSchematizedView, type SchematizedViewOptions } from "./baseView.js";
 import { SchemaValidationError } from "./errors.js";
 import { SchematizedMapView } from "./mapView.js";
+
+// ============================================================================
+// Field Accessor Interface and Implementations
+// ============================================================================
+
+/**
+ * Schema-agnostic interface for accessing field values.
+ * Abstracts away whether we're at root level (direct storage) or nested (read-modify-write).
+ */
+interface IFieldAccessor {
+	get(key: string): unknown;
+	set(key: string, value: unknown): void;
+	has(key: string): boolean;
+	delete(key: string): void;
+}
+
+/**
+ * Field accessor that wraps ISchemaStorage for direct root-level access.
+ */
+class RootFieldAccessor implements IFieldAccessor {
+	private static readonly genericSchema: NodeSchema = {
+		identifier: "value",
+		kind: NodeKind.Leaf,
+	};
+
+	public constructor(private readonly storage: ISchemaStorage) {}
+
+	public get(key: string): StorageResult | undefined {
+		return this.storage.getField(key, RootFieldAccessor.genericSchema);
+	}
+
+	public set(key: string, value: unknown): void {
+		this.storage.setField(key, RootFieldAccessor.genericSchema, value);
+	}
+
+	public has(key: string): boolean {
+		return this.storage.hasField(key);
+	}
+
+	public delete(key: string): void {
+		this.storage.deleteField(key);
+	}
+}
+
+/**
+ * Field accessor for nested objects that performs read-modify-write.
+ */
+class NestedFieldAccessor implements IFieldAccessor {
+	public constructor(
+		private readonly parent: IFieldAccessor,
+		private readonly parentKey: string,
+	) {}
+
+	private readParentObject(): Record<string, unknown> {
+		const result = this.parent.get(this.parentKey);
+		// Handle StorageResult from RootFieldAccessor
+		if (result !== null && typeof result === "object" && "type" in result) {
+			const storageResult = result as StorageResult;
+			if (
+				storageResult.type === "value" &&
+				typeof storageResult.value === "object" &&
+				storageResult.value !== null
+			) {
+				return storageResult.value as Record<string, unknown>;
+			}
+			return {};
+		}
+		// Handle plain object from nested NestedFieldAccessor
+		if (typeof result === "object" && result !== null && !Array.isArray(result)) {
+			return result as Record<string, unknown>;
+		}
+		return {};
+	}
+
+	public get(key: string): unknown {
+		return this.readParentObject()[key];
+	}
+
+	public set(key: string, value: unknown): void {
+		const current = this.readParentObject();
+		this.parent.set(this.parentKey, { ...current, [key]: value });
+	}
+
+	public has(key: string): boolean {
+		return key in this.readParentObject();
+	}
+
+	public delete(key: string): void {
+		const current = this.readParentObject();
+		const { [key]: _, ...rest } = current;
+		this.parent.set(this.parentKey, rest);
+	}
+}
+
+// ============================================================================
+// Schema Proxy Factory
+// ============================================================================
+
+/**
+ * Options for createSchemaProxy.
+ */
+interface SchemaProxyOptions {
+	enableValidation: boolean;
+	ensureNotDisposed: () => void;
+}
+
+/**
+ * Gets the nested schema for a field from the schema's info property.
+ */
+function getNestedSchemaFromInfo(
+	schema: ObjectNodeSchema,
+	prop: string,
+): NodeSchema | undefined {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+	const schemaInfo = (schema as any).info;
+	if (schemaInfo === undefined) {
+		return undefined;
+	}
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+	const fieldInfo = schemaInfo[prop];
+	if (fieldInfo === undefined) {
+		return undefined;
+	}
+
+	// TypedFieldSchema with info property
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+	if (typeof fieldInfo === "object" && fieldInfo !== null && "info" in fieldInfo) {
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+		return fieldInfo.info as NodeSchema | undefined;
+	}
+
+	// Direct schema object
+	if (typeof fieldInfo === "object" && fieldInfo !== null && "kind" in fieldInfo) {
+		return fieldInfo as NodeSchema;
+	}
+
+	// Schema class constructor
+	if (typeof fieldInfo === "function" && "kind" in fieldInfo) {
+		return fieldInfo as unknown as NodeSchema;
+	}
+
+	return undefined;
+}
+
+/**
+ * Creates a proxy that provides typed access to fields through an accessor.
+ * All schema logic (validation, required/optional, nested wrapping) lives here.
+ */
+function createSchemaProxy<TSchema extends ObjectNodeSchema>(
+	schema: TSchema,
+	accessor: IFieldAccessor,
+	options: SchemaProxyOptions,
+): NodeFromSchema<TSchema> {
+	const { enableValidation, ensureNotDisposed } = options;
+
+	// Use schema class prototype as target if available (enables custom methods)
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+	const target: object = isSchemaClassConstructor(schema)
+		? Object.create(schema.prototype)
+		: {};
+
+	return new Proxy(target, {
+		get(proxyTarget, prop, receiver): unknown {
+			ensureNotDisposed();
+
+			if (typeof prop !== "string" || !(prop in schema.fields)) {
+				return Reflect.get(proxyTarget, prop, receiver);
+			}
+
+			const fieldSchema = schema.fields[prop];
+			if (fieldSchema === undefined) {
+				return undefined;
+			}
+
+			const result = accessor.get(prop);
+
+			// Handle StorageResult from RootFieldAccessor
+			if (result !== null && typeof result === "object" && "type" in result) {
+				const storageResult = result as StorageResult;
+				return unwrapStorageResult(storageResult, schema, prop, accessor, options);
+			}
+
+			// Handle plain value from NestedFieldAccessor
+			if (result === undefined) {
+				if (fieldSchema.kind === FieldKind.Required) {
+					throw new SchemaValidationError(`Required field "${prop}" is missing`);
+				}
+				return undefined;
+			}
+
+			// Wrap nested objects
+			const nestedSchema = getNestedSchemaFromInfo(schema, prop);
+			if (
+				nestedSchema !== undefined &&
+				isObjectSchema(nestedSchema) &&
+				typeof result === "object" &&
+				result !== null &&
+				!Array.isArray(result)
+			) {
+				const nestedAccessor = new NestedFieldAccessor(accessor, prop);
+				return createSchemaProxy(
+					nestedSchema as TypedObjectNodeSchema,
+					nestedAccessor,
+					options,
+				);
+			}
+
+			return result;
+		},
+
+		set(proxyTarget, prop, value): boolean {
+			ensureNotDisposed();
+
+			if (typeof prop !== "string" || !(prop in schema.fields)) {
+				return false;
+			}
+
+			const fieldSchema = schema.fields[prop];
+			if (fieldSchema === undefined) {
+				return false;
+			}
+
+			// Handle undefined for optional fields
+			if (value === undefined) {
+				if (fieldSchema.kind === FieldKind.Optional) {
+					accessor.delete(prop);
+					return true;
+				}
+				throw new UsageError(`Cannot set required field "${prop}" to undefined`);
+			}
+
+			// Validate if enabled
+			if (enableValidation) {
+				const nodeSchema: NodeSchema = {
+					identifier: fieldSchema.allowedTypes[0] ?? "unknown",
+					kind: NodeKind.Leaf,
+				};
+				const validation = validateData(nodeSchema, value);
+				if (!validation.valid) {
+					throw new SchemaValidationError(
+						`Invalid value for field "${prop}"`,
+						validation.errors,
+					);
+				}
+			}
+
+			accessor.set(prop, value);
+			return true;
+		},
+
+		has(proxyTarget, prop): boolean {
+			if (typeof prop === "string" && prop in schema.fields) {
+				return accessor.has(prop);
+			}
+			return Reflect.has(proxyTarget, prop);
+		},
+
+		deleteProperty(proxyTarget, prop): boolean {
+			if (typeof prop === "string" && prop in schema.fields) {
+				const fieldSchema = schema.fields[prop];
+				if (fieldSchema?.kind === FieldKind.Optional) {
+					accessor.delete(prop);
+					return true;
+				}
+				return false;
+			}
+			return Reflect.deleteProperty(proxyTarget, prop);
+		},
+
+		ownKeys(proxyTarget): (string | symbol)[] {
+			return [
+				...Object.keys(schema.fields),
+				...Reflect.ownKeys(proxyTarget).filter(
+					(k) => typeof k !== "string" || !(k in schema.fields),
+				),
+			];
+		},
+
+		getOwnPropertyDescriptor(proxyTarget, prop): PropertyDescriptor | undefined {
+			if (typeof prop === "string" && prop in schema.fields) {
+				return { enumerable: true, configurable: true, writable: true };
+			}
+			return Reflect.getOwnPropertyDescriptor(proxyTarget, prop);
+		},
+	}) as NodeFromSchema<TSchema>;
+}
+
+/**
+ * Unwrap a StorageResult to get the value or create nested views.
+ */
+function unwrapStorageResult(
+	result: StorageResult,
+	schema: ObjectNodeSchema,
+	prop: string,
+	accessor: IFieldAccessor,
+	options: SchemaProxyOptions,
+): unknown {
+	const fieldSchema = schema.fields[prop];
+
+	switch (result.type) {
+		case "value": {
+			const value = result.value;
+
+			if (value === undefined) {
+				if (fieldSchema?.kind === FieldKind.Required) {
+					throw new SchemaValidationError(`Required field "${prop}" is missing`);
+				}
+				return undefined;
+			}
+
+			// Wrap nested objects
+			const nestedSchema = getNestedSchemaFromInfo(schema, prop);
+			if (
+				nestedSchema !== undefined &&
+				isObjectSchema(nestedSchema) &&
+				typeof value === "object" &&
+				value !== null &&
+				!Array.isArray(value)
+			) {
+				const nestedAccessor = new NestedFieldAccessor(accessor, prop);
+				return createSchemaProxy(
+					nestedSchema as TypedObjectNodeSchema,
+					nestedAccessor,
+					options,
+				);
+			}
+
+			return value;
+		}
+		case "storage": {
+			// Nested storage - wrap in appropriate view
+			const nestedSchema = getNestedSchemaFromInfo(schema, prop);
+			if (nestedSchema !== undefined && isObjectSchema(nestedSchema)) {
+				return new SchematizedObjectView(
+					result.storage,
+					nestedSchema as TypedObjectNodeSchema,
+				);
+			} else if (nestedSchema !== undefined && isMapSchema(nestedSchema)) {
+				return new SchematizedMapView(result.storage, nestedSchema as TypedMapNodeSchema);
+			}
+			return result.storage;
+		}
+		default: {
+			return undefined;
+		}
+	}
+}
+
+// ============================================================================
+// SchematizedObjectView
+// ============================================================================
 
 /**
  * Options for configuring a {@link SchematizedObjectView}.
@@ -77,147 +428,17 @@ export class SchematizedObjectView<
 	 * @param options - Optional configuration options
 	 */
 	public constructor(
-		private readonly storage: ISchemaStorage,
+		storage: ISchemaStorage,
 		schema: TSchema,
 		persistence?: ISchemaPersistence,
 		options?: SchematizedObjectViewOptions,
 	) {
 		super(schema, persistence, options);
-		this.rootProxy = this.createRootProxy();
-	}
-
-	/**
-	 * Creates the root proxy for typed property access to schema fields.
-	 *
-	 * @remarks
-	 * The proxy handler accesses storage directly for optimal performance,
-	 * avoiding the overhead of method calls for field access.
-	 */
-	private createRootProxy(): NodeFromSchema<TSchema> {
-		// Capture references to avoid `this` aliasing in proxy handlers
-		const schema = this.schema;
-		const storage = this.storage;
-		const ensureNotDisposed = (): void => this.ensureNotDisposed();
-		const enableValidation = this.enableSchemaValidation;
-		const getFieldNodeSchema = (fieldSchema: FieldSchema): NodeSchema =>
-			this.getFieldNodeSchema(fieldSchema);
-		const unwrapStorageResult = (
-			result: StorageResult,
-			nodeSchema: NodeSchema,
-			fieldKey: string,
-			nestedSchema: NodeSchema | undefined,
-		): unknown => this.unwrapStorageResult(result, nodeSchema, fieldKey, nestedSchema);
-		const getNestedSchema = (prop: string): NodeSchema | undefined =>
-			this.getNestedSchema(prop);
-
-		// If the schema is a class (created with sf.object()), use its prototype as the target.
-		// This enables custom methods and getters on schema subclasses to work via Reflect.
-		// For plain object schemas, use an empty object.
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-		const target: object = isSchemaClassConstructor(schema)
-			? Object.create(schema.prototype)
-			: {};
-
-		return new Proxy(target, {
-			get(proxyTarget, prop, receiver): unknown {
-				ensureNotDisposed();
-				if (typeof prop === "string" && prop in schema.fields) {
-					// Access storage directly for schema fields
-					const fieldSchema = schema.fields[prop];
-					if (fieldSchema === undefined) {
-						return undefined;
-					}
-					const nodeSchema = getFieldNodeSchema(fieldSchema);
-					const result = storage.getField(prop, nodeSchema);
-
-					if (result === undefined) {
-						if (fieldSchema.kind === FieldKind.Required) {
-							throw new SchemaValidationError(`Required field "${prop}" is missing`);
-						}
-						return undefined;
-					}
-
-					// Get the nested schema from info if available
-					const nestedSchema = getNestedSchema(prop);
-					return unwrapStorageResult(result, nodeSchema, prop, nestedSchema);
-				}
-				// Reflect fallback for non-schema properties (enables custom methods/getters when target has prototype)
-
-				return Reflect.get(proxyTarget, prop, receiver);
-			},
-			set(proxyTarget, prop, value, _receiver) {
-				ensureNotDisposed();
-				if (typeof prop === "string" && prop in schema.fields) {
-					// Access storage directly for schema fields
-					const fieldSchema = schema.fields[prop];
-					if (fieldSchema === undefined) {
-						return false;
-					}
-
-					// Handle undefined for optional fields
-					if (value === undefined) {
-						if (fieldSchema.kind === FieldKind.Optional) {
-							storage.deleteField(prop);
-							return true;
-						}
-						throw new UsageError(`Cannot set required field "${prop}" to undefined`);
-					}
-
-					const nodeSchema = getFieldNodeSchema(fieldSchema);
-
-					// Validate only if schema validation is enabled
-					if (enableValidation) {
-						const validation = validateData(nodeSchema, value);
-						if (!validation.valid) {
-							throw new SchemaValidationError(
-								`Invalid value for field "${prop}"`,
-								validation.errors,
-							);
-						}
-					}
-
-					storage.setField(prop, nodeSchema, value);
-					return true;
-				}
-				// Don't allow setting unknown properties on schema-backed objects
-				// This matches the original behavior and prevents accidental property pollution
-				return false;
-			},
-			has(proxyTarget, prop) {
-				// Check if the field has a value (like hasField), not just if it's in the schema
-				if (typeof prop === "string" && prop in schema.fields) {
-					return storage.hasField(prop);
-				}
-				return Reflect.has(proxyTarget, prop);
-			},
-			ownKeys(proxyTarget) {
-				return [
-					...Object.keys(schema.fields),
-					...Reflect.ownKeys(proxyTarget).filter(
-						(k) => typeof k !== "string" || !(k in schema.fields),
-					),
-				];
-			},
-			getOwnPropertyDescriptor(proxyTarget, prop) {
-				if (typeof prop === "string" && prop in schema.fields) {
-					return { enumerable: true, configurable: true, writable: true };
-				}
-				return Reflect.getOwnPropertyDescriptor(proxyTarget, prop);
-			},
-			deleteProperty(proxyTarget, prop) {
-				if (typeof prop === "string" && prop in schema.fields) {
-					// For schema fields, setting to undefined clears optional fields
-					// For required fields, we cannot delete
-					const fieldSchema = schema.fields[prop];
-					if (fieldSchema !== undefined && fieldSchema.kind === FieldKind.Optional) {
-						storage.deleteField(prop);
-						return true;
-					}
-					return false; // Cannot delete required fields
-				}
-				return Reflect.deleteProperty(proxyTarget, prop);
-			},
-		}) as NodeFromSchema<TSchema>;
+		const accessor = new RootFieldAccessor(storage);
+		this.rootProxy = createSchemaProxy(schema, accessor, {
+			enableValidation: this.enableSchemaValidation,
+			ensureNotDisposed: () => this.ensureNotDisposed(),
+		});
 	}
 
 	/**
@@ -233,157 +454,5 @@ export class SchematizedObjectView<
 	public get root(): NodeFromSchema<TSchema> {
 		this.ensureNotDisposed();
 		return this.rootProxy;
-	}
-
-	/**
-	 * Get a dummy node schema from a field schema for storage operations.
-	 * This is a simplification - in a full implementation, we'd look up the actual schema.
-	 */
-	private getFieldNodeSchema(fieldSchema: FieldSchema): NodeSchema {
-		// For now, return a minimal schema for storage operations
-		// The storage layer doesn't actually use the schema for much
-		const schema: NodeSchema = {
-			identifier: fieldSchema.allowedTypes[0] ?? "unknown",
-			kind: NodeKind.Leaf, // Default to leaf - actual type determined at runtime
-		};
-		return schema;
-	}
-
-	/**
-	 * Get the nested schema for a field from the schema's info property.
-	 * This allows us to access the actual schema object (not just the identifier)
-	 * for nested object fields.
-	 */
-	private getNestedSchema(prop: string): NodeSchema | undefined {
-		// Access the info property which contains the original field definitions
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
-		const schemaInfo = (this.schema as any).info;
-		if (schemaInfo === undefined) {
-			return undefined;
-		}
-		// Get the field's schema from info
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
-		const fieldInfo = schemaInfo[prop];
-		if (fieldInfo === undefined) {
-			return undefined;
-		}
-
-		// fieldInfo could be:
-		// - A TypedFieldSchema (from sf.optional() or sf.required()) with an info property
-		// - A TypedNodeSchema directly (e.g., sf.string, AddressSchema)
-		// - A schema class constructor (function) with static kind/identifier properties
-
-		// Check if it's a TypedFieldSchema with an info property
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-		if (typeof fieldInfo === "object" && fieldInfo !== null && "info" in fieldInfo) {
-			// It's a TypedFieldSchema - get the nested schema from its info
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-			return fieldInfo.info as NodeSchema | undefined;
-		}
-
-		// It's directly a schema object (e.g., sf.string leaf schema)
-		if (typeof fieldInfo === "object" && fieldInfo !== null && "kind" in fieldInfo) {
-			return fieldInfo as NodeSchema;
-		}
-
-		// It's a schema class constructor (e.g., AddressSchema created by sf.object())
-		// Schema classes have static 'kind' and 'identifier' properties
-		if (typeof fieldInfo === "function" && "kind" in fieldInfo) {
-			return fieldInfo as unknown as NodeSchema;
-		}
-
-		return undefined;
-	}
-
-	/**
-	 * Unwrap a storage result to get the actual value or nested view.
-	 *
-	 * @param result - The storage result
-	 * @param nodeSchema - The node schema for the field
-	 * @param fieldKey - The field key in storage (for write-back on nested objects)
-	 * @param nestedSchema - The actual nested schema if available (for object wrapping)
-	 */
-	private unwrapStorageResult(
-		result: StorageResult,
-		nodeSchema: NodeSchema,
-		fieldKey: string,
-		nestedSchema: NodeSchema | undefined,
-	): unknown {
-		switch (result.type) {
-			case "value": {
-				const value = result.value;
-
-				// For nested objects in flat storage, wrap in a proxy that writes back
-				if (
-					nestedSchema !== undefined &&
-					isObjectSchema(nestedSchema) &&
-					typeof value === "object" &&
-					value !== null &&
-					!Array.isArray(value)
-				) {
-					return this.createNestedObjectProxy(
-						value as Record<string, unknown>,
-						fieldKey,
-						nestedSchema as TypedObjectNodeSchema,
-					);
-				}
-
-				return value;
-			}
-			case "storage": {
-				// Nested storage - wrap in appropriate view
-				if (isObjectSchema(nodeSchema)) {
-					return new SchematizedObjectView(
-						result.storage,
-						nodeSchema as TypedObjectNodeSchema,
-					);
-				} else if (isMapSchema(nodeSchema)) {
-					return new SchematizedMapView(result.storage, nodeSchema as TypedMapNodeSchema);
-				}
-				// Should not happen for leaf schemas
-				return result.storage;
-			}
-			default: {
-				// Exhaustive check - all result types handled above
-				return undefined;
-			}
-		}
-	}
-
-	/**
-	 * Creates a proxy for a nested object that writes changes back to storage.
-	 *
-	 * @remarks
-	 * Reading: `root.address` returns a fresh proxy from current storage each time,
-	 * so reads are fresh if you re-access through root. Holding a proxy reference
-	 * may see stale data on get (acceptable trade-off for simplicity).
-	 *
-	 * Writing: Must read-modify-write to preserve concurrent changes from other clients.
-	 */
-	private createNestedObjectProxy(
-		data: Record<string, unknown>,
-		fieldKey: string,
-		_nestedSchema: TypedObjectNodeSchema,
-	): Record<string, unknown> {
-		const storage = this.storage;
-		const nodeSchema = { identifier: "object", kind: NodeKind.Object };
-
-		return new Proxy(data, {
-			set(_target, prop, newValue) {
-				if (typeof prop !== "string") {
-					return false;
-				}
-				// Read current value from storage to preserve concurrent changes
-				const result = storage.getField(fieldKey, nodeSchema);
-				const current: Record<string, unknown> =
-					result?.type === "value" && typeof result.value === "object" && result.value !== null
-						? (result.value as Record<string, unknown>)
-						: {};
-				// Write updated object back
-				const updated: Record<string, unknown> = { ...current, [prop]: newValue as unknown };
-				storage.setField(fieldKey, nodeSchema, updated);
-				return true;
-			},
-		});
 	}
 }
