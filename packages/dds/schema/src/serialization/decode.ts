@@ -173,10 +173,25 @@ function decodeFieldSchema(
 	encoded: EncodedFieldSchema,
 	definitions: Map<string, SimpleNodeSchema>,
 ): SimpleFieldSchema {
-	return {
+	const result: {
+		kind: FieldKind;
+		allowedTypes: readonly string[];
+		key?: string;
+		metadata?: { description?: string; custom?: unknown };
+	} = {
 		kind: encoded.kind === "required" ? FieldKind.Required : FieldKind.Optional,
 		allowedTypes: decodeAllowedTypes(encoded.allowedTypes, definitions),
 	};
+
+	// Include props if present
+	if (encoded.key !== undefined) {
+		result.key = encoded.key;
+	}
+	if (encoded.metadata) {
+		result.metadata = encoded.metadata;
+	}
+
+	return result;
 }
 
 /**

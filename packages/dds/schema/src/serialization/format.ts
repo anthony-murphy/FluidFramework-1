@@ -156,6 +156,21 @@ export interface EncodedFieldSchema {
 	 * Each element can be an inline schema or a string reference to a schema in definitions.
 	 */
 	readonly allowedTypes: readonly (EncodedNodeSchema | string)[];
+
+	/**
+	 * Storage key override.
+	 * @remarks
+	 * If specified, this key is used for storage instead of the field name.
+	 */
+	readonly key?: string;
+
+	/**
+	 * Metadata for the field.
+	 */
+	readonly metadata?: {
+		readonly description?: string;
+		readonly custom?: unknown;
+	};
 }
 
 import type { FieldKind, NodeKind } from "../core/index.js";
@@ -222,6 +237,19 @@ export interface SimpleLeafNodeSchema {
 export interface SimpleFieldSchema {
 	readonly kind: FieldKind;
 	readonly allowedTypes: readonly string[];
+	/**
+	 * Storage key override.
+	 * @remarks
+	 * If specified, this key is used for storage instead of the field name.
+	 */
+	readonly key?: string;
+	/**
+	 * Metadata for the field.
+	 */
+	readonly metadata?: {
+		readonly description?: string;
+		readonly custom?: unknown;
+	};
 }
 
 /**

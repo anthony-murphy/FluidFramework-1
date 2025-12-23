@@ -417,4 +417,92 @@ describe("SchemaFactory", () => {
 			});
 		});
 	});
+
+	describe("union types (array of allowed types)", () => {
+		it("creates optional field with array of types (union)", () => {
+			const sf = new SchemaFactory("test");
+			const optionalUnion = sf.optional([sf.string, sf.number]);
+
+			assert.equal(optionalUnion.kind, FieldKind.Optional);
+			assert.deepEqual(optionalUnion.allowedTypes, [
+				"com.fluidframework.leaf.string",
+				"com.fluidframework.leaf.number",
+			]);
+		});
+
+		it("creates required field with array of types (union)", () => {
+			const sf = new SchemaFactory("test");
+			const requiredUnion = sf.required([sf.string, sf.number, sf.boolean]);
+
+			assert.equal(requiredUnion.kind, FieldKind.Required);
+			assert.deepEqual(requiredUnion.allowedTypes, [
+				"com.fluidframework.leaf.string",
+				"com.fluidframework.leaf.number",
+				"com.fluidframework.leaf.boolean",
+			]);
+		});
+
+		it("creates object schema with union field and correct allowedTypes", () => {
+			const sf = new SchemaFactory("test");
+			const schema = sf.object("MixedValue", {
+				value: sf.optional([sf.string, sf.number]),
+			});
+
+			assert.equal(schema.kind, NodeKind.Object);
+			assert.equal(schema.fields.value?.kind, FieldKind.Optional);
+			assert.deepEqual(schema.fields.value?.allowedTypes, [
+				"com.fluidframework.leaf.string",
+				"com.fluidframework.leaf.number",
+			]);
+		});
+
+		it("creates union of leaf types and object types", () => {
+			const sf = new SchemaFactory("test");
+			const AddressSchema = sf.object("Address", {
+				street: sf.string,
+			});
+			const schema = sf.object("Person", {
+				contact: sf.optional([sf.string, AddressSchema]),
+			});
+
+			assert.deepEqual(schema.fields.contact?.allowedTypes, [
+				"com.fluidframework.leaf.string",
+				"test.Address",
+			]);
+		});
+
+		it("creates map with union value types", () => {
+			const sf = new SchemaFactory("test");
+			const schema = sf.map("MixedMap", [sf.string, sf.number]);
+
+			assert.equal(schema.kind, NodeKind.Map);
+			assert.deepEqual(schema.allowedTypes, [
+				"com.fluidframework.leaf.string",
+				"com.fluidframework.leaf.number",
+			]);
+		});
+
+		it("creates union with all leaf types", () => {
+			const sf = new SchemaFactory("test");
+			const allLeafs = sf.optional([sf.string, sf.number, sf.boolean, sf.null]);
+
+			assert.deepEqual(allLeafs.allowedTypes, [
+				"com.fluidframework.leaf.string",
+				"com.fluidframework.leaf.number",
+				"com.fluidframework.leaf.boolean",
+				"com.fluidframework.leaf.null",
+			]);
+		});
+
+		it("preserves props on union field", () => {
+			const sf = new SchemaFactory("test");
+			const unionField = sf.optional([sf.string, sf.number], {
+				key: "mixed_value",
+				metadata: { description: "A string or number" },
+			});
+
+			assert.equal(unionField.props?.key, "mixed_value");
+			assert.equal(unionField.props?.metadata?.description, "A string or number");
+		});
+	});
 });
