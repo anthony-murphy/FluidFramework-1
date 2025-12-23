@@ -10,7 +10,7 @@
 import { UsageError } from "@fluidframework/telemetry-utils/internal";
 
 import type { NodeSchema, ObjectNodeSchema, FieldSchema } from "../core/index.js";
-import { FieldKind, isObjectSchema, isMapSchema } from "../core/index.js";
+import { FieldKind, NodeKind, isObjectSchema, isMapSchema } from "../core/index.js";
 import {
 	isSchemaClassConstructor,
 	type TypedObjectNodeSchema,
@@ -101,8 +101,14 @@ export class SchematizedObjectView<
 		const enableValidation = this.enableSchemaValidation;
 		const getFieldNodeSchema = (fieldSchema: FieldSchema): NodeSchema =>
 			this.getFieldNodeSchema(fieldSchema);
-		const unwrapStorageResult = (result: StorageResult, nodeSchema: NodeSchema): unknown =>
-			this.unwrapStorageResult(result, nodeSchema);
+		const unwrapStorageResult = (
+			result: StorageResult,
+			nodeSchema: NodeSchema,
+			fieldKey: string,
+			nestedSchema: NodeSchema | undefined,
+		): unknown => this.unwrapStorageResult(result, nodeSchema, fieldKey, nestedSchema);
+		const getNestedSchema = (prop: string): NodeSchema | undefined =>
+			this.getNestedSchema(prop);
 
 		// If the schema is a class (created with sf.object()), use its prototype as the target.
 		// This enables custom methods and getters on schema subclasses to work via Reflect.
@@ -111,7 +117,7 @@ export class SchematizedObjectView<
 		const target: object = isSchemaClassConstructor(schema)
 			? Object.create(schema.prototype)
 			: {};
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		return new Proxy(target, {
 			get(proxyTarget, prop, receiver): unknown {
 				ensureNotDisposed();
@@ -131,10 +137,12 @@ export class SchematizedObjectView<
 						return undefined;
 					}
 
-					return unwrapStorageResult(result, nodeSchema);
+					// Get the nested schema from info if available
+					const nestedSchema = getNestedSchema(prop);
+					return unwrapStorageResult(result, nodeSchema, prop, nestedSchema);
 				}
 				// Reflect fallback for non-schema properties (enables custom methods/getters when target has prototype)
-				// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+
 				return Reflect.get(proxyTarget, prop, receiver);
 			},
 			set(proxyTarget, prop, value, _receiver) {
@@ -236,18 +244,91 @@ export class SchematizedObjectView<
 		// The storage layer doesn't actually use the schema for much
 		const schema: NodeSchema = {
 			identifier: fieldSchema.allowedTypes[0] ?? "unknown",
-			kind: 3, // NodeKind.Leaf as default
+			kind: NodeKind.Leaf, // Default to leaf - actual type determined at runtime
 		};
 		return schema;
 	}
 
 	/**
-	 * Unwrap a storage result to get the actual value or nested view.
+	 * Get the nested schema for a field from the schema's info property.
+	 * This allows us to access the actual schema object (not just the identifier)
+	 * for nested object fields.
 	 */
-	private unwrapStorageResult(result: StorageResult, nodeSchema: NodeSchema): unknown {
+	private getNestedSchema(prop: string): NodeSchema | undefined {
+		// Access the info property which contains the original field definitions
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+		const schemaInfo = (this.schema as any).info;
+		if (schemaInfo === undefined) {
+			return undefined;
+		}
+		// Get the field's schema from info
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+		const fieldInfo = schemaInfo[prop];
+		if (fieldInfo === undefined) {
+			return undefined;
+		}
+
+		// fieldInfo could be:
+		// - A TypedFieldSchema (from sf.optional() or sf.required()) with an info property
+		// - A TypedNodeSchema directly (e.g., sf.string, AddressSchema)
+		// - A schema class constructor (function) with static kind/identifier properties
+
+		// Check if it's a TypedFieldSchema with an info property
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+		if (typeof fieldInfo === "object" && fieldInfo !== null && "info" in fieldInfo) {
+			// It's a TypedFieldSchema - get the nested schema from its info
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+			return fieldInfo.info as NodeSchema | undefined;
+		}
+
+		// It's directly a schema object (e.g., sf.string leaf schema)
+		if (typeof fieldInfo === "object" && fieldInfo !== null && "kind" in fieldInfo) {
+			return fieldInfo as NodeSchema;
+		}
+
+		// It's a schema class constructor (e.g., AddressSchema created by sf.object())
+		// Schema classes have static 'kind' and 'identifier' properties
+		if (typeof fieldInfo === "function" && "kind" in fieldInfo) {
+			return fieldInfo as unknown as NodeSchema;
+		}
+
+		return undefined;
+	}
+
+	/**
+	 * Unwrap a storage result to get the actual value or nested view.
+	 *
+	 * @param result - The storage result
+	 * @param nodeSchema - The node schema for the field
+	 * @param fieldKey - The field key in storage (for write-back on nested objects)
+	 * @param nestedSchema - The actual nested schema if available (for object wrapping)
+	 */
+	private unwrapStorageResult(
+		result: StorageResult,
+		nodeSchema: NodeSchema,
+		fieldKey: string,
+		nestedSchema: NodeSchema | undefined,
+	): unknown {
 		switch (result.type) {
 			case "value": {
-				return result.value;
+				const value = result.value;
+
+				// For nested objects in flat storage, wrap in a proxy that writes back
+				if (
+					nestedSchema !== undefined &&
+					isObjectSchema(nestedSchema) &&
+					typeof value === "object" &&
+					value !== null &&
+					!Array.isArray(value)
+				) {
+					return this.createNestedObjectProxy(
+						value as Record<string, unknown>,
+						fieldKey,
+						nestedSchema as TypedObjectNodeSchema,
+					);
+				}
+
+				return value;
 			}
 			case "storage": {
 				// Nested storage - wrap in appropriate view
@@ -267,5 +348,42 @@ export class SchematizedObjectView<
 				return undefined;
 			}
 		}
+	}
+
+	/**
+	 * Creates a proxy for a nested object that writes changes back to storage.
+	 *
+	 * @remarks
+	 * Reading: `root.address` returns a fresh proxy from current storage each time,
+	 * so reads are fresh if you re-access through root. Holding a proxy reference
+	 * may see stale data on get (acceptable trade-off for simplicity).
+	 *
+	 * Writing: Must read-modify-write to preserve concurrent changes from other clients.
+	 */
+	private createNestedObjectProxy(
+		data: Record<string, unknown>,
+		fieldKey: string,
+		_nestedSchema: TypedObjectNodeSchema,
+	): Record<string, unknown> {
+		const storage = this.storage;
+		const nodeSchema = { identifier: "object", kind: NodeKind.Object };
+
+		return new Proxy(data, {
+			set(_target, prop, newValue) {
+				if (typeof prop !== "string") {
+					return false;
+				}
+				// Read current value from storage to preserve concurrent changes
+				const result = storage.getField(fieldKey, nodeSchema);
+				const current: Record<string, unknown> =
+					result?.type === "value" && typeof result.value === "object" && result.value !== null
+						? (result.value as Record<string, unknown>)
+						: {};
+				// Write updated object back
+				const updated: Record<string, unknown> = { ...current, [prop]: newValue as unknown };
+				storage.setField(fieldKey, nodeSchema, updated);
+				return true;
+			},
+		});
 	}
 }

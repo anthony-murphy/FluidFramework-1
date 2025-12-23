@@ -98,6 +98,68 @@ describe("SharedMap.viewWith e2e", () => {
 		return loader.resolve({ url: "https://localhost:8080/test_document_id" });
 	}
 
+	/** Wait for container's local changes to be saved and return the sequence number */
+	async function waitForSave(container: IContainer): Promise<number> {
+		return new Promise<number>((resolve, reject) => {
+			if (container.closed || container.disposed) {
+				reject(new Error("Container already closed or disposed"));
+				return;
+			}
+			if (!container.isDirty) {
+				resolve(container.deltaManager.lastSequenceNumber);
+				return;
+			}
+			const off = (): void => {
+				container.off("saved", resolveHandler);
+				container.off("closed", rejectHandler);
+				container.off("disposed", rejectHandler);
+			};
+			const resolveHandler = (): void => {
+				resolve(container.deltaManager.lastSequenceNumber);
+				off();
+			};
+			const rejectHandler = (): void => {
+				reject(new Error("Container closed or disposed"));
+				off();
+			};
+			container.on("saved", resolveHandler);
+			container.on("closed", rejectHandler);
+			container.on("disposed", rejectHandler);
+		});
+	}
+
+	/** Wait for container to process ops up to the given sequence number */
+	async function catchUp(container: IContainer, sequenceNumber: number): Promise<void> {
+		return new Promise<void>((resolve, reject) => {
+			if (container.closed || container.disposed) {
+				reject(new Error("Container already closed or disposed"));
+				return;
+			}
+			if (container.deltaManager.lastSequenceNumber >= sequenceNumber) {
+				resolve();
+				return;
+			}
+			const off = (): void => {
+				container.off("op", opHandler);
+				container.off("closed", rejectHandler);
+				container.off("disposed", rejectHandler);
+			};
+			const opHandler = (message: { sequenceNumber: number }): void => {
+				if (message.sequenceNumber >= sequenceNumber) {
+					resolve();
+					off();
+				}
+			};
+			const rejectHandler = (): void => {
+				reject(new Error("Container closed or disposed"));
+				off();
+			};
+			container.on("op", opHandler);
+			container.on("closed", rejectHandler);
+			container.on("disposed", rejectHandler);
+		});
+	}
+
 	async function getMap(container: IContainer): Promise<ISharedMap> {
 		const dataObject = (await container.getEntryPoint()) as TestFluidObject;
 		return dataObject.getSharedObject<ISharedMap>(mapId);
@@ -252,10 +314,7 @@ describe("SharedMap.viewWith e2e", () => {
 			assert.equal(view2.root.bio, undefined);
 		});
 
-		// BUG: Nested object field updates appear to concatenate values instead of replacing.
-		// This may be a bug in how nested object proxies handle set operations.
-		// TODO: Investigate nested object proxy set handler
-		it.skip("syncs nested object changes", async () => {
+		it("syncs nested object changes", async () => {
 			const AddressSchema = sf.object("Address", {
 				street: sf.string,
 				city: sf.string,
@@ -277,10 +336,15 @@ describe("SharedMap.viewWith e2e", () => {
 			view1.root.name = "Diana";
 			view1.root.address = { street: "123 Main St", city: "Seattle" };
 
+			// Wait for client 1's changes to be saved
+			const seqNum1 = await waitForSave(container1);
+
 			// Client 2 loads
 			const container2 = await loadContainer();
 			await waitForContainerConnection(container2);
-			await new Promise<void>((resolve) => setTimeout(resolve, 100));
+
+			// Wait for client 2 to catch up to client 1's changes
+			await catchUp(container2, seqNum1);
 
 			const map2 = await getMap(container2);
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -291,11 +355,16 @@ describe("SharedMap.viewWith e2e", () => {
 			assert.equal(view2.root.address.street, "123 Main St");
 			assert.equal(view2.root.address.city, "Seattle");
 
-			// Client 2 updates nested field
+			// Client 2 updates nested field via the view proxy
 			view2.root.address.city = "Portland";
-			await new Promise<void>((resolve) => setTimeout(resolve, 100));
 
-			// Client 1 should see the nested change
+			// Wait for client 2's changes to be saved
+			const seqNum2 = await waitForSave(container2);
+
+			// Wait for client 1 to catch up
+			await catchUp(container1, seqNum2);
+
+			// Client 1 should see the nested change via the view
 			assert.equal(view1.root.address.city, "Portland");
 		});
 	});

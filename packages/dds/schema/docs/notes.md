@@ -22,9 +22,9 @@
 
 ## Open Issues
 
-### Nested Object Field Updates Concatenate Instead of Replace [BUG]
+### Nested Object Field Updates - Strange Multi-Client Behavior [BUG]
 
-**Problem:** When updating a nested object field from a second client, values get concatenated instead of replaced.
+**Problem:** When updating a nested object field from a second client, the result is a bizarre character-level interleaving instead of the expected last-write-wins behavior.
 
 **Reproduction (from local-server-tests/schematizedMap.spec.ts):**
 ```typescript
@@ -34,15 +34,28 @@ view1.root.address = { street: "123 Main St", city: "Seattle" };
 // Client 2: Updates nested field
 view2.root.address.city = "Portland";
 
-// Expected on Client 1: "Portland"
-// Actual on Client 1: "SeaPorttleand"  // Concatenated!
+// Expected on Client 1: "Portland" (last-write-wins)
+// Actual on Client 1: "Portland" ✅ FIXED
 ```
 
-**Likely cause:** The nested object proxy's `set` handler may be incorrectly handling the update, possibly due to how the storage key path is constructed or how the SharedMap `set` operation is being called.
+**Root Cause (FOUND):**
+The `getNestedSchema()` function in `objectView.ts` was not handling schema class constructors (functions).
+Schema classes created by `sf.object()` are class constructors (typeof === "function"), not plain objects.
+The condition `typeof fieldInfo === "object"` failed, returning `undefined` for the nested schema.
 
-**Files to investigate:**
-- `src/view/objectView.ts` - Object proxy handler
-- `src/view/mapView.ts` - Storage key path construction
+**Fix Applied:**
+Added handling for schema class constructors in `getNestedSchema()`:
+```typescript
+// It's a schema class constructor (e.g., AddressSchema created by sf.object())
+// Schema classes have static 'kind' and 'identifier' properties
+if (typeof fieldInfo === "function" && "kind" in fieldInfo) {
+    return fieldInfo as unknown as NodeSchema;
+}
+```
+
+**Files involved:**
+- `src/view/objectView.ts` - Fixed `getNestedSchema()` and `createNestedObjectProxy()`
+- `packages/test/local-server-tests/src/test/schematizedMap.spec.ts` - E2E test now passes
 
 ---
 
