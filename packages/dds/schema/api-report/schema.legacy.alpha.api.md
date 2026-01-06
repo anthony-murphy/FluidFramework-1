@@ -71,7 +71,7 @@ export interface MapNodeSchema extends NodeSchema {
 export type MapView<TSchema extends MapNodeSchema> = SchematizedView<TSchema>;
 
 // @alpha @legacy
-export type NodeFromSchema<T> = T extends TypedLeafNodeSchema ? ValueFromLeafSchema<T> : T extends TypedObjectNodeSchema<string, infer TFields> ? ObjectFromFields<TFields> : T extends TypedMapNodeSchema<string, infer TValueSchema> ? TypeFromImplicitAllowedTypes<TValueSchema> : T extends SchemaClassConstructor<infer TFields extends ObjectSchemaFields> ? ObjectFromFields<TFields> : T extends {
+export type NodeFromSchema<T> = T extends TypedLeafNodeSchema ? ValueFromLeafSchema<T> : T extends TypedConstObjectNodeSchema<string, infer TFields> ? ReadonlyObjectFromFields<TFields> : T extends TypedObjectNodeSchema<string, infer TFields> ? ObjectFromFields<TFields> : T extends TypedMapNodeSchema<string, infer TValueSchema> ? TypeFromImplicitAllowedTypes<TValueSchema> : T extends SchemaClassConstructor<infer TFields extends ObjectSchemaFields> ? ObjectFromFields<TFields> : T extends {
     readonly info: infer TFields;
 } ? TFields extends ObjectSchemaFields ? ObjectFromFields<TFields> : never : never;
 
@@ -116,6 +116,7 @@ export type ObjectFromFields<TFields extends ObjectSchemaFields> = {
 
 // @alpha @legacy
 export interface ObjectNodeSchema extends NodeSchema {
+    readonly const?: boolean;
     readonly fields: Record<string, FieldSchema>;
     // (undocumented)
     readonly kind: typeof NodeKind.Object;
@@ -128,7 +129,23 @@ export type ObjectSchemaFields = Record<string, ImplicitFieldSchema>;
 export type ObjectView<TSchema extends ObjectNodeSchema> = SchematizedView<TSchema>;
 
 // @alpha @legacy
-export type RootFromSchema<TSchema extends RootSchema> = TSchema extends ObjectNodeSchema ? NodeFromSchema<TSchema> : TSchema extends MapNodeSchema ? Map<string, InferMapValueType<TSchema>> : never;
+export type ReadonlyObjectFromFields<TFields extends ObjectSchemaFields> = {
+    readonly [K in keyof TFields as NormalizeFieldSchema<TFields[K]>["kind"] extends typeof FieldKind.Required ? K : never]: ReadonlyTypeFromField<TFields[K]>;
+} & {
+    readonly [K in keyof TFields as NormalizeFieldSchema<TFields[K]>["kind"] extends typeof FieldKind.Optional ? K : never]?: ReadonlyTypeFromField<TFields[K]>;
+};
+
+// @alpha @legacy
+export type ReadonlyTypeFromField<T extends ImplicitFieldSchema> = NormalizeFieldSchema<T> extends {
+    kind: infer K;
+    allowedTypes: infer A;
+} ? A extends ImplicitAllowedTypes ? K extends typeof FieldKind.Optional ? ReadonlyTypeFromImplicitAllowedTypes<A> | undefined : ReadonlyTypeFromImplicitAllowedTypes<A> : never : never;
+
+// @alpha @legacy
+export type ReadonlyTypeFromImplicitAllowedTypes<T extends ImplicitAllowedTypes> = T extends TypedLeafNodeSchema ? ValueFromLeafSchema<T> : T extends TypedObjectNodeSchema<string, infer TFields> ? ReadonlyObjectFromFields<TFields> : T extends TypedMapNodeSchema<string, infer TValueSchema> ? ReadonlyTypeFromImplicitAllowedTypes<TValueSchema> : T extends readonly (infer U)[] ? U extends TypedLeafNodeSchema | TypedObjectNodeSchema | TypedMapNodeSchema ? ReadonlyTypeFromImplicitAllowedTypes<U> : never : never;
+
+// @alpha @legacy
+export type RootFromSchema<TSchema extends RootSchema> = TSchema extends TypedConstObjectNodeSchema<string, infer TFields> ? ReadonlyObjectFromFields<TFields> : TSchema extends ObjectNodeSchema ? NodeFromSchema<TSchema> : TSchema extends MapNodeSchema ? Map<string, InferMapValueType<TSchema>> : never;
 
 // @alpha @legacy
 export type RootSchema = ObjectNodeSchema | MapNodeSchema;
@@ -161,6 +178,7 @@ export class SchemaFactory<TScope extends string = string> {
     constructor(
     scope: TScope);
     get boolean(): TypedLeafNodeSchema<"com.fluidframework.leaf.boolean", "boolean", boolean>;
+    constObject<const TName extends string, const TFields extends ObjectSchemaFields>(name: TName, fields: TFields): TypedConstObjectNodeSchema<ScopedSchemaName<TScope, TName>, TFields> & SchemaClassConstructor<TFields>;
     get handle(): TypedLeafNodeSchema<"com.fluidframework.leaf.handle", "handle", IFluidHandle>;
     map<const TName extends string, const TValueSchema extends ImplicitAllowedTypes>(name: TName, valueSchema: TValueSchema): TypedMapNodeSchema<ScopedSchemaName<TScope, TName>, TValueSchema>;
     get null(): TypedLeafNodeSchema<"com.fluidframework.leaf.null", "null", null>;
@@ -196,6 +214,11 @@ export type ScopedSchemaName<TScope extends string, TName extends string | numbe
 
 // @alpha @legacy
 export const stringSchema: TypedLeafNodeSchema<"com.fluidframework.leaf.string", "string", string>;
+
+// @alpha @legacy
+export interface TypedConstObjectNodeSchema<TIdentifier extends string = string, TFields extends ObjectSchemaFields = ObjectSchemaFields> extends TypedObjectNodeSchema<TIdentifier, TFields> {
+    readonly const: true;
+}
 
 // @alpha @legacy
 export interface TypedFieldSchema<TKind extends FieldKind = FieldKind, TAllowedTypes extends ImplicitAllowedTypes = ImplicitAllowedTypes> extends FieldSchema {
@@ -243,7 +266,7 @@ export type TypeFromField<T extends ImplicitFieldSchema> = NormalizeFieldSchema<
 } ? A extends ImplicitAllowedTypes ? K extends typeof FieldKind.Optional ? TypeFromImplicitAllowedTypes<A> | undefined : TypeFromImplicitAllowedTypes<A> : never : never;
 
 // @alpha @legacy
-export type TypeFromImplicitAllowedTypes<T extends ImplicitAllowedTypes> = T extends TypedLeafNodeSchema ? ValueFromLeafSchema<T> : T extends TypedObjectNodeSchema<string, infer TFields> ? ObjectFromFields<TFields> : T extends TypedMapNodeSchema<string, infer TValueSchema> ? TypeFromImplicitAllowedTypes<TValueSchema> : T extends readonly (infer U)[] ? U extends TypedLeafNodeSchema | TypedObjectNodeSchema | TypedMapNodeSchema ? TypeFromImplicitAllowedTypes<U> : never : never;
+export type TypeFromImplicitAllowedTypes<T extends ImplicitAllowedTypes> = T extends TypedLeafNodeSchema ? ValueFromLeafSchema<T> : T extends TypedConstObjectNodeSchema<string, infer TFields> ? ReadonlyObjectFromFields<TFields> : T extends TypedObjectNodeSchema<string, infer TFields> ? ObjectFromFields<TFields> : T extends TypedMapNodeSchema<string, infer TValueSchema> ? TypeFromImplicitAllowedTypes<TValueSchema> : T extends readonly (infer U)[] ? U extends TypedLeafNodeSchema | TypedObjectNodeSchema | TypedMapNodeSchema ? TypeFromImplicitAllowedTypes<U> : never : never;
 
 // @alpha @legacy
 export type ValueFromLeafSchema<T extends TypedLeafNodeSchema> = T extends TypedLeafNodeSchema<string, "string", infer TValue> ? TValue : T extends TypedLeafNodeSchema<string, "number", infer TValue> ? TValue : T extends TypedLeafNodeSchema<string, "boolean", infer TValue> ? TValue : T extends TypedLeafNodeSchema<string, "null", infer TValue> ? TValue : T extends TypedLeafNodeSchema<string, "handle", infer TValue> ? TValue : never;

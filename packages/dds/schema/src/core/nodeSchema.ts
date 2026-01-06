@@ -61,6 +61,23 @@ export interface ObjectNodeSchema extends NodeSchema {
 	 * on instances of this object node.
 	 */
 	readonly fields: Record<string, FieldSchema>;
+
+	/**
+	 * Whether this object schema represents a const (immutable) value.
+	 *
+	 * @remarks
+	 * When `true`, instances of this schema are treated as immutable value objects.
+	 * All properties (including nested objects) become readonly, and the entire
+	 * object must be replaced rather than mutating individual properties.
+	 *
+	 * This is similar to TypeScript's `as const` assertion - the object and all
+	 * its nested structures are deeply readonly.
+	 *
+	 * Use {@link SchemaFactory.constObject} to create const object schemas.
+	 *
+	 * @defaultValue `false`
+	 */
+	readonly const?: boolean;
 }
 
 /**

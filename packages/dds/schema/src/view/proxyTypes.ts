@@ -13,25 +13,35 @@
 import type { IDisposable } from "@fluidframework/core-interfaces";
 
 import type { ObjectNodeSchema, MapNodeSchema, RootSchema } from "../core/index.js";
+import type { TypedConstObjectNodeSchema } from "../factory/index.js";
 import type { SchemaCompatibilityStatus } from "../serialization/index.js";
-import type { NodeFromSchema, InferMapValueType } from "../types/index.js";
+import type {
+	NodeFromSchema,
+	InferMapValueType,
+	ReadonlyObjectFromFields,
+} from "../types/index.js";
 
 /**
  * Computes the root data type for a given schema.
  *
  * @remarks
- * - For {@link ObjectNodeSchema}: Returns the typed object with properties
+ * - For {@link ObjectNodeSchema}: Returns the typed object with properties.
+ * For const schemas ({@link TypedConstObjectNodeSchema}), returns readonly properties.
+ *
  * - For {@link MapNodeSchema}: Returns a Map with typed values
  *
  * @typeParam TSchema - The root schema type
  *
  * @alpha @legacy
  */
-export type RootFromSchema<TSchema extends RootSchema> = TSchema extends ObjectNodeSchema
-	? NodeFromSchema<TSchema>
-	: TSchema extends MapNodeSchema
-		? Map<string, InferMapValueType<TSchema>>
-		: never;
+export type RootFromSchema<TSchema extends RootSchema> =
+	TSchema extends TypedConstObjectNodeSchema<string, infer TFields>
+		? ReadonlyObjectFromFields<TFields>
+		: TSchema extends ObjectNodeSchema
+			? NodeFromSchema<TSchema>
+			: TSchema extends MapNodeSchema
+				? Map<string, InferMapValueType<TSchema>>
+				: never;
 
 /**
  * Base view interface without the schema-dependent root type.

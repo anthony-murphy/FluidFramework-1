@@ -100,6 +100,7 @@ export function isSchemaClassConstructor(value: unknown): value is SchemaClassCo
  * @param identifier - The unique identifier for this schema
  * @param fields - The field definitions for this schema (runtime representation)
  * @param info - The original field definitions with type information (for TypeScript inference)
+ * @param isConst - Whether this schema represents a const (immutable) value object
  * @returns A class that can be subclassed for custom methods
  *
  * @internal
@@ -108,6 +109,7 @@ export function createSchemaClass<TFields>(
 	identifier: string,
 	fields: Readonly<Record<string, FieldSchema>>,
 	info: TFields,
+	isConst: boolean = false,
 ): SchemaClassConstructor & { readonly info: TFields } {
 	// Create the class dynamically using an anonymous class.
 	// This avoids eslint's no-extraneous-class error since the class has
@@ -139,6 +141,12 @@ export function createSchemaClass<TFields>(
 		},
 		info: {
 			value: info,
+			writable: false,
+			enumerable: true,
+			configurable: false,
+		},
+		const: {
+			value: isConst,
 			writable: false,
 			enumerable: true,
 			configurable: false,

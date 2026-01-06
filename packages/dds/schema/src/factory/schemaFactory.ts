@@ -164,6 +164,35 @@ export interface TypedObjectNodeSchema<
 }
 
 /**
+ * A typed const object node schema.
+ *
+ * @typeParam TIdentifier - The unique identifier for this schema.
+ * @typeParam TFields - A record type mapping field names to their schemas.
+ *
+ * @remarks
+ * Const object schemas produce deeply readonly types. All properties,
+ * including nested objects, become readonly. This models value objects
+ * that must be replaced entirely rather than mutated.
+ *
+ * Similar to TypeScript's `as const`, the entire structure is immutable.
+ * @legacy
+ * @alpha
+ */
+export interface TypedConstObjectNodeSchema<
+	TIdentifier extends string = string,
+	TFields extends ObjectSchemaFields = ObjectSchemaFields,
+> extends TypedObjectNodeSchema<TIdentifier, TFields> {
+	/**
+	 * Indicates this is a const object schema.
+	 *
+	 * @remarks
+	 * When `true`, instances are treated as immutable value objects with
+	 * deeply readonly properties.
+	 */
+	readonly const: true;
+}
+
+/**
  * A typed map node schema that preserves the value schema type.
  *
  * @typeParam TIdentifier - The unique identifier for this schema.
@@ -609,9 +638,86 @@ export class SchemaFactory<TScope extends string = string> {
 			identifier as ScopedSchemaName<TScope, TName>,
 			normalizedFields,
 			fields,
+			false, // not const
 		);
 
 		return SchemaClass as TypedObjectNodeSchema<ScopedSchemaName<TScope, TName>, TFields> &
+			SchemaClassConstructor<TFields>;
+	}
+
+	/**
+	 * Creates a const object node schema with the given name and fields.
+	 *
+	 * @param name - The name for this schema, which will be combined with the scope
+	 * to form the full identifier.
+	 * @param fields - A record mapping field names to their schemas.
+	 *
+	 * @returns A typed const object node schema that produces deeply readonly types.
+	 *
+	 * @remarks
+	 * Const objects are value objects that must be replaced entirely rather than
+	 * mutated. All properties, including nested objects, become readonly in the
+	 * inferred TypeScript type.
+	 *
+	 * This is similar to TypeScript's `as const` assertion - the object and all
+	 * its nested structures are deeply immutable.
+	 *
+	 * Use const objects when:
+	 * - The data is stored as a flat JSON blob (e.g., in SharedMap)
+	 * - You want to enforce immutable value semantics (replace whole value)
+	 * - Nested property mutations would be misleading (last-writer-wins on whole object)
+	 *
+	 * @example
+	 * ```typescript
+	 * const sf = new SchemaFactory("myApp");
+	 *
+	 * // Address is a value object - must be replaced entirely
+	 * const AddressSchema = sf.constObject("Address", {
+	 *   street: sf.string,
+	 *   city: sf.string,
+	 *   zip: sf.string,
+	 * });
+	 *
+	 * // Person can use Address as a nested value
+	 * const PersonSchema = sf.object("Person", {
+	 *   name: sf.string,
+	 *   address: AddressSchema,  // address.city is readonly
+	 * });
+	 *
+	 * // Type: { readonly street: string; readonly city: string; readonly zip: string }
+	 * type Address = NodeFromSchema<typeof AddressSchema>;
+	 *
+	 * // Usage:
+	 * person.address.city = "NYC";  // ❌ Type error - readonly
+	 * person.address = { ...person.address, city: "NYC" };  // ✅ Replace whole object
+	 * ```
+	 */
+	public constObject<const TName extends string, const TFields extends ObjectSchemaFields>(
+		name: TName,
+		fields: TFields,
+	): TypedConstObjectNodeSchema<ScopedSchemaName<TScope, TName>, TFields> &
+		SchemaClassConstructor<TFields> {
+		const identifier = `${this.scope}.${name}`;
+
+		// Convert fields to the runtime FieldSchema format
+		const normalizedFields: Record<string, FieldSchema> = {};
+		for (const [fieldName, fieldSchema] of Object.entries(fields)) {
+			normalizedFields[fieldName] = normalizeFieldSchema(fieldSchema);
+		}
+
+		// Create a class with the schema as static properties
+		// Pass the original fields for type inference, mark as const
+		const SchemaClass = createSchemaClass(
+			identifier as ScopedSchemaName<TScope, TName>,
+			normalizedFields,
+			fields,
+			true, // const
+		);
+
+		return SchemaClass as TypedConstObjectNodeSchema<
+			ScopedSchemaName<TScope, TName>,
+			TFields
+		> &
 			SchemaClassConstructor<TFields>;
 	}
 

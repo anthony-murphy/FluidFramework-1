@@ -202,6 +202,81 @@ describe("SchemaFactory", () => {
 		});
 	});
 
+	describe("constObject schemas", () => {
+		it("creates constObject with const flag set to true", () => {
+			const sf = new SchemaFactory("test");
+			const schema = sf.constObject("Address", {
+				street: sf.string,
+				city: sf.string,
+			});
+
+			assert.equal(schema.kind, NodeKind.Object);
+			assert.equal(schema.identifier, "test.Address");
+			assert.equal(schema.const, true);
+		});
+
+		it("regular object does not have const flag", () => {
+			const sf = new SchemaFactory("test");
+			const schema = sf.object("Address", {
+				street: sf.string,
+				city: sf.string,
+			});
+
+			assert.equal(schema.kind, NodeKind.Object);
+			assert.equal(schema.const, false);
+		});
+
+		it("constObject has required fields", () => {
+			const sf = new SchemaFactory("test");
+			const schema = sf.constObject("Point", {
+				x: sf.number,
+				y: sf.number,
+			});
+
+			assert.equal(schema.fields.x?.kind, FieldKind.Required);
+			assert.equal(schema.fields.y?.kind, FieldKind.Required);
+		});
+
+		it("constObject supports optional fields", () => {
+			const sf = new SchemaFactory("test");
+			const schema = sf.constObject("Point", {
+				x: sf.number,
+				y: sf.number,
+				label: sf.optional(sf.string),
+			});
+
+			assert.equal(schema.fields.x?.kind, FieldKind.Required);
+			assert.equal(schema.fields.y?.kind, FieldKind.Required);
+			assert.equal(schema.fields.label?.kind, FieldKind.Optional);
+		});
+
+		it("constObject can be nested in regular object", () => {
+			const sf = new SchemaFactory("test");
+			const AddressSchema = sf.constObject("Address", {
+				street: sf.string,
+				city: sf.string,
+			});
+			const PersonSchema = sf.object("Person", {
+				name: sf.string,
+				address: AddressSchema,
+			});
+
+			assert.equal(AddressSchema.const, true);
+			assert.equal(PersonSchema.const, false);
+			assert.deepEqual(PersonSchema.fields.address?.allowedTypes, ["test.Address"]);
+		});
+
+		it("scopes identifiers correctly", () => {
+			const sf = new SchemaFactory("com.example.values");
+			const schema = sf.constObject("Point", {
+				x: sf.number,
+				y: sf.number,
+			});
+
+			assert.equal(schema.identifier, "com.example.values.Point");
+		});
+	});
+
 	describe("map schemas", () => {
 		it("creates map with leaf value schema", () => {
 			const sf = new SchemaFactory("test");

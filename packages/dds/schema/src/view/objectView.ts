@@ -67,56 +67,6 @@ class RootFieldAccessor implements IFieldAccessor {
 	}
 }
 
-/**
- * Field accessor for nested objects that performs read-modify-write.
- */
-class NestedFieldAccessor implements IFieldAccessor {
-	public constructor(
-		private readonly parent: IFieldAccessor,
-		private readonly parentKey: string,
-	) {}
-
-	private readParentObject(): Record<string, unknown> {
-		const result = this.parent.get(this.parentKey);
-		// Handle StorageResult from RootFieldAccessor
-		if (result !== null && typeof result === "object" && "type" in result) {
-			const storageResult = result as StorageResult;
-			if (
-				storageResult.type === "value" &&
-				typeof storageResult.value === "object" &&
-				storageResult.value !== null
-			) {
-				return storageResult.value as Record<string, unknown>;
-			}
-			return {};
-		}
-		// Handle plain object from nested NestedFieldAccessor
-		if (typeof result === "object" && result !== null && !Array.isArray(result)) {
-			return result as Record<string, unknown>;
-		}
-		return {};
-	}
-
-	public get(key: string): unknown {
-		return this.readParentObject()[key];
-	}
-
-	public set(key: string, value: unknown): void {
-		const current = this.readParentObject();
-		this.parent.set(this.parentKey, { ...current, [key]: value });
-	}
-
-	public has(key: string): boolean {
-		return key in this.readParentObject();
-	}
-
-	public delete(key: string): void {
-		const current = this.readParentObject();
-		const { [key]: _, ...rest } = current;
-		this.parent.set(this.parentKey, rest);
-	}
-}
-
 // ============================================================================
 // Schema Proxy Factory
 // ============================================================================
@@ -217,7 +167,7 @@ function createSchemaProxy<TSchema extends ObjectNodeSchema>(
 				return unwrapStorageResult(storageResult, schema, prop, storageKey, accessor, options);
 			}
 
-			// Handle plain value from NestedFieldAccessor
+			// Handle undefined values
 			if (result === undefined) {
 				if (fieldSchema.kind === FieldKind.Required) {
 					throw new SchemaValidationError(`Required field "${prop}" is missing`);
@@ -225,23 +175,11 @@ function createSchemaProxy<TSchema extends ObjectNodeSchema>(
 				return undefined;
 			}
 
-			// Wrap nested objects
-			const nestedSchema = getNestedSchemaFromInfo(schema, prop);
-			if (
-				nestedSchema !== undefined &&
-				isObjectSchema(nestedSchema) &&
-				typeof result === "object" &&
-				result !== null &&
-				!Array.isArray(result)
-			) {
-				const nestedAccessor = new NestedFieldAccessor(accessor, storageKey);
-				return createSchemaProxy(
-					nestedSchema as TypedObjectNodeSchema,
-					nestedAccessor,
-					options,
-				);
-			}
-
+			// Return nested objects directly.
+			// Note: The type system marks nested objects as readonly, but at runtime
+			// mutations are still possible. This is intentional - type-level enforcement
+			// is sufficient to guide users toward the correct pattern of replacing
+			// whole nested values rather than mutating properties.
 			return result;
 		},
 
@@ -350,23 +288,10 @@ function unwrapStorageResult(
 				return undefined;
 			}
 
-			// Wrap nested objects
-			const nestedSchema = getNestedSchemaFromInfo(schema, prop);
-			if (
-				nestedSchema !== undefined &&
-				isObjectSchema(nestedSchema) &&
-				typeof value === "object" &&
-				value !== null &&
-				!Array.isArray(value)
-			) {
-				const nestedAccessor = new NestedFieldAccessor(accessor, storageKey);
-				return createSchemaProxy(
-					nestedSchema as TypedObjectNodeSchema,
-					nestedAccessor,
-					options,
-				);
-			}
-
+			// Return nested objects directly.
+			// Note: The type system marks nested objects as readonly, but at runtime
+			// mutations are still possible. This is intentional - type-level enforcement
+			// is sufficient to guide users toward the correct pattern.
 			return value;
 		}
 		case "storage": {

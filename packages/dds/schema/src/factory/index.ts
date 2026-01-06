@@ -24,6 +24,7 @@ export {
 	type FieldProps,
 	type TypedFieldSchema,
 	type TypedObjectNodeSchema,
+	type TypedConstObjectNodeSchema,
 	type TypedMapNodeSchema,
 	type ImplicitAllowedTypes,
 	type ImplicitFieldSchema,

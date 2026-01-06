@@ -59,9 +59,10 @@ const UserProfileSchema = sf.object("UserProfile", {
 });
 
 /**
- * Nested schema - for structured data.
+ * Nested schema using constObject - for value objects that should be
+ * replaced entirely rather than mutated. All properties become readonly.
  */
-const AddressSchema = sf.object("Address", {
+const AddressSchema = sf.constObject("Address", {
 	street: sf.string,
 	city: sf.string,
 	state: sf.string,
@@ -71,8 +72,33 @@ const AddressSchema = sf.object("Address", {
 
 const CompanySchema = sf.object("Company", {
 	name: sf.string,
-	headquarters: AddressSchema,
+	headquarters: AddressSchema, // AddressSchema is a constObject, so headquarters.* is readonly
 	founded: sf.number,
+});
+
+/**
+ * Nested schema using regular object - properties are mutable.
+ */
+const MutableAddressSchema = sf.object("MutableAddress", {
+	street: sf.string,
+	city: sf.string,
+	state: sf.string,
+	zip: sf.string,
+	country: sf.string,
+});
+
+const PersonSchema = sf.object("Person", {
+	name: sf.string,
+	address: MutableAddressSchema, // MutableAddressSchema is a regular object, so address.* is mutable
+});
+
+/**
+ * ConstObject that nests a mutable object - the nested object should also be
+ * readonly because constObject implies deep immutability.
+ */
+const ConstPersonSchema = sf.constObject("ConstPerson", {
+	name: sf.string,
+	address: MutableAddressSchema, // Even though MutableAddressSchema is a regular object, it should be readonly here
 });
 
 /**
@@ -80,6 +106,16 @@ const CompanySchema = sf.object("Company", {
  */
 const UsersMapSchema = sf.map("UsersMap", UserSchema);
 const SettingsMapSchema = sf.map("SettingsMap", sf.string);
+
+/**
+ * Map schema with constObject values - values are readonly.
+ */
+const AddressBookSchema = sf.map("AddressBook", AddressSchema);
+
+/**
+ * Map schema with mutable object values - values are mutable.
+ */
+const MutableAddressBookSchema = sf.map("MutableAddressBook", MutableAddressSchema);
 
 // =============================================================================
 // Idiomatic usage: ObjectView with typed root
@@ -140,7 +176,7 @@ export function testOptionalFieldsIdiomaticUsage(
 export function testNestedObjectsIdiomaticUsage(
 	companyView: ObjectView<typeof CompanySchema>,
 ): void {
-	// Access nested properties
+	// Access nested properties (readonly - can read but not mutate)
 	companyView.root.name satisfies string;
 	companyView.root.headquarters.street satisfies string;
 	companyView.root.headquarters.city satisfies string;
@@ -150,11 +186,16 @@ export function testNestedObjectsIdiomaticUsage(
 	companyView.root.name = "Acme Corp";
 	companyView.root.founded = 1995;
 
-	// Set nested properties
+	// Nested properties are readonly because AddressSchema uses sf.constObject().
+	// This makes it a value object that must be replaced entirely.
+	// For flat storage DDSes like SharedMap, this is the recommended pattern
+	// because mutations would hide that the entire value gets replaced (LWW).
+	// @ts-expect-error - nested object properties are readonly
 	companyView.root.headquarters.street = "123 Main St";
+	// @ts-expect-error - nested object properties are readonly
 	companyView.root.headquarters.city = "Seattle";
 
-	// Set entire nested object
+	// Set entire nested object - this is the correct pattern
 	companyView.root.headquarters = {
 		street: "456 Oak Ave",
 		city: "Portland",
@@ -168,6 +209,73 @@ export function testNestedObjectsIdiomaticUsage(
 		street: "789 Pine St",
 		city: "Denver",
 		// missing state, zip, country
+	};
+}
+
+// =============================================================================
+// Idiomatic usage: Mutable object nested under constObject (should be readonly)
+// =============================================================================
+
+export function testMutableNestedUnderConstObjectIdiomaticUsage(
+	constPersonView: ObjectView<typeof ConstPersonSchema>,
+): void {
+	// Even though MutableAddressSchema was defined with sf.object(), when nested
+	// under a constObject, the entire structure should be deeply readonly.
+
+	// Can read all properties
+	constPersonView.root.name satisfies string;
+	constPersonView.root.address.street satisfies string;
+	constPersonView.root.address.city satisfies string;
+
+	// Top-level properties are readonly
+	// @ts-expect-error - constObject properties are readonly
+	constPersonView.root.name = "Alice";
+
+	// Nested mutable object properties should ALSO be readonly because constObject is deep
+	// @ts-expect-error - nested object properties are readonly due to parent being constObject
+	constPersonView.root.address.street = "123 Main St";
+	// @ts-expect-error - nested object properties are readonly due to parent being constObject
+	constPersonView.root.address.city = "Seattle";
+
+	// Can replace the entire nested object as readonly value
+	// @ts-expect-error - nested object is readonly, cannot reassign
+	constPersonView.root.address = {
+		street: "456 Oak Ave",
+		city: "Portland",
+		state: "OR",
+		zip: "97201",
+		country: "USA",
+	};
+}
+
+// =============================================================================
+// Idiomatic usage: Mutable nested objects (regular sf.object)
+// =============================================================================
+
+export function testMutableNestedObjectsIdiomaticUsage(
+	personView: ObjectView<typeof PersonSchema>,
+): void {
+	// Access nested properties - these are mutable (not using constObject)
+	personView.root.name satisfies string;
+	personView.root.address.street satisfies string;
+	personView.root.address.city satisfies string;
+
+	// Set top-level properties
+	personView.root.name = "Alice";
+
+	// Nested properties ARE mutable because MutableAddressSchema uses sf.object()
+	// (not sf.constObject). This is allowed but may have surprising semantics
+	// in flat storage DDSes - the entire parent object gets replaced.
+	personView.root.address.street = "123 Main St";
+	personView.root.address.city = "Seattle";
+
+	// Can also replace the entire nested object
+	personView.root.address = {
+		street: "456 Oak Ave",
+		city: "Portland",
+		state: "OR",
+		zip: "97201",
+		country: "USA",
 	};
 }
 
@@ -225,6 +333,84 @@ export function testMapOfObjectsIdiomaticUsage(
 		// @ts-expect-error - wrong field type
 		age: "twenty-five",
 	});
+}
+
+// =============================================================================
+// Idiomatic usage: MapView with constObject values (readonly)
+// =============================================================================
+
+export function testMapOfConstObjectsIdiomaticUsage(
+	addressBookView: MapView<typeof AddressBookSchema>,
+): void {
+	// Get returns readonly object or undefined
+	const address = addressBookView.root.get("home");
+	if (address !== undefined) {
+		// Can read all properties
+		use(address.street satisfies string);
+		use(address.city satisfies string);
+		use(address.state satisfies string);
+		use(address.zip satisfies string);
+		use(address.country satisfies string);
+
+		// @ts-expect-error - constObject values are readonly
+		address.street = "123 Main St";
+		// @ts-expect-error - constObject values are readonly
+		address.city = "Seattle";
+	}
+
+	// Set with a complete object - this is the correct pattern
+	addressBookView.root.set("work", {
+		street: "456 Corporate Ave",
+		city: "Portland",
+		state: "OR",
+		zip: "97201",
+		country: "USA",
+	});
+
+	// Iteration - values are readonly
+	for (const [key, value] of addressBookView.root) {
+		use(key satisfies string);
+		use(value.street satisfies string);
+		// @ts-expect-error - values from iteration are also readonly
+		value.city = "Modified";
+	}
+}
+
+// =============================================================================
+// Idiomatic usage: MapView with mutable object values
+// =============================================================================
+
+export function testMapOfMutableObjectsIdiomaticUsage(
+	addressBookView: MapView<typeof MutableAddressBookSchema>,
+): void {
+	// Get returns mutable object or undefined
+	const address = addressBookView.root.get("home");
+	if (address !== undefined) {
+		// Can read all properties
+		use(address.street satisfies string);
+		use(address.city satisfies string);
+
+		// Regular object values ARE mutable (but see caveat below)
+		// Note: In flat storage DDSes, this mutation causes the entire
+		// map value to be replaced - other concurrent mutations may be lost.
+		address.street = "123 Main St";
+		address.city = "Seattle";
+	}
+
+	// Set with a complete object
+	addressBookView.root.set("work", {
+		street: "456 Corporate Ave",
+		city: "Portland",
+		state: "OR",
+		zip: "97201",
+		country: "USA",
+	});
+
+	// Iteration - values are mutable
+	for (const [key, value] of addressBookView.root) {
+		use(key satisfies string);
+		value.city = "Modified"; // Allowed for regular objects
+	}
 }
 
 // =============================================================================
